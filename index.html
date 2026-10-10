@@ -162,6 +162,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .mtok{width:34px;height:34px;border-radius:50%;border:3px solid currentColor;display:flex;align-items:center;justify-content:center;font:700 20px Alegreya,serif;background:radial-gradient(circle at 35% 30%,#fff9 0,#ffffff22 35%,#0006 100%),#1d1d21;box-shadow:0 0 8px currentColor;cursor:help}
 .mtok.F{color:var(--fire)}.mtok.E{color:var(--earth)}.mtok.W{color:var(--water)}
 .mini.F.on{background:var(--fire);color:#201}.mini.E.on{background:var(--earth);color:#102}.mini.W.on{background:var(--water);color:#012}
+.mlabel{cursor:help;text-decoration:underline dotted rgba(210,173,79,.5);text-underline-offset:3px}
 /* Kampf */
 .combatcenter{text-align:center;height:100%;display:flex;flex-direction:column}.combatcenter>*{flex:none}
 .combatcenter img.big{height:96px;align-self:center;filter:drop-shadow(0 4px 8px rgba(0,0,0,.6))}
@@ -279,15 +280,29 @@ function dealFresh(state, d, slots) {
   fillHand(state, d);
 }
 // Nachziehen: alle nicht gesperrten Handkarten ablegen, freie Plätze neu füllen.
+// Fluchkarten bleiben dabei zunächst liegen und werden erst nach dem Ersetzen der übrigen Karten abgeworfen (ihre Plätze werden danach ebenfalls neu gefüllt).
 function drawPhase(state, d) {
   d.marks = [];
   for (let i = 0; i < d.hand.length; i++) {
     const c = d.hand[i];
-    if (c && !c.locked) { d.discard.push(c); d.hand[i] = null; }
+    if (c && !c.locked && !parseCard(c.id).curse) { d.discard.push(c); d.hand[i] = null; }
   }
-  if (!d.hand.some(c => !c)) return false;
+  const replaced = d.hand.some(c => !c);
+  if (replaced) fillHand(state, d);
+  let cursed = false;
+  for (let i = 0; i < d.hand.length; i++) {
+    const c = d.hand[i];
+    if (c && parseCard(c.id).curse) { c.locked = false; d.discard.push(c); d.hand[i] = null; cursed = true; }
+  }
+  if (cursed) fillHand(state, d);
+  return replaced || cursed;
+}
+// Alle Fluchkarten aus Zugstapel, Hand und Ablage entfernen (Kampfende im Fluchsystem „deathcards“).
+function stripCurseCards(state, d) {
+  const keep = c => !parseCard(c.id).curse;
+  d.draw = d.draw.filter(keep); d.discard = d.discard.filter(keep);
+  d.hand = d.hand.map(c => (c && !keep(c) ? null : c)); d.marks = [];
   fillHand(state, d);
-  return true;
 }
 function removeFromHand(d, idx) { const c = d.hand[idx]; d.hand[idx] = null; d.marks = d.marks.filter(i => i !== idx); return c; }
 
@@ -398,11 +413,12 @@ function spawnOne(el, stage, rng, v) {
     stats.gold = M.gold[st];
   }
   rng.shuffle(finalDeck);
-  const tags = [];
-  if (stage === 1 && v.t && V.temple1[el][v.t]) tags.push(V.temple1[el][v.t].map(f => ({ hp: 'Zäh', mana: 'Mana', limit: 'Limit' }[f])).join('+'));
-  if (stage >= 2 && v.p) tags.push(ELEMENT_NAME_SHORT[S] + '-lastig');
-  if (stage >= 2 && v.d) tags.push(V.deckNames[v.d]);
-  return { el, name: M.names[el] + ' ' + STAGE_NUMERAL[stage], label: tags.join(', '), variant: v, stage, stats, deckIds: finalDeck };
+  const tags = [], hints = [];
+  const FHINT = { hp: 'Zäh: zusätzliche maximale HP.', mana: 'Mana: zusätzliches maximales Mana.', limit: 'Limit: darf mehr Karten gleichzeitig spielen (höheres Ausspiellimit).' };
+  if (stage === 1 && v.t && V.temple1[el][v.t]) { const fs = V.temple1[el][v.t]; tags.push(fs.map(f => ({ hp: 'Zäh', mana: 'Mana', limit: 'Limit' }[f])).join('+')); fs.filter((f, i) => fs.indexOf(f) === i).forEach(f => hints.push(FHINT[f])); }
+  if (stage >= 2 && v.p) { tags.push(ELEMENT_NAME_SHORT[S] + '-lastig'); { const FN = { F: 'Feuer', E: 'Erde', W: 'Wasser' }; hints.push(ELEMENT_NAME_SHORT[S] + '-lastig: Das Nebenelement dieses Monsters ist ' + FN[S] + ' (normalerweise ' + FN[M.profile[el].secondary] + '). Es spielt neben seinem Hauptelement vor allem ' + FN[S] + '.'); } }
+  if (stage >= 2 && v.d) { tags.push(V.deckNames[v.d]); hints.push(v.d === 1 ? 'breit: mehr Karten im Nebenelement, dafür weniger im Hauptelement. Vielseitiger, aber mit schwächerer Spitze.' : 'spitz: stärkere Spitze (mehr Karten der höchsten Stufe), dafür eine schwächere Basis (mehr Stufe-1-Karten).'); }
+  return { el, name: M.names[el] + ' ' + STAGE_NUMERAL[stage], label: tags.join(', '), hints, variant: v, stage, stats, deckIds: finalDeck };
 }
 const ELEMENT_NAME_SHORT = { F: 'Feuer', E: 'Erd', W: 'Wasser' };
 // Mit ‚rng‘ (aus dem Spiel abgeleitet) werden die Varianten gewürfelt; ohne bleibt es die feste Grundform.
@@ -521,8 +537,29 @@ const CURSE_SYSTEMS = {
       return result;
     },
   },
+  // „deathcards“ (Regelstand v6): keine Schwäche. Aggro Stufe S legt eine Fluchkarte der Stufe S (C1–C3) auf den Ablagestapel der Gegenseite.
+  // Fluchkarten belegen Handplätze, kosten beim Ausspielen oder Verteidigen so viel Mana wie ihre Stufe und wirken sonst nicht. Die Aktion „Nachziehen“
+  // ersetzt erst die übrigen (nicht gesperrten) Karten und wirft danach alle Fluchkarten der Hand ab. Am Kampfende verschwinden alle Fluchkarten.
+  // Der Todes-Fluch (Ultimate) liegt als Marker (1 Marker = 1 HP je eigenem Angriffszug); Lifeflow kann Marker entfernen.
+  deathcards: {
+    id: 'deathcards', cardCurses: false, curseCards: true,
+    inflict(state, victim, level) {
+      const lv = Math.max(1, Math.min(3, level));
+      victim.deck.discard.push(mkCard(state, 'C' + lv));
+      return 'Fluchkarte Stufe ' + lv + ' für ' + victim.name;
+    },
+    relieve() { return ''; },
+    turnStart(state, pid, stats, inCombat, name) {
+      if (!inCombat || !(stats.death > 0)) return false;
+      stats.hp = Math.max(0, stats.hp - stats.death);
+      log(state, 'Todes-Fluch: ' + name + ' verliert ' + stats.death + ' HP.', pid);
+      return true;
+    },
+    worldAction() { return undefined; },
+    settleExhaustion(state, a, b) { return CURSE_SYSTEMS.weak.settleExhaustion(state, a, b); },
+  },
   cards: {
-    id: 'cards', cardCurses: true,
+    id: 'cards', cardCurses: true, discardAction: true,
     inflict(state, victim, level) {
       for (let i = 0; i < level; i++) victim.deck.discard.push(mkCard(state, 'C1'));
       return level + ' Fluch' + (level > 1 ? 'e' : '') + ' für ' + victim.name;
@@ -547,7 +584,7 @@ function curses(state) { return CURSE_SYSTEMS[state.rules.curses]; }
    Der Händler arbeitet mit den markierten Handkarten (Auswahl, begrenzt durch das Ausspiellimit):
    - Gratiskarte (F1/E1/W1): immer möglich; sie verlangt keine Markierung und verbraucht weder Karten noch Markierungen.
    - Aufwertung: zwei gleiche markierte Karten ergeben die nächste Stufe, oder eine markierte Karte des überlegenen
-     Elements ergibt die nächste Stufe des Elements. Die markierten Karten werden abgegeben.
+     Elements ergibt die nächste Stufe des Elements. Die markierten Karten verschwinden aus dem Spiel; die neue Karte kommt auf den Ablagestapel.
    Der Kauf beendet den Zug. */
 
 // Alle Angebote zu einer Kartenmenge ([{slot, id}], ohne Flüche). ‚limit‘ begrenzt, wie viele Karten bezahlt werden können.
@@ -583,7 +620,7 @@ function execVendor(state, pid, a) {
   const want = JSON.stringify(a.cost || []);
   const opt = vendorChoices(sel, p.stats.limit).find(o => o.result === a.result && JSON.stringify(o.cost) === want);
   if (!opt) return fail(sel.length ? 'Mit den markierten Karten ist dieses Angebot nicht möglich.' : 'Markiere zuerst Karten aus deiner Hand.');
-  if (!opt.free) opt.slots.forEach(i => d.discard.push(removeFromHand(d, i)));
+  if (!opt.free) opt.slots.forEach(i => removeFromHand(d, i));   // bezahlte Karten verschwinden aus dem Spiel
   if (!opt.free) d.marks = [];
   d.discard.push(mkCard(state, opt.result));
   log(state, p.name + ' tauscht beim Händler' + (opt.cost.length ? ' ' + opt.cost.join(' + ') + ' gegen ' : ' und erhält ') + opt.result + '.', pid);
@@ -612,7 +649,7 @@ function evalAttack(stats, cards) {
   const curses = cards.filter(c => c.curse), normals = cards.filter(c => !c.curse);
   const prim = normals.length ? normals[0].el : null;
   const same = prim ? normals.filter(c => c.el === prim) : [];
-  const cost = same.length + curses.length;
+  const cost = same.length + curses.reduce((n, c) => n + c.tier, 0);
   let damage = 0; same.forEach(c => { damage += Math.min(c.tier, stats.mag[prim]); });
   const tiers = { F: [], E: [], W: [] }; normals.forEach(c => tiers[c.el].push(c.tier));
   const levels = comboLevels(tiers, stats.mag);
@@ -626,7 +663,7 @@ function evalDefense(stats, cards, color) {
   if (normals.some(c => c.el !== el)) return { valid: false, reason: 'Alle Karten der Verteidigung müssen dasselbe Element haben.' };
   if (el && el !== color && el !== SUPERIOR[color]) return { valid: false, reason: NAMES[el] + ' kann nicht gegen ' + NAMES[color] + ' verteidigen.' };
   const free = stats.mirrorFree && mirrorOf(stats, color) > 0;   // Spiegel mit Rabatt: Verteidigung in der Farbe des Angriffs kostet kein Mana
-  const cost = curses.length + (el === color && !free ? normals.length : 0);
+  const cost = curses.reduce((n, c) => n + c.tier, 0) + (el === color && !free ? normals.length : 0);
   let block = 0; normals.forEach(c => { block += Math.min(c.tier, stats.mag[el]); });
   return { valid: true, el, cost, block, affordable: stats.mana >= cost };
 }
@@ -702,6 +739,7 @@ function evaluateEnd(state) {
 function endCombat(state, end) {
   const c = state.combat, res = { mode: c.mode, reason: end.reason, winner: end.winner, monsterDefeated: false };
   state.players.forEach(p => { p.stats.freeDraws = 0; p.deck.marks = []; delete p.stats.mirror; delete p.stats.mirrorEl; delete p.stats.mirrorFree; delete p.stats.death; if (curses(state).weakDouble) p.stats.marks = 0; });
+  if (curses(state).curseCards) state.players.forEach(p => stripCurseCards(state, p.deck));
   delete c.sides.b.stats.death; if (curses(state).weakDouble && c.sides.b.monster) c.sides.b.monster.stats.marks = 0;
   if (c.sides.b.monster) { delete c.sides.b.monster.stats.mirror; delete c.sides.b.monster.stats.mirrorEl; delete c.sides.b.monster.stats.mirrorFree; }
   const A = state.players[c.att], B = state.players[c.def];
@@ -784,8 +822,9 @@ function defaultMirrorEl(opp) { let b = ELEMENTS[0]; for (const e of ELEMENTS) i
 // Lifeflow 'any': gewählte Marker (sc/oc/sm/om), höchstens S; ohne Wahl automatisch eigene Flüche, dann Spiegel des Gegners.
 function lifeflowPicks(state, side, opp, lvl) {
   if (Array.isArray(state.combat.lfp)) return state.combat.lfp.slice(0, lvl);
-  const out = []; let sc = side.stats.marks || 0, om = opp.stats.mirror || 0;
+  const out = []; let sc = side.stats.marks || 0, om = opp.stats.mirror || 0, sd = side.stats.death || 0;
   while (out.length < lvl && sc > 0) { out.push('sc'); sc--; }
+  while (out.length < lvl && sd > 0) { out.push('sd'); sd--; }
   while (out.length < lvl && om > 0) { out.push('om'); om--; }
   return out;
 }
@@ -828,12 +867,12 @@ function execAttack(state) {
     if (k === 'fe' && cs.deferInflict) { const n = lvl + (cs.inflictBonus || 0); c.defer = { to: opp, n }; texts.push('Aggro ' + lvl + ': ' + n + ' Schwäche-Marker für ' + opp.name + ' (nach diesem Zug)'); }
     else if (k === 'fe') texts.push('Aggro ' + lvl + ': ' + cs.inflict(state, opp, lvl));
     if (k === 'ew' && state.rules.lifeflowMode === 'any') {   // S Marker beliebig vom Brett nehmen, je entferntem Marker 1 HP heilen
-      const before = side.stats.hp, picks = lifeflowPicks(state, side, opp, lvl), names = { sc: 'eigene Fluchmarker', oc: 'Fluchmarker des Gegners', sm: 'eigene Spiegelmarker', om: 'Spiegelmarker des Gegners' };
+      const before = side.stats.hp, picks = lifeflowPicks(state, side, opp, lvl), names = { sd: 'eigene Todesmarker', od: 'Todesmarker des Gegners', sc: 'eigene Fluchmarker', oc: 'Fluchmarker des Gegners', sm: 'eigene Spiegelmarker', om: 'Spiegelmarker des Gegners' };
       const got = {}; let removed = 0;
       for (const kk of picks) {
-        const tgt = kk[0] === 's' ? side : opp, key = kk[1] === 'c' ? 'marks' : 'mirror';
+        const tgt = kk[0] === 's' ? side : opp, key = kk[1] === 'c' ? 'marks' : kk[1] === 'd' ? 'death' : 'mirror';
         if ((tgt.stats[key] || 0) <= 0) continue;
-        if (key === 'mirror') mirrorTakeAny(tgt.stats, 1); else tgt.stats[key]--;
+        if (key === 'mirror') mirrorTakeAny(tgt.stats, 1); else { tgt.stats[key]--; if (key === 'death' && tgt.stats.death <= 0) delete tgt.stats.death; }
         removed++; got[kk] = (got[kk] || 0) + 1;
       }
       const od = state.rules.lifeflowDrawAll ? removed : (got.oc || 0) + (got.om || 0), dr = od * (state.rules.lifeflowDraw || 0);   // Gratis-Nachziehen je entferntem Marker (lifeflowDrawAll) oder nur je gegnerischem
@@ -915,7 +954,7 @@ function applyCombat(state, a) {
       if (at >= 0) c.ult.splice(at, 1); else { if (c.ult.length >= 2) return fail('Es sind höchstens zwei Kombos wählbar.'); c.ult.push(a.key); }
       return { ok: true };
     }
-    case 'lfp': { if (c.action !== 'attack') return fail('Nur im Angriffszug.'); if (state.rules.lifeflowMode !== 'any') return fail('Keine Wahl in dieser Regelvariante.'); const ok = ['sc', 'oc', 'sm', 'om']; c.lfp = (Array.isArray(a.pick) ? a.pick : []).filter(x => ok.includes(x)).slice(0, 3); return { ok: true }; }
+    case 'lfp': { if (c.action !== 'attack') return fail('Nur im Angriffszug.'); if (state.rules.lifeflowMode !== 'any') return fail('Keine Wahl in dieser Regelvariante.'); const ok = ['sc', 'oc', 'sm', 'om', 'sd', 'od']; c.lfp = (Array.isArray(a.pick) ? a.pick : []).filter(x => ok.includes(x)).slice(0, 3); return { ok: true }; }
     case 'mel': { if (c.action !== 'attack') return fail('Nur im Angriffszug.'); if (!mirrorOn(state)) return fail('Kein Spiegel in dieser Regelvariante.'); if (!ELEMENTS.includes(a.el)) return fail('Unbekanntes Element.'); c.mel = a.el; c.melTurn = c.turns; return { ok: true }; }
     case 'lf': { if (c.action !== 'attack') return fail('Nur im Angriffszug.'); if (state.rules.lifeflowMode !== 'choice') return fail('Keine Wahl in dieser Regelvariante.'); c.lf = a.target === 'opp' ? 'opp' : 'self'; return { ok: true }; }
     case 'mr': { if (c.action !== 'defense') return fail('Nur in der Verteidigung.'); if (!state.rules.mirrorChoice) return fail('Keine Wahl in dieser Regelvariante.'); const have = Math.min(mirrorOf(side.stats, c.color), c.pending); c.mr = Math.max(0, Math.min(have, Math.floor(+a.n) || 0)); return { ok: true }; }
@@ -993,7 +1032,7 @@ function execSpend(state, pid, what) {
   const p = state.players[pid], s = p.stats, d = p.deck;
   if (s.pending <= 0) return fail('Keine offenen Upgrade-Punkte.');
   let cost = 1;
-  if (what === 'hp') { s.maxHp += 1; s.hp = Math.min(s.maxHp, s.hp + 1); }
+  if (what === 'hp') { const n = state.rules.hpPerPoint || 1; s.maxHp += n; s.hp = Math.min(s.maxHp, s.hp + n); }
   else if (what === 'mana') {
     cost = manaStepCost();
     if (s.pending < cost) return fail('Der nächste Mana-Schritt kostet ' + cost + ' Upgrade-Punkte.');
@@ -1080,7 +1119,7 @@ function applyWorld(state, a) {
 // lifeflowMode 'any': S Marker beliebig vom Brett (eigene/gegnerische Fluch- und Spiegelmarker), je entferntem Marker 1 HP ('removed', Variante 'flat' = S HP).
 // lifeflowMode: 'classic' (S HP heilen und S eigene Fluchmarker herunternehmen) oder 'choice' (S HP heilen und S Marker wegnehmen: eigene Fluchmarker oder die Spiegelmarker des Gegners).
 // firstPlayerGold: zusätzliches Startgold für den Beginnenden (Ausgleich zum Vorteil des zweiten Spielers).
-const DEFAULT_RULES = { curses: 'weak', ultiMode: 'death', limitFirstStepCost: 2, secondPlayerPending: 0, campActions: 0, showdownAttacker: 'behind', firstPlayerGold: 0, controlMode: 'mirror', mirrorDecay: 0, mirrorTrigger: 'same', mirrorFree: true, mirrorMult: 1, mirrorStep: 1, mirrorChoice: true, mirrorMana: 0, mirrorHeal: 0, lifeflowMode: 'any', lifeflowDrawAll: true, lifeflowHealMode: 'flat', lifeflowHeal: 1, lifeflowMana: false, monsterVariants: true, monstersPerStage: 3, fightReset: true, fightCarry: true, stagePoints: [0, 1, 2, 3], stageGold: [0, 1, 2, 3], startGold: 2, secondPlayerGold: 0, loserStarts: true, freshHands: false, showdownRestore: false, lootShare: 0, lootPot: false, lifeflowDraw: 1 };
+const DEFAULT_RULES = { curses: 'deathcards', ultiMode: 'death', limitFirstStepCost: 2, secondPlayerPending: 0, campActions: 0, showdownAttacker: 'behind', firstPlayerGold: 0, controlMode: 'mirror', mirrorDecay: 0, mirrorTrigger: 'same', mirrorFree: true, mirrorMult: 1, mirrorStep: 1, mirrorChoice: true, mirrorMana: 0, mirrorHeal: 0, hpPerPoint: 2, lifeflowMode: 'any', lifeflowDrawAll: true, lifeflowHealMode: 'flat', lifeflowHeal: 1, lifeflowMana: false, monsterVariants: true, monstersPerStage: 3, fightReset: true, fightCarry: true, stagePoints: [0, 1, 2, 3], stageGold: [0, 1, 2, 3], startGold: 2, secondPlayerGold: 0, loserStarts: true, freshHands: false, showdownRestore: false, lootShare: 0, lootPot: false, lifeflowDraw: 1 };
 
 function newPlayer(state, name, ai) {
   const p = { name, ai: !!ai, stats: newStats(), temple: { points: 0, level: 0 }, sp: 0, slots: MIN_SLOTS };
@@ -1237,7 +1276,7 @@ function worldPlan(state, pid) {
       if (free) cands.push({ score: 5 + R(), acts: [A({ type: 'vendor', result: best + '1', cost: [] })] });
     }
   }
-  if (!camp && curses.length) {   // nur im Fluchsystem „cards“
+  if (!camp && curses.length && M.curses(state).discardAction) {   // nur im Fluchsystem „cards“
     const acts = curses.slice(0, Math.max(1, s.limit)).map(h => A({ type: 'mark', slot: h.slot }));
     acts.push(A({ type: 'discardCurses' }));
     cands.push({ score: 6 + curses.length * 4 + R(), acts });
@@ -1280,7 +1319,7 @@ function comboValue(k, lvl, side, opp, Q, rules) {
     return lvl * Q.wFE;
   }
   if (rules.lifeflowMode === 'plain') { const heal = Math.min(lvl * (rules.lifeflowHeal || 1), st.maxHp - st.hp); return heal * Q.wEW + lvl * Q.wDraw * (rules.lifeflowDraw ? 1 : 0) + (heal === 0 ? 0.3 * lvl : 0); }
-  return lvl * ((st.maxHp - st.hp > 0 || (st.marks || 0) > 0) ? Q.wEW : 0.4);
+  return lvl * ((st.maxHp - st.hp > 0 || (st.marks || 0) > 0 || (st.death || 0) > 0) ? Q.wEW : 0.4);
 }
 // Farbe neuer Spiegelmarker: das Element, mit dem der Gegner am wahrscheinlichsten (und am stärksten) angreift.
 function pickMirrorEl(side, opp) {
@@ -1366,6 +1405,7 @@ function combatPlan(state, pid) {
       if (usesEw && state.rules.lifeflowMode === 'any') {
         const lvl = best.ev.levels.ulti > 0 ? best.ev.levels.ulti : best.ev.levels.ew, pick = [];
         for (let i = 0; i < Math.min(lvl, s.marks || 0); i++) pick.push('sc');
+        for (let i = 0; pick.length < lvl && i < (s.death || 0); i++) pick.push('sd');
         for (let i = 0; pick.length < lvl && i < (opp.stats.mirror || 0); i++) pick.push('om');
         if (state.rules.lifeflowDraw && !state.rules.lifeflowDrawAll) for (let i = 0; pick.length < lvl && i < (opp.stats.marks || 0); i++) pick.push('oc');
         acts.push(A({ type: 'lfp', pick }));
@@ -1505,7 +1545,7 @@ function ctx() {
 function cardCurses() { return M.curses(G).cardCurses; }   // Fluchsystem „Karten“ (sonst Marker)
 function marks(n, cls) { let t = ''; for (let i = 0; i < M.MAX_MARKS; i++) t += '<img class="mkimg' + (cls ? ' ' + cls : '') + (i < n ? '' : ' off') + '" src="' + IMG.curse + '">'; return t; }
 // Todes-Fluch (Ultimate): HP-Verlust zu Beginn jedes eigenen Angriffszuges, bis Kampfende.
-function deathBadge(s) { return s.death > 0 ? '<span class="mr" title="Todes-Fluch: ' + s.death + ' HP Verlust zu Beginn jedes eigenen Angriffszuges bis Kampfende, nicht aufhebbar.">☠ −' + s.death + '</span>' : ''; }
+function deathBadge(s) { return s.death > 0 ? '<span class="mr" title="Todesmarker ×' + s.death + ': ' + s.death + ' HP Verlust zu Beginn jedes eigenen Angriffszuges bis Kampfende. Nur Lifeflow kann einzelne Marker entfernen.">' + '☠'.repeat(s.death) + '</span>' : ''; }
 // Spiegelmarker (Control): je Element ein Stein neben dem Handbrett, mit Zähler ab 2 Stück.
 function mirrorStack(s, x, y) {
   if (G.rules.controlMode !== 'mirror' || !(s.mirror > 0)) return '';
@@ -1522,6 +1562,7 @@ function mirrorBadge(s) {
 }
 // Marker untereinander: Fluchmarker (violett), Spiegelmarker (blau), Todes-Fluch als Text.
 function markCol(s, curseTip) {
+  if (G.rules.curses === 'deathcards') return '<span class="mkcol"><span class="mk" title="Todesmarker: ' + (s.death || 0) + ' HP Verlust zu Beginn jedes eigenen Angriffszuges bis Kampfende. Nur Lifeflow kann Marker entfernen.">' + marks(s.death || 0) + '</span></span>';
   return '<span class="mkcol"><span class="mk" title="' + curseTip + '">' + marks(s.marks || 0) + '</span>' + deathBadge(s) + '</span>';
 }
 function myTurn() { return !G.over && M.actor(G) === ME; }
@@ -1601,7 +1642,7 @@ function layoutDeck(deck, L, mine) {
   deck.hand.forEach((c, i) => {
     if (!c) return;
     const marked = deck.marks.includes(i);
-    place(c, { x: slotX(i, n, L), y: L.y + (marked ? L.raise : 0), sc: L.s, down: !mine, z: 20 + i + (marked ? 30 : 0), marked, locked: c.locked, mine, slot: i, spawn, zone: 'hand' });
+    place(c, { x: slotX(i, n, L), y: L.y + (marked ? L.raise : 0), sc: L.s, down: !mine, z: 20 + i + (marked ? 30 : 0), marked, locked: mine && c.locked, mine, slot: i, spawn, zone: 'hand' });
   });
 }
 function renderCards() {
@@ -1660,7 +1701,7 @@ function statsBlock(name, s, p, size, up, full) {
   const mk = !cardCurses() ? markCol(s, mkT) : '', mr = '';
   const my = myTurn(), anyT = my, pend = up ? s.pending : 0, lc = up ? M.limitStepCost(G, s) : 1, mc = up ? M.manaStepCost(G, s) : 1;
   const pl = (ok, w, title, attr) => ok ? '<button class="up" data-act="' + (attr || 'spend') + '" ' + (attr ? 'data-e' : 'data-w') + '="' + w + '" title="' + title + '"></button>' : '';
-  const hpPl = pl(up && anyT && pend > 0, 'hp', '+1 max. HP (1 Upgrade-Punkt)');
+  const hpPl = pl(up && anyT && pend > 0, 'hp', '+' + (G.rules.hpPerPoint || 1) + ' max. HP (1 Upgrade-Punkt)');
   // Schritte, die mehr als 1 Upgrade-Punkt kosten, bleiben sichtbar (abgedunkelt, solange die Punkte fehlen) und tragen eine Kostenzahl.
   const plc = (show, afford, w, label, c) => !show ? '' : '<button class="up' + (c > 1 ? ' costly' : '') + (afford ? '' : ' off') + '" data-act="spend" data-w="' + w + '"' + (c > 1 ? ' data-c="' + c + '"' : '') + (afford ? '' : ' disabled') + ' title="' + label + ' (' + c + ' Upgrade-Punkt' + (c > 1 ? 'e' : '') + (afford ? '' : ', dir fehlen Punkte') + ')"></button>';
   const manaPl = mc > 1 ? plc(up && anyT, pend >= mc, 'mana', '+1 max. Mana', mc) : pl(up && anyT && pend > 0, 'mana', '+1 max. Mana (1 Upgrade-Punkt)');
@@ -1755,7 +1796,7 @@ function monsterCards() {
     const curses = m.deckIds.filter(x => x[0] === 'C').length, mk = st.marks || 0;
     const img = alive ? IMG['m_' + e.toLowerCase() + m.stage] : IMG['d_' + e.toLowerCase()];
     h += '<div class="mon ' + (alive ? '' : 'dead') + '" style="left:' + (R.left + i * R.step) + 'px;top:' + R.top + 'px;width:' + R.w + 'px;height:' + R.h + 'px;padding:10px 8px"><img class="pic" src="' + img + '" style="width:172px;height:196px">' +
-      '<div class="nm ' + e + '">' + esc(m.name) + '</div>' + (alive && m.label ? '<div class="sm" style="color:var(--gold);margin-top:-2px">' + esc(m.label) + '</div>' : '');
+      '<div class="nm ' + e + '">' + esc(m.name) + '</div>' + (alive && m.label ? '<div class="sm mlabel" title="' + esc((m.hints || []).join('\n')) + '" style="color:var(--gold);margin-top:-2px">' + esc(m.label) + (m.hints && m.hints.length ? ' ⓘ' : '') + '</div>' : '');
     if (alive) {
       h += '<div class="sm">HP ' + st.hp + '/' + st.maxHp + '</div><div class="bar"><i style="width:' + st.hp / st.maxHp * 100 + '%"></i></div>' +
         '<div class="sm">Mana ' + st.mana + '/' + st.maxMana + ' · Limit ' + st.limit + '</div><div class="bar mana"><i style="width:' + st.mana / st.maxMana * 100 + '%"></i></div>' +
@@ -1786,8 +1827,9 @@ function comboText(k, lv) {
   if (lv <= 0) return 'kein Effekt';
   if (k === 'fw' && G.rules.controlMode === 'mirror') return lv + ' Spiegelmarker in einer gewählten Farbe (neben deiner Hand): gegen einen Angriff dieser Farbe verteidigst du gratis und legst bei jeder Verteidigung ' + (G.rules.mirrorChoice ? 'höchstens so viele, wie deine markierten Karten in dieser Farbe mit deinem Magielevel blocken' : (G.rules.mirrorStep || 1)) + ' ab, je ' + (G.rules.mirrorMult || 1) + ' Schaden auf den Angreifer' + (G.rules.mirrorHeal ? ', je ' + G.rules.mirrorHeal + ' HP Heilung' : '') + (G.rules.mirrorMana ? ' und +' + G.rules.mirrorMana + ' Mana' : '');
   if (!cardCurses() && k === 'ew' && G.rules.lifeflowMode === 'plain') return '+' + lv + ' HP und ' + lv * (G.rules.lifeflowDraw || 0) + ' Gratis-Nachziehen';
-  if (!cardCurses() && k === 'ew' && G.rules.lifeflowMode === 'any') return (G.rules.lifeflowHealMode === 'flat' ? '+' + lv + ' HP und bis zu ' + lv + ' Marker (Spiegel oder Schwäche) vom Brett' : '+1 HP je Marker, bis zu ' + lv + ' Marker vom Brett') + (G.rules.lifeflowDraw ? (G.rules.lifeflowDrawAll ? ', 1 Gratis-Nachziehen je entferntem Marker' : ', 1 Gratis-Nachziehen je entferntem gegnerischem Marker') : '');
+  if (!cardCurses() && k === 'ew' && G.rules.lifeflowMode === 'any') return (G.rules.lifeflowHealMode === 'flat' ? '+' + lv + ' HP und bis zu ' + lv + ' Marker (Spiegel oder Todesmarker) vom Brett' : '+1 HP je Marker, bis zu ' + lv + ' Marker vom Brett') + (G.rules.lifeflowDraw ? (G.rules.lifeflowDrawAll ? ', 1 Gratis-Nachziehen je entferntem Marker' : ', 1 Gratis-Nachziehen je entferntem gegnerischem Marker') : '');
   if (!cardCurses() && k === 'ew' && G.rules.lifeflowMode === 'choice') return '+' + lv + ' HP, ' + lv + ' Marker weg (eigene Fluchmarker oder Spiegel des Gegners)';
+  if (G.rules.curses === 'deathcards' && k === 'fe') return 'eine Fluchkarte der Stufe ' + lv + ' auf den Ablagestapel der Gegenseite (sie belegt dort einen Handplatz)';
   if (G.rules.curses === 'weak' && k === 'fe') return (lv + 1) + ' Schwäche-Marker für die Gegenseite nach diesem Zug (S+1, höchstens 3): doppelter Schaden, solange einer liegt';
   if (!cardCurses()) return k === 'fw' ? lv + ' Gratis-Nachziehen' : k === 'fe' ? lv + ' Fluchmarker für die Gegenseite' : '+' + lv + ' HP, ' + lv + ' Marker weniger';
   return k === 'fw' ? lv + ' Gratis-Nachziehen' : k === 'fe' ? lv + ' Fluch' + (lv > 1 ? 'e' : '') + ' für die Gegenseite' : '+' + lv + ' HP';
@@ -1796,14 +1838,15 @@ function comboText(k, lv) {
 function lfPicks(cx, lvl) {
   const c = cx.c;
   if (Array.isArray(c.lfp)) return c.lfp.slice(0, lvl);
-  const out = []; let sc = cx.myStats.marks || 0, om = cx.theirs.stats.mirror || 0;
+  const out = []; let sc = cx.myStats.marks || 0, om = cx.theirs.stats.mirror || 0, sd = cx.myStats.death || 0;
   while (out.length < lvl && sc-- > 0) out.push('sc');
+  while (out.length < lvl && sd-- > 0) out.push('sd');
   while (out.length < lvl && om-- > 0) out.push('om');
   return out;
 }
 function lfAnyRow(cx, lvl) {
   const picks = lfPicks(cx, lvl), th = cx.theirs.stats, my = cx.myStats;
-  const kinds = [['sc', 'eigene Flüche', my.marks || 0], ['om', 'Spiegel Gegner', th.mirror || 0], ['oc', 'Flüche Gegner', th.marks || 0], ['sm', 'eigener Spiegel', my.mirror || 0]].filter(k => k[2] > 0);
+  const kinds = [['sc', 'eigene Flüche', my.marks || 0], ['om', 'Spiegel Gegner', th.mirror || 0], ['oc', 'Flüche Gegner', th.marks || 0], ['sm', 'eigener Spiegel', my.mirror || 0], ['sd', 'eigene Todesmarker', my.death || 0], ['od', 'Todesmarker Gegner', th.death || 0]].filter(k => k[2] > 0);
   return '<div class="lfsel">' + kinds.map(k => { const n = picks.filter(x => x === k[0]).length; return '<button class="mini' + (n ? ' on' : '') + '" data-act="lfk" data-k="' + k[0] + '" data-l="' + lvl + '"' + (k[2] ? '' : ' disabled') + ' title="Klick: einen Marker mehr wegnehmen, nach dem Maximum wieder auf 0">' + k[1] + ' ' + n + '/' + k[2] + '</button>'; }).join('') + '</div>';
 }
 function comboPanel(cx) {
@@ -1816,7 +1859,7 @@ function comboPanel(cx) {
   } else {
     const ev = M.evalAttack(cx.myStats, M.selection(cx.mine.deck));
     const lv = ev.valid ? ev.levels : { fw: 0, fe: 0, ew: 0, ulti: 0 };
-    h += '<div class="note" style="margin-bottom:8px">' + (lv.ulti && G.rules.ultiMode === 'death' ? 'Ultimate Stufe ' + lv.ulti + ': Todes-Fluch – der Gegner verliert ' + lv.ulti + ' HP zu Beginn jedes eigenen Angriffszuges bis Kampfende, nicht aufhebbar. Die Einzel-Kombos entfallen.' : lv.ulti ? 'Ultimate Stufe ' + lv.ulti + ': wähle genau zwei Kombos.' : 'Markiere Karten zweier Elemente für einen Kombo.') + '</div>';
+    h += '<div class="note" style="margin-bottom:8px">' + (lv.ulti && G.rules.ultiMode === 'death' ? 'Ultimate Stufe ' + lv.ulti + ': Todes-Fluch – der Gegner verliert ' + lv.ulti + ' HP zu Beginn jedes eigenen Angriffszuges bis Kampfende (je ein Todesmarker pro HP; nur Lifeflow kann Marker entfernen). Die Einzel-Kombos entfallen.' : lv.ulti ? 'Ultimate Stufe ' + lv.ulti + ': wähle genau zwei Kombos.' : 'Markiere Karten zweier Elemente für einen Kombo.') + '</div>';
     defs.forEach(d => {
       const dth = lv.ulti && G.rules.ultiMode === 'death', l = dth ? 0 : lv.ulti ? lv.ulti : lv[d[0]], on = l > 0 && (!lv.ulti || c.ult.includes(d[0]));
       h += '<div class="combo ' + (on ? 'on' : '') + '"><div>' + d[1] + '<small>' + d[2] + ' · ' + comboText(d[0], l) + '</small></div>' +
@@ -1865,13 +1908,13 @@ function combatCenter(cx) {
 }
 // Rechte Kampfseite: Übersicht der Kombos (statt einer Doppelanzeige des Gegners, der steht schon oben rechts).
 function comboRef(cx) {
-  const mag = cx.myStats.mag, def = G.rules.controlMode === 'mirror' && G.rules.curses === 'weak' && G.rules.ultiMode === 'death';
+  const mag = cx.myStats.mag, def = G.rules.controlMode === 'mirror' && (G.rules.curses === 'weak' || G.rules.curses === 'deathcards') && G.rules.ultiMode === 'death';
   const sel = M.selection(cx.mine.deck), ev = sel.length ? M.evalAttack(cx.myStats, sel) : null, lv = ev && ev.valid ? ev.levels : { fw: 0, fe: 0, ew: 0, ulti: 0 };
   const el = e => '<span class="' + e + '">' + NAMES[e] + '</span>';
   const rows = [
     ['fw', 'Control', 'F', 'W', 'S Spiegelmarker in gewählter Farbe: Verteidigung gegen diese Angriffsfarbe gratis, je Marker 1 Schaden zurück (höchstens so viel, wie deine Karten dieser Farbe mit deinem Magielevel blocken), Marker verbraucht.'],
-    ['fe', 'Aggro', 'F', 'E', 'Nach dem Zug S+1 Schwäche-Marker: Gegner erleidet doppelten Schaden; −1 nach jedem seiner Angriffszüge.'],
-    ['ew', 'Lifeflow', 'E', 'W', (G.rules.lifeflowMode === 'plain' ? 'S HP heilen und S Gratis-Nachziehen.' : (G.rules.lifeflowHealMode === 'flat' ? 'S HP heilen und bis zu S Marker (Spiegel oder Schwäche) vom Brett nehmen: je entferntem Marker 1 Gratis-Nachziehen.' : 'Bis zu S Marker vom Brett (eigene oder gegnerische): je Marker 1 HP und 1 Gratis-Nachziehen.'))],
+    ['fe', 'Aggro', 'F', 'E', (G.rules.curses === 'deathcards' ? 'Eine Fluchkarte der Stufe S auf den Ablagestapel des Gegners: belegt einen Handplatz, kostet beim Ausspielen S Mana. „Nachziehen“ wirft sie ab.' : 'Nach dem Zug S+1 Schwäche-Marker: Gegner erleidet doppelten Schaden; −1 nach jedem seiner Angriffszüge.')],
+    ['ew', 'Lifeflow', 'E', 'W', (G.rules.lifeflowMode === 'plain' ? 'S HP heilen und S Gratis-Nachziehen.' : (G.rules.lifeflowHealMode === 'flat' ? 'S HP heilen und bis zu S Marker (Spiegel oder Todesmarker) vom Brett nehmen (auch Todesmarker): je entferntem Marker 1 Gratis-Nachziehen.' : 'Bis zu S Marker vom Brett (eigene oder gegnerische): je Marker 1 HP und 1 Gratis-Nachziehen.'))],
   ];
   let h = '<h3 style="margin-bottom:3px" title="S = Minimum aus beiden Magiewerten und den höchsten markierten Kartenstufen (max. 3). Kombos kosten 0 Mana.">Kombo-Übersicht <span class="note" style="font-size:13px">S = Kombostufe</span></h3>';
   rows.forEach(r => {
@@ -1879,7 +1922,7 @@ function comboRef(cx) {
     h += '<div class="cref' + (lv[r[0]] > 0 && !(lv.ulti && def) ? ' on' : '') + '"><b>' + r[1] + '</b> ' + el(r[2]) + ' + ' + el(r[3]) + ' <span class="note">· Magie: bis S ' + maxS + (lv[r[0]] > 0 && !(lv.ulti && def) ? ' · markiert: S ' + lv[r[0]] : '') + '</span><small>' + (def ? r[4] : comboText(r[0], Math.max(1, maxS))) + '</small></div>';
   });
   const uS = Math.min(3, mag.F, mag.E, mag.W);
-  h += '<div class="cref' + (lv.ulti > 0 ? ' on' : '') + '"><b>Ultimate</b> ' + el('F') + ' + ' + el('E') + ' + ' + el('W') + ' <span class="note">· Magie: bis S ' + uS + (lv.ulti > 0 ? ' · markiert: S ' + lv.ulti : '') + '</span><small>' + (def ? 'Todes-Fluch: Gegner verliert S HP je eigenem Angriffszug bis Kampfende, nicht aufhebbar. Einzel-Kombos entfallen.' : 'Alle drei Elemente markiert: zwei der drei Kombos wählen.') + '</small></div>';
+  h += '<div class="cref' + (lv.ulti > 0 ? ' on' : '') + '"><b>Ultimate</b> ' + el('F') + ' + ' + el('E') + ' + ' + el('W') + ' <span class="note">· Magie: bis S ' + uS + (lv.ulti > 0 ? ' · markiert: S ' + lv.ulti : '') + '</span><small>' + (def ? 'Todes-Fluch: Gegner verliert S HP je eigenem Angriffszug bis Kampfende (je ein Todesmarker pro HP; nur Lifeflow kann Marker entfernen). Einzel-Kombos entfallen.' : 'Alle drei Elemente markiert: zwei der drei Kombos wählen.') + '</small></div>';
   return '<div class="panel" style="' + box(LAYOUT.oppInfo) + '">' + h + '</div>';
 }
 /* ---------- Gesamtdarstellung ---------- */
@@ -1911,7 +1954,7 @@ function showStart() {
     '<li>Klicke Karten an, um sie zu markieren. Die erste markierte Karte bestimmt das Element deines Angriffs.</li>' +
     '<li>Rechtsklick oder das Schloss sperrt eine Karte, sie bleibt beim Nachziehen in der Hand.</li>' +
     '<li>Siegpunkte gibt es nur im Showdown. Nach dem dritten gewinnt, wer mehr hat.</li>' +
-    '<li><b>Vor und nach jedem Kampf</b> haben beide Spieler eine frisch gemischte, volle Hand. HP und Mana bleiben nach einem Monsterkampf erhalten (Spieler und Monster) und regenerieren in der Weltphase um 1 je Zug; in einen Showdown gehen beide mit vollen HP und vollem Mana. Vor jedem Abschnitt erhält jeder Spieler Upgrade-Punkte und Gold in Höhe der Abschnittsnummer (1, 2, 3). Die Beute je Monster ist 1, 2, 3 Gold. Wer einen Showdown verliert, beginnt den nächsten Abschnitt.</li><li><b>Besondere Regeln:</b> Aggro legt nach dem Zug S+1 Schwäche-Marker (höchstens 3): Wer einen trägt, erleidet doppelten Schaden (Rückwurf des Spiegels bleibt einfach); nach jedem eigenen Angriffszug fällt ein Marker weg, am Kampfende alle. Control legt S Spiegelmarker in einer gewählten Farbe (höchstens 3, neben deiner Hand): Verteidigst du gegen einen Angriff dieser Farbe in derselben Farbe, kostet das kein Mana, und du wirfst Marker als 1 Schaden je Marker zurück (höchstens so viele, wie deine Karten dieser Farbe mit deinem Magielevel blocken); sie werden verbraucht. Lifeflow heilt S HP und nimmt bis zu S Marker vom Brett (Spiegel- oder Schwäche-Marker, eigene oder gegnerische): je entferntem Marker erhältst du 1 Gratis-Nachziehen, das du in Angriff und Verteidigung nutzen kannst. Die Ultimate (alle drei Elemente) ist ein Todes-Fluch: Der Gegner verliert Stufe-S HP zu Beginn jedes eigenen Angriffszuges bis Kampfende. Der erste Limit-Schritt kostet 2 Upgrade-Punkte, Punkte darfst du aufsparen. Opfern, Magie kaufen und Punkte ausgeben sind Bonusaktionen in deinem Zug, jede andere Aktion beendet ihn.</li></ul>' +
+    '<li><b>Vor und nach jedem Kampf</b> haben beide Spieler eine frisch gemischte, volle Hand. HP und Mana bleiben nach einem Monsterkampf erhalten (Spieler und Monster) und regenerieren in der Weltphase um 1 je Zug; in einen Showdown gehen beide mit vollen HP und vollem Mana. Vor jedem Abschnitt erhält jeder Spieler Upgrade-Punkte und Gold in Höhe der Abschnittsnummer (1, 2, 3). Die Beute je Monster ist 1, 2, 3 Gold. Wer einen Showdown verliert, beginnt den nächsten Abschnitt.</li><li><b>Besondere Regeln:</b> Aggro legt eine Fluchkarte der Stufe S auf den Ablagestapel des Gegners. Sie belegt einen Handplatz und kostet beim Ausspielen S Mana. Die Aktion „Nachziehen“ ersetzt zuerst die übrigen nicht gesperrten Karten und wirft danach alle Fluchkarten der Hand ab. Am Kampfende verschwinden alle Fluchkarten. Control legt S Spiegelmarker in einer gewählten Farbe (höchstens 3, neben deiner Hand): Verteidigst du gegen einen Angriff dieser Farbe in derselben Farbe, kostet das kein Mana, und du wirfst Marker als 1 Schaden je Marker zurück (höchstens so viele, wie deine Karten dieser Farbe mit deinem Magielevel blocken); sie werden verbraucht. Lifeflow heilt S HP und nimmt bis zu S Marker vom Brett (Spiegel- oder Todesmarker, eigene oder gegnerische): je entferntem Marker erhältst du 1 Gratis-Nachziehen, das du in Angriff und Verteidigung nutzen kannst. Die Ultimate (alle drei Elemente) ist ein Todes-Fluch: Der Gegner verliert Stufe-S HP zu Beginn jedes eigenen Angriffszuges bis Kampfende. Ein Upgrade-Punkt auf HP gibt +2 maximale HP. Der erste Limit-Schritt kostet 2 Upgrade-Punkte, Punkte darfst du aufsparen. Opfern, Magie kaufen und Punkte ausgeben sind Bonusaktionen in deinem Zug, jede andere Aktion beendet ihn.</li></ul>' +
     '<button class="btn primary" style="font-size:22px;padding:10px 28px;flex:none;align-self:center" data-act="newgame">Gegen den Computer spielen</button>' +
     '<div id="mpbox" class="mpbox" style="display:none"><b>Mehrspieler</b> <span class="note">zwei Geräte, ein Raum</span><div class="mprow"><button class="btn" data-act="mphost">Raum erstellen</button><input id="mpcode" maxlength="5" placeholder="Code" autocomplete="off" spellcheck="false"><button class="btn" data-act="mpjoin">Beitreten</button></div><div id="mpmsg" class="note"></div></div></div>';
   mpOffer();
@@ -1949,7 +1992,7 @@ function act(a) {
 }
 function pump() {
   clearTimeout(aiTimer);
-  if (G && !G.over && G.phase === 'combat') { const pl = G.logN; if (M.combatTick(G)) { checkCombatEnd(pl); } else if (G.logN > pl && !cardCurses()) toast(G.rules.curses === 'weak' ? 'Todes-Fluch: HP-Verlust.' : 'Ein Fluchmarker wird gegen 1 HP getauscht.'); }
+  if (G && !G.over && G.phase === 'combat') { const pl = G.logN; if (M.combatTick(G)) { checkCombatEnd(pl); } else if (G.logN > pl && !cardCurses()) toast(G.rules.curses === 'weak' || G.rules.curses === 'deathcards' ? 'Todes-Fluch: HP-Verlust.' : 'Ein Fluchmarker wird gegen 1 HP getauscht.'); }
   render();
   if (!G || G.over) return;
   const who = M.actor(G);
