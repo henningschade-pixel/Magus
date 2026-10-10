@@ -928,9 +928,8 @@ function applyCombat(state, a) {
     case 'recover': {
       if (c.action !== 'attack') return fail('Erholen geht nur im Angriffszug.');
       side.stats.mana = Math.min(side.stats.maxMana, side.stats.mana + 1);
-      opp.stats.mana = Math.min(opp.stats.maxMana, opp.stats.mana + 1);
       side.deck.marks = [];
-      log(state, side.name + ' erholt sich: beide Seiten +1 Mana.', side.ctrl);
+      log(state, side.name + ' erholt sich: +1 Mana.', side.ctrl);
       passAttackTurn(state); return { ok: true, combatEnd: finishStep(state) };
     }
     case 'draw': {
@@ -1859,7 +1858,7 @@ function combatCenter(cx) {
   }
   if (my && !atk && G.rules.mirrorChoice && (cx.myStats.mirror || 0) > 0) { const cap = Math.min(M.mirrorOf(cx.myStats, c.color), c.pending, M.mirrorCap(cx.myStats, M.selection(cx.mine.deck), c.color)), n = Math.min(cap, c.mr == null ? 1 : c.mr); prev += '<div class="mrsel">Spiegel ablegen: <button class="mini" data-act="mr" data-n="' + Math.max(0, n - 1) + '">−</button> <b>' + n + '</b> von ' + cap + ' <button class="mini" data-act="mr" data-n="' + Math.min(cap, n + 1) + '">+</button></div>'; }
   h += '<div class="preview">' + prev + '</div><div class="btnrow">';
-  if (atk) h += '<button class="btn primary" data-act="attack" ' + (my && canExec ? '' : 'disabled') + '>Angriff ausführen</button><button class="btn" data-act="recover" ' + (my ? '' : 'disabled') + ' title="Beide Seiten erhalten +1 Mana">Erholen</button><button class="btn" data-act="draw" ' + (my ? '' : 'disabled') + ' title="Hand tauschen, ersetzt den Angriff">Nachziehen</button><button class="btn" data-act="pass" ' + (my ? '' : 'disabled') + '>Passen</button>';
+  if (atk) h += '<button class="btn primary" data-act="attack" ' + (my && canExec ? '' : 'disabled') + '>Angriff ausführen</button><button class="btn" data-act="recover" ' + (my ? '' : 'disabled') + ' title="Nur du erhältst +1 Mana">Erholen</button><button class="btn" data-act="draw" ' + (my ? '' : 'disabled') + ' title="Hand tauschen, ersetzt den Angriff">Nachziehen</button><button class="btn" data-act="pass" ' + (my ? '' : 'disabled') + '>Passen</button>';
   else h += '<button class="btn primary" data-act="defend" ' + (my && canExec ? '' : 'disabled') + '>Verteidigung ausführen</button><button class="btn" data-act="pass" ' + (my ? '' : 'disabled') + '>Schaden nehmen</button>';
   h += '</div></div>';
   return '<div class="panel" style="' + box(LAYOUT.combat, 'padding:10px 14px') + '">' + h + '</div>';
