@@ -537,16 +537,16 @@ const CURSE_SYSTEMS = {
       return result;
     },
   },
-  // „deathcards“ (Regelstand v6): keine Schwäche. Aggro Stufe S legt eine Fluchkarte der Stufe S (C1–C3) auf den Ablagestapel der Gegenseite.
+  // „deathcards“ (Regelstand v6): keine Schwäche. Aggro Stufe S legt S Fluchkarten (C1) auf den Ablagestapel der Gegenseite.
   // Fluchkarten belegen Handplätze, kosten beim Ausspielen oder Verteidigen so viel Mana wie ihre Stufe und wirken sonst nicht. Die Aktion „Nachziehen“
   // ersetzt erst die übrigen (nicht gesperrten) Karten und wirft danach alle Fluchkarten der Hand ab. Am Kampfende verschwinden alle Fluchkarten.
   // Der Todes-Fluch (Ultimate) liegt als Marker (1 Marker = 1 HP je eigenem Angriffszug); Lifeflow kann Marker entfernen.
   deathcards: {
     id: 'deathcards', cardCurses: false, curseCards: true,
     inflict(state, victim, level) {
-      const lv = Math.max(1, Math.min(3, level));
-      victim.deck.discard.push(mkCard(state, 'C' + lv));
-      return 'Fluchkarte Stufe ' + lv + ' für ' + victim.name;
+      const n = Math.max(1, Math.min(3, level));
+      for (let i = 0; i < n; i++) victim.deck.discard.push(mkCard(state, 'C1'));
+      return n + ' Fluchkarte' + (n > 1 ? 'n' : '') + ' für ' + victim.name;
     },
     relieve() { return ''; },
     turnStart(state, pid, stats, inCombat, name) {
@@ -1829,7 +1829,7 @@ function comboText(k, lv) {
   if (!cardCurses() && k === 'ew' && G.rules.lifeflowMode === 'plain') return '+' + lv + ' HP und ' + lv * (G.rules.lifeflowDraw || 0) + ' Gratis-Nachziehen';
   if (!cardCurses() && k === 'ew' && G.rules.lifeflowMode === 'any') return (G.rules.lifeflowHealMode === 'flat' ? '+' + lv + ' HP und bis zu ' + lv + ' Marker (Spiegel oder Todesmarker) vom Brett' : '+1 HP je Marker, bis zu ' + lv + ' Marker vom Brett') + (G.rules.lifeflowDraw ? (G.rules.lifeflowDrawAll ? ', 1 Gratis-Nachziehen je entferntem Marker' : ', 1 Gratis-Nachziehen je entferntem gegnerischem Marker') : '');
   if (!cardCurses() && k === 'ew' && G.rules.lifeflowMode === 'choice') return '+' + lv + ' HP, ' + lv + ' Marker weg (eigene Fluchmarker oder Spiegel des Gegners)';
-  if (G.rules.curses === 'deathcards' && k === 'fe') return 'eine Fluchkarte der Stufe ' + lv + ' auf den Ablagestapel der Gegenseite (sie belegt dort einen Handplatz)';
+  if (G.rules.curses === 'deathcards' && k === 'fe') return lv + ' Fluchkarte' + (lv > 1 ? 'n' : '') + ' auf den Ablagestapel der Gegenseite (jede belegt dort einen Handplatz)';
   if (G.rules.curses === 'weak' && k === 'fe') return (lv + 1) + ' Schwäche-Marker für die Gegenseite nach diesem Zug (S+1, höchstens 3): doppelter Schaden, solange einer liegt';
   if (!cardCurses()) return k === 'fw' ? lv + ' Gratis-Nachziehen' : k === 'fe' ? lv + ' Fluchmarker für die Gegenseite' : '+' + lv + ' HP, ' + lv + ' Marker weniger';
   return k === 'fw' ? lv + ' Gratis-Nachziehen' : k === 'fe' ? lv + ' Fluch' + (lv > 1 ? 'e' : '') + ' für die Gegenseite' : '+' + lv + ' HP';
@@ -1913,7 +1913,7 @@ function comboRef(cx) {
   const el = e => '<span class="' + e + '">' + NAMES[e] + '</span>';
   const rows = [
     ['fw', 'Control', 'F', 'W', 'S Spiegelmarker in gewählter Farbe: Verteidigung gegen diese Angriffsfarbe gratis, je Marker 1 Schaden zurück (höchstens so viel, wie deine Karten dieser Farbe mit deinem Magielevel blocken), Marker verbraucht.'],
-    ['fe', 'Aggro', 'F', 'E', (G.rules.curses === 'deathcards' ? 'Eine Fluchkarte der Stufe S auf den Ablagestapel des Gegners: belegt einen Handplatz, kostet beim Ausspielen S Mana. „Nachziehen“ wirft sie ab.' : 'Nach dem Zug S+1 Schwäche-Marker: Gegner erleidet doppelten Schaden; −1 nach jedem seiner Angriffszüge.')],
+    ['fe', 'Aggro', 'F', 'E', (G.rules.curses === 'deathcards' ? 'S Fluchkarten auf den Ablagestapel des Gegners: jede belegt einen Handplatz und kostet beim Ausspielen 1 Mana. „Nachziehen“ wirft sie ab.' : 'Nach dem Zug S+1 Schwäche-Marker: Gegner erleidet doppelten Schaden; −1 nach jedem seiner Angriffszüge.')],
     ['ew', 'Lifeflow', 'E', 'W', (G.rules.lifeflowMode === 'plain' ? 'S HP heilen und S Gratis-Nachziehen.' : (G.rules.lifeflowHealMode === 'flat' ? 'S HP heilen und bis zu S Marker (Spiegel oder Todesmarker) vom Brett nehmen (auch Todesmarker): je entferntem Marker 1 Gratis-Nachziehen.' : 'Bis zu S Marker vom Brett (eigene oder gegnerische): je Marker 1 HP und 1 Gratis-Nachziehen.'))],
   ];
   let h = '<h3 style="margin-bottom:3px" title="S = Minimum aus beiden Magiewerten und den höchsten markierten Kartenstufen (max. 3). Kombos kosten 0 Mana.">Kombo-Übersicht <span class="note" style="font-size:13px">S = Kombostufe</span></h3>';
@@ -1954,7 +1954,7 @@ function showStart() {
     '<li>Klicke Karten an, um sie zu markieren. Die erste markierte Karte bestimmt das Element deines Angriffs.</li>' +
     '<li>Rechtsklick oder das Schloss sperrt eine Karte, sie bleibt beim Nachziehen in der Hand.</li>' +
     '<li>Siegpunkte gibt es nur im Showdown. Nach dem dritten gewinnt, wer mehr hat.</li>' +
-    '<li><b>Vor und nach jedem Kampf</b> haben beide Spieler eine frisch gemischte, volle Hand. HP und Mana bleiben nach einem Monsterkampf erhalten (Spieler und Monster) und regenerieren in der Weltphase um 1 je Zug; in einen Showdown gehen beide mit vollen HP und vollem Mana. Vor jedem Abschnitt erhält jeder Spieler Upgrade-Punkte und Gold in Höhe der Abschnittsnummer (1, 2, 3). Die Beute je Monster ist 1, 2, 3 Gold. Wer einen Showdown verliert, beginnt den nächsten Abschnitt.</li><li><b>Besondere Regeln:</b> Aggro legt eine Fluchkarte der Stufe S auf den Ablagestapel des Gegners. Sie belegt einen Handplatz und kostet beim Ausspielen S Mana. Die Aktion „Nachziehen“ ersetzt zuerst die übrigen nicht gesperrten Karten und wirft danach alle Fluchkarten der Hand ab. Am Kampfende verschwinden alle Fluchkarten. Control legt S Spiegelmarker in einer gewählten Farbe (höchstens 3, neben deiner Hand): Verteidigst du gegen einen Angriff dieser Farbe in derselben Farbe, kostet das kein Mana, und du wirfst Marker als 1 Schaden je Marker zurück (höchstens so viele, wie deine Karten dieser Farbe mit deinem Magielevel blocken); sie werden verbraucht. Lifeflow heilt S HP und nimmt bis zu S Marker vom Brett (Spiegel- oder Todesmarker, eigene oder gegnerische): je entferntem Marker erhältst du 1 Gratis-Nachziehen, das du in Angriff und Verteidigung nutzen kannst. Die Ultimate (alle drei Elemente) ist ein Todes-Fluch: Der Gegner verliert Stufe-S HP zu Beginn jedes eigenen Angriffszuges bis Kampfende. Ein Upgrade-Punkt auf HP gibt +2 maximale HP. Der erste Limit-Schritt kostet 2 Upgrade-Punkte, Punkte darfst du aufsparen. Opfern, Magie kaufen und Punkte ausgeben sind Bonusaktionen in deinem Zug, jede andere Aktion beendet ihn.</li></ul>' +
+    '<li><b>Vor und nach jedem Kampf</b> haben beide Spieler eine frisch gemischte, volle Hand. HP und Mana bleiben nach einem Monsterkampf erhalten (Spieler und Monster) und regenerieren in der Weltphase um 1 je Zug; in einen Showdown gehen beide mit vollen HP und vollem Mana. Vor jedem Abschnitt erhält jeder Spieler Upgrade-Punkte und Gold in Höhe der Abschnittsnummer (1, 2, 3). Die Beute je Monster ist 1, 2, 3 Gold. Wer einen Showdown verliert, beginnt den nächsten Abschnitt.</li><li><b>Besondere Regeln:</b> Aggro legt S Fluchkarten auf den Ablagestapel des Gegners. Jede belegt einen Handplatz und kostet beim Ausspielen 1 Mana. Die Aktion „Nachziehen“ ersetzt zuerst die übrigen nicht gesperrten Karten und wirft danach alle Fluchkarten der Hand ab. Am Kampfende verschwinden alle Fluchkarten. Control legt S Spiegelmarker in einer gewählten Farbe (höchstens 3, neben deiner Hand): Verteidigst du gegen einen Angriff dieser Farbe in derselben Farbe, kostet das kein Mana, und du wirfst Marker als 1 Schaden je Marker zurück (höchstens so viele, wie deine Karten dieser Farbe mit deinem Magielevel blocken); sie werden verbraucht. Lifeflow heilt S HP und nimmt bis zu S Marker vom Brett (Spiegel- oder Todesmarker, eigene oder gegnerische): je entferntem Marker erhältst du 1 Gratis-Nachziehen, das du in Angriff und Verteidigung nutzen kannst. Die Ultimate (alle drei Elemente) ist ein Todes-Fluch: Der Gegner verliert Stufe-S HP zu Beginn jedes eigenen Angriffszuges bis Kampfende. Ein Upgrade-Punkt auf HP gibt +2 maximale HP. Der erste Limit-Schritt kostet 2 Upgrade-Punkte, Punkte darfst du aufsparen. Opfern, Magie kaufen und Punkte ausgeben sind Bonusaktionen in deinem Zug, jede andere Aktion beendet ihn.</li></ul>' +
     '<button class="btn primary" style="font-size:22px;padding:10px 28px;flex:none;align-self:center" data-act="newgame">Gegen den Computer spielen</button>' +
     '<div id="mpbox" class="mpbox" style="display:none"><b>Mehrspieler</b> <span class="note">zwei Geräte, ein Raum</span><div class="mprow"><button class="btn" data-act="mphost">Raum erstellen</button><input id="mpcode" maxlength="5" placeholder="Code" autocomplete="off" spellcheck="false"><button class="btn" data-act="mpjoin">Beitreten</button></div><div id="mpmsg" class="note"></div></div></div>';
   mpOffer();
