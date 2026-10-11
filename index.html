@@ -375,12 +375,12 @@ function magicProgress(p) { return (p.stats.mag.F - 1) + (p.stats.mag.E - 1) + (
    Die Werte sind Abstimmungsdaten (abgestimmt mit tools/sim-monster-stufen.js gegen skriptierte Spielerbauten);
    die Monster werden im Kampf vom Gegenspieler gesteuert. */
 
-// Startdeck jedes Monsters: das Startdeck mit zwei Karten des Elements auf Stufe 2.
+// Startdeck jedes Monsters: das Startdeck mit Karten des Elements auf Stufe 2 (Anzahl: ‚upgrades‘).
 // Tempel-Verbesserungen: Stufe I ‚stage1Temple‘, danach je Stufe die Liste ‚temple[stufe][element]‘.
 const MONSTER = {
   profile: { F: { primary: 'F', secondary: 'E' }, E: { primary: 'E', secondary: 'W' }, W: { primary: 'W', secondary: 'F' } },
-  stage1Temple: { F: ['hp'], E: ['hp'], W: [] },
-  temple: { 2: { F: ['hp', 'hp', 'hp', 'hp'], E: ['hp', 'hp', 'hp'], W: ['hp', 'hp'] }, 3: { F: ['hp', 'hp'], E: ['hp', 'hp'], W: ['hp', 'hp'] } },
+  stage1Temple: { F: [], E: [], W: [] },
+  temple: { 2: { F: ['hp', 'hp', 'hp'], E: ['hp', 'hp'], W: ['hp', 'hp', 'hp'] }, 3: { F: ['hp', 'hp', 'mana', 'mana', 'limit'], E: ['hp', 'hp', 'mana', 'mana', 'limit'], W: ['hp', 'hp', 'mana', 'mana', 'limit'] } },
   magic: { 2: [3, 2, 1], 3: [3, 3, 1] },                                  // Stufen von Haupt-, Neben- und drittem Element
   deck: {
     2: (P, S, T) => [P + '3', P + '2', P + '2', P + '2', S + '2', S + '2', T + '1', T + '1', P + '1'],
@@ -388,8 +388,8 @@ const MONSTER = {
   },
   // Varianten (gleich stark, gemessen): je Monster wird beim Erscheinen gewürfelt. Index 0 = Grundform.
   variants: {
-    temple1: { F: [['hp'], ['mana', 'limit'], ['limit', 'limit']], E: [['hp'], ['mana', 'limit'], ['hp', 'mana']], W: [[], ['mana', 'limit']] },
-    temple: { 2: { F: [['hp', 'hp', 'hp', 'hp'], ['hp', 'hp', 'mana', 'hp']], W: [['hp', 'hp'], ['mana', 'hp']] }, 3: { F: [['hp', 'hp'], ['hp', 'mana']] } },
+    temple1: { F: [[], ['mana']], E: [[], ['mana']], W: [[], ['mana']] },
+    temple: { 2: { F: [['hp', 'hp', 'hp'], ['hp', 'mana', 'hp']], W: [['hp', 'hp', 'hp'], ['mana', 'hp', 'hp']] }, 3: { F: [['hp', 'hp', 'mana', 'mana', 'limit'], ['hp', 'hp', 'hp', 'mana', 'limit']] } },
     swap: { F: { primary: 'F', secondary: 'W' }, E: { primary: 'E', secondary: 'F' }, W: { primary: 'W', secondary: 'E' } },   // Neben- und drittes Element getauscht
     deck: {   // Deckformen: Grundform, breit (mehr Nebenelement), spitz (stärkere Spitze, schwächere Basis)
       2: [null, (P, S, T) => [P + '3', P + '2', P + '2', S + '2', S + '2', S + '2', T + '1', T + '1', P + '1'], (P, S, T) => [P + '3', P + '3', P + '1', P + '1', S + '2', S + '2', S + '2', T + '1', T + '1']],
@@ -397,7 +397,7 @@ const MONSTER = {
     },
     deckNames: ['', 'breit', 'spitz'],
   },
-  upgrades: { F: 2, E: 2, W: 2 },   // Karten des Startdecks, die auf Stufe 2 gehoben werden (nur Abschnitt I)
+  upgrades: { F: 2, E: 0, W: 1 },   // Karten des Startdecks, die auf Stufe 2 gehoben werden (nur Abschnitt I)
   gold: { 1: 1, 2: 2, 3: 3 },                                              // Beute
   names: { F: 'Feuermonster', E: 'Erdmonster', W: 'Wassermonster' },
 };
