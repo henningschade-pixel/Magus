@@ -768,7 +768,7 @@ function endCombat(state, end) {
     } else if (end.winner === 'b') {   // Niederlage gegen das Monster: der andere Spieler (Monsterführer) nimmt die Beute des Monsters
       const loot = Math.max(0, m.stats.gold); m.stats.gold = 0; B.stats.gold += loot; res.loot = loot; res.stolenBy = c.def;
       log(state, m.name + ' gewinnt den Kampf. ' + B.name + ' nimmt die Beute (' + loot + ' Gold).', c.def);
-      m.stats.hp = 0;   // das Monster zieht mit der Beute ab und verschwindet vom Brett
+      m.stats.hp = 0; m.won = true;   // das Monster zieht mit der Beute ab und verschwindet vom Brett
     }
     else log(state, end.reason === 'exhaustion' ? 'Beide Seiten sind erschöpft. Kein Sieger, keine Beute.' : 'Beide Seiten fallen. Kein Sieger, keine Beute.');
   } else {
@@ -1838,7 +1838,7 @@ function monsterCards() {
   M.ELEMENTS.forEach((e, i) => {
     const m = G.monsters[e], alive = M.monsterAlive(m), st = m.stats;
     const curses = m.deckIds.filter(x => x[0] === 'C').length, mk = st.marks || 0;
-    const img = alive ? IMG['m_' + e.toLowerCase() + m.stage] : IMG['d_' + e.toLowerCase()];
+    const img = alive || m.won ? IMG['m_' + e.toLowerCase() + m.stage] : IMG['d_' + e.toLowerCase()];
     h += '<div class="mon ' + (alive ? '' : 'dead') + '" style="left:' + (R.left + i * R.step) + 'px;top:' + R.top + 'px;width:' + R.w + 'px;height:' + R.h + 'px;padding:10px 8px"><img class="pic" src="' + img + '" style="width:172px;height:196px">' +
       '<div class="nm ' + e + '">' + esc(m.name) + '</div>' + (alive && m.label ? '<div class="sm mlabel" title="' + esc((m.hints || []).join('\n')) + '" style="color:var(--gold);margin-top:-2px">' + esc(m.label) + '</div>' : '');
     if (alive) {
@@ -1847,7 +1847,7 @@ function monsterCards() {
         '<div class="sm"><span class="dots F">' + dots(st.mag.F) + '</span> <span class="dots E">' + dots(st.mag.E) + '</span> <span class="dots W">' + dots(st.mag.W) + '</span></div>' +
         '<div class="loot">Beute ' + st.gold + (cardCurses() ? ' · ' + curses + ' Flüche' : (mk ? ' · <span class="mk">' + marks(mk) + '</span>' : '')) + '</div>' +
         '<button class="btn small" data-act="combat" data-e="' + e + '" ' + (my && !G.camp ? '' : 'disabled') + '>Kämpfen</button>';
-    } else h += '<div class="sm" style="margin-top:12px">besiegt</div>';
+    } else h += '<div class="sm" style="margin-top:12px">' + (m.won ? 'Das Monster hat gewonnen' : 'besiegt') + '</div>';
     h += '</div>';
   });
   return h;
