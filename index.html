@@ -768,6 +768,7 @@ function endCombat(state, end) {
     } else if (end.winner === 'b') {   // Niederlage gegen das Monster: der andere Spieler (Monsterführer) nimmt die Beute des Monsters
       const loot = Math.max(0, m.stats.gold); m.stats.gold = 0; B.stats.gold += loot; res.loot = loot; res.stolenBy = c.def;
       log(state, m.name + ' gewinnt den Kampf. ' + B.name + ' nimmt die Beute (' + loot + ' Gold).', c.def);
+      m.stats.hp = 0;   // das Monster zieht mit der Beute ab und verschwindet vom Brett
     }
     else log(state, end.reason === 'exhaustion' ? 'Beide Seiten sind erschöpft. Kein Sieger, keine Beute.' : 'Beide Seiten fallen. Kein Sieger, keine Beute.');
   } else {
