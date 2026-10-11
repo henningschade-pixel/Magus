@@ -178,7 +178,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 
 .cref{padding:2px 7px;border:1px solid #44444c;border-radius:8px;margin-bottom:3px;font-size:14px;background:rgba(255,255,255,.02)}.cref.on{border-color:var(--good);background:rgba(127,208,138,.12)}.cref small{display:block;color:var(--mute);font-size:12.5px;line-height:1.15;margin-top:0}.cref .note{font-size:13px}
 /* Hinweise, Start-/Endbildschirm, Ton */
-#toast{position:absolute;left:50%;top:96px;transform:translateX(-50%);background:rgba(10,8,14,.92);border:1px solid var(--bad);border-radius:10px;padding:8px 18px;font-size:19px;z-index:200;opacity:0;pointer-events:none;transition:opacity .25s}
+#toast{position:absolute;left:50%;top:96px;transform:translateX(-50%);background:rgba(10,8,14,.92);border:1px solid var(--bad);border-radius:10px;padding:8px 18px;font-size:19px;z-index:320;opacity:0;pointer-events:none;transition:opacity .25s}
 #toast.show{opacity:1}
 .overlay{position:absolute;inset:0;z-index:300;display:flex;align-items:center;justify-content:center;background:rgba(10,7,16,.78)}
 .overlay .box{width:640px;max-height:740px;display:flex;flex-direction:column;box-sizing:border-box;background:linear-gradient(180deg,#2e2e33,#1d1d21);border:1px solid var(--gold);border-radius:16px;padding:28px 34px;text-align:center}
@@ -196,6 +196,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .mpcode{font-family:'Alegreya SC',serif;font-size:64px;letter-spacing:.2em;color:var(--gold);margin:10px 0}
 #mpchip{position:absolute;left:56px;top:16px;z-index:250;font-size:15px;color:var(--mute);background:rgba(10,8,14,.7);border:1px solid var(--line);border-radius:14px;padding:3px 12px;pointer-events:none}
 #mpchip.off{color:var(--bad);border-color:var(--bad)}
+#expbtn{position:absolute;left:12px;top:54px;width:26px;height:26px;border-radius:50%;border:1px solid var(--line);background:rgba(10,8,14,.55);color:var(--mute);font-size:14px;line-height:1;cursor:pointer;z-index:310;padding:0;opacity:.45;transition:opacity .15s}#expbtn:hover{opacity:1;border-color:var(--gold);color:var(--gold)}
 </style>
 </head>
 <body>
@@ -751,7 +752,10 @@ function endCombat(state, end) {
       res.monsterDefeated = true; res.loot = loot;
       if (state.rules.lootPot && allMonstersDead(state)) { const stake = state.rules.lootPot === 'all' ? A.stats.gold : loot; if (stake > 0) { A.stats.gold -= stake; state.pot = { owner: c.att, gold: stake }; log(state, (state.rules.lootPot === 'all' ? 'Das gesamte Gold von ' + A.name : 'Die Beute des letzten Monsters') + ' (' + stake + ' Gold) steht im Showdown auf dem Spiel.', c.att); } }   // wer das letzte Monster besiegt, kann die Beute erst nach dem Showdown einsetzen
       if (state.rules.lootShare > 0) { const sh = Math.floor(loot * state.rules.lootShare); state.players[c.def].stats.gold += sh; A.stats.gold -= sh; if (sh) log(state, B.name + ' erhält als Monsterführer ' + sh + ' Gold aus der Beute.', c.def); }
-    } else if (end.winner === 'b') log(state, m.name + ' gewinnt den Kampf. ' + A.name + ' verliert kein Gold.', c.def);
+    } else if (end.winner === 'b') {   // Niederlage gegen das Monster: der andere Spieler (Monsterführer) nimmt die Beute des Monsters
+      const loot = Math.max(0, m.stats.gold); m.stats.gold = 0; B.stats.gold += loot; res.loot = loot; res.stolenBy = c.def;
+      log(state, m.name + ' gewinnt den Kampf. ' + B.name + ' nimmt die Beute (' + loot + ' Gold).', c.def);
+    }
     else log(state, end.reason === 'exhaustion' ? 'Beide Seiten sind erschöpft. Kein Sieger, keine Beute.' : 'Beide Seiten fallen. Kein Sieger, keine Beute.');
   } else {
     if (end.winner) { const w = end.winner === 'a' ? A : B; w.sp += 2; log(state, w.name + ' gewinnt den Showdown (+2 Siegpunkte).', end.winner === 'a' ? c.att : c.def); }
@@ -1146,7 +1150,25 @@ function newGame(opts) {
   return state;
 }
 // Führt eine Aktion aus: { pid, type, ... }. Antwort { ok } oder { ok:false, error }.
+let RECSTATE = null;
+function record(state) { RECSTATE = state; if (state) state.rec = []; }
+function prim(o) { const r = {}; if (o) Object.keys(o).forEach(k => { const v = o[k]; if (v === null || typeof v === 'number' || typeof v === 'string' || typeof v === 'boolean') r[k] = v; }); return r; }
+function snapshot(state) {
+  const hand = d => d && d.hand ? d.hand.map(x => x ? x.id : null) : null;
+  const s = { phase: state.phase, stage: state.stage, showdown: state.showdown, turn: state.turn, worldTurns: state.worldTurns,
+    players: state.players.map(p => ({ name: p.name, sp: p.sp, stats: prim(p.stats), hand: hand(p.deck) })),
+    monsters: state.monsters ? Object.keys(state.monsters).map(e => ({ elem: e, stats: prim(state.monsters[e].stats) })) : null };
+  if (state.combat) { const c = state.combat; s.combat = { mode: c.mode, turn: c.turn, turns: c.turns, action: c.action, att: c.att, sides: ['a', 'b'].map(k => ({ ctrl: c.sides[k].ctrl, stats: prim(c.sides[k].stats), hand: hand(c.sides[k].deck) })) }; }
+  return s;
+}
 function apply(state, a) {
+  if (state !== RECSTATE) return applyInner(state, a);
+  const pre = snapshot(state), n0 = state.logN, who = actor(state);
+  const r = applyInner(state, a);
+  if (r.ok && !r.ticked) state.rec.push({ i: state.rec.length, actor: who, action: JSON.parse(JSON.stringify(a)), before: pre, logFrom: n0 + 1, logTo: state.logN, after: { phase: state.phase, over: state.over, winner: state.winner, sp: state.players.map(p => p.sp) } });
+  return r;
+}
+function applyInner(state, a) {
   if (state.over) return fail('Das Spiel ist beendet.');
   if (state.phase === 'combat' && combatTick(state)) return { ok: true, ticked: true };
   if (state.phase === 'world') return applyWorld(state, a);
@@ -1162,7 +1184,7 @@ function actor(state) {
 function handCounts(d) { const c = {}; d.hand.forEach(x => { if (x) c[x.id] = (c[x.id] || 0) + 1; }); return c; }
 
 return { ELEMENTS, SUPERIOR, NAMES, START_DECK, MAX_MAGIC, MAX_SLOTS, MIN_SLOTS, MAX_LIMIT, MAX_MARKS, DEFAULT_RULES, CURSE_SYSTEMS, MONSTER,
-  makeRng, parseCard, selection, newGame, apply, actor, other, regen, handCounts,
+  makeRng, parseCard, selection, newGame, apply, record, prim, actor, other, regen, handCounts,
   vendorOffers, vendorPlans, previewTemple, pointsForGold, nextLevelCost, limitStepCost, manaStepCost,
   evalAttack, evalDefense, comboLevels, campAllowed, combatTick,
   mirrorOf, mirrorCap, defaultMirrorEl, monsterAlive, allMonstersDead, magicProgress, spawnMonsters, spawnForGame, curses };
@@ -1971,6 +1993,7 @@ function newGame() {
   clearTimeout(aiTimer);
   els.forEach(r => r.el.remove()); els.clear();
   G = M.newGame({ seed: (/[?&]seed=(\d+)/.exec(location.search) || [0, (Math.random() * 2 ** 31) | 0])[1] | 0, names: ['Du', 'Computer'], ai: [false, true], rules: CURSES ? { curses: CURSES } : {} });
+  M.record(G);
   seenCombat = null; banner = null; hold = 0; started = true;
   overlay.style.display = 'none'; overlay.innerHTML = '';
   pump();
@@ -2113,6 +2136,7 @@ function mpStart(seed, first, rules) {
   ME = MP.seat; OPP = 1 - ME;
   clearTimeout(aiTimer); els.forEach(r => r.el.remove()); els.clear();
   G = M.newGame({ seed, first, names: ME === 0 ? ['Du', 'Mitspieler'] : ['Mitspieler', 'Du'], ai: [false, false], rules });
+  M.record(G);
   seenCombat = null; banner = null; hold = 0; started = true;
   overlay.style.display = 'none'; overlay.innerHTML = '';
   mpChip(); pump();
@@ -2238,6 +2262,37 @@ const sndBtn = document.createElement('button');
 sndBtn.id = 'sndbtn'; sndBtn.title = 'Ton an/aus'; sndBtn.textContent = Snd.on ? '🔊' : '🔇';
 sndBtn.addEventListener('click', e => { e.stopPropagation(); sndBtn.textContent = Snd.toggle() ? '🔊' : '🔇'; });
 stage.appendChild(sndBtn);
+/* ---------- Spiellog-Export (jederzeit, auch am Spielende) ---------- */
+function buildExport() {
+  if (!G) return null;
+  return {
+    format: 'magus-spiellog', version: 1, exportiert: new Date().toISOString(),
+    hinweis: 'actions = jede ausgeführte Aktion mit Zustand davor (before), Akteur und den zugehörigen Logzeilen (logFrom..logTo, Nummern aus log). Die KI-Spieler sind mit ai=true markiert. Mit seed + rules + first lässt sich die Partie über die Aktionsfolge nachspielen.',
+    modus: MP ? 'mehrspieler' : 'gegen-computer', mein_platz: ME,
+    seed: G.seed, rules: G.rules, first: MP ? MP.first : 0,
+    spieler: G.players.map((p, i) => ({ platz: i, name: p.name, ai: !!p.ai, siegpunkte: p.sp, endwerte: M.prim(p.stats) })),
+    beendet: !!G.over, sieger: G.winner, abschnitt: G.stage, showdowns: G.showdown,
+    actions: G.rec || [],
+    log: G.log.map(e => ({ n: e.n, pid: e.pid, text: e.txt }))
+  };
+}
+const expBtn = document.createElement('button');
+expBtn.id = 'expbtn'; expBtn.title = 'Spiellog exportieren (Alt-Klick: in die Zwischenablage)'; expBtn.textContent = '⤓';
+expBtn.addEventListener('click', async e => {
+  e.stopPropagation();
+  const d = buildExport(); if (!d) { toast('Noch keine Partie.'); return; }
+  const txt = JSON.stringify(d, null, 1);
+  const fn = 'magus-log-' + d.seed + '-' + new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '') + '.json';
+  if (e.altKey) { try { await navigator.clipboard.writeText(txt); toast('Spiellog kopiert.'); } catch (x) { toast('Kopieren nicht möglich.'); } return; }
+  let dl = null; try { dl = window.claude && window.claude.use ? await window.claude.use('downloads') : null; } catch (x) { dl = null; }
+  if (dl) { try { await dl.save({ filename: fn, data: txt }); toast('Spiellog exportiert (' + d.actions.length + ' Aktionen).'); } catch (x) { if (!x || x.code !== 'declined') toast('Export nicht möglich.'); } return; }
+  try {   // Online-Fassung (GitHub Pages): normaler Browser-Download
+    const a = document.createElement('a'), u = URL.createObjectURL(new Blob([txt], { type: 'application/json' }));
+    a.href = u; a.download = fn; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000);
+    toast('Spiellog exportiert (' + d.actions.length + ' Aktionen).');
+  } catch (x) { toast('Export nicht möglich.'); }
+});
+stage.appendChild(expBtn);
 window.__magus = { get mp() { return MP && { n: MP.log.length, started: MP.started, seat: MP.seat }; }, get state() { return G; }, act, newGame, pump };
 showStart();
 mpRestore();
