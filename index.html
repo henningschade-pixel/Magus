@@ -330,6 +330,9 @@ function drawPhase(state, d) {
     if (parseCard(c.id).curse) { c.locked = false; old.push(c); d.hand[i] = null; }
     else if (!c.locked) { d.discard.push(c); d.hand[i] = null; }
   }
+  // Fluchkarten vom Ablagestapel werden beim Nachziehen zuerst gezogen: sie wandern oben auf den Zugstapel (gezogen wird von hinten)
+  const fresh = d.discard.filter(c => parseCard(c.id).curse);
+  if (fresh.length) { d.discard = d.discard.filter(c => !parseCard(c.id).curse); d.draw.push(...fresh); }
   const replaced = d.hand.some(c => !c);
   if (replaced) fillHand(state, d);   // frisch gezogene Fluchkarten bleiben auf der Hand und belegen einen Platz
   // die alten Fluchkarten sind damit endgültig aus dem Spiel (nicht auf dem Ablagestapel)
@@ -1922,7 +1925,7 @@ function comboText(k, lv) {
   if (!cardCurses() && k === 'ew' && G.rules.lifeflowMode === 'plain') return '+' + lv + ' HP und ' + lv * (G.rules.lifeflowDraw || 0) + ' Gratis-Nachziehen';
   if (!cardCurses() && k === 'ew' && G.rules.lifeflowMode === 'any') return (G.rules.lifeflowHealMode === 'flat' ? 'Heile um ' + lv + ', entferne ' + lv + ' Marker' : 'Entferne ' + lv + ' Marker: je 1 HP') + (G.rules.lifeflowDraw ? ' und erhalte für jeden einen Nachziehtoken' : '');
   if (!cardCurses() && k === 'ew' && G.rules.lifeflowMode === 'choice') return '+' + lv + ' HP, ' + lv + ' Marker weg (eigene Fluchmarker oder Spiegel des Gegners)';
-  if (G.rules.curses === 'deathcards' && k === 'fe') return 'Lege ' + lv + (lv > 1 ? ' Flüche' : ' Fluch') + ' auf den Ablagestapel der Gegenseite; sie landen auf der Hand, sobald sie gezogen werden, und werden beim nächsten Nachziehen dauerhaft verworfen';
+  if (G.rules.curses === 'deathcards' && k === 'fe') return 'Lege ' + lv + (lv > 1 ? ' Flüche' : ' Fluch') + ' auf den Ablagestapel der Gegenseite; sie kommen beim nächsten Nachziehen des Gegners zuerst auf seine Hand und werden beim darauffolgenden Nachziehen dauerhaft vernichtet';
   if (G.rules.curses === 'weak' && k === 'fe') return (lv + 1) + ' Schwäche-Marker für die Gegenseite nach diesem Zug (S+1, höchstens 3): doppelter Schaden, solange einer liegt';
   if (!cardCurses()) return k === 'fw' ? lv + ' Gratis-Nachziehen' : k === 'fe' ? lv + ' Fluchmarker für die Gegenseite' : '+' + lv + ' HP, ' + lv + ' Marker weniger';
   return k === 'fw' ? lv + ' Gratis-Nachziehen' : k === 'fe' ? lv + ' Fluch' + (lv > 1 ? 'e' : '') + ' für die Gegenseite' : '+' + lv + ' HP';
@@ -2027,7 +2030,7 @@ function comboRef(cx) {
   const el = e => '<span class="' + e + '">' + NAMES[e] + '</span>';
   const rows = [
     ['fw', 'Control', 'F', 'W', n => 'Erzeuge ' + n + ' Spiegelmarker gegen eine Magie deiner Wahl.'],
-    ['fe', 'Aggro', 'F', 'E', n => G.rules.curses === 'deathcards' ? 'Lege ' + n + (n === 1 ? ' Fluch' : ' Flüche') + ' auf den Ablagestapel deines Gegners. Gezogen belegen sie einen Handplatz, bis du nachziehst; dann sind sie dauerhaft verworfen.' : 'Nach dem Zug ' + (n + 1) + ' Schwäche-Marker: Gegner erleidet doppelten Schaden; −1 nach jedem seiner Angriffszüge.'],
+    ['fe', 'Aggro', 'F', 'E', n => G.rules.curses === 'deathcards' ? 'Lege ' + n + (n === 1 ? ' Fluch' : ' Flüche') + ' auf den Ablagestapel deines Gegners. Beim nächsten Nachziehen kommen sie zuerst auf seine Hand und belegen Plätze, beim darauffolgenden Nachziehen sind sie dauerhaft vernichtet.' : 'Nach dem Zug ' + (n + 1) + ' Schwäche-Marker: Gegner erleidet doppelten Schaden; −1 nach jedem seiner Angriffszüge.'],
     ['ew', 'Lifeflow', 'E', 'W', n => G.rules.lifeflowMode === 'plain' ? 'Heile um ' + n + ' und erhalte ' + n + ' Nachziehtoken.' : (G.rules.lifeflowHealMode === 'flat' ? 'Heile um ' + n + ', entferne ' + n + ' Marker und erhalte für jeden einen Nachziehtoken.' : 'Entferne ' + n + ' Marker: je Marker 1 HP und 1 Nachziehtoken.')],
   ];
   let h = '<h3 style="margin-bottom:3px" title="S = Minimum aus beiden Magiewerten und den höchsten markierten Kartenstufen (max. 3). Kombos kosten 0 Mana.">Kombo-Übersicht <span class="note" style="font-size:13px">S = Kombostufe</span></h3>';
