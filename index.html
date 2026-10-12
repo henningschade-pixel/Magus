@@ -95,12 +95,35 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .up{width:24px;height:26px;padding:0;border:0;background:var(--plus) center/contain no-repeat;cursor:var(--cp);margin-left:4px;flex:none}
 .up:hover{background-image:var(--plush)}
 .up.costly{position:relative}
+.up{position:relative}
+.up.pt::before{content:"";position:absolute;inset:1px;border-radius:50%;background:radial-gradient(circle,rgba(120,230,145,.55),rgba(70,190,100,.38));box-shadow:0 0 7px rgba(95,215,120,.75);pointer-events:none}
+.up.pt:hover::before{background:radial-gradient(circle,rgba(160,248,178,.7),rgba(90,210,120,.55))}
+.up.pt.off::before{opacity:.55}
+.up.pt.costly::after{background:#7ad78d;color:#0b2a12;box-shadow:0 0 0 1px #0b2a12}
+.up.gd::before{content:"";position:absolute;inset:1px;border-radius:50%;background:radial-gradient(circle,rgba(242,205,100,.4),rgba(200,150,50,.28));box-shadow:0 0 6px rgba(232,195,90,.6);pointer-events:none}
+.up.gd:hover::before{background:radial-gradient(circle,rgba(255,225,130,.55),rgba(220,170,60,.42))}
+/* Lifeflow: Marker auf dem Brett anwählen */
+.mtok.lf{cursor:var(--cp);position:relative;padding:0;transition:transform .12s,box-shadow .12s}
+.mtok.lf:hover{transform:scale(1.1)}
+.mtok.lf::after{content:"";position:absolute;inset:-6px;border-radius:50%;border:2px dashed rgba(210,173,79,.6);pointer-events:none}
+.mtok.lf.sel{box-shadow:0 0 0 3px #f2d27a,0 0 16px 5px rgba(242,210,122,.9)}
+.mtok.lf.sel::after{border:2px solid #f2d27a}
+.lfb{position:absolute;right:-10px;top:-10px;min-width:22px;height:18px;padding:0 3px;border-radius:9px;background:#f2d27a;color:#2a1a05;font:700 12px/18px Alegreya,serif;text-align:center;font-style:normal;box-shadow:0 0 0 1px #2a1a05;z-index:3}
+.mkb{background:none;border:0;padding:0;margin:0;cursor:var(--cp);position:relative;border-radius:50%;line-height:0;display:block}
+.mkb img{display:block}
+.mkb.lf::after{content:"";position:absolute;inset:-3px;border:1.5px dashed rgba(210,173,79,.65);border-radius:50%;pointer-events:none}
+.mkb.lf:hover img{filter:brightness(1.4)}
+.mkb.lf.sel{background:radial-gradient(circle,rgba(242,210,122,.6),transparent 72%)}
+.mkb.lf.sel::after{border:2px solid #f2d27a;box-shadow:0 0 8px 2px rgba(242,210,122,.85)}
+.mkb.lf.sel img{filter:brightness(1.6) drop-shadow(0 0 3px #f2d27a)}
+.lfchips{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0}.lfchip{padding:1px 9px;border-radius:11px;background:rgba(242,210,122,.2);border:1px solid #f2d27a;color:#f2d27a;font-size:15px}
+.lfsum{margin-top:6px}.lfsum .note{font-size:15px}.lfsum b{color:#f2d27a}
 .up.costly::after{content:attr(data-c);position:absolute;right:-5px;top:-6px;min-width:15px;height:15px;border-radius:8px;background:#e8c35a;color:#2a1a05;font:700 12px/15px Alegreya,serif;text-align:center;box-shadow:0 0 0 1px #2a1a05}
 .up.off{opacity:.38;cursor:var(--cd);pointer-events:auto}
 .up.off:hover{background-image:var(--plus)}
 .up.mg{position:absolute;margin:0;z-index:2}
 .up.ph{visibility:hidden;pointer-events:none;background:none}
-.upgpts{position:absolute;display:flex;align-items:center;gap:2px;color:var(--gold);font-size:28px;pointer-events:auto;z-index:70}
+.upgpts{position:absolute;display:flex;align-items:center;gap:2px;color:var(--good);font-size:28px;pointer-events:auto;z-index:70}
 .upgpts img{width:34px;height:50px;object-fit:contain}
 
 /* Opfern: Auswahl links, Knopf rechts, zusammen so lang wie die Balken */
@@ -145,7 +168,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .hdr{display:flex;align-items:center;gap:8px;width:100%}
 .hn{white-space:nowrap}
 .hsp{margin-left:auto;font-weight:400;color:var(--mute);font-size:17px;white-space:nowrap}.hsp b{color:var(--gold)}
-.pendhdr{float:none;white-space:nowrap;font-size:17px;font-variant-numeric:tabular-nums}.pendhdr .pl{color:var(--mute)}.pendhdr .mx{color:var(--bone)}.pendhdr .mx.nw{color:var(--good)}.pendhdr .mx .w{font-weight:700;font-size:19px}
+.pendhdr{float:none;white-space:nowrap;font-size:17px;font-variant-numeric:tabular-nums;color:var(--good)}.pendhdr b{color:#a9efb8}.pendhdr .pl{color:#5fa872}.pendhdr .mx{color:var(--good)}.pendhdr .mx.nw{color:#c4f7cf;text-shadow:0 0 6px rgba(120,230,145,.6)}.pendhdr .mx .w{font-weight:700;font-size:19px}
 .temple{display:flex;align-items:center;gap:5px;flex:1;min-width:0;font-family:'Alegreya',serif;font-weight:400;font-size:14px;color:var(--mute)}
 .temple .tl{white-space:nowrap}
 .temple .bar.sb{flex:1;min-width:20px}
@@ -893,10 +916,11 @@ function execAttack(state) {
     if (k === 'ew' && state.rules.lifeflowMode === 'any') {   // S Marker beliebig vom Brett nehmen, je entferntem Marker 1 HP heilen
       const before = side.stats.hp, picks = lifeflowPicks(state, side, opp, lvl), names = { sd: 'eigene Todesmarker', od: 'Todesmarker des Gegners', sc: 'eigene Fluchmarker', oc: 'Fluchmarker des Gegners', sm: 'eigene Spiegelmarker', om: 'Spiegelmarker des Gegners' };
       const got = {}; let removed = 0;
-      for (const kk of picks) {
+      for (const pk of picks) {
+        const [kk, mel] = pk.split(':');   // Spiegelmarker können mit Farbe gewählt werden, z. B. 'om:F'
         const tgt = kk[0] === 's' ? side : opp, key = kk[1] === 'c' ? 'marks' : kk[1] === 'd' ? 'death' : 'mirror';
         if ((tgt.stats[key] || 0) <= 0) continue;
-        if (key === 'mirror') mirrorTakeAny(tgt.stats, 1); else { tgt.stats[key]--; if (key === 'death' && tgt.stats.death <= 0) delete tgt.stats.death; }
+        if (key === 'mirror') { if (mel && mirrorOf(tgt.stats, mel) > 0) mirrorTake(tgt.stats, mel, 1); else mirrorTakeAny(tgt.stats, 1); } else { tgt.stats[key]--; if (key === 'death' && tgt.stats.death <= 0) delete tgt.stats.death; }
         removed++; got[kk] = (got[kk] || 0) + 1;
       }
       const od = state.rules.lifeflowDrawAll ? removed : (got.oc || 0) + (got.om || 0), dr = od * (state.rules.lifeflowDraw || 0);   // Gratis-Nachziehen je entferntem Marker (lifeflowDrawAll) oder nur je gegnerischem
@@ -978,7 +1002,7 @@ function applyCombat(state, a) {
       if (at >= 0) c.ult.splice(at, 1); else { if (c.ult.length >= 2) return fail('Es sind höchstens zwei Kombos wählbar.'); c.ult.push(a.key); }
       return { ok: true };
     }
-    case 'lfp': { if (c.action !== 'attack') return fail('Nur im Angriffszug.'); if (state.rules.lifeflowMode !== 'any') return fail('Keine Wahl in dieser Regelvariante.'); const ok = ['sc', 'oc', 'sm', 'om', 'sd', 'od']; c.lfp = (Array.isArray(a.pick) ? a.pick : []).filter(x => ok.includes(x)).slice(0, 3); return { ok: true }; }
+    case 'lfp': { if (c.action !== 'attack') return fail('Nur im Angriffszug.'); if (state.rules.lifeflowMode !== 'any') return fail('Keine Wahl in dieser Regelvariante.'); const ok = ['sc', 'oc', 'sm', 'om', 'sd', 'od']; c.lfp = a.pick === null ? null : (Array.isArray(a.pick) ? a.pick : []).filter(x => typeof x === 'string' && ok.includes(x.split(':')[0]) && (x.indexOf(':') < 0 || ELEMENTS.includes(x.split(':')[1]))).slice(0, 3); return { ok: true }; }
     case 'mel': { if (c.action !== 'attack') return fail('Nur im Angriffszug.'); if (!mirrorOn(state)) return fail('Kein Spiegel in dieser Regelvariante.'); if (!ELEMENTS.includes(a.el)) return fail('Unbekanntes Element.'); c.mel = a.el; c.melTurn = c.turns; return { ok: true }; }
     case 'lf': { if (c.action !== 'attack') return fail('Nur im Angriffszug.'); if (state.rules.lifeflowMode !== 'choice') return fail('Keine Wahl in dieser Regelvariante.'); c.lf = a.target === 'opp' ? 'opp' : 'self'; return { ok: true }; }
     case 'mr': { if (c.action !== 'defense') return fail('Nur in der Verteidigung.'); if (!state.rules.mirrorChoice) return fail('Keine Wahl in dieser Regelvariante.'); const have = Math.min(mirrorOf(side.stats, c.color), c.pending); c.mr = Math.max(0, Math.min(have, Math.floor(+a.n) || 0)); return { ok: true }; }
@@ -1596,10 +1620,18 @@ function marks(n, cls) { let t = ''; for (let i = 0; i < M.MAX_MARKS; i++) t += 
 // Todes-Fluch (Ultimate): HP-Verlust zu Beginn jedes eigenen Angriffszuges, bis Kampfende.
 function deathBadge(s) { return s.death > 0 ? '<span class="mr" title="Todesmarker ×' + s.death + ': ' + s.death + ' HP Verlust zu Beginn jedes eigenen Angriffszuges bis Kampfende. Nur Lifeflow kann einzelne Marker entfernen.">' + '☠'.repeat(s.death) + '</span>' : ''; }
 // Spiegelmarker (Control): je Element ein Stein neben dem Handbrett, mit Zähler ab 2 Stück.
-function mirrorStack(s, x, y) {
+function mirrorStack(s, x, y, who) {
   if (G.rules.controlMode !== 'mirror' || !(s.mirror > 0)) return '';
+  const L = who ? lfCtx() : null;
   let t = '';
-  for (const e of M.ELEMENTS) { const n = (s.mirrorEl && s.mirrorEl[e]) || 0; if (n > 0) t += '<div class="mtok ' + e + '" title="Spiegel ' + M.NAMES[e] + ' ×' + n + ': Verteidigst du gegen einen ' + M.NAMES[e] + '-Angriff in dieser Farbe, kostet es kein Mana und du wirfst bis zu so viele Marker, wie Schaden eingeht, als 1 Schaden je Marker zurück. Marker werden dabei verbraucht.">' + n + '</div>'; }
+  for (const e of M.ELEMENTS) {
+    const n = (s.mirrorEl && s.mirrorEl[e]) || 0; if (n <= 0) continue;
+    const tip = 'Spiegel ' + M.NAMES[e] + ' ×' + n + ': Verteidigst du gegen einen ' + M.NAMES[e] + '-Angriff in dieser Farbe, kostet es kein Mana und du wirfst bis zu so viele Marker, wie Schaden eingeht, als 1 Schaden je Marker zurück. Marker werden dabei verbraucht.';
+    if (L) {
+      const sel = L.picks.filter(p => p === who + 'm:' + e).length;
+      t += '<button class="mtok ' + e + ' lf' + (sel ? ' sel' : '') + '" data-act="lfm" data-k="' + who + 'm" data-e="' + e + '" title="Lifeflow: Spiegelmarker ' + M.NAMES[e] + ' wählen (Klick: einen mehr, nach dem Maximum wieder alle weg). ' + sel + ' von ' + n + ' gewählt.">' + n + (sel ? '<i class="lfb">✓' + sel + '</i>' : '') + '</button>';
+    } else t += '<div class="mtok ' + e + '" title="' + tip + '">' + n + '</div>';
+  }
   return '<div class="mirstack" style="left:' + x + 'px;top:' + y + 'px">' + t + '</div>';
 }
 // (alt) Anzeige neben den Fluchmarkern, nicht mehr verwendet.
@@ -1610,9 +1642,19 @@ function mirrorBadge(s) {
   return '<span class="mk mkm" title="' + tip + '">' + marks(n, 'mir') + '</span>';
 }
 // Marker untereinander: Fluchmarker (violett), Spiegelmarker (blau), Todes-Fluch als Text.
-function markCol(s, curseTip) {
-  if (G.rules.curses === 'deathcards') return '<span class="mkcol"><span class="mk" title="Todesmarker: ' + (s.death || 0) + ' HP Verlust zu Beginn jedes eigenen Angriffszuges bis Kampfende. Nur Lifeflow kann Marker entfernen.">' + marks(s.death || 0) + '</span></span>';
-  return '<span class="mkcol"><span class="mk" title="' + curseTip + '">' + marks(s.marks || 0) + '</span>' + deathBadge(s) + '</span>';
+// Marker-Symbole (Totenköpfe/Flüche); im Lifeflow-Angriff anklickbar, gewählte leuchten
+function markIcons(n, kind, L, cls) {
+  const sel = L ? L.picks.filter(p => p === kind).length : 0; let t = '';
+  for (let i = 0; i < M.MAX_MARKS; i++) {
+    const img = '<img class="mkimg' + (cls ? ' ' + cls : '') + (i < n ? '' : ' off') + '" src="' + IMG.curse + '">';
+    t += L && i < n ? '<button class="mkb lf' + (i < sel ? ' sel' : '') + '" data-act="lfm" data-k="' + kind[0] + kind[1] + '" data-i="' + i + '" title="Lifeflow: diesen Marker wählen oder abwählen">' + img + '</button>' : img;
+  }
+  return t;
+}
+function markCol(s, curseTip, who) {
+  const L = who ? lfCtx() : null;
+  if (G.rules.curses === 'deathcards') return '<span class="mkcol"><span class="mk" title="Todesmarker: ' + (s.death || 0) + ' HP Verlust zu Beginn jedes eigenen Angriffszuges bis Kampfende. Nur Lifeflow kann Marker entfernen.">' + (who ? markIcons(s.death || 0, who + 'd', L) : marks(s.death || 0)) + '</span></span>';
+  return '<span class="mkcol"><span class="mk" title="' + curseTip + '">' + (who ? markIcons(s.marks || 0, who + 'c', L) : marks(s.marks || 0)) + '</span>' + deathBadge(s) + '</span>';
 }
 function myTurn() { return !G.over && M.actor(G) === ME; }
 /* ---------- Sound ---------- */
@@ -1717,12 +1759,12 @@ function renderCards() {
   const pnd = G.players[ME].stats.pending;
   if (!cx.combat && pnd > 0 && G.players[ME].slots < M.MAX_SLOTS) {
     const canSlot = myTurn();
-    ph += '<div class="upgpts" style="left:' + (slotX(n - 1, n, L_MY) + CW * L_MY.s + 10) + 'px;top:' + (L_MY.y + 70) + 'px">' + (canSlot ? '<button class="up" style="width:34px;height:38px;margin:0" data-act="spend" data-w="slot" title="+1 Handplatz (1 Upgrade-Punkt)"></button>' : '') + '</div>';
+    ph += '<div class="upgpts" style="left:' + (slotX(n - 1, n, L_MY) + CW * L_MY.s + 10) + 'px;top:' + (L_MY.y + 70) + 'px">' + (canSlot ? '<button class="up pt" style="width:34px;height:38px;margin:0" data-act="spend" data-w="slot" title="+1 Handplatz (1 Upgrade-Punkt)"></button>' : '') + '</div>';
   }
   if (cx.combat) {
-    ph += mirrorStack(cx.myStats, slotX(n - 1, n, L_MY) + CW * L_MY.s + 10, L_MY.y + 20);
+    ph += mirrorStack(cx.myStats, slotX(n - 1, n, L_MY) + CW * L_MY.s + 10, L_MY.y + 20, 's');
     const no = cx.oppDeck.hand.length;
-    ph += mirrorStack(cx.oppStats, slotX(no - 1, no, L_OP) + CW * L_OP.s + 10, L_OP.y + 6);
+    ph += mirrorStack(cx.oppStats, slotX(no - 1, no, L_OP) + CW * L_OP.s + 10, L_OP.y + 6, 'o');
   }
   layerPh.innerHTML = ph;
 }
@@ -1747,12 +1789,13 @@ function boardHTML(mag, size) {
 function statsBlock(name, s, p, size, up, full) {
   const img = k => '<img src="' + IMG[k] + '">', compact = !full;
   const mkT = G.rules.curses === 'weak' ? 'Schwäche: solange ein Marker liegt, erleidest du doppelten Schaden. Nach jedem eigenen Angriffszug fällt ein Marker weg, am Kampfende alle. Lifeflow nimmt Marker herunter.' : 'Zu Beginn deines Zuges wird ein Fluchmarker gegen 1 HP getauscht. Lifeflow nimmt Marker herunter.';
-  const mk = !cardCurses() ? markCol(s, mkT) : '', mr = '';
+  const lfc = lfCtx(), who = lfc ? (s === lfc.cx.myStats ? 's' : s === lfc.cx.oppStats ? 'o' : null) : null;
+  const mk = !cardCurses() ? markCol(s, mkT, who) : '', mr = '';
   const my = myTurn(), anyT = my, pend = up ? s.pending : 0, lc = up ? M.limitStepCost(G, s) : 1, mc = up ? M.manaStepCost(G, s) : 1;
-  const pl = (ok, w, title, attr) => ok ? '<button class="up" data-act="' + (attr || 'spend') + '" ' + (attr ? 'data-e' : 'data-w') + '="' + w + '" title="' + title + '"></button>' : '';
+  const pl = (ok, w, title, attr) => ok ? '<button class="up pt" data-act="' + (attr || 'spend') + '" ' + (attr ? 'data-e' : 'data-w') + '="' + w + '" title="' + title + '"></button>' : '';
   const hpPl = pl(up && anyT && pend > 0, 'hp', '+' + (G.rules.hpPerPoint || 1) + ' max. HP (1 Upgrade-Punkt)');
   // Schritte, die mehr als 1 Upgrade-Punkt kosten, bleiben sichtbar (abgedunkelt, solange die Punkte fehlen) und tragen eine Kostenzahl.
-  const plc = (show, afford, w, label, c) => !show ? '' : '<button class="up' + (c > 1 ? ' costly' : '') + (afford ? '' : ' off') + '" data-act="spend" data-w="' + w + '"' + (c > 1 ? ' data-c="' + c + '"' : '') + (afford ? '' : ' disabled') + ' title="' + label + ' (' + c + ' Upgrade-Punkt' + (c > 1 ? 'e' : '') + (afford ? '' : ', dir fehlen Punkte') + ')"></button>';
+  const plc = (show, afford, w, label, c) => !show ? '' : '<button class="up pt' + (c > 1 ? ' costly' : '') + (afford ? '' : ' off') + '" data-act="spend" data-w="' + w + '"' + (c > 1 ? ' data-c="' + c + '"' : '') + (afford ? '' : ' disabled') + ' title="' + label + ' (' + c + ' Upgrade-Punkt' + (c > 1 ? 'e' : '') + (afford ? '' : ', dir fehlen Punkte') + ')"></button>';
   const manaPl = mc > 1 ? plc(up && anyT, pend >= mc, 'mana', '+1 max. Mana', mc) : pl(up && anyT && pend > 0, 'mana', '+1 max. Mana (1 Upgrade-Punkt)');
   const limPl = lc > 1 ? plc(up && anyT && s.limit < M.MAX_LIMIT, pend >= lc, 'limit', '+1 Ausspiellimit', lc) : pl(up && anyT && pend >= lc && s.limit < M.MAX_LIMIT, 'limit', '+1 Ausspiellimit (1 Upgrade-Punkt)');
   const slotPl = pl(up && anyT && pend > 0 && p.slots < M.MAX_SLOTS, 'slot', '+1 Handplatz (1 Upgrade-Punkt)');
@@ -1796,7 +1839,7 @@ function statsBlock(name, s, p, size, up, full) {
       const lv = s.mag[e], mc = M.magicCost(G, lv); if (lv >= M.MAX_MAGIC || s.gold < mc) continue;
       const ang = dir[e] * Math.PI / 180, r = bsz * 0.507;
       const x = bsz / 2 + Math.cos(ang) * r - d / 2, y = bsz / 2 + Math.sin(ang) * r - d / 2;
-      btn += '<button class="up mg" style="left:' + x.toFixed(1) + 'px;top:' + y.toFixed(1) + 'px;width:' + d + 'px;height:' + d + 'px" data-act="magic" data-e="' + e + '" title="' + NAMES[e] + ' Stufe ' + (lv + 1) + ' kaufen (' + mc + ' Gold)"></button>';
+      btn += '<button class="up mg gd" style="left:' + x.toFixed(1) + 'px;top:' + y.toFixed(1) + 'px;width:' + d + 'px;height:' + d + 'px" data-act="magic" data-e="' + e + '" title="' + NAMES[e] + ' Stufe ' + (lv + 1) + ' kaufen (' + mc + ' Gold)"></button>';
     }
     bd = bd.replace(/<\/div>$/, btn + '</div>');
   }
@@ -1893,10 +1936,31 @@ function lfPicks(cx, lvl) {
   while (out.length < lvl && om-- > 0) out.push('om');
   return out;
 }
-function lfAnyRow(cx, lvl) {
-  const picks = lfPicks(cx, lvl), th = cx.theirs.stats, my = cx.myStats;
-  const kinds = [['sc', 'eigene Flüche', my.marks || 0], ['om', 'Spiegel Gegner', th.mirror || 0], ['oc', 'Flüche Gegner', th.marks || 0], ['sm', 'eigener Spiegel', my.mirror || 0], ['sd', 'eigene Todesmarker', my.death || 0], ['od', 'Todesmarker Gegner', th.death || 0]].filter(k => k[2] > 0);
-  return '<div class="lfsel">' + kinds.map(k => { const n = picks.filter(x => x === k[0]).length; return '<button class="mini' + (n ? ' on' : '') + '" data-act="lfk" data-k="' + k[0] + '" data-l="' + lvl + '"' + (k[2] ? '' : ' disabled') + ' title="Klick: einen Marker mehr wegnehmen, nach dem Maximum wieder auf 0">' + k[1] + ' ' + n + '/' + k[2] + '</button>'; }).join('') + '</div>';
+// Lifeflow: Marker direkt auf dem Brett anklicken. lfCtx liefert die Wahl, solange ich einen Lifeflow-Angriff vorbereite.
+function lfCtx() {
+  if (!G || G.phase !== 'combat' || G.rules.lifeflowMode !== 'any' || cardCurses() || !myTurn()) return null;
+  const cx = ctx(), c = cx.c; if (c.action !== 'attack') return null;
+  const ev = M.evalAttack(cx.myStats, M.selection(cx.mine.deck));
+  if (!ev.valid || !(ev.levels.ew > 0) || (ev.levels.ulti > 0 && G.rules.ultiMode === 'death')) return null;
+  return { cx, c, lvl: ev.levels.ew, picks: lfExpand(lfPicks(cx, ev.levels.ew), cx) };
+}
+// Spiegelmarker einer Wahl auf konkrete Farben abbilden (in der Reihenfolge, in der die Engine sie wegnimmt)
+function lfExpand(picks, cx) {
+  const out = [], left = { s: Object.assign({ F: 0, E: 0, W: 0 }, cx.myStats.mirrorEl || {}), o: Object.assign({ F: 0, E: 0, W: 0 }, cx.oppStats.mirrorEl || {}) };
+  picks.forEach(p => { const [k, e] = p.split(':'); if (e && (k === 'sm' || k === 'om')) left[k[0]][e]--; });
+  picks.forEach(p => { const [k, e] = p.split(':'); if ((k === 'sm' || k === 'om') && !e) { const el = M.ELEMENTS.find(x => left[k[0]][x] > 0); if (el) { left[k[0]][el]--; out.push(k + ':' + el); } } else out.push(p); });
+  return out;
+}
+function lfHave(cx, k, e) {
+  const w = k[0] === 's' ? cx.myStats : cx.oppStats, t = k[1];
+  return t === 'c' ? (w.marks || 0) : t === 'd' ? (w.death || 0) : (e ? M.mirrorOf(w, e) : (w.mirror || 0));
+}
+function lfSummary(cx, lvl) {
+  const L = lfCtx(), picks = L ? L.picks : lfExpand(lfPicks(cx, lvl), cx), cnt = {};
+  picks.forEach(p => { cnt[p] = (cnt[p] || 0) + 1; });
+  const nm = { sd: 'eigener Todesmarker', od: 'Todesmarker des Gegners', sc: 'eigener Fluch', oc: 'Fluch des Gegners', sm: 'eigener Spiegel', om: 'Spiegel des Gegners' };
+  const chips = Object.keys(cnt).map(p => { const [k, e] = p.split(':'); return '<span class="lfchip">' + nm[k] + (e ? ' ' + NAMES[e] : '') + (cnt[p] > 1 ? ' ×' + cnt[p] : '') + '</span>'; }).join('');
+  return '<div class="lfsum"><div class="note">Klicke die Marker auf dem Brett (Totenköpfe und Spiegelsteine). Gewählt: <b>' + picks.length + '/' + lvl + '</b></div><div class="lfchips">' + (chips || '<span class="note">kein Marker gewählt (nur Heilung)</span>') + '</div><button class="mini" data-act="lfauto" title="Wieder die automatische Auswahl verwenden">Automatisch</button></div>';
 }
 function comboPanel(cx) {
   const c = cx.c, my = myTurn() && c.action === 'attack';
@@ -1912,7 +1976,7 @@ function comboPanel(cx) {
     defs.forEach(d => {
       const dth = lv.ulti && G.rules.ultiMode === 'death', l = dth ? 0 : lv.ulti ? lv.ulti : lv[d[0]], on = l > 0 && (!lv.ulti || c.ult.includes(d[0]));
       h += '<div class="combo ' + (on ? 'on' : '') + '"><div>' + d[1] + '<small>' + d[2] + ' · ' + comboText(d[0], l) + '</small></div>' +
-        (d[0] === 'ew' && G.rules.lifeflowMode === 'any' && l > 0 ? lfAnyRow(cx, l) : '') +
+        
         (d[0] === 'ew' && G.rules.lifeflowMode === 'choice' && l > 0 ? '<div class="lfsel"><button class="mini' + (c.lf === 'opp' ? '' : ' on') + '" data-act="lf" data-t="self" title="Eigene Fluchmarker herunternehmen">von dir</button><button class="mini' + (c.lf === 'opp' ? ' on' : '') + '" data-act="lf" data-t="opp" title="Spiegelmarker des Gegners wegnehmen">vom Gegner</button></div>' : '') +
         (lv.ulti && !dth ? '<input type="checkbox" data-act="ult" data-k="' + d[0] + '" ' + (c.ult.includes(d[0]) ? 'checked' : '') + '>' : '') + '</div>';
     });
@@ -1937,7 +2001,7 @@ function combatCenter(cx) {
         prev = 'Schaden <b>' + (ev.prim ? ev.damage : 0) + '</b>' + (ev.prim ? ' <span class="' + ev.prim + '">' + NAMES[ev.prim] + '</span>' : '') + ' · Mana <b>' + ev.cost + '</b> von ' + cx.myStats.mana;
         const pick2 = ev.levels.ulti > 0 && !(G.rules.ultiMode === 'death');
         canExec = ev.valid && ev.affordable && !(pick2 && c.ult.length !== 2);
-        if (G.rules.lifeflowMode === 'any' && !cardCurses() && ev.valid && ev.levels.ew > 0 && !(ev.levels.ulti > 0 && G.rules.ultiMode === 'death')) prev += '<div class="note" style="margin-top:4px">Lifeflow: Marker wählen (je 1 HP)</div>' + lfAnyRow(cx, ev.levels.ew);
+        if (G.rules.lifeflowMode === 'any' && !cardCurses() && ev.valid && ev.levels.ew > 0 && !(ev.levels.ulti > 0 && G.rules.ultiMode === 'death')) prev += lfSummary(cx, ev.levels.ew);
         if (G.rules.controlMode === 'mirror' && ev.valid && ev.levels.fw > 0 && !(ev.levels.ulti > 0 && G.rules.ultiMode === 'death')) { const cur = (c.mel && c.melTurn === c.turns && c.mel) || M.defaultMirrorEl(cx.theirs); prev += '<div class="mrsel">Spiegel gegen: ' + M.ELEMENTS.map(e => '<button class="mini ' + e + (e === cur ? ' on' : '') + '" data-act="mel" data-e="' + e + '">' + M.NAMES[e] + '</button>').join(' ') + '</div>'; }
         if (!ev.affordable) prev += '<div class="bad">Zu wenig Mana.</div>'; else if (pick2 && c.ult.length !== 2) prev += '<div class="bad">Wähle zwei Kombos links.</div>';
       }
@@ -2282,16 +2346,16 @@ function onAct(d) {
     case 'ult': act({ type: 'ult', key: d.k }); break;
     case 'mr': act({ type: 'mr', n: +d.n }); break;
     case 'mel': act({ type: 'mel', el: d.e }); break;
-    case 'lfk': {
-      const cx = ctx(), lvl = +d.l, picks = lfPicks(cx, lvl), k = d.k, have = { sc: cx.myStats.marks || 0, sm: cx.myStats.mirror || 0, oc: cx.theirs.stats.marks || 0, om: cx.theirs.stats.mirror || 0 }[k];
-      const n = picks.filter(x => x === k).length, others = picks.filter(x => x !== k);
-      let m = n + 1 <= have ? n + 1 : 0;
-      if (n === 0 && m === 1) while (others.length + m > lvl) others.shift();   // voll: ältere Wahl weicht
-      else if (others.length + m > lvl) m = 0;
-      const next = others.slice();
-      for (let i = 0; i < m; i++) next.push(k);
-      act({ type: 'lfp', pick: next }); break;
+    case 'lfm': {
+      const L = lfCtx(); if (!L) break;
+      const k = d.k, e = d.e || '', key = e ? k + ':' + e : k, have = lfHave(L.cx, k, e), n = L.picks.filter(x => x === key).length;
+      let m = e ? (n + 1 <= Math.min(have, L.lvl) ? n + 1 : 0) : (n > +d.i ? +d.i : +d.i + 1);   // Spiegelstein: einen mehr, nach dem Maximum alle weg; Totenkopf: bis hierhin wählen oder ab hier abwählen
+      m = Math.min(m, have, L.lvl);
+      const others = L.picks.filter(x => x !== key);
+      while (others.length + m > L.lvl && others.length) others.shift();   // voll: die älteste andere Wahl weicht
+      act({ type: 'lfp', pick: others.concat(Array(m).fill(key)) }); break;
     }
+    case 'lfauto': act({ type: 'lfp', pick: null }); break;
     case 'lf': act({ type: 'lf', target: d.t }); break;
   }
 }
