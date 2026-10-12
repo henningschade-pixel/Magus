@@ -773,7 +773,8 @@ function endCombat(state, end) {
     }
     else log(state, end.reason === 'exhaustion' ? 'Beide Seiten sind erschöpft. Kein Sieger, keine Beute.' : 'Beide Seiten fallen. Kein Sieger, keine Beute.');
   } else {
-    if (end.winner) { const w = end.winner === 'a' ? A : B; w.sp += 2; log(state, w.name + ' gewinnt den Showdown (+2 Siegpunkte).', end.winner === 'a' ? c.att : c.def); }
+    if (end.winner) { const w = end.winner === 'a' ? A : B; w.sp += 2; log(state, w.name + ' gewinnt den Showdown (+2 Siegpunkte).', end.winner === 'a' ? c.att : c.def);
+      const L = w === A ? B : A; if (state.rules.loserUp > 0 && state.showdown < 2) { L.stats.pending += state.rules.loserUp; log(state, L.name + ' erhält als Trostpreis ' + state.rules.loserUp + ' Upgrade-Punkt' + (state.rules.loserUp > 1 ? 'e' : '') + '.', w === A ? c.def : c.att); } }
     else { A.sp += 1; B.sp += 1; log(state, 'Showdown ohne Sieger: je 1 Siegpunkt.'); }
     if (state.pot) {   // Einsatz: der Sieger erhält die Beute, bei Remis wird geteilt (Rest an den Besitzer)
       const pot = state.pot, ow = state.players[pot.owner], ot = state.players[other(pot.owner)];
@@ -1138,7 +1139,7 @@ function applyWorld(state, a) {
 // lifeflowMode 'any': S Marker beliebig vom Brett (eigene/gegnerische Fluch- und Spiegelmarker), je entferntem Marker 1 HP ('removed', Variante 'flat' = S HP).
 // lifeflowMode: 'classic' (S HP heilen und S eigene Fluchmarker herunternehmen) oder 'choice' (S HP heilen und S Marker wegnehmen: eigene Fluchmarker oder die Spiegelmarker des Gegners).
 // firstPlayerGold: zusätzliches Startgold für den Beginnenden (Ausgleich zum Vorteil des zweiten Spielers).
-const DEFAULT_RULES = { curses: 'deathcards', ultiMode: 'death', limitFirstStepCost: 2, secondPlayerPending: 0, campActions: 0, showdownAttacker: 'behind', firstPlayerGold: 0, controlMode: 'mirror', mirrorDecay: 0, mirrorTrigger: 'same', mirrorFree: true, mirrorMult: 1, mirrorStep: 1, mirrorChoice: true, mirrorMana: 0, mirrorHeal: 0, hpPerPoint: 2, lifeflowMode: 'any', lifeflowDrawAll: true, lifeflowHealMode: 'flat', lifeflowHeal: 1, lifeflowMana: false, monsterVariants: true, monstersPerStage: 3, fightReset: true, fightCarry: true, stagePoints: [0, 1, 2, 3], stageGold: [0, 1, 2, 3], startGold: 1, secondPlayerGold: 0, loserStarts: true, freshHands: false, showdownRestore: false, lootShare: 0, lootPot: false, lifeflowDraw: 1 };
+const DEFAULT_RULES = { curses: 'deathcards', ultiMode: 'death', limitFirstStepCost: 2, secondPlayerPending: 0, campActions: 0, showdownAttacker: 'behind', firstPlayerGold: 0, controlMode: 'mirror', mirrorDecay: 0, mirrorTrigger: 'same', mirrorFree: true, mirrorMult: 1, mirrorStep: 1, mirrorChoice: true, mirrorMana: 0, mirrorHeal: 0, hpPerPoint: 2, lifeflowMode: 'any', lifeflowDrawAll: true, lifeflowHealMode: 'flat', lifeflowHeal: 1, lifeflowMana: false, monsterVariants: true, monstersPerStage: 3, fightReset: true, fightCarry: true, stagePoints: [0, 1, 2, 3], stageGold: [0, 1, 2, 3], startGold: 1, secondPlayerGold: 0, loserStarts: true, loserUp: 1, freshHands: false, showdownRestore: false, lootShare: 0, lootPot: false, lifeflowDraw: 1 };
 
 function newPlayer(state, name, ai) {
   const p = { name, ai: !!ai, stats: newStats(), temple: { points: 0, level: 0 }, sp: 0, slots: MIN_SLOTS };
