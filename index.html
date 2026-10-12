@@ -673,13 +673,14 @@ function evalAttack(stats, cards) {
   if (stats.noCombo) for (const k of stats.noCombo) levels[k] = 0; // nur für Simulationen
   return { valid: true, prim, cost, damage, levels, curses: curses.length, affordable: stats.mana >= cost };
 }
-function evalDefense(stats, cards, color) {
+// mr: gewählte Zahl der Spiegelmarker (0 = Spiegel wird nicht eingesetzt, dann kostet die Verteidigung normal; ohne Angabe wird der Spiegel eingesetzt).
+function evalDefense(stats, cards, color, mr) {
   if (!cards.length) return { valid: true, cost: 0, block: 0, empty: true };
   const curses = cards.filter(c => c.curse), normals = cards.filter(c => !c.curse);
   const el = normals.length ? normals[0].el : null;
   if (normals.some(c => c.el !== el)) return { valid: false, reason: 'Alle Karten der Verteidigung müssen dasselbe Element haben.' };
   if (el && el !== color && el !== SUPERIOR[color]) return { valid: false, reason: NAMES[el] + ' kann nicht gegen ' + NAMES[color] + ' verteidigen.' };
-  const free = stats.mirrorFree && mirrorOf(stats, color) > 0;   // Spiegel mit Rabatt: Verteidigung in der Farbe des Angriffs kostet kein Mana
+  const free = stats.mirrorFree && mirrorOf(stats, color) > 0 && mr !== 0;   // Spiegel mit Rabatt: Verteidigung in der Farbe des Angriffs kostet kein Mana, aber nur, wenn der Spiegel auch eingesetzt wird
   const cost = curses.reduce((n, c) => n + c.tier, 0) + (el === color && !free ? normals.length : 0);
   let block = 0; normals.forEach(c => { block += Math.min(c.tier, stats.mag[el]); });
   return { valid: true, el, cost, block, affordable: stats.mana >= cost };
@@ -931,7 +932,7 @@ function execDefense(state, passOnly) {
   let block = 0, cost = 0, sel = [];
   if (!passOnly) {
     sel = selection(d);
-    const ev = evalDefense(side.stats, sel, c.color);
+    const ev = evalDefense(side.stats, sel, c.color, c.mr);
     if (!ev.valid) return fail(ev.reason);
     if (ev.affordable === false) return fail('Zu wenig Mana (' + ev.cost + ' nötig).');
     block = ev.block || 0; cost = ev.cost || 0;
@@ -1487,7 +1488,12 @@ function combatPlan(state, pid) {
   }
   if (!best.ord.length) return [A({ type: 'pass' })];
   const acts = best.ord.map(h => A({ type: 'mark', slot: h.slot }));
-  if (state.rules.mirrorChoice && M.mirrorOf(s, color) > 0) acts.push(A({ type: 'mr', n: mirrorPick(state, side, c, best.ord) }));
+  if (state.rules.mirrorChoice && M.mirrorOf(s, color) > 0) {
+    let n = mirrorPick(state, side, c, best.ord);
+    const cap = Math.min(M.mirrorOf(s, color), c.pending, M.mirrorCap(s, best.ord, color));
+    if (n === 0 && cap > 0 && (M.evalDefense(s, best.ord, color, 0).cost || 0) > 0) n = 1;   // ohne eingesetzten Spiegel kostet die Verteidigung Mana
+    acts.push(A({ type: 'mr', n }));
+  }
   acts.push(A({ type: 'defend' }));
   return acts;
 }
@@ -1597,7 +1603,7 @@ function mirrorStack(s, x, y) {
 function mirrorBadge(s) {
   if (G.rules.controlMode !== 'mirror') return '';
   const n = s.mirror || 0, st = G.rules.mirrorStep || 0, mult = G.rules.mirrorMult || 1;
-  const tip = 'Spiegel: ' + n + ' Marker. Bei jeder Verteidigung' + (G.rules.mirrorTrigger === 'any' ? '' : ' in der Farbe des Angriffs') + (G.rules.mirrorFree ? ' (Angriffsfarbe ohne Mana)' : '') + ' legst du ' + (G.rules.mirrorChoice ? 'höchstens so viele Marker wie Schaden eingeht' : (st > 0 ? st + ' Marker' : 'alle Marker')) + ' ab: je ' + mult + ' Schaden je Marker auf den Angreifer' + (G.rules.mirrorHeal ? ', du heilst ' + G.rules.mirrorHeal + ' HP je Marker' : '') + (G.rules.mirrorMana ? ', +' + G.rules.mirrorMana + ' Mana je Marker für dich' : '') + (G.rules.mirrorDecay > 0 ? '. Ein Marker zerfällt je eigenem Zug.' : '.');
+  const tip = 'Spiegel: ' + n + ' Marker. Bei jeder Verteidigung' + (G.rules.mirrorTrigger === 'any' ? '' : ' in der Farbe des Angriffs') + (G.rules.mirrorFree ? ' (Angriffsfarbe ohne Mana, solange du den Spiegel ablegst)' : '') + ' legst du ' + (G.rules.mirrorChoice ? 'höchstens so viele Marker wie Schaden eingeht' : (st > 0 ? st + ' Marker' : 'alle Marker')) + ' ab: je ' + mult + ' Schaden je Marker auf den Angreifer' + (G.rules.mirrorHeal ? ', du heilst ' + G.rules.mirrorHeal + ' HP je Marker' : '') + (G.rules.mirrorMana ? ', +' + G.rules.mirrorMana + ' Mana je Marker für dich' : '') + (G.rules.mirrorDecay > 0 ? '. Ein Marker zerfällt je eigenem Zug.' : '.');
   return '<span class="mk mkm" title="' + tip + '">' + marks(n, 'mir') + '</span>';
 }
 // Marker untereinander: Fluchmarker (violett), Spiegelmarker (blau), Todes-Fluch als Text.
@@ -1933,7 +1939,7 @@ function combatCenter(cx) {
         if (!ev.affordable) prev += '<div class="bad">Zu wenig Mana.</div>'; else if (pick2 && c.ult.length !== 2) prev += '<div class="bad">Wähle zwei Kombos links.</div>';
       }
     } else {
-      const ev = M.evalDefense(cx.myStats, sel, c.color);
+      const ev = M.evalDefense(cx.myStats, sel, c.color, c.mr);
       if (!sel.length) prev = '<span class="note">Markiere Karten im Element des Angriffs oder im überlegenen Element, oder nimm den Schaden.</span>';
       else if (!ev.valid) prev = '<span class="bad">' + esc(ev.reason) + '</span>';
       else { prev = 'Block <b>' + ev.block + '</b> · Mana <b>' + ev.cost + '</b> von ' + cx.myStats.mana + ' · Schaden danach <b>' + Math.max(0, c.pending - ev.block) + '</b>'; canExec = ev.affordable; if (!ev.affordable) prev += '<div class="bad">Zu wenig Mana.</div>'; }
