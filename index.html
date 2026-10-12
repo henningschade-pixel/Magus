@@ -546,7 +546,7 @@ const CURSE_SYSTEMS = {
     },
   },
   // „weak“ (Regelstand v5): Fluchmarker sind Schwäche. Wer mindestens 1 Marker trägt, erleidet doppelten Schaden (der Rückwurf des Spiegels bleibt einfach).
-  // Am Ende des eigenen Angriffszuges des Betroffenen fällt ein Marker weg. Marker gelten nur bis Kampfende. Todes-Fluch (Ultimate): stats.death HP pro eigenem Angriffszug.
+  // Am Ende des eigenen Angriffszuges des Betroffenen fällt ein Marker weg. Marker gelten nur bis Kampfende. Todes-Fluch (Ultimate): stats.death HP am Ende der eigenen Angriffsphase.
   weak: {
     id: 'weak', cardCurses: false, weakDouble: true, deferInflict: true, inflictBonus: 1,
     inflict(state, victim, level) {
@@ -559,12 +559,7 @@ const CURSE_SYSTEMS = {
       return ', -' + r + ' Marker';
     },
     endTurn(state, side) { if (side.stats.marks > 0) side.stats.marks--; },
-    turnStart(state, pid, stats, inCombat, name) {
-      if (!inCombat || !(stats.death > 0)) return false;
-      stats.hp = Math.max(0, stats.hp - stats.death);
-      log(state, 'Todes-Fluch: ' + name + ' verliert ' + stats.death + ' HP.', pid);
-      return true;
-    },
+    turnStart() { return false; },   // der Todes-Fluch wirkt am Ende der eigenen Angriffsphase (deathTick), nicht zu Beginn des Zuges
     worldAction() { return undefined; },
     // Erschöpfung: nur der Todes-Fluch zehrt weiter; wer zuerst auf 0 HP fällt, verliert.
     settleExhaustion(state, a, b) {
@@ -582,7 +577,7 @@ const CURSE_SYSTEMS = {
   // „deathcards“ (Regelstand v6): keine Schwäche. Aggro Stufe S legt S Fluchkarten (C1) auf den Ablagestapel der Gegenseite.
   // Fluchkarten belegen Handplätze, kosten beim Ausspielen oder Verteidigen so viel Mana wie ihre Stufe und wirken sonst nicht. Die Aktion „Nachziehen“
   // ersetzt erst die übrigen (nicht gesperrten) Karten und wirft danach alle Fluchkarten der Hand ab. Am Kampfende verschwinden alle Fluchkarten.
-  // Der Todes-Fluch (Ultimate) liegt als Marker (1 Marker = 1 HP je eigenem Angriffszug); Lifeflow kann Marker entfernen.
+  // Der Todes-Fluch (Ultimate) liegt als Marker (1 Marker = 1 HP am Ende der eigenen Angriffsphase); Lifeflow kann Marker entfernen.
   deathcards: {
     id: 'deathcards', cardCurses: false, curseCards: true,
     inflict(state, victim, level) {
@@ -591,12 +586,7 @@ const CURSE_SYSTEMS = {
       return n + ' Fluchkarte' + (n > 1 ? 'n' : '') + ' auf den Ablagestapel von ' + victim.name;
     },
     relieve() { return ''; },
-    turnStart(state, pid, stats, inCombat, name) {
-      if (!inCombat || !(stats.death > 0)) return false;
-      stats.hp = Math.max(0, stats.hp - stats.death);
-      log(state, 'Todes-Fluch: ' + name + ' verliert ' + stats.death + ' HP.', pid);
-      return true;
-    },
+    turnStart() { return false; },   // der Todes-Fluch wirkt am Ende der eigenen Angriffsphase (deathTick), nicht zu Beginn des Zuges
     worldAction() { return undefined; },
     settleExhaustion(state, a, b) { return CURSE_SYSTEMS.weak.settleExhaustion(state, a, b); },
   },
@@ -879,8 +869,17 @@ function lifeflowPicks(state, side, opp, lvl) {
 function mirrorCap(stats, sel, color) { let b = 0; sel.forEach(x => { if (!x.curse && x.el === color) b += Math.min(x.tier, stats.mag[color]); }); return b; }
 function mirrorOn(state) { return state.rules.controlMode === 'mirror'; }
 function decayMirror(state, side) { if (mirrorOn(state) && state.rules.mirrorDecay > 0 && side.stats.mirror > 0) { mirrorTakeAny(side.stats, state.rules.mirrorDecay); } }
+// Todes-Fluch: Am Ende der eigenen Angriffsphase (nach Angriff und Verteidigung der Gegenseite) verliert die Seite so viele HP, wie sie Todesmarker trägt.
+// Ist der Kampf schon entschieden (eine Seite auf 0 HP), wirkt er nicht mehr.
+function deathTick(state, side) {
+  const c = state.combat;
+  if (!(side.stats.death > 0) || c.sides.a.stats.hp <= 0 || c.sides.b.stats.hp <= 0) return;
+  side.stats.hp = Math.max(0, side.stats.hp - side.stats.death);
+  log(state, 'Todes-Fluch: ' + side.name + ' verliert ' + side.stats.death + ' HP am Ende der Angriffsphase.', side.ctrl);
+}
 function passAttackTurn(state, noDecay) {
   const c = state.combat;
+  deathTick(state, c.sides[c.turn]);
   if (!noDecay) { decayMirror(state, c.sides[c.turn]); const cs = curses(state); if (cs.endTurn) cs.endTurn(state, c.sides[c.turn]); }
   c.turn = c.turn === 'a' ? 'b' : 'a'; c.action = 'attack'; c.color = null; c.pending = 0; c.ult = []; c.lf = 'self';
 }
@@ -942,7 +941,7 @@ function execAttack(state) {
       } else texts.push('Lifeflow ' + lvl + ': +' + (side.stats.hp - before) + ' HP' + cs.relieve(state, side, lvl));
     }
   }
-  if (death) { opp.stats.death = Math.max(opp.stats.death || 0, ev.levels.ulti); texts.push('Ultimate ' + ev.levels.ulti + ': Todes-Fluch für ' + opp.name + ' (' + opp.stats.death + ' HP je Zug bis Kampfende)'); }
+  if (death) { opp.stats.death = Math.max(opp.stats.death || 0, ev.levels.ulti); texts.push('Ultimate ' + ev.levels.ulti + ': Todes-Fluch für ' + opp.name + ' (' + opp.stats.death + ' HP am Ende jeder seiner Angriffsphasen bis Kampfende)'); }
   if (cs.endTurn) cs.endTurn(state, side);
   c.ult = []; c.lf = 'self'; c.lfp = null; c.mel = null;
   const dmg = ev.prim ? ev.damage : 0;
@@ -979,8 +978,10 @@ function execDefense(state, passOnly) {
     log(state, 'Spiegel: ' + side.name + ' wirft ' + r + ' Schaden auf ' + att.name + ' zurück.', side.ctrl);
     }
   }
+  const attSide = c.sides[c.turn === 'a' ? 'b' : 'a'];   // wer gerade angegriffen hat: seine Angriffsphase endet mit dieser Verteidigung
   c.action = 'attack'; c.color = null; c.pending = 0; c.ult = []; c.mr = null;
   flushDefer(state);
+  deathTick(state, attSide);
   const res = finishStep(state);
   return { ok: true, combatEnd: res };
 }
@@ -1617,8 +1618,8 @@ function ctx() {
 }
 function cardCurses() { return M.curses(G).cardCurses; }   // Fluchsystem „Karten“ (sonst Marker)
 function marks(n, cls) { let t = ''; for (let i = 0; i < M.MAX_MARKS; i++) t += '<img class="mkimg' + (cls ? ' ' + cls : '') + (i < n ? '' : ' off') + '" src="' + IMG.curse + '">'; return t; }
-// Todes-Fluch (Ultimate): HP-Verlust zu Beginn jedes eigenen Angriffszuges, bis Kampfende.
-function deathBadge(s) { return s.death > 0 ? '<span class="mr" title="Todesmarker ×' + s.death + ': ' + s.death + ' HP Verlust zu Beginn jedes eigenen Angriffszuges bis Kampfende. Nur Lifeflow kann einzelne Marker entfernen.">' + '☠'.repeat(s.death) + '</span>' : ''; }
+// Todes-Fluch (Ultimate): HP-Verlust am Ende jeder eigenen Angriffsphase, bis Kampfende.
+function deathBadge(s) { return s.death > 0 ? '<span class="mr" title="Todesmarker ×' + s.death + ': ' + s.death + ' HP Verlust am Ende jeder eigenen Angriffsphase bis Kampfende. Nur Lifeflow kann einzelne Marker entfernen.">' + '☠'.repeat(s.death) + '</span>' : ''; }
 // Spiegelmarker (Control): je Element ein Stein neben dem Handbrett, mit Zähler ab 2 Stück.
 function mirrorStack(s, x, y, who) {
   if (G.rules.controlMode !== 'mirror' || !(s.mirror > 0)) return '';
@@ -1653,7 +1654,7 @@ function markIcons(n, kind, L, cls) {
 }
 function markCol(s, curseTip, who) {
   const L = who ? lfCtx() : null;
-  if (G.rules.curses === 'deathcards') return '<span class="mkcol"><span class="mk" title="Todesmarker: ' + (s.death || 0) + ' HP Verlust zu Beginn jedes eigenen Angriffszuges bis Kampfende. Nur Lifeflow kann Marker entfernen.">' + (who ? markIcons(s.death || 0, who + 'd', L) : marks(s.death || 0)) + '</span></span>';
+  if (G.rules.curses === 'deathcards') return '<span class="mkcol"><span class="mk" title="Todesmarker: ' + (s.death || 0) + ' HP Verlust am Ende jeder eigenen Angriffsphase bis Kampfende. Nur Lifeflow kann Marker entfernen.">' + (who ? markIcons(s.death || 0, who + 'd', L) : marks(s.death || 0)) + '</span></span>';
   return '<span class="mkcol"><span class="mk" title="' + curseTip + '">' + (who ? markIcons(s.marks || 0, who + 'c', L) : marks(s.marks || 0)) + '</span>' + deathBadge(s) + '</span>';
 }
 function myTurn() { return !G.over && M.actor(G) === ME; }
@@ -1972,7 +1973,7 @@ function comboPanel(cx) {
   } else {
     const ev = M.evalAttack(cx.myStats, M.selection(cx.mine.deck));
     const lv = ev.valid ? ev.levels : { fw: 0, fe: 0, ew: 0, ulti: 0 };
-    h += '<div class="note" style="margin-bottom:8px">' + (lv.ulti && G.rules.ultiMode === 'death' ? 'Ultimate Stufe ' + lv.ulti + ': Todes-Fluch – der Gegner verliert ' + lv.ulti + ' HP zu Beginn jedes eigenen Angriffszuges bis Kampfende (je ein Todesmarker pro HP; nur Lifeflow kann Marker entfernen). Die Einzel-Kombos entfallen.' : lv.ulti ? 'Ultimate Stufe ' + lv.ulti + ': wähle genau zwei Kombos.' : 'Markiere Karten zweier Elemente für einen Kombo.') + '</div>';
+    h += '<div class="note" style="margin-bottom:8px">' + (lv.ulti && G.rules.ultiMode === 'death' ? 'Ultimate Stufe ' + lv.ulti + ': Todes-Fluch – der Gegner verliert ' + lv.ulti + ' HP am Ende jeder eigenen Angriffsphase bis Kampfende (je ein Todesmarker pro HP; nur Lifeflow kann Marker entfernen). Die Einzel-Kombos entfallen.' : lv.ulti ? 'Ultimate Stufe ' + lv.ulti + ': wähle genau zwei Kombos.' : 'Markiere Karten zweier Elemente für einen Kombo.') + '</div>';
     defs.forEach(d => {
       const dth = lv.ulti && G.rules.ultiMode === 'death', l = dth ? 0 : lv.ulti ? lv.ulti : lv[d[0]], on = l > 0 && (!lv.ulti || c.ult.includes(d[0]));
       h += '<div class="combo ' + (on ? 'on' : '') + '"><div>' + d[1] + '<small>' + d[2] + ' · ' + comboText(d[0], l) + '</small></div>' +
@@ -2035,7 +2036,7 @@ function comboRef(cx) {
     h += '<div class="cref' + (lv[r[0]] > 0 && !(lv.ulti && def) ? ' on' : '') + '"><b>' + r[1] + '</b> ' + el(r[2]) + ' + ' + el(r[3]) + ' <span class="note">· Magie: bis S ' + maxS + (lv[r[0]] > 0 && !(lv.ulti && def) ? ' · markiert: S ' + lv[r[0]] : '') + '</span><small>' + (def ? r[4](lv[r[0]] > 0 ? lv[r[0]] : Math.max(1, maxS)) : comboText(r[0], Math.max(1, maxS))) + '</small></div>';
   });
   const uS = Math.min(3, mag.F, mag.E, mag.W);
-  h += '<div class="cref' + (lv.ulti > 0 ? ' on' : '') + '"><b>Ultimate</b> ' + el('F') + ' + ' + el('E') + ' + ' + el('W') + ' <span class="note">· Magie: bis S ' + uS + (lv.ulti > 0 ? ' · markiert: S ' + lv.ulti : '') + '</span><small>' + (def ? (u => 'Erzeuge ' + u + (u === 1 ? ' Todesfluch' : ' Todesflüche') + ' beim Gegner.')(lv.ulti > 0 ? lv.ulti : Math.max(1, uS)) : 'Alle drei Elemente markiert: zwei der drei Kombos wählen.') + '</small></div>';
+  h += '<div class="cref' + (lv.ulti > 0 ? ' on' : '') + '"><b>Ultimate</b> ' + el('F') + ' + ' + el('E') + ' + ' + el('W') + ' <span class="note">· Magie: bis S ' + uS + (lv.ulti > 0 ? ' · markiert: S ' + lv.ulti : '') + '</span><small>' + (def ? (u => 'Gib dem Gegner ' + u + (u === 1 ? ' Todesfluch' : ' Todesflüche') + ': Er verliert ' + u + ' HP am Ende seiner Angriffsphase.')(lv.ulti > 0 ? lv.ulti : Math.max(1, uS)) : 'Alle drei Elemente markiert: zwei der drei Kombos wählen.') + '</small></div>';
   return '<div class="panel" style="' + box(LAYOUT.oppInfo) + '">' + h + '</div>';
 }
 /* ---------- Gesamtdarstellung ---------- */
