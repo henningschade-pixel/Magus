@@ -851,9 +851,11 @@ function mirrorSync(stats) {
   const m = stats.mirrorEl; const t = m ? (m.F || 0) + (m.E || 0) + (m.W || 0) : 0;
   if (t > 0) stats.mirror = t; else { delete stats.mirror; delete stats.mirrorEl; delete stats.mirrorFree; }
 }
+// Ein Control der Stufe n bringt den Spiegel dieser Farbe auf n Marker (nicht obendrauf addiert); höchstens 3 Marker insgesamt über alle Farben.
 function mirrorAdd(stats, el, n) {
   stats.mirrorEl = stats.mirrorEl || { F: 0, E: 0, W: 0 };
-  const room = Math.max(0, MAX_MIRROR - (stats.mirror || 0)); stats.mirrorEl[el] += Math.min(n, room); mirrorSync(stats);
+  const cur = stats.mirrorEl[el] || 0, others = (stats.mirror || 0) - cur;
+  stats.mirrorEl[el] = Math.max(cur, Math.min(n, MAX_MIRROR - others)); mirrorSync(stats);
 }
 function mirrorTake(stats, el, n) { if (stats.mirrorEl) { stats.mirrorEl[el] = Math.max(0, stats.mirrorEl[el] - n); mirrorSync(stats); } }
 function mirrorTakeAny(stats, n) { for (const el of ELEMENTS) { while (n > 0 && mirrorOf(stats, el) > 0) { mirrorTake(stats, el, 1); n--; } } }
@@ -1921,7 +1923,7 @@ function campPanel() {
 /* ---------- Kampf ---------- */
 function comboText(k, lv) {
   if (lv <= 0) return 'kein Effekt';
-  if (k === 'fw' && G.rules.controlMode === 'mirror') return 'Erzeuge ' + lv + ' Spiegelmarker gegen eine Magie deiner Wahl';
+  if (k === 'fw' && G.rules.controlMode === 'mirror') return 'Bringe deinen Spiegel gegen eine Magie deiner Wahl auf ' + lv + ' Marker (nicht addiert, höchstens 3)';
   if (!cardCurses() && k === 'ew' && G.rules.lifeflowMode === 'plain') return '+' + lv + ' HP und ' + lv * (G.rules.lifeflowDraw || 0) + ' Gratis-Nachziehen';
   if (!cardCurses() && k === 'ew' && G.rules.lifeflowMode === 'any') return (G.rules.lifeflowHealMode === 'flat' ? 'Heile um ' + lv + ', entferne ' + lv + ' Marker' : 'Entferne ' + lv + ' Marker: je 1 HP') + (G.rules.lifeflowDraw ? ' und erhalte für jeden einen Nachziehtoken' : '');
   if (!cardCurses() && k === 'ew' && G.rules.lifeflowMode === 'choice') return '+' + lv + ' HP, ' + lv + ' Marker weg (eigene Fluchmarker oder Spiegel des Gegners)';
@@ -2029,7 +2031,7 @@ function comboRef(cx) {
   const sel = M.selection(cx.mine.deck), ev = sel.length ? M.evalAttack(cx.myStats, sel) : null, lv = ev && ev.valid ? ev.levels : { fw: 0, fe: 0, ew: 0, ulti: 0 };
   const el = e => '<span class="' + e + '">' + NAMES[e] + '</span>';
   const rows = [
-    ['fw', 'Control', 'F', 'W', n => 'Erzeuge ' + n + ' Spiegelmarker gegen eine Magie deiner Wahl.'],
+    ['fw', 'Control', 'F', 'W', n => 'Bringe deinen Spiegel gegen eine Magie deiner Wahl auf ' + n + ' Marker (nicht addiert, höchstens 3).'],
     ['fe', 'Aggro', 'F', 'E', n => G.rules.curses === 'deathcards' ? 'Lege ' + n + (n === 1 ? ' Fluch' : ' Flüche') + ' auf den Ablagestapel deines Gegners. Beim nächsten Nachziehen kommen sie zuerst auf seine Hand und belegen Plätze, beim darauffolgenden Nachziehen sind sie dauerhaft vernichtet.' : 'Nach dem Zug ' + (n + 1) + ' Schwäche-Marker: Gegner erleidet doppelten Schaden; −1 nach jedem seiner Angriffszüge.'],
     ['ew', 'Lifeflow', 'E', 'W', n => G.rules.lifeflowMode === 'plain' ? 'Heile um ' + n + ' und erhalte ' + n + ' Nachziehtoken.' : (G.rules.lifeflowHealMode === 'flat' ? 'Heile um ' + n + ', entferne ' + n + ' Marker und erhalte für jeden einen Nachziehtoken.' : 'Entferne ' + n + ' Marker: je Marker 1 HP und 1 Nachziehtoken.')],
   ];
