@@ -409,7 +409,7 @@ function magicProgress(p) { return (p.stats.mag.F - 1) + (p.stats.mag.E - 1) + (
 const MONSTER = {
   profile: { F: { primary: 'F', secondary: 'E' }, E: { primary: 'E', secondary: 'W' }, W: { primary: 'W', secondary: 'F' } },
   stage1Temple: { F: [], E: [], W: [] },
-  temple: { 2: { F: ['limit'], E: ['limit'], W: ['limit'] }, 3: { F: ['hp', 'limit'], E: ['hp', 'limit'], W: ['hp', 'limit'] } },
+  temple: { 2: { F: ['limit', 'hp', 'mana'], E: ['limit', 'hp', 'mana'], W: ['limit', 'hp', 'mana'] }, 3: { F: ['hp', 'limit', 'mana'], E: ['hp', 'limit', 'mana'], W: ['hp', 'limit', 'mana'] } },
   magic: { 2: [3, 2, 1], 3: [3, 2, 1] },                                  // Stufen von Haupt-, Neben- und drittem Element
   deck: {
     2: (P, S, T) => [P + '3', P + '2', P + '2', P + '2', S + '2', S + '2', T + '1', T + '1', P + '1'],
@@ -418,7 +418,10 @@ const MONSTER = {
   // Varianten (gleich stark, gemessen): je Monster wird beim Erscheinen gewürfelt. Index 0 = Grundform.
   variants: {
     temple1: { F: [[], ['mana']], E: [[], ['mana']], W: [[], ['mana']] },
-    temple: { 2: { F: [['limit']], W: [['limit']] }, 3: { F: [['hp', 'limit']] } },
+    temple: {   // Stufe II/III: Grundform (Limit, Zäh, Mana), dazu ohne Mana (ruhiger) und mit doppeltem Mana (zielt auf Dauerdruck); gemessen etwa gleich schwer für den Spieler
+      2: { F: [['limit', 'hp', 'mana'], ['limit', 'hp'], ['limit', 'hp', 'mana', 'mana']], E: [['limit', 'hp', 'mana'], ['limit', 'hp'], ['limit', 'hp', 'mana', 'mana']], W: [['limit', 'hp', 'mana'], ['limit', 'hp'], ['limit', 'hp', 'mana', 'mana']] },
+      3: { F: [['hp', 'limit', 'mana'], ['hp', 'limit'], ['hp', 'limit', 'mana', 'mana']], E: [['hp', 'limit', 'mana'], ['hp', 'limit'], ['hp', 'limit', 'mana', 'mana']], W: [['hp', 'limit', 'mana'], ['hp', 'limit'], ['hp', 'limit', 'mana', 'mana']] },
+    },
     swap: { F: { primary: 'F', secondary: 'W' }, E: { primary: 'E', secondary: 'F' }, W: { primary: 'W', secondary: 'E' } },   // Neben- und drittes Element getauscht
     deck: {   // Deckformen: Grundform, breit (mehr Nebenelement), spitz (stärkere Spitze, schwächere Basis)
       2: [null, (P, S, T) => [P + '3', P + '2', P + '2', S + '2', S + '2', S + '2', T + '1', T + '1', P + '1'], (P, S, T) => [P + '3', P + '3', P + '1', P + '1', S + '2', S + '2', S + '2', T + '1', T + '1']],
@@ -459,6 +462,11 @@ function spawnOne(el, stage, rng, v) {
   const tags = [], hints = [];
   const FHINT = { hp: 'Zäh: zusätzliche maximale HP.', mana: 'Mana: zusätzliches maximales Mana.', limit: 'Limit: darf mehr Karten gleichzeitig spielen (höheres Ausspiellimit).' };
   if (stage === 1 && v.t && V.temple1[el][v.t]) { const fs = V.temple1[el][v.t]; tags.push(fs.map(f => ({ hp: 'Zäh', mana: 'Mana', limit: 'Limit' }[f])).join('+')); fs.filter((f, i) => fs.indexOf(f) === i).forEach(f => hints.push(FHINT[f])); }
+  if (stage >= 2 && v.t && V.temple[stage] && V.temple[stage][el] && V.temple[stage][el][v.t]) {
+    const cnt = (l, f) => l.filter(x => x === f).length, tv = V.temple[stage][el][v.t], bs = M.temple[stage][el], dm = cnt(tv, 'mana') - cnt(bs, 'mana');
+    if (dm < 0) { tags.push('ohne Extra-Mana'); hints.push('Ohne Extra-Mana: in diesem Abschnitt kein zusätzliches maximales Mana (weniger Dauerdruck).'); }
+    else if (dm > 0) { tags.push('Mana+'); hints.push('Mana+: ein weiteres zusätzliches maximales Mana, es kann länger angreifen.'); }
+  }
   if (stage >= 2 && v.p) { tags.push(ELEMENT_NAME_SHORT[S] + '-lastig'); { const FN = { F: 'Feuer', E: 'Erde', W: 'Wasser' }; hints.push(ELEMENT_NAME_SHORT[S] + '-lastig: Das Nebenelement dieses Monsters ist ' + FN[S] + ' (normalerweise ' + FN[M.profile[el].secondary] + '). Es spielt neben seinem Hauptelement vor allem ' + FN[S] + '.'); } }
   if (stage >= 2 && v.d) { tags.push(V.deckNames[v.d]); hints.push(v.d === 1 ? 'breit: mehr Karten im Nebenelement, dafür weniger im Hauptelement. Vielseitiger, aber mit schwächerer Spitze.' : 'spitz: stärkere Spitze (mehr Karten der höchsten Stufe), dafür eine schwächere Basis (mehr Stufe-1-Karten).'); }
   return { el, name: M.names[el] + ' ' + STAGE_NUMERAL[stage], label: tags.join(', '), hints, variant: v, stage, stats, deckIds: finalDeck };
