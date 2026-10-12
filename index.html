@@ -2091,7 +2091,8 @@ const PeerRoom = {
         c.on('open', ping);
         c.on('data', m => { if (m && m.t) fire(m.t, m.d); });
         c.on('close', () => { if (conn === c) { conn = null; ping(); if (!host) later(); } });
-        c.on('error', () => { });
+        c.on('error', e => { room.err = (e && e.type) || 'Verbindungsfehler'; });
+        c.on('iceStateChanged', st => { room.ice = st; });
         if (c.open) ping();
       };
       const dial = () => { if (left || !peer || peer.destroyed || (conn && conn.open)) return; try { attach(peer.connect('magus-' + name.replace(/^mg-/, ''), { reliable: true })); } catch (e) { later(); } };
@@ -2099,17 +2100,18 @@ const PeerRoom = {
       const room = {
         emit(t, d) { try { if (conn && conn.open) conn.send({ t, d }); } catch (e) { } return Promise.resolve(); },
         on(t, f) { (subs[t] = subs[t] || []).push(f); return () => { subs[t] = (subs[t] || []).filter(x => x !== f); }; },
-        peers, onPeers(f) { pl.add(f); return () => pl.delete(f); },
+        peerjs: true, peers, onPeers(f) { pl.add(f); return () => pl.delete(f); },
         async leave() { left = true; clearTimeout(retry); try { if (conn) conn.close(); } catch (e) { } try { peer.destroy(); } catch (e) { } }
       };
       let tries = 0;
       const create = () => {
         const opts = { debug: 0 };
         peer = host ? new window.Peer('magus-' + name.replace(/^mg-/, ''), opts) : new window.Peer(opts);
-        peer.on('open', () => { room.opened = true; resolve(room); if (!host) dial(); });
+        peer.on('open', () => { room.opened = true; room.srv = 'Vermittlungsserver erreicht'; resolve(room); if (!host) dial(); });
         peer.on('connection', c => { if (host) attach(c); });
         peer.on('disconnected', () => { try { if (!left && !peer.destroyed) peer.reconnect(); } catch (e) { } });
         peer.on('error', e => {
+          room.err = (e && e.type) || String(e);
           if (!room.opened) {
             if (host && e.type === 'unavailable-id' && ++tries < 5) { try { peer.destroy(); } catch (x) { } setTimeout(create, 3000); return; }   // alte Anmeldung nach Neuladen läuft noch aus
             if (e.type !== 'peer-unavailable') { reject(e); return; }
@@ -2223,7 +2225,7 @@ async function mpJoin() {
   if (!(await mpOpen(code, false))) return;
   mpWait('Raum ' + code.toUpperCase(), '<p class="note">Verbinde mit dem Gastgeber …</p>');
   let tries = 0;
-  const ask = () => { if (!MP) return; if (++tries > 12) { clearInterval(MP.hello); mpWait('Raum ' + code.toUpperCase(), '<p class="bad">Kein Gastgeber gefunden. Stimmt der Code, und ist der Raum auf dem anderen Gerät noch offen?</p>'); return; } mpEmit('hello', {}); };
+  const ask = () => { if (!MP) return; if (++tries > 12) { clearInterval(MP.hello); mpWait('Raum ' + code.toUpperCase(), '<p class="bad">Kein Gastgeber gefunden. Stimmt der Code, und ist der Raum auf dem anderen Gerät noch offen?</p>' + (MP.room.peerjs ? '<p class="note">Technisch: ' + [MP.room.srv || 'Vermittlungsserver nicht erreicht', MP.room.err ? 'Fehler ' + MP.room.err : '', MP.room.ice ? 'ICE ' + MP.room.ice : ''].filter(Boolean).join(' · ') + '</p>' : '')); return; } mpEmit('hello', {}); };
   MP.hello = setInterval(ask, 2000); ask();
 }
 async function mpLeave() {
