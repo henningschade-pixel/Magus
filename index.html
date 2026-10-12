@@ -2129,6 +2129,9 @@ const PeerRoom = {
 let MP = null, roomApi;
 const MP_TOPICS = ['hello', 'start', 'need', 'act', 'acts', 'sync'];
 const MP_KEY = 'magus-mp';
+// Kennung dieser Spielversion: beide Geräte müssen denselben Programmtext haben, sonst rechnen sie unterschiedlich.
+const BUILD = (() => { let h = 2166136261; const t = [...document.scripts].map(x => x.text).join(''); for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); })();
+function mpOldVersion(who) { mpWait('Andere Spielversion', '<p class="bad">' + who + ' hat eine andere Version von Magus geladen.</p><p class="note">Bitte auf beiden Geräten die Seite mit Strg+F5 (Handy: Seite neu laden, notfalls Cache leeren) neu laden und danach einen neuen Raum erstellen.</p>'); }
 async function mpRoomApi() {
   if (roomApi) return roomApi;
   try { roomApi = window.claude && window.claude.use ? await window.claude.use('room') : null; } catch (e) { roomApi = null; }
@@ -2159,8 +2162,8 @@ async function mpOpen(code, host) {
   MP = { room, code, host, seat: host ? 0 : 1, log: [], seed: null, first: 0, rules: null, started: false, subs: [], hello: null };
   // nur das eigene Echo (sameTab) wird ignoriert: das zweite Gerät derselben Person zählt als Mitspieler
   const on = (t, f) => MP.subs.push(room.on(t, m => { if (!m.sameTab) f(m.data || {}, m); }));
-  on('hello', d => { if (!MP.host) return; if (!MP.started) mpBegin(); mpEmit('start', { seed: MP.seed, first: MP.first, rules: MP.rules }); });
-  on('start', d => { if (MP.host) return; if (!MP.started || MP.seed !== d.seed) mpStart(d.seed, d.first, d.rules); clearInterval(MP.hello); mpEmit('need', { from: MP.log.length }); });
+  on('hello', d => { if (!MP.host) return; if (d.v !== BUILD) { mpEmit('start', { v: BUILD }); if (!MP.started) mpOldVersion('Der Mitspieler'); return; } if (!MP.started) mpBegin(); mpEmit('start', { seed: MP.seed, first: MP.first, rules: MP.rules, v: BUILD }); });
+  on('start', d => { if (MP.host) return; if (d.v !== BUILD) { clearInterval(MP.hello); mpOldVersion('Der Gastgeber'); return; } if (!MP.started || MP.seed !== d.seed) mpStart(d.seed, d.first, d.rules); clearInterval(MP.hello); mpEmit('need', { from: MP.log.length }); });
   on('need', d => mpSendLog(+d.from || 0));
   on('sync', d => { if (!MP.started) return; const n = +d.n; if (n > MP.log.length) mpEmit('need', { from: MP.log.length }); else if (n < MP.log.length) mpSendLog(n); });   // Herzschlag: verlorene Nachrichten nachholen
   MP.beat = setInterval(() => { if (MP && MP.started) mpEmit('sync', { n: MP.log.length }); }, 2000);
@@ -2225,7 +2228,7 @@ async function mpJoin() {
   if (!(await mpOpen(code, false))) return;
   mpWait('Raum ' + code.toUpperCase(), '<p class="note">Verbinde mit dem Gastgeber …</p>');
   let tries = 0;
-  const ask = () => { if (!MP) return; if (++tries > 12) { clearInterval(MP.hello); mpWait('Raum ' + code.toUpperCase(), '<p class="bad">Kein Gastgeber gefunden. Stimmt der Code, und ist der Raum auf dem anderen Gerät noch offen?</p>' + (MP.room.peerjs ? '<p class="note">Technisch: ' + [MP.room.srv || 'Vermittlungsserver nicht erreicht', MP.room.err ? 'Fehler ' + MP.room.err : '', MP.room.ice ? 'ICE ' + MP.room.ice : ''].filter(Boolean).join(' · ') + '</p>' : '')); return; } mpEmit('hello', {}); };
+  const ask = () => { if (!MP) return; if (++tries > 12) { clearInterval(MP.hello); mpWait('Raum ' + code.toUpperCase(), '<p class="bad">Kein Gastgeber gefunden. Stimmt der Code, und ist der Raum auf dem anderen Gerät noch offen?</p>' + (MP.room.peerjs ? '<p class="note">Technisch: ' + [MP.room.srv || 'Vermittlungsserver nicht erreicht', MP.room.err ? 'Fehler ' + MP.room.err : '', MP.room.ice ? 'ICE ' + MP.room.ice : ''].filter(Boolean).join(' · ') + '</p>' : '')); return; } mpEmit('hello', { v: BUILD }); };
   MP.hello = setInterval(ask, 2000); ask();
 }
 async function mpLeave() {
@@ -2243,7 +2246,7 @@ async function mpRestore() {   // nach Neuladen der Seite: laufende Partie wiede
   sv.log.forEach(a => { const prev = G.logN, r = M.apply(G, a); if (r.ok) { MP.log.push(a); checkCombatEnd(prev); if (G.phase === 'combat') M.combatTick(G); } });
   banner = null; hold = 0;
   mpSave(); pump();
-  mpEmit('need', { from: MP.log.length }); if (!MP.host) mpEmit('hello', {});
+  mpEmit('need', { from: MP.log.length }); if (!MP.host) mpEmit('hello', { v: BUILD });
 }
 /* ---------- Eingaben ---------- */
 function onAct(d) {
