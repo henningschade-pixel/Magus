@@ -297,22 +297,20 @@ function dealFresh(state, d, slots) {
   fillHand(state, d);
 }
 // Nachziehen: alle nicht gesperrten Handkarten ablegen, freie Plätze neu füllen.
-// Fluchkarten bleiben dabei zunächst liegen und werden erst nach dem Ersetzen der übrigen Karten abgeworfen (ihre Plätze werden danach ebenfalls neu gefüllt).
+// Fluchkarten, die schon auf der Hand liegen, werden dabei dauerhaft verworfen (sie kommen nicht auf den Ablagestapel); neu gezogene Fluchkarten bleiben auf der Hand.
 function drawPhase(state, d) {
   d.marks = [];
+  const old = [];   // Fluchkarten, die schon vor dem Nachziehen auf der Hand lagen: sie werden dauerhaft verworfen
   for (let i = 0; i < d.hand.length; i++) {
     const c = d.hand[i];
-    if (c && !c.locked && !parseCard(c.id).curse) { d.discard.push(c); d.hand[i] = null; }
+    if (!c) continue;
+    if (parseCard(c.id).curse) { c.locked = false; old.push(c); d.hand[i] = null; }
+    else if (!c.locked) { d.discard.push(c); d.hand[i] = null; }
   }
   const replaced = d.hand.some(c => !c);
-  if (replaced) fillHand(state, d);
-  let cursed = false;
-  for (let i = 0; i < d.hand.length; i++) {
-    const c = d.hand[i];
-    if (c && parseCard(c.id).curse) { c.locked = false; d.discard.push(c); d.hand[i] = null; cursed = true; }
-  }
-  if (cursed) fillHand(state, d);
-  return replaced || cursed;
+  if (replaced) fillHand(state, d);   // frisch gezogene Fluchkarten bleiben auf der Hand und belegen einen Platz
+  // die alten Fluchkarten sind damit endgültig aus dem Spiel (nicht auf dem Ablagestapel)
+  return replaced || old.length > 0;
 }
 // Alle Fluchkarten aus Zugstapel, Hand und Ablage entfernen (Kampfende im Fluchsystem „deathcards“).
 function stripCurseCards(state, d) {
@@ -320,19 +318,6 @@ function stripCurseCards(state, d) {
   d.draw = d.draw.filter(keep); d.discard = d.discard.filter(keep);
   d.hand = d.hand.map(c => (c && !keep(c) ? null : c)); d.marks = [];
   fillHand(state, d);
-}
-// Eine Fluchkarte kommt direkt auf die Hand des Opfers: in einen freien Handplatz, sonst ersetzt sie eine zufällige nicht gesperrte Handkarte (die wandert auf den Ablagestapel).
-// Liegt keine ersetzbare Karte vor (alles gesperrt oder schon Flüche), gibt es false und der Aufrufer legt den Fluch auf den Ablagestapel.
-function giveCurseToHand(state, d) {
-  let slot = d.hand.findIndex(c => !c);
-  if (slot < 0) {
-    const cand = []; d.hand.forEach((c, i) => { if (c && !c.locked && !parseCard(c.id).curse) cand.push(i); });
-    if (!cand.length) return false;
-    slot = cand[Math.floor(state.rng.random() * cand.length)];
-    d.discard.push(d.hand[slot]); d.marks = d.marks.filter(i => i !== slot);
-  }
-  d.hand[slot] = mkCard(state, 'C1');
-  return true;
 }
 function removeFromHand(d, idx) { const c = d.hand[idx]; d.hand[idx] = null; d.marks = d.marks.filter(i => i !== idx); return c; }
 
@@ -578,9 +563,9 @@ const CURSE_SYSTEMS = {
   deathcards: {
     id: 'deathcards', cardCurses: false, curseCards: true,
     inflict(state, victim, level) {
-      const n = Math.max(1, Math.min(3, level)); let hand = 0;
-      for (let i = 0; i < n; i++) { if (giveCurseToHand(state, victim.deck)) hand++; else victim.deck.discard.push(mkCard(state, 'C1')); }
-      return n + ' Fluchkarte' + (n > 1 ? 'n' : '') + ' für ' + victim.name + (hand ? ' (' + (hand === n ? 'auf die Hand' : hand + ' davon auf die Hand') + ')' : ' (auf den Ablagestapel, die Hand ist voll)');
+      const n = Math.max(1, Math.min(3, level));
+      for (let i = 0; i < n; i++) victim.deck.discard.push(mkCard(state, 'C1'));
+      return n + ' Fluchkarte' + (n > 1 ? 'n' : '') + ' auf den Ablagestapel von ' + victim.name;
     },
     relieve() { return ''; },
     turnStart(state, pid, stats, inCombat, name) {
@@ -1893,7 +1878,7 @@ function comboText(k, lv) {
   if (!cardCurses() && k === 'ew' && G.rules.lifeflowMode === 'plain') return '+' + lv + ' HP und ' + lv * (G.rules.lifeflowDraw || 0) + ' Gratis-Nachziehen';
   if (!cardCurses() && k === 'ew' && G.rules.lifeflowMode === 'any') return (G.rules.lifeflowHealMode === 'flat' ? 'Heile um ' + lv + ', entferne ' + lv + ' Marker' : 'Entferne ' + lv + ' Marker: je 1 HP') + (G.rules.lifeflowDraw ? ' und erhalte für jeden einen Nachziehtoken' : '');
   if (!cardCurses() && k === 'ew' && G.rules.lifeflowMode === 'choice') return '+' + lv + ' HP, ' + lv + ' Marker weg (eigene Fluchmarker oder Spiegel des Gegners)';
-  if (G.rules.curses === 'deathcards' && k === 'fe') return 'Lege ' + lv + (lv > 1 ? ' Flüche' : ' Fluch') + ' auf die Hand der Gegenseite (ein freier Platz, sonst ersetzt der Fluch eine Handkarte)';
+  if (G.rules.curses === 'deathcards' && k === 'fe') return 'Lege ' + lv + (lv > 1 ? ' Flüche' : ' Fluch') + ' auf den Ablagestapel der Gegenseite; sie landen auf der Hand, sobald sie gezogen werden, und werden beim nächsten Nachziehen dauerhaft verworfen';
   if (G.rules.curses === 'weak' && k === 'fe') return (lv + 1) + ' Schwäche-Marker für die Gegenseite nach diesem Zug (S+1, höchstens 3): doppelter Schaden, solange einer liegt';
   if (!cardCurses()) return k === 'fw' ? lv + ' Gratis-Nachziehen' : k === 'fe' ? lv + ' Fluchmarker für die Gegenseite' : '+' + lv + ' HP, ' + lv + ' Marker weniger';
   return k === 'fw' ? lv + ' Gratis-Nachziehen' : k === 'fe' ? lv + ' Fluch' + (lv > 1 ? 'e' : '') + ' für die Gegenseite' : '+' + lv + ' HP';
@@ -1977,7 +1962,7 @@ function comboRef(cx) {
   const el = e => '<span class="' + e + '">' + NAMES[e] + '</span>';
   const rows = [
     ['fw', 'Control', 'F', 'W', n => 'Erzeuge ' + n + ' Spiegelmarker gegen eine Magie deiner Wahl.'],
-    ['fe', 'Aggro', 'F', 'E', n => G.rules.curses === 'deathcards' ? 'Lege ' + n + (n === 1 ? ' Fluch' : ' Flüche') + ' auf die Hand deines Gegners. Flüche belegen Handplätze und werden nur durch Nachziehen abgeworfen.' : 'Nach dem Zug ' + (n + 1) + ' Schwäche-Marker: Gegner erleidet doppelten Schaden; −1 nach jedem seiner Angriffszüge.'],
+    ['fe', 'Aggro', 'F', 'E', n => G.rules.curses === 'deathcards' ? 'Lege ' + n + (n === 1 ? ' Fluch' : ' Flüche') + ' auf den Ablagestapel deines Gegners. Gezogen belegen sie einen Handplatz, bis du nachziehst; dann sind sie dauerhaft verworfen.' : 'Nach dem Zug ' + (n + 1) + ' Schwäche-Marker: Gegner erleidet doppelten Schaden; −1 nach jedem seiner Angriffszüge.'],
     ['ew', 'Lifeflow', 'E', 'W', n => G.rules.lifeflowMode === 'plain' ? 'Heile um ' + n + ' und erhalte ' + n + ' Nachziehtoken.' : (G.rules.lifeflowHealMode === 'flat' ? 'Heile um ' + n + ', entferne ' + n + ' Marker und erhalte für jeden einen Nachziehtoken.' : 'Entferne ' + n + ' Marker: je Marker 1 HP und 1 Nachziehtoken.')],
   ];
   let h = '<h3 style="margin-bottom:3px" title="S = Minimum aus beiden Magiewerten und den höchsten markierten Kartenstufen (max. 3). Kombos kosten 0 Mana.">Kombo-Übersicht <span class="note" style="font-size:13px">S = Kombostufe</span></h3>';
