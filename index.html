@@ -321,6 +321,19 @@ function stripCurseCards(state, d) {
   d.hand = d.hand.map(c => (c && !keep(c) ? null : c)); d.marks = [];
   fillHand(state, d);
 }
+// Eine Fluchkarte kommt direkt auf die Hand des Opfers: in einen freien Handplatz, sonst ersetzt sie eine zufällige nicht gesperrte Handkarte (die wandert auf den Ablagestapel).
+// Liegt keine ersetzbare Karte vor (alles gesperrt oder schon Flüche), gibt es false und der Aufrufer legt den Fluch auf den Ablagestapel.
+function giveCurseToHand(state, d) {
+  let slot = d.hand.findIndex(c => !c);
+  if (slot < 0) {
+    const cand = []; d.hand.forEach((c, i) => { if (c && !c.locked && !parseCard(c.id).curse) cand.push(i); });
+    if (!cand.length) return false;
+    slot = cand[Math.floor(state.rng.random() * cand.length)];
+    d.discard.push(d.hand[slot]); d.marks = d.marks.filter(i => i !== slot);
+  }
+  d.hand[slot] = mkCard(state, 'C1');
+  return true;
+}
 function removeFromHand(d, idx) { const c = d.hand[idx]; d.hand[idx] = null; d.marks = d.marks.filter(i => i !== idx); return c; }
 
 /* ---------- Auswahl (markierte Handkarten) ---------- */
@@ -332,8 +345,9 @@ function consumeSelection(d, sel) {
   d.marks = [];
 }
 // Markieren ist durch das Ausspiellimit begrenzt (bei Limit 1 ersetzt die neue Markierung die alte).
-function toggleMark(d, slot, limit) {
+function toggleMark(d, slot, limit, noCurse) {
   if (!d.hand[slot]) return 'Hier liegt keine Karte.';
+  if (parseCard(d.hand[slot].id).curse && noCurse) return 'Fluchkarten lassen sich nicht ausspielen. Sie werden nur durch Nachziehen abgeworfen.';
   const at = d.marks.indexOf(slot);
   if (at >= 0) { d.marks.splice(at, 1); return null; }
   if (d.marks.length >= limit) {
@@ -561,9 +575,9 @@ const CURSE_SYSTEMS = {
   deathcards: {
     id: 'deathcards', cardCurses: false, curseCards: true,
     inflict(state, victim, level) {
-      const n = Math.max(1, Math.min(3, level));
-      for (let i = 0; i < n; i++) victim.deck.discard.push(mkCard(state, 'C1'));
-      return n + ' Fluchkarte' + (n > 1 ? 'n' : '') + ' für ' + victim.name;
+      const n = Math.max(1, Math.min(3, level)); let hand = 0;
+      for (let i = 0; i < n; i++) { if (giveCurseToHand(state, victim.deck)) hand++; else victim.deck.discard.push(mkCard(state, 'C1')); }
+      return n + ' Fluchkarte' + (n > 1 ? 'n' : '') + ' für ' + victim.name + (hand ? ' (' + (hand === n ? 'auf die Hand' : hand + ' davon auf die Hand') + ')' : ' (auf den Ablagestapel, die Hand ist voll)');
     },
     relieve() { return ''; },
     turnStart(state, pid, stats, inCombat, name) {
@@ -966,7 +980,7 @@ function applyCombat(state, a) {
   if (a.type === 'lock') { const e = toggleLock(mine.deck, a.slot); return e ? fail(e) : { ok: true }; }
   if (side.ctrl !== pid) return fail('Die Gegenseite ist am Zug.');
   switch (a.type) {
-    case 'mark': { const e = toggleMark(side.deck, a.slot, side.stats.limit); if (!e) c.ult = c.ult.slice(); return e ? fail(e) : { ok: true }; }
+    case 'mark': { const e = toggleMark(side.deck, a.slot, side.stats.limit, curses(state).curseCards); if (!e) c.ult = c.ult.slice(); return e ? fail(e) : { ok: true }; }
     case 'ult': {
       const ev = evalAttack(side.stats, selection(side.deck));
       if (state.rules.ultiMode === 'death') return fail('Die Ultimate ist der Todes-Fluch; es gibt nichts zu wählen.');
@@ -1097,7 +1111,7 @@ function execMagic(state, pid, e) {
 function applyWorld(state, a) {
   const pid = a.pid, p = state.players[pid], d = p.deck, s = p.stats;
   // Markieren und Sperren sind auch außerhalb des eigenen Zuges möglich.
-  if (a.type === 'mark') { const e = toggleMark(d, a.slot, s.limit); return e ? fail(e) : { ok: true }; }
+  if (a.type === 'mark') { const e = toggleMark(d, a.slot, s.limit, curses(state).curseCards); return e ? fail(e) : { ok: true }; }
   if (a.type === 'lock') { const e = toggleLock(d, a.slot); return e ? fail(e) : { ok: true }; }
   if (state.turn !== pid) return fail('Du bist nicht am Zug.');
   const viaCurses = curses(state).worldAction(state, a, { p, pid, d });
@@ -1375,6 +1389,7 @@ function pickMirrorEl(side, opp) {
 }
 function bestAttack(side, opp, hand, Q, state0) {
   const stats = side.stats, lim = Math.max(1, stats.limit);
+  if (M.curses(state0).curseCards) hand = hand.filter(h => !h.curse);   // im Fluchkartensystem „deathcards“ lassen sich Flüche nicht ausspielen
   let best = null;
   for (const sub of subsets(hand, lim)) {
     const firsts = sub.filter(h => !h.curse);
@@ -1472,7 +1487,7 @@ function combatPlan(state, pid) {
   }
   // Verteidigung
   const color = c.color, pend = c.pending, lethal = pend * (M.curses(state).weakDouble && (s.marks || 0) > 0 ? 2 : 1) >= s.hp;
-  const cand = hand.filter(h => h.curse || h.el === color || h.el === M.SUPERIOR[color]);
+  const cand = hand.filter(h => (h.curse ? !M.curses(state).curseCards : (h.el === color || h.el === M.SUPERIOR[color])));
   let best = { score: pend * (lethal ? Q.dLeth : Q.dPend), ord: [] };
   for (const sub of subsets(cand, Math.max(1, s.limit))) {
     const ev = M.evalDefense(s, sub, color);
@@ -1875,7 +1890,7 @@ function comboText(k, lv) {
   if (!cardCurses() && k === 'ew' && G.rules.lifeflowMode === 'plain') return '+' + lv + ' HP und ' + lv * (G.rules.lifeflowDraw || 0) + ' Gratis-Nachziehen';
   if (!cardCurses() && k === 'ew' && G.rules.lifeflowMode === 'any') return (G.rules.lifeflowHealMode === 'flat' ? 'Heile um ' + lv + ', entferne ' + lv + ' Marker' : 'Entferne ' + lv + ' Marker: je 1 HP') + (G.rules.lifeflowDraw ? ' und erhalte für jeden einen Nachziehtoken' : '');
   if (!cardCurses() && k === 'ew' && G.rules.lifeflowMode === 'choice') return '+' + lv + ' HP, ' + lv + ' Marker weg (eigene Fluchmarker oder Spiegel des Gegners)';
-  if (G.rules.curses === 'deathcards' && k === 'fe') return 'Füge dem Deck der Gegenseite ' + lv + (lv > 1 ? ' Flüche' : ' Fluch') + ' hinzu';
+  if (G.rules.curses === 'deathcards' && k === 'fe') return 'Lege ' + lv + (lv > 1 ? ' Flüche' : ' Fluch') + ' auf die Hand der Gegenseite (ein freier Platz, sonst ersetzt der Fluch eine Handkarte)';
   if (G.rules.curses === 'weak' && k === 'fe') return (lv + 1) + ' Schwäche-Marker für die Gegenseite nach diesem Zug (S+1, höchstens 3): doppelter Schaden, solange einer liegt';
   if (!cardCurses()) return k === 'fw' ? lv + ' Gratis-Nachziehen' : k === 'fe' ? lv + ' Fluchmarker für die Gegenseite' : '+' + lv + ' HP, ' + lv + ' Marker weniger';
   return k === 'fw' ? lv + ' Gratis-Nachziehen' : k === 'fe' ? lv + ' Fluch' + (lv > 1 ? 'e' : '') + ' für die Gegenseite' : '+' + lv + ' HP';
@@ -1959,7 +1974,7 @@ function comboRef(cx) {
   const el = e => '<span class="' + e + '">' + NAMES[e] + '</span>';
   const rows = [
     ['fw', 'Control', 'F', 'W', n => 'Erzeuge ' + n + ' Spiegelmarker gegen eine Magie deiner Wahl.'],
-    ['fe', 'Aggro', 'F', 'E', n => G.rules.curses === 'deathcards' ? 'Füge dem Deck deines Gegners ' + n + (n === 1 ? ' Fluch' : ' Flüche') + ' hinzu.' : 'Nach dem Zug ' + (n + 1) + ' Schwäche-Marker: Gegner erleidet doppelten Schaden; −1 nach jedem seiner Angriffszüge.'],
+    ['fe', 'Aggro', 'F', 'E', n => G.rules.curses === 'deathcards' ? 'Lege ' + n + (n === 1 ? ' Fluch' : ' Flüche') + ' auf die Hand deines Gegners. Flüche belegen Handplätze und werden nur durch Nachziehen abgeworfen.' : 'Nach dem Zug ' + (n + 1) + ' Schwäche-Marker: Gegner erleidet doppelten Schaden; −1 nach jedem seiner Angriffszüge.'],
     ['ew', 'Lifeflow', 'E', 'W', n => G.rules.lifeflowMode === 'plain' ? 'Heile um ' + n + ' und erhalte ' + n + ' Nachziehtoken.' : (G.rules.lifeflowHealMode === 'flat' ? 'Heile um ' + n + ', entferne ' + n + ' Marker und erhalte für jeden einen Nachziehtoken.' : 'Entferne ' + n + ' Marker: je Marker 1 HP und 1 Nachziehtoken.')],
   ];
   let h = '<h3 style="margin-bottom:3px" title="S = Minimum aus beiden Magiewerten und den höchsten markierten Kartenstufen (max. 3). Kombos kosten 0 Mana.">Kombo-Übersicht <span class="note" style="font-size:13px">S = Kombostufe</span></h3>';
