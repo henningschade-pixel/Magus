@@ -374,6 +374,8 @@ function regen(stats) {
 // Kosten (in Upgrade-Punkten) für den nächsten Schritt des Ausspiellimits: der erste Schritt (1 -> 2) kostet limitFirstStepCost.
 function limitStepCost(state, s) { return s.limit <= 1 ? state.rules.limitFirstStepCost : 1; }
 function manaStepCost() { return 1; }
+// Gold für die nächste Magiestufe: Index = aktuelle Stufe (Stufe 1 → 2 kostet 1 Gold, Stufe 2 → 3 kostet 3 Gold).
+function magicCost(state, lv) { const t = state.rules.magicCost || [0, 1, 2]; return t[lv] === undefined ? lv : t[lv]; }
 // Tempel: n Gold ergeben n(n+1)/2 Punkte; die Stufe k+1 kostet k+1 Punkte und gibt einen Upgrade-Punkt.
 function pointsForGold(n) { return n * (n + 1) / 2; }
 function nextLevelCost(level) { return level + 1; }
@@ -394,11 +396,12 @@ function magicProgress(p) { return (p.stats.mag.F - 1) + (p.stats.mag.E - 1) + (
 
 // Startdeck jedes Monsters: das Startdeck mit Karten des Elements auf Stufe 2 (Anzahl: ‚upgrades‘).
 // Tempel-Verbesserungen: Stufe I ‚stage1Temple‘, danach je Stufe die Liste ‚temple[stufe][element]‘.
+// Ausspiellimit der Monster: Stufe I = 1, Stufe II = 2 (ein ‚limit‘), Stufe III = 3 (ein weiteres ‚limit‘). Abgestimmt gegen Magiekosten 1/3 Gold und 2 HP je Upgrade-Punkt.
 const MONSTER = {
   profile: { F: { primary: 'F', secondary: 'E' }, E: { primary: 'E', secondary: 'W' }, W: { primary: 'W', secondary: 'F' } },
   stage1Temple: { F: [], E: [], W: [] },
-  temple: { 2: { F: ['hp', 'hp', 'hp'], E: ['hp', 'hp'], W: ['hp', 'hp', 'hp'] }, 3: { F: ['hp', 'hp', 'mana', 'mana', 'limit'], E: ['hp', 'hp', 'mana', 'mana', 'limit'], W: ['hp', 'hp', 'mana', 'mana', 'limit'] } },
-  magic: { 2: [3, 2, 1], 3: [3, 3, 1] },                                  // Stufen von Haupt-, Neben- und drittem Element
+  temple: { 2: { F: ['limit'], E: ['limit'], W: ['limit'] }, 3: { F: ['hp', 'limit'], E: ['hp', 'limit'], W: ['hp', 'limit'] } },
+  magic: { 2: [3, 2, 1], 3: [3, 2, 1] },                                  // Stufen von Haupt-, Neben- und drittem Element
   deck: {
     2: (P, S, T) => [P + '3', P + '2', P + '2', P + '2', S + '2', S + '2', T + '1', T + '1', P + '1'],
     3: (P, S, T) => [P + '3', P + '3', P + '2', P + '2', P + '2', S + '3', S + '2', T + '1', T + '1'],
@@ -406,7 +409,7 @@ const MONSTER = {
   // Varianten (gleich stark, gemessen): je Monster wird beim Erscheinen gewürfelt. Index 0 = Grundform.
   variants: {
     temple1: { F: [[], ['mana']], E: [[], ['mana']], W: [[], ['mana']] },
-    temple: { 2: { F: [['hp', 'hp', 'hp'], ['hp', 'mana', 'hp']], W: [['hp', 'hp', 'hp'], ['mana', 'hp', 'hp']] }, 3: { F: [['hp', 'hp', 'mana', 'mana', 'limit'], ['hp', 'hp', 'hp', 'mana', 'limit']] } },
+    temple: { 2: { F: [['limit']], W: [['limit']] }, 3: { F: [['hp', 'limit']] } },
     swap: { F: { primary: 'F', secondary: 'W' }, E: { primary: 'E', secondary: 'F' }, W: { primary: 'W', secondary: 'E' } },   // Neben- und drittes Element getauscht
     deck: {   // Deckformen: Grundform, breit (mehr Nebenelement), spitz (stärkere Spitze, schwächere Basis)
       2: [null, (P, S, T) => [P + '3', P + '2', P + '2', S + '2', S + '2', S + '2', T + '1', T + '1', P + '1'], (P, S, T) => [P + '3', P + '3', P + '1', P + '1', S + '2', S + '2', S + '2', T + '1', T + '1']],
@@ -1101,7 +1104,7 @@ function execMagic(state, pid, e) {
   if (!campAllowed(state, pid, 'temple')) return fail('In der Erholungsphase nicht mehr erlaubt.');
   if (!ELEMENTS.includes(e)) return fail('Unbekanntes Element.');
   if (s.mag[e] >= MAX_MAGIC) return fail(NAMES[e] + ' ist schon auf Stufe ' + MAX_MAGIC + '.');
-  const cost = s.mag[e];
+  const cost = magicCost(state, s.mag[e]);
   if (s.gold < cost) return fail('Du brauchst ' + cost + ' Gold.');
   s.gold -= cost; s.mag[e]++;
   log(state, p.name + ' steigert ' + NAMES[e] + ' auf Stufe ' + s.mag[e] + ' (' + cost + ' Gold).', pid);
@@ -1155,7 +1158,7 @@ function applyWorld(state, a) {
 // lifeflowMode 'any': S Marker beliebig vom Brett (eigene/gegnerische Fluch- und Spiegelmarker), je entferntem Marker 1 HP ('removed', Variante 'flat' = S HP).
 // lifeflowMode: 'classic' (S HP heilen und S eigene Fluchmarker herunternehmen) oder 'choice' (S HP heilen und S Marker wegnehmen: eigene Fluchmarker oder die Spiegelmarker des Gegners).
 // firstPlayerGold: zusätzliches Startgold für den Beginnenden (Ausgleich zum Vorteil des zweiten Spielers).
-const DEFAULT_RULES = { curses: 'deathcards', ultiMode: 'death', limitFirstStepCost: 2, secondPlayerPending: 0, campActions: 0, showdownAttacker: 'behind', firstPlayerGold: 0, controlMode: 'mirror', mirrorDecay: 0, mirrorTrigger: 'same', mirrorFree: true, mirrorMult: 1, mirrorStep: 1, mirrorChoice: true, mirrorMana: 0, mirrorHeal: 0, hpPerPoint: 2, lifeflowMode: 'any', lifeflowDrawAll: true, lifeflowHealMode: 'flat', lifeflowHeal: 1, lifeflowMana: false, monsterVariants: true, monstersPerStage: 3, fightReset: true, fightCarry: true, stagePoints: [0, 1, 2, 3], stageGold: [0, 1, 2, 3], startGold: 1, secondPlayerGold: 0, loserStarts: true, loserUp: 1, winSp: 4, freshHands: false, showdownRestore: false, lootShare: 0, lootPot: false, lifeflowDraw: 1 };
+const DEFAULT_RULES = { magicCost: [0, 1, 3], curses: 'deathcards', ultiMode: 'death', limitFirstStepCost: 2, secondPlayerPending: 0, campActions: 0, showdownAttacker: 'behind', firstPlayerGold: 0, controlMode: 'mirror', mirrorDecay: 0, mirrorTrigger: 'same', mirrorFree: true, mirrorMult: 1, mirrorStep: 1, mirrorChoice: true, mirrorMana: 0, mirrorHeal: 0, hpPerPoint: 2, lifeflowMode: 'any', lifeflowDrawAll: true, lifeflowHealMode: 'flat', lifeflowHeal: 1, lifeflowMana: false, monsterVariants: true, monstersPerStage: 3, fightReset: true, fightCarry: true, stagePoints: [0, 1, 2, 3], stageGold: [0, 1, 2, 3], startGold: 1, secondPlayerGold: 0, loserStarts: true, loserUp: 1, winSp: 4, freshHands: false, showdownRestore: false, lootShare: 0, lootPot: false, lifeflowDraw: 1 };
 
 function newPlayer(state, name, ai) {
   const p = { name, ai: !!ai, stats: newStats(), temple: { points: 0, level: 0 }, sp: 0, slots: MIN_SLOTS };
@@ -1218,7 +1221,7 @@ function handCounts(d) { const c = {}; d.hand.forEach(x => { if (x) c[x.id] = (c
 
 return { ELEMENTS, SUPERIOR, NAMES, START_DECK, MAX_MAGIC, MAX_SLOTS, MIN_SLOTS, MAX_LIMIT, MAX_MARKS, DEFAULT_RULES, CURSE_SYSTEMS, MONSTER,
   makeRng, parseCard, selection, newGame, apply, record, prim, actor, other, regen, handCounts,
-  vendorOffers, vendorPlans, previewTemple, pointsForGold, nextLevelCost, limitStepCost, manaStepCost,
+  vendorOffers, vendorPlans, previewTemple, pointsForGold, nextLevelCost, limitStepCost, manaStepCost, magicCost,
   evalAttack, evalDefense, comboLevels, campAllowed, combatTick,
   mirrorOf, mirrorCap, defaultMirrorEl, monsterAlive, allMonstersDead, magicProgress, spawnMonsters, spawnForGame, curses };
 }));</script>
@@ -1279,7 +1282,7 @@ function ecoStep(state, pid) {
   const allIds = [...p.deck.draw, ...p.deck.discard, ...p.deck.hand.filter(Boolean)].map(c => c.id);
   const countEl = e => allIds.filter(id => id[0] === e).length;
   let best = null;
-  for (const e of M.ELEMENTS) { const cost = s.mag[e]; if (s.mag[e] < M.MAX_MAGIC && s.gold >= cost) { const sc = Q.mBase - cost * Q.mCost + countEl(e) * Q.mCnt + (s.mag[e] === Math.max(s.mag.F, s.mag.E, s.mag.W) ? Q.mTop : 0); if (!best || sc > best.sc) best = { sc, a: A({ type: 'magic', elem: e }) }; } }
+  for (const e of M.ELEMENTS) { const cost = M.magicCost(state, s.mag[e]); if (s.mag[e] < M.MAX_MAGIC && s.gold >= cost) { const sc = Q.mBase - cost * Q.mCost + countEl(e) * Q.mCnt + (s.mag[e] === Math.max(s.mag.F, s.mag.E, s.mag.W) ? Q.mTop : 0); if (!best || sc > best.sc) best = { sc, a: A({ type: 'magic', elem: e }) }; } }
   if (best) return best.a;
   if (s.gold >= 2) return A({ type: 'temple', amount: Math.min(s.gold, 3) });
   return null;
@@ -1805,10 +1808,10 @@ function statsBlock(name, s, p, size, up, full) {
     const dir = { F: -90, E: 30, W: 150 }, d = 26;
     let btn = '';
     for (const e of M.ELEMENTS) {
-      const lv = s.mag[e]; if (lv >= M.MAX_MAGIC || s.gold < lv) continue;
+      const lv = s.mag[e], mc = M.magicCost(G, lv); if (lv >= M.MAX_MAGIC || s.gold < mc) continue;
       const ang = dir[e] * Math.PI / 180, r = bsz * 0.507;
       const x = bsz / 2 + Math.cos(ang) * r - d / 2, y = bsz / 2 + Math.sin(ang) * r - d / 2;
-      btn += '<button class="up mg" style="left:' + x.toFixed(1) + 'px;top:' + y.toFixed(1) + 'px;width:' + d + 'px;height:' + d + 'px" data-act="magic" data-e="' + e + '" title="' + NAMES[e] + ' Stufe ' + (lv + 1) + ' kaufen (' + lv + ' Gold)"></button>';
+      btn += '<button class="up mg" style="left:' + x.toFixed(1) + 'px;top:' + y.toFixed(1) + 'px;width:' + d + 'px;height:' + d + 'px" data-act="magic" data-e="' + e + '" title="' + NAMES[e] + ' Stufe ' + (lv + 1) + ' kaufen (' + mc + ' Gold)"></button>';
     }
     bd = bd.replace(/<\/div>$/, btn + '</div>');
   }
