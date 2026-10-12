@@ -145,7 +145,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .hdr{display:flex;align-items:center;gap:8px;width:100%}
 .hn{white-space:nowrap}
 .hsp{margin-left:auto;font-weight:400;color:var(--mute);font-size:17px;white-space:nowrap}.hsp b{color:var(--gold)}
-.pendhdr{float:none;white-space:nowrap}
+.pendhdr{float:none;white-space:nowrap;font-size:17px;font-variant-numeric:tabular-nums}.pendhdr .pl{color:var(--mute)}.pendhdr .mx{color:var(--bone)}.pendhdr .mx.nw{color:var(--good)}.pendhdr .mx .w{font-weight:700;font-size:19px}
 .temple{display:flex;align-items:center;gap:5px;flex:1;min-width:0;font-family:'Alegreya',serif;font-weight:400;font-size:14px;color:var(--mute)}
 .temple .tl{white-space:nowrap}
 .temple .bar.sb{flex:1;min-width:20px}
@@ -1755,25 +1755,24 @@ function statsBlock(name, s, p, size, up, full) {
     h += hp + mana;
     h += '<div class="statrow">' + img('gold') + '<b>' + s.gold + '</b>' + img('limit') + '<b>' + s.limit + '</b>' + mk + mr + '</div>';
   } else {
-    let sac = '', sacBtn = '', gainHdr = '';
+    let sac = '', sacBtn = '';
     if (up && s.gold >= 1) {
       const can = my && M.campAllowed(G, ME, 'temple');
       const n = Math.max(1, Math.min(sacN, s.gold, 4)), pv = M.previewTemple(p, n);
       sacBtn = '<button class="btn small sacbtn" data-act="temple" data-n="' + n + '" ' + (can ? '' : 'disabled') + ' title="Tempel: Punkte ' + p.temple.points + ', Stufe ' + p.temple.level + ', nächste Stufe kostet ' + M.nextLevelCost(p.temple.level) + '">Opfern</button>';
       const stp = '<div class="stepper"><button class="arr" data-act="sacdn" ' + (n > 1 ? '' : 'disabled') + '>◀</button><b title="+' + pv.points + ' Punkte → ' + (pv.gained ? '+' + pv.gained + ' Upgrade' : 'kein Upgrade') + '">' + n + '</b><button class="arr" data-act="sacup" ' + (n < Math.min(s.gold, 4) ? '' : 'disabled') + '>▶</button></div>';
       sac = '<div class="sacbox">' + stp + sacBtn + '</div><span class="up ph"></span>';
-      gainHdr = pv.gained ? ' <span style="color:var(--good);font-size:16px;font-weight:400;margin-left:6px" title="Upgrade-Punkte aus diesem Opfer">+' + pv.gained + '</span>' : '';
     }
-    h = h.replace('@@G@@', (pend > 0 ? '<span class="pendhdr" title="Offene Upgrade-Punkte (aufgespart)">Punkte <b>' + pend + '</b></span>' : '') + gainHdr);
+    let ptsHdr = '';
+    if (p) {   // Punkte + gemischte Zahl: offene Upgrade-Punkte, dazu (ganze Zahl) durch ein geplantes Opfer volle Punkte und der Bruch (Fortschritt/Preis der nächsten Stufe)
+      const lvl = p.temple.level, pv0 = up && s.gold >= 1 ? M.previewTemple(p, Math.max(1, Math.min(sacN, s.gold, 4))) : null;
+      const W = pv0 ? pv0.gained : 0, fh = pv0 ? pv0.pool : p.temple.points, fn = pv0 ? M.nextLevelCost(pv0.level) : M.nextLevelCost(lvl);
+      const tip = 'Offene Upgrade-Punkte (aufgespart) plus Fortschritt zur nächsten Tempelstufe: ' + p.temple.points + ' von ' + M.nextLevelCost(lvl) + ' Punkten (Tempelstufe ' + lvl + ')' + (pv0 ? '. Das geplante Opfer bringt +' + pv0.points + ' Punkte' + (W ? ', davon ' + W + ' voller Upgrade-Punkt' + (W === 1 ? '' : 'e') : '') + '.' : '.');
+      ptsHdr = '<span class="pendhdr" title="' + tip + '">Punkte <b>' + pend + '</b> <span class="pl">+</span> <span class="mx' + (pv0 ? ' nw' : '') + '">' + (W > 0 ? '<span class="w">' + W + '</span>' : '') + (fh > 0 || W === 0 ? (W > 0 ? ' ' : '') + fh + '/' + fn : '') + '</span></span>';
+    }
+    h = h.replace('@@G@@', ptsHdr);
     const ph = '<span class="up ph"></span>';
-    let tempRow = '';
-    if (p) {   // Tempelfortschritt: Punkte bis zur nächsten Tempelstufe
-      const lvl = p.temple.level, need = M.nextLevelCost(lvl), have = p.temple.points;
-      const pv0 = up && s.gold >= 1 ? M.previewTemple(p, Math.max(1, Math.min(sacN, s.gold, 4))) : null;
-      const tip = 'Tempel Stufe ' + lvl + ': ' + have + ' von ' + need + ' Punkten bis Stufe ' + (lvl + 1) + (pv0 ? '. Ein Opfer von ' + Math.max(1, Math.min(sacN, s.gold, 4)) + ' Gold bringt +' + pv0.points + ' Punkte.' : '');
-      const tbar = '<div class="bar sb tp pv">' + (pv0 ? '<i class="pre" style="width:' + Math.min(1, (have + pv0.points) / need) * 100 + '%"></i>' : '') + '<i style="width:' + Math.min(1, have / need) * 100 + '%"></i></div>';
-      tempRow = '<span class="temple" title="' + tip + '"><span class="tl">Tempel ' + lvl + '</span>' + tbar + '<b class="tc">' + have + '/' + need + (pv0 ? ' <span class="tg">+' + pv0.points + (pv0.gained ? ' ▲' : '') + '</span>' : '') + '</b></span>';
-    }
+    const tempRow = '';
     h = h.replace('@@T@@', tempRow);
     h += '<div class="statrow">' + img('gold') + '<b>' + s.gold + '</b>' + sac + '</div>' + hp.replace(/<\/div>$/, (hpPl ? '' : ph) + '</div>') + mana.replace(/<\/div>$/, (manaPl ? '' : ph) + '</div>');
     h += '<div class="statrow">' + img('limit') + '<b>' + s.limit + '</b>' + mk + mr + '<span class="plcol">' + (limPl || '<span class="up ph"></span>') + '</span></div>';
