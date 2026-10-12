@@ -806,7 +806,6 @@ function endCombat(state, end) {
   else if (state.rules.freshHands) { dealFresh(state, A.deck, A.slots); if (c.mode === 'showdown') dealFresh(state, B.deck, B.slots); }   // jeder Kampf wird mit frisch gemischtem Deck und voller Hand verlassen
   state.turn = c.def;
   regen(state.players[c.def].stats);
-  regenMonsters(state);
   state.worldTurns = 0;
   if (c.mode === 'monster') {
     if (allMonstersDead(state)) {   // auch wenn das letzte Monster ohne Beute fiel (beide Seiten gleichzeitig auf 0 HP)
@@ -1075,8 +1074,8 @@ function endTurn(state, pid, kind) {
   }
   const nx = other(pid);
   regen(state.players[nx].stats);
-  regenMonsters(state);
   state.turn = nx; state.worldTurns++;
+  if (state.worldTurns % 2 === 0) regenMonsters(state);   // Monster erholen sich am Ende jeder Runde (nach den Zügen beider Spieler)
   curses(state).turnStart(state, nx, state.players[nx].stats, false, state.players[nx].name);
 }
 
