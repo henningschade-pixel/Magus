@@ -17,7 +17,7 @@ body{background:var(--ink);color:var(--bone);font:16px/1.45 var(--f-body);paddin
 header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px}
 h1{font:700 26px/1.1 var(--f-display);letter-spacing:.06em;margin:0;color:var(--gold);text-wrap:balance}
 header p{margin:4px 0 0;color:var(--mute);max-width:52ch}
-.tabs{display:flex;gap:6px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
 .tab{font:500 14px var(--f-display);letter-spacing:.1em;text-transform:uppercase;background:var(--panel);color:var(--mute);border:1px solid var(--line);border-radius:6px;padding:9px 16px;cursor:pointer}
 .tab[aria-selected=true]{color:var(--ink);background:var(--gold);border-color:var(--gold)}
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--water);outline-offset:2px}
@@ -69,11 +69,13 @@ textarea{width:100%;min-height:150px;background:var(--ink);color:var(--bone);bor
   <header>
     <div>
       <h1>Effektwerkstatt</h1>
-      <p>Einblendungen für den Spiegel, der unter dem Rückwurf zerbricht, und für den Todesfluch mit Pentagramm. Regler verstellen, Zeitleiste ziehen, Werte als JSON ins Spiel übernehmen.</p>
+      <p>Einblendungen für Spiegel, Todesfluch, Lifeflow und Aggro. Regler verstellen, Zeitleiste ziehen, Werte als JSON ins Spiel übernehmen.</p>
     </div>
     <div class="tabs" role="tablist" aria-label="Effekt">
       <button class="tab" role="tab" id="tab-mirror" data-fx="mirror" aria-selected="true">Spiegel</button>
       <button class="tab" role="tab" id="tab-curse" data-fx="curse" aria-selected="false">Todesfluch</button>
+      <button class="tab" role="tab" id="tab-lifeflow" data-fx="lifeflow" aria-selected="false">Lifeflow</button>
+      <button class="tab" role="tab" id="tab-aggro" data-fx="aggro" aria-selected="false">Aggro</button>
     </div>
   </header>
 
@@ -466,9 +468,220 @@ function drawCurse(ctx,t,p){
   ctx.restore();
 }
 
+
+/* ---------- Lifeflow (Erde + Wasser) ---------- */
+function mixc(a,b,k){const x=parseInt(a.slice(1),16),y=parseInt(b.slice(1),16);const f=(i)=>Math.round(((x>>i)&255)*(1-k)+((y>>i)&255)*k);return 'rgb('+f(16)+','+f(8)+','+f(0)+')'}
+function rr(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
+function lfTimes(p){
+  const n=Math.min(p.level,p.markers),d0=.30,dN=d0+(n-1)*.08;
+  const aS=d0+.06,aE=dN+.02+.1+.24;
+  return{n,d0,aS,aE};
+}
+function drawLifeflow(ctx,t,p){
+  const u=clamp(t/p.dur),G='#93c24f',B='#52a6f5',T=lfTimes(p),n=T.n;
+  bg(ctx,G,.15);
+  const me={x:190,y:292},brd={x:530,y:226},chest={x:me.x,y:me.y-22};
+  const kinds=['#dcdce8',B,'#ea5a5e','#dcdce8',B,'#ea5a5e'];
+  const slots=[];
+  for(let i=0;i<p.markers;i++)slots.push({x:brd.x+((i%3)-1)*56,y:brd.y+(Math.floor(i/3)-.5)*64,c:kinds[i]});
+  const glow=p.glow*seg(u,T.aS,T.aE)*(1-seg(u,T.aE+.05,T.aE+.3));
+  /* Brett */
+  ctx.save();rr(ctx,brd.x-110,brd.y-84,220,168,10);
+  ctx.fillStyle='rgba(255,255,255,.035)';ctx.fill();ctx.strokeStyle='rgba(255,255,255,.14)';ctx.lineWidth=1;ctx.stroke();
+  ctx.font='500 10px "JetBrains Mono",monospace';ctx.fillStyle='rgba(170,170,178,.8)';ctx.textAlign='center';
+  ctx.fillText('MARKER AUF DEM BRETT',brd.x,brd.y+100);ctx.restore();
+  /* Marker */
+  slots.forEach((m,i)=>{
+    const picked=i<n,d=T.d0+i*.08;
+    let al=1,sc=1;
+    if(picked&&u>d){const g=seg(u,d,d+.06);al=1-g;sc=1+g*.8}
+    if(al<=0)return;
+    ctx.save();ctx.translate(m.x,m.y);ctx.rotate(Math.PI/4);ctx.scale(sc,sc);ctx.globalAlpha=al;
+    ctx.shadowColor=m.c;ctx.shadowBlur=8;ctx.fillStyle=rgba(m.c,.55);ctx.fillRect(-9,-9,18,18);
+    ctx.strokeStyle=m.c;ctx.lineWidth=2;ctx.strokeRect(-9,-9,18,18);ctx.restore();
+    if(picked&&u>.14&&u<d+.02){
+      const pu=seg(u,.14,.2);
+      ctx.save();ctx.strokeStyle=rgba(lighten(G,.4),.9*pu);ctx.lineWidth=2;ctx.shadowColor=G;ctx.shadowBlur=10;
+      ctx.beginPath();ctx.arc(m.x,m.y,20+3*Math.sin(t*9+i),0,7);ctx.stroke();ctx.restore();
+    }
+  });
+  /* Figur, Aura */
+  const aura=Math.max(glow,seg(u,0,.12)*.25);
+  figure(ctx,me.x,me.y,1.1,'#1f2b25',mixc('#3a4a40',mixc(G,B,.3),.35+.55*glow),1,false);
+  ctx.save();ctx.globalCompositeOperation='lighter';
+  const ag=ctx.createRadialGradient(chest.x,chest.y,0,chest.x,chest.y,130);
+  ag.addColorStop(0,rgba(G,.35*aura));ag.addColorStop(.6,rgba(B,.12*aura));ag.addColorStop(1,rgba(B,0));
+  ctx.fillStyle=ag;ctx.fillRect(0,0,W,H);ctx.restore();
+  /* Heilring */
+  const hr=seg(u,T.aS,T.aE+.2);
+  if(hr>0&&hr<1){
+    ctx.save();ctx.globalCompositeOperation='lighter';
+    [[G,0],[B,.15]].forEach(([c,dl])=>{
+      const q=clamp((hr-dl)/(1-dl));if(q<=0)return;
+      ctx.strokeStyle=rgba(c,(1-q)*.9);ctx.lineWidth=4*(1-q)+1;ctx.shadowColor=c;ctx.shadowBlur=12;
+      ctx.beginPath();ctx.ellipse(me.x,me.y+56,20+q*95,(20+q*95)*.35,0,0,7);ctx.stroke();
+    });
+    ctx.restore();
+  }
+  /* Funken vom Brett zur Figur */
+  for(let i=0;i<n;i++){
+    const m=slots[i],d=T.d0+i*.08,r=rng(p.seed+i*31+1);
+    ctx.save();
+    for(let k=0;k<p.motes;k++){
+      const dl=r()*.1,ph=r()*6.28,lat=(r()-.5)*40,col=k%2?B:G;
+      const s=seg(u,d+.02+dl,d+.02+dl+.24);
+      if(s<=0||s>=1)continue;
+      const pos=q=>{
+        const e=eio(q),mx=(m.x+chest.x)/2,my=Math.min(m.y,chest.y)-110-lat;
+        const x=(1-e)*(1-e)*m.x+2*(1-e)*e*mx+e*e*chest.x,y=(1-e)*(1-e)*m.y+2*(1-e)*e*my+e*e*chest.y;
+        const amp=14*p.swirl*Math.sin(q*Math.PI);
+        return[x+Math.cos(q*Math.PI*4+ph)*amp,y+Math.sin(q*Math.PI*4+ph)*amp];
+      };
+      for(let j=4;j>=1;j--){const q=clamp(s-j*.018);if(q<=0)continue;const pp=pos(q);ctx.globalAlpha=(1-j/5)*.45;orb(ctx,pp[0],pp[1],2,col)}
+      ctx.globalAlpha=1;const pp=pos(s);orb(ctx,pp[0],pp[1],2.6,col,'#ffffff');
+    }
+    ctx.restore();
+    const bs=seg(u,d,d+.08);
+    if(bs>0&&bs<1){
+      ctx.save();ctx.globalCompositeOperation='lighter';
+      const fl=ctx.createRadialGradient(m.x,m.y,0,m.x,m.y,50*bs+10);
+      fl.addColorStop(0,'rgba(255,255,255,'+(.8*(1-bs))+')');fl.addColorStop(1,rgba(G,0));
+      ctx.fillStyle=fl;ctx.beginPath();ctx.arc(m.x,m.y,60,0,7);ctx.fill();ctx.restore();
+    }
+  }
+  /* Blätter */
+  if(glow>0&&p.leaves>0){
+    const lr=rng(p.seed+77);
+    ctx.save();ctx.globalCompositeOperation='lighter';
+    for(let i=0;i<p.leaves;i++){
+      const ph0=lr(),a0=lr()*6.28,sp=.25+lr()*.3,ph=(ph0+t*sp)%1;
+      const x=me.x+Math.cos(a0+ph*5)*(30+40*ph0),y=me.y+56-ph*150;
+      ctx.save();ctx.translate(x,y);ctx.rotate(a0+ph*6);
+      ctx.fillStyle=rgba(i%2?B:G,Math.sin(Math.PI*ph)*glow*.9);
+      ctx.beginPath();ctx.ellipse(0,0,6,2.6,0,0,7);ctx.fill();ctx.restore();
+    }
+    ctx.restore();
+  }
+  /* Lebensanzeige */
+  const maxHp=12,hp0=5,hp=hp0+n*eo(seg(u,T.aS,T.aE+.1));
+  const bx=me.x-72,by=me.y+84;
+  ctx.save();
+  for(let i=0;i<maxHp;i++){
+    const f=clamp(hp-i);
+    ctx.fillStyle='rgba(255,255,255,.08)';rr(ctx,bx+i*12.5,by,10.5,12,2);ctx.fill();
+    if(f>0){ctx.fillStyle=mixc(G,B,i>=hp0?.5:0);ctx.shadowColor=G;ctx.shadowBlur=i>=hp0?8*glow:0;rr(ctx,bx+i*12.5,by,10.5*f,12,2);ctx.fill();ctx.shadowBlur=0}
+  }
+  const tu=seg(u,T.aS+.04,T.aS+.14)*(1-seg(u,T.aE+.2,T.aE+.35));
+  if(tu>0){
+    ctx.font='700 22px "JetBrains Mono",monospace';ctx.textAlign='center';ctx.fillStyle=rgba(lighten(G,.5),tu);
+    ctx.shadowColor=G;ctx.shadowBlur=10;ctx.fillText('+'+n+' HP',me.x,me.y-104-tu*0+(-12)*seg(u,T.aS,T.aE));
+  }
+  ctx.restore();
+  /* Gratis-Nachziehen */
+  if(p.draw){
+    const dp=eo(seg(u,T.aE+.1,T.aE+.2))*(1-seg(u,.96,1));
+    if(dp>0){
+      for(let i=0;i<n;i++){
+        const a=(i-(n-1)/2)*.28;
+        ctx.save();ctx.translate(me.x+105,me.y-30);ctx.rotate(a);ctx.translate(0,-18*dp);ctx.scale(dp,dp);
+        ctx.shadowColor=B;ctx.shadowBlur=12;rr(ctx,-14,-20,28,40,4);ctx.fillStyle='#1d2430';ctx.fill();
+        ctx.strokeStyle=lighten(B,.3);ctx.lineWidth=1.5;ctx.stroke();ctx.restore();
+      }
+    }
+  }
+}
+
+/* ---------- Aggro (Feuer + Erde) ---------- */
+function agTimes(p){
+  const n=p.level,start=.2,lands=[];
+  for(let i=0;i<n;i++)lands.push(start+i*p.gap+p.flight);
+  return{n,start,lands};
+}
+function cardDraw(ctx,x,y,w,h,rot,sx,al,col,label){
+  ctx.save();ctx.translate(x,y);ctx.rotate(rot);ctx.scale(Math.max(.02,Math.abs(sx)),1);ctx.globalAlpha=al;
+  rr(ctx,-w/2,-h/2,w,h,6);ctx.fillStyle='#1d1b22';ctx.fill();ctx.strokeStyle=col;ctx.lineWidth=2;ctx.stroke();
+  if(label&&Math.abs(sx)>.35){
+    ctx.strokeStyle=rgba(col,.8);ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(0,-6,12,0,7);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(0,-20);ctx.lineTo(0,8);ctx.moveTo(-10,-10);ctx.lineTo(10,-2);ctx.moveTo(10,-10);ctx.lineTo(-10,-2);ctx.stroke();
+    ctx.font='700 11px "JetBrains Mono",monospace';ctx.textAlign='center';ctx.fillStyle=col;ctx.fillText('C1',0,h/2-8);
+  }
+  ctx.restore();
+}
+function drawAggro(ctx,t,p){
+  const u=clamp(t/p.dur),F='#ff7a3d',E='#93c24f',CU='#dcdce8',T=agTimes(p),n=T.n;
+  const A={x:110,y:300},foe={x:560,y:258},pile={x:560,y:384},hand={x:A.x+46,y:A.y-52};
+  let k=0;T.lands.forEach(l=>{if(u>l)k+=Math.exp(-(u-l)*p.dur*9)});
+  const amp=p.shake*5*Math.min(k,1.5);
+  ctx.save();ctx.translate(Math.sin(t*95)*amp,Math.cos(t*81)*amp*.7);
+  bg(ctx,F,Math.min(k,1)*.3);
+  figure(ctx,A.x,A.y,1.1,'#2a2225',mixc(F,E,.3),1,false);
+  const fl=T.lands.length&&u>T.lands[0]?seg(u,T.lands[0],T.lands[0]+.05):0;
+  figure(ctx,foe.x+Math.sin(t*70)*Math.min(k,1)*3*p.shake,foe.y,1.1,'#23222a',rgba(CU,.35+.5*fl),1,true);
+  /* Aufladen */
+  const ca=seg(u,.02,.12)*(1-seg(u,T.start+(n-1)*p.gap+.04,T.start+(n-1)*p.gap+.1));
+  if(ca>0){
+    const r=5+ca*9,rot=t*8;
+    orb(ctx,hand.x+Math.cos(rot)*9,hand.y+Math.sin(rot)*9,r,F);
+    orb(ctx,hand.x-Math.cos(rot)*9,hand.y-Math.sin(rot)*9,r,E);
+  }
+  /* Ablagestapel */
+  ctx.save();
+  ctx.font='500 10px "JetBrains Mono",monospace';ctx.textAlign='center';ctx.fillStyle='rgba(170,170,178,.8)';
+  ctx.fillText('ABLAGESTAPEL DES GEGNERS',pile.x,pile.y+66);ctx.restore();
+  for(let i=0;i<3;i++)cardDraw(ctx,pile.x+i*1.5,pile.y-i*2,64,90,0,1,1,'#4d4d55',false);
+  const stackPos=i=>({x:pile.x+4+i*3,y:pile.y-8-i*4});
+  const mixes=['F','E'];
+  /* Karten */
+  const sparks=[];
+  for(let i=0;i<n;i++){
+    const s0=T.start+i*p.gap,s=seg(u,s0,s0+p.flight),sp=stackPos(i);
+    if(s<=0)continue;
+    if(s>=1){cardDraw(ctx,sp.x,sp.y,64,90,0,1,1,CU,true);continue}
+    const pos=q=>{const e=eio(q);return[lerp(hand.x,sp.x,e),lerp(hand.y,sp.y,e)-Math.sin(q*Math.PI)*p.arc]};
+    for(let j=9;j>=1;j--){
+      const q=clamp(s-j*.03);if(q<=0)continue;const pp=pos(q);
+      ctx.save();ctx.globalAlpha=(1-j/10)*.7*Math.min(1,p.embers);orb(ctx,pp[0],pp[1],1+3*(1-j/10),j%2?F:E);ctx.restore();
+    }
+    const pp=pos(s),sc=lerp(.45,1,eo(s)),rot=Math.sin(s*Math.PI)*.5*(i%2?1:-1);
+    const flip=Math.cos(s*p.spin*Math.PI*2);
+    ctx.save();ctx.translate(pp[0],pp[1]);ctx.scale(sc,sc);ctx.translate(-pp[0],-pp[1]);
+    cardDraw(ctx,pp[0],pp[1],64,90,rot,flip,1,CU,true);ctx.restore();
+  }
+  /* Abwurf an der Hand und Aufschlag */
+  for(let i=0;i<n;i++){
+    const b=seg(u,T.start+i*p.gap,T.start+i*p.gap+.06);
+    if(b>0&&b<1)orb(ctx,hand.x,hand.y,14*(1-b)+3,mixc(F,E,.5));
+    const l=T.lands[i],g=seg(u,l,l+.14),sp=stackPos(i);
+    if(g>0&&g<1){
+      ctx.save();ctx.globalCompositeOperation='lighter';
+      ctx.strokeStyle=rgba(i%2?E:F,(1-g)*.9);ctx.lineWidth=3*(1-g)+.5;
+      ctx.beginPath();ctx.ellipse(pile.x,pile.y+44,g*90,g*30,0,0,7);ctx.stroke();
+      const sr=rng(p.seed+i*13);
+      for(let q=0;q<Math.round(14*p.embers);q++){
+        const a=sr()*Math.PI*2,v=30+sr()*90;
+        ctx.fillStyle=rgba(q%2?E:F,(1-g));
+        ctx.fillRect(sp.x+Math.cos(a)*v*g-1.5,sp.y+Math.sin(a)*v*g*.7-g*20-1.5,3,3);
+      }
+      ctx.restore();
+    }
+  }
+  /* Schwäche-Marker über dem Gegner */
+  if(p.weak){
+    const wa=T.lands[n-1]+.06;
+    for(let i=0;i<n;i++){
+      const g=eo(seg(u,wa+i*.03,wa+i*.03+.08));if(g<=0)continue;
+      ctx.save();ctx.translate(foe.x+(i-(n-1)/2)*30,foe.y-112-(1-g)*16);ctx.rotate(Math.PI/4);ctx.scale(g,g);
+      ctx.shadowColor=CU;ctx.shadowBlur=10;ctx.fillStyle=rgba(CU,.45);ctx.fillRect(-9,-9,18,18);
+      ctx.strokeStyle=CU;ctx.lineWidth=2;ctx.strokeRect(-9,-9,18,18);ctx.restore();
+    }
+  }
+  ctx.restore();
+}
+
 /* ---------- Definitionen ---------- */
 const FX={
   mirror:{
+    name:'spiegel',
     draw:drawMirror,
     def:{elem:'W',markers:2,brk:'one',reflect:true,size:1,cracks:8,shards:12,crackT:.12,scatter:1,gravity:1,shine:.6,shake:.5,dur:3,seed:7},
     phases:p=>[[0,'Aufbau'],[.12,'Geschoss'],[.42,'Einschlag'],[.42+p.crackT,'Zerbrechen']].concat(p.reflect?[[.42+p.crackT+.02,'Rückwurf']]:[]),
@@ -498,6 +711,7 @@ const FX={
     ]
   },
   curse:{
+    name:'todesfluch',
     draw:drawCurse,
     def:{color:'#dcdce8',size:1,tilt:.42,rings:2,runes:14,lineW:2.5,glow:14,flicker:.4,particles:50,pillar:.6,dark:.6,finish:'implode',shake:.6,dur:4,seed:3},
     phases:()=>[[0,'Abdunkeln'],[.04,'Kreis'],[.22,'Runen'],[.30,'Pentagramm'],[.62,'Entzündung'],[.68,'Aufladung'],[.82,'Vollstreckung']],
@@ -526,11 +740,61 @@ const FX={
       {k:'shake',t:'rng',l:'Wackeln',min:0,max:1,step:.05},
       {k:'dur',t:'rng',l:'Dauer',min:2,max:7,step:.1,u:' s'}
     ]
+  },
+  lifeflow:{
+    name:'lifeflow',
+    draw:drawLifeflow,
+    def:{level:2,markers:5,motes:16,swirl:1,glow:.7,leaves:18,draw:true,dur:3.6,seed:5},
+    phases:p=>{const T=lfTimes(p);return[[0,'Aufbau'],[.14,'Auswahl'],[.30,'Auflösen'],[T.aS+.04,'Heilung']].concat(p.draw?[[T.aE+.1,'Nachziehen']]:[])},
+    presets:{
+      'Stufe 2':{},
+      'Stufe 1':{level:1,motes:12,glow:.5,leaves:10},
+      'Stufe 3':{level:3,markers:6,motes:24,glow:1,leaves:30},
+      'Sanft':{swirl:1.7,leaves:34,motes:10,glow:.8,dur:4.4}
+    },
+    ctrls:[
+      {t:'h',l:'Kombo'},
+      {k:'level',t:'seg',l:'Stufe (Marker und HP)',o:[[1,'1'],[2,'2'],[3,'3']],hint:'Stufe S nimmt S Marker vom Brett und heilt S HP.'},
+      {k:'markers',t:'rng',l:'Marker auf dem Brett',min:3,max:6,step:1},
+      {k:'draw',t:'chk',l:'Gratis-Nachziehen zeigen'},
+      {t:'h',l:'Fluss'},
+      {k:'motes',t:'rng',l:'Funken je Marker',min:4,max:40,step:1},
+      {k:'swirl',t:'rng',l:'Wirbel',min:0,max:2,step:.05},
+      {k:'glow',t:'rng',l:'Glühen',min:0,max:1,step:.05},
+      {k:'leaves',t:'rng',l:'Blätter',min:0,max:50,step:1},
+      {k:'dur',t:'rng',l:'Dauer',min:2,max:6,step:.1,u:' s'}
+    ]
+  },
+  aggro:{
+    name:'aggro',
+    draw:drawAggro,
+    def:{level:2,gap:.09,flight:.22,arc:120,spin:1.5,embers:1,shake:.5,weak:true,dur:3.2,seed:9},
+    phases:p=>{const T=agTimes(p);return[[0,'Aufladen'],[T.start,'Fluchkarten'],[T.lands[0],'Einschlag']].concat(p.weak?[[T.lands[T.n-1]+.06,'Schwäche']]:[])},
+    presets:{
+      'Stufe 2':{},
+      'Stufe 1':{level:1,shake:.3},
+      'Stufe 3':{level:3,gap:.07,shake:.8,embers:1.5},
+      'Wurfsalve':{level:3,gap:.04,flight:.18,arc:70,spin:2.5,shake:.9}
+    },
+    ctrls:[
+      {t:'h',l:'Kombo'},
+      {k:'level',t:'seg',l:'Stufe (Fluchkarten)',o:[[1,'1'],[2,'2'],[3,'3']],hint:'Stufe S legt S Fluchkarten (C1) auf den Ablagestapel des Gegners.'},
+      {k:'weak',t:'chk',l:'Schwäche-Marker zeigen'},
+      {t:'h',l:'Flug'},
+      {k:'gap',t:'rng',l:'Abstand der Karten',min:.03,max:.2,step:.01},
+      {k:'flight',t:'rng',l:'Flugdauer',min:.1,max:.4,step:.01},
+      {k:'arc',t:'rng',l:'Bogenhöhe',min:0,max:220,step:5},
+      {k:'spin',t:'rng',l:'Drehung',min:0,max:4,step:.1},
+      {t:'h',l:'Wirkung'},
+      {k:'embers',t:'rng',l:'Glut',min:0,max:2,step:.05},
+      {k:'shake',t:'rng',l:'Wackeln',min:0,max:1,step:.05},
+      {k:'dur',t:'rng',l:'Dauer',min:2,max:6,step:.1,u:' s'}
+    ]
   }
 };
 
 /* ---------- Zustand ---------- */
-const store={mirror:{...FX.mirror.def},curse:{...FX.curse.def}};
+const store={};for(const f in FX)store[f]={...FX[f].def};
 try{
   const s=JSON.parse(localStorage.getItem('magus-fx-v1')||'null');
   if(s)for(const f in store)if(s[f])for(const k in store[f])if(k in s[f]&&typeof s[f][k]===typeof store[f][k])store[f][k]=s[f][k];
@@ -620,7 +884,7 @@ function sync(){
   $('json').value=exportJson();
   draw();
 }
-function exportJson(){return JSON.stringify({effekt:cur==='mirror'?'spiegel':'todesfluch',werte:store[cur]},null,2)}
+function exportJson(){return JSON.stringify({effekt:FX[cur].name,werte:store[cur]},null,2)}
 
 function resize(){
   const r=cv.getBoundingClientRect(),d=Math.min(window.devicePixelRatio||1,2);
@@ -671,7 +935,7 @@ $('copy').onclick=async()=>{
 };
 $('apply').onclick=()=>{
   try{
-    const o=JSON.parse($('json').value),map={spiegel:'mirror',todesfluch:'curse'},f=map[o.effekt];
+    const o=JSON.parse($('json').value),map={};for(const q in FX)map[FX[q].name]=q;const f=map[o.effekt];
     if(!f||!o.werte)throw new Error('Feld „effekt“ oder „werte“ fehlt.');
     const d=FX[f].def,n={...d};
     for(const k in d){if(k in o.werte){if(typeof o.werte[k]!==typeof d[k])throw new Error('Wert „'+k+'“ hat den falschen Typ.');n[k]=o.werte[k]}}
