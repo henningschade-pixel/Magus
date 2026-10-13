@@ -2270,7 +2270,9 @@ const MirrorFx = (() => {
   }
   let cv = null, raf = 0;
   function play(fx) {
-    if (FAST || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
+    const quiet = FAST || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+    Snd.play('break', quiet ? 0 : .42 * D.dur, 0.7);   // Bruch-Sound erst, wenn das Projektil den Spiegel trifft (Einschlag bei 42 % der Dauer)
+    if (quiet) return;
     const p = Object.assign({}, D, { elem: fx.elem, markers: fx.markers, broken: fx.broken, fromTop: fx.att !== ME });
     if (!cv) { cv = document.createElement('canvas'); cv.width = 1280; cv.height = 800; cv.style.cssText = 'position:absolute;left:0;top:0;width:1280px;height:800px;z-index:288;pointer-events:none'; stage.appendChild(cv); }
     cancelAnimationFrame(raf);
@@ -2350,10 +2352,10 @@ const FlowFx = (() => {
   /* Aggro: Feuer- und Erdfunken fliegen von der Hand des Angreifers auf den Ablagestapel des Gegners (ohne eigene Karte) */
   function aggro(fx) {
     if (off()) return;
-    const n = Math.max(1, fx.n || 1), H = handOf(fx.who), P = pileOf(fx.to), gap = .09, flight = .24, start = .16, arc = 90, dur = start + (n - 1) * gap + flight + .6;
+    const n = Math.max(1, fx.n || 1), H = handOf(fx.who), P = pileOf(fx.to), gap = .22, flight = .75, start = .3, arc = 110, dur = start + (n - 1) * gap + flight + .9;
     const shake = fx.to === ME ? 0 : 0;
     run(dur, (ctx, t, u) => {
-      const tt = t, ca = seg(tt, .0, .12) * (1 - seg(tt, start + (n - 1) * gap, start + (n - 1) * gap + .08));
+      const tt = t, ca = seg(tt, .0, .28) * (1 - seg(tt, start + (n - 1) * gap, start + (n - 1) * gap + .12));
       if (ca > 0) { const r = 5 + ca * 9, rot = tt * 8; orb(ctx, H.x + Math.cos(rot) * 14, H.y + Math.sin(rot) * 14, r, F); orb(ctx, H.x - Math.cos(rot) * 14, H.y - Math.sin(rot) * 14, r, G); }
       for (let i = 0; i < n; i++) {
         const s0 = start + i * gap, s = seg(tt, s0, s0 + flight), land = s0 + flight;
@@ -2362,7 +2364,7 @@ const FlowFx = (() => {
           for (let j = 12; j >= 1; j--) { const q = clamp(s - j * .03); if (q <= 0) continue; const pp = pos(q); ctx.save(); ctx.globalAlpha = (1 - j / 13) * .75; orb(ctx, pp[0], pp[1], 1.5 + 4 * (1 - j / 13), j % 2 ? F : G); ctx.restore(); }
           const pp = pos(s); orb(ctx, pp[0], pp[1], 8, i % 2 ? G : F, '#ffffff');
         }
-        const g = seg(tt, land, land + .3);
+        const g = seg(tt, land, land + .55);
         if (g > 0 && g < 1) {
           ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = rgba(i % 2 ? G : F, (1 - g) * .9); ctx.lineWidth = 3 * (1 - g) + .5; ctx.beginPath(); ctx.ellipse(P.x, P.y + 20, g * 80, g * 26, 0, 0, 7); ctx.stroke();
           const sr = rng(13 + i * 13); for (let q = 0; q < 14; q++) { const a = sr() * Math.PI * 2, v = 30 + sr() * 90; ctx.fillStyle = rgba(q % 2 ? G : F, 1 - g); ctx.fillRect(P.x + Math.cos(a) * v * g - 1.5, P.y + Math.sin(a) * v * g * .7 - g * 20 - 1.5, 3, 3); }
@@ -2422,7 +2424,8 @@ function render() {
     stage.dataset.top = side === 'top' ? mc.elem : ''; stage.dataset.bot = side === 'bot' ? mc.elem : ''; }
   if (cx.combat) {   // Marker (Schwäche, Spiegel, Tod) weg -> Sound
     const sa = G.combat.sides.a.stats, sb = G.combat.sides.b.stats, n = x => (x.marks || 0) + (x.mirror || 0) + (x.death || 0);
-    if (mkSeen && mkSeen.c === G.combat && (n(sa) < mkSeen.a || n(sb) < mkSeen.b)) Snd.play('break', 0, 0.7);
+    const mirNew = G.log.some(e => e.n > fxLast && [].concat(e.fx || []).some(f => f.kind === 'mirror'));   // beim Spiegelbruch spielt die Animation den Sound selbst, zum Einschlag
+    if (mkSeen && mkSeen.c === G.combat && (n(sa) < mkSeen.a || n(sb) < mkSeen.b) && !mirNew) Snd.play('break', 0, 0.7);
     mkSeen = { c: G.combat, a: n(sa), b: n(sb) };
     const dd = (sa.death || 0) + (sb.death || 0);   // Todes-Fluch-Marker hinzugekommen -> Fluch-Sound
     if (dthSeen && dthSeen.c === G.combat && dd > dthSeen.n) CurseFx.play();
