@@ -70,6 +70,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 @keyframes burnash{0%{translate:0 0;opacity:1;filter:none;-webkit-mask-position:0 0;mask-position:0 0}
  50%{filter:grayscale(.4) brightness(.64)}
  100%{translate:0 -70px;opacity:0;filter:grayscale(.8) brightness(.28) blur(2px);-webkit-mask-position:0 100%;mask-position:0 100%}}
+.pile-ph{position:absolute;border:1.5px dashed rgba(169,159,189,.3);border-radius:9px;pointer-events:none}
 .slot-ph{position:absolute;width:128px;height:194px;border:2px dashed rgba(169,159,189,.28);border-radius:12px}
 .pilelabel{position:absolute;font-size:15px;color:var(--mute);text-align:center;width:110px}
 .pilehit{position:absolute;border-radius:12px;cursor:var(--cp);z-index:60}
@@ -1789,6 +1790,8 @@ function renderCards() {
     return '<div class="pilelabel" style="left:' + (L.draw.x - 8) + 'px;top:' + y + 'px;width:' + (w + 16) + 'px">Stapel ' + d.draw.length + '</div>' +
       '<div class="pilelabel" style="left:' + (L.disc.x - 8) + 'px;top:' + y + 'px;width:' + (w + 16) + 'px">Ablage ' + d.discard.length + '</div>';
   };
+  const emp = (L, d) => ['draw', 'disc'].map(k => (k === 'draw' ? d.draw : d.discard).length ? '' : '<div class="pile-ph" style="left:' + L[k].x + 'px;top:' + L[k].y + 'px;width:' + CW * L.ps + 'px;height:' + CH * L.ps + 'px"></div>').join('');   // leere Stapel: dezent gestrichelt
+  ph += emp(L_MY, cx.myDeck) + emp(L_OP, cx.oppDeck);
   ph += lab(L_MY, cx.myDeck, true) + lab(L_OP, cx.oppDeck, false);
   const canDraw = canDrawNow();
   ph += '<div class="pilehit ' + (canDraw ? '' : 'off') + '" data-act="draw" title="Nachziehen: nicht gesperrte Karten ablegen und neu füllen" style="left:' + L_MY.draw.x + 'px;top:' + L_MY.draw.y + 'px;width:' + CW * L_MY.ps + 'px;height:' + CH * L_MY.ps + 'px"></div>';
