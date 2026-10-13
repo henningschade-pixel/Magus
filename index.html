@@ -102,6 +102,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .rg{position:absolute;border-radius:50%;box-sizing:border-box;pointer-events:none}
 .rg.pv{border:2.5px solid #5fe07f;box-shadow:0 0 9px #5fe07faa;background:rgba(95,224,127,.25)}
 .pvdn{color:var(--bad);font-weight:700}
+.slotgh{position:absolute;width:128px;height:194px;border:2px dashed #5fe07f;border-radius:12px;background:rgba(95,224,127,.10);pointer-events:none;display:none}.slotgh.on{display:block}
 .pvnew{color:var(--good);font-weight:700}
 .pvfl{position:absolute;z-index:270;pointer-events:none;color:var(--good);font-weight:700;font-size:18px;background:rgba(14,10,22,.92);border:1px solid var(--good);border-radius:8px;padding:3px 9px;white-space:nowrap}
 .rg.on{border:2.5px solid #f2c850;box-shadow:0 0 6px #f2c850aa;background:rgba(242,200,80,.18)}
@@ -1797,7 +1798,9 @@ function renderCards() {
   const pnd = G.players[ME].stats.pending;
   if (!cx.combat && pnd > 0 && G.players[ME].slots < M.MAX_SLOTS) {
     const canSlot = myTurn();
-    ph += '<div class="upgpts" style="left:' + (slotX(n - 1, n, L_MY) + CW * L_MY.s + 10) + 'px;top:' + (L_MY.y + 70) + 'px">' + (canSlot ? '<button class="up pt" style="width:34px;height:38px;margin:0" data-act="spend" data-w="slot" title="+1 Handplatz (1 Upgrade-Punkt)"></button>' : '') + '</div>';
+    const stp = n > 1 ? Math.min(L_MY.gap, (L_MY.span - CW * L_MY.s) / (n - 1)) : L_MY.gap, nx = slotX(n - 1, n, L_MY) + stp;   // Platz des nächsten Handplatzes
+    ph += '<div class="slotgh" style="left:' + nx + 'px;top:' + L_MY.y + 'px"></div>' +
+      '<div class="upgpts" style="left:' + (nx + CW * L_MY.s / 2 - 17) + 'px;top:' + (L_MY.y + CH * L_MY.s / 2 - 19) + 'px">' + (canSlot ? '<button class="up pt" style="width:34px;height:38px;margin:0" data-act="spend" data-w="slot" title="+1 Handplatz (1 Upgrade-Punkt)"></button>' : '') + '</div>';
   }
   if (cx.combat) {
     ph += mirrorStack(cx.myStats, slotX(n - 1, n, L_MY) + CW * L_MY.s + 10, L_MY.y + 20, 's');
@@ -2479,10 +2482,7 @@ stage.addEventListener('mouseover', e => {
     const nw = w === 'hp' ? st.hp + '/' + (st.maxHp + n) : w === 'mana' ? st.mana + '/' + (st.maxMana + 1) : String(st.limit + 1);
     v.innerHTML = '<span class="pvnew">' + nw + '</span>'; undos.push(() => { v.innerHTML = old; });
   } else if (act === 'spend' && w === 'slot') {
-    const f = document.createElement('div'); f.className = 'pvfl'; f.textContent = 'Handplätze ' + (G.players[ME].slots + 1);
-    const r = b.getBoundingClientRect(), sr = stage.getBoundingClientRect(), k = sr.width / stage.offsetWidth;
-    f.style.left = ((r.left - sr.left) / k - 60) + 'px'; f.style.top = ((r.top - sr.top) / k - 34) + 'px';
-    stage.appendChild(f); undos.push(() => f.remove());
+    const gh = stage.querySelector('.slotgh'); if (gh) { gh.classList.add('on'); undos.push(() => gh.classList.remove('on')); }
   }
   pvUndo = () => { undos.forEach(u => u()); };
 });
