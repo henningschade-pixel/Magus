@@ -193,7 +193,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .hdr{display:flex;align-items:center;gap:8px;width:100%}
 .hn{white-space:nowrap}
 .hsp{margin-left:auto;font-weight:400;color:var(--mute);font-size:17px;white-space:nowrap}.hsp b{color:var(--gold)}
-.pendhdr{float:none;white-space:nowrap;font-size:17px;font-variant-numeric:tabular-nums;color:var(--good)}.pendhdr b{color:#a9efb8}.pendhdr .pl{color:#5fa872}.pendhdr .mx{color:var(--good)}.pendhdr .mx.nw{color:#c4f7cf;text-shadow:0 0 6px rgba(120,230,145,.6)}.pendhdr .mx .w{font-weight:700;font-size:19px}
+.pendhdr{float:none;white-space:nowrap;font-size:17px;font-variant-numeric:tabular-nums;color:var(--good)}.pendhdr b{color:#a9efb8}.pendhdr .pvnew{color:#e2ffe8;text-shadow:0 0 6px rgba(120,230,145,.8)}.pendhdr .pl{color:#5fa872}.pendhdr .mx{color:var(--good)}.pendhdr .mx.nw{color:#c4f7cf;text-shadow:0 0 6px rgba(120,230,145,.6)}.pendhdr .mx .w{font-weight:700;font-size:19px}
 .temple{display:flex;align-items:center;gap:5px;flex:1;min-width:0;font-family:'Alegreya',serif;font-weight:400;font-size:14px;color:var(--mute)}
 .temple .tl{white-space:nowrap}
 .temple .bar.sb{flex:1;min-width:20px}
@@ -1866,11 +1866,10 @@ function statsBlock(name, s, p, size, up, full) {
   const mana = '<div class="statrow">' + lead(manaPl) + img('mana') + '<b data-pv="mana">' + s.mana + '/' + s.maxMana + '</b>' + sbar(s.mana, s.maxMana, 'mana') + '</div>';
   let h = '<h3><span class="hdr"><span class="hn">' + name + '</span>@@T@@@@G@@' + (p ? '<span class="hsp" title="Siegpunkte">★ <b>' + p.sp + '</b></span>' : '') + '</span></h3><div class="sbody"><div class="scol">';
   let ptsHdr = '';
-  if (p) {   // Punkte + gemischte Zahl: offene Upgrade-Punkte, dazu (ganze Zahl) durch ein geplantes Opfer volle Punkte und der Bruch (Fortschritt/Preis der nächsten Stufe)
-    const lvl = p.temple.level, pv0 = up && s.gold >= 1 ? M.previewTemple(p, Math.max(1, Math.min(sacN, s.gold, 4))) : null;
-    const W = pv0 ? pv0.gained : 0, fh = pv0 ? pv0.pool : p.temple.points, fn = pv0 ? M.nextLevelCost(pv0.level) : M.nextLevelCost(lvl);
-    const tip = 'Offene Upgrade-Punkte (aufgespart) plus Fortschritt zur nächsten Tempelstufe: ' + p.temple.points + ' von ' + M.nextLevelCost(lvl) + ' Punkten (Tempelstufe ' + lvl + ')' + (pv0 ? '. Das geplante Opfer bringt +' + pv0.points + ' Punkte' + (W ? ', davon ' + W + ' voller Upgrade-Punkt' + (W === 1 ? '' : 'e') : '') + '.' : '.');
-    ptsHdr = '<span class="pendhdr" title="' + tip + '">Punkte <b data-pv="pts">' + s.pending + '</b> <span class="pl">+</span> <span class="mx' + (pv0 ? ' nw' : '') + '">' + (W > 0 ? '<span class="w">' + W + '</span>' : '') + (fh > 0 || W === 0 ? (W > 0 ? ' ' : '') + fh + '/' + fn : '') + '</span></span>';
+  if (p) {   // offene Upgrade-Punkte, dahinter als Bruch der Fortschritt zur nächsten Tempelstufe; das Ergebnis eines Opfers zeigt die Vorschau beim Überfahren des Opfern-Knopfes
+    const lvl = p.temple.level;
+    const tip = 'Offene Upgrade-Punkte (aufgespart). Der Bruch ist der Fortschritt zur nächsten Tempelstufe: ' + p.temple.points + ' von ' + M.nextLevelCost(lvl) + ' Punkten (Tempelstufe ' + lvl + ').';
+    ptsHdr = '<span class="pendhdr" title="' + tip + '">Punkte <b data-pv="pts">' + s.pending + '</b> <span class="mx" data-pv="frac">' + p.temple.points + '/' + M.nextLevelCost(lvl) + '</span></span>';
   }
   h = h.replace('@@G@@', ptsHdr);
   if (compact) {
@@ -2474,6 +2473,8 @@ stage.addEventListener('mouseover', e => {
     redo('gold', n);
     const el = stage.querySelector('[data-pv="pts"]');
     if (el && pv.gained > 0) { const old = el.innerHTML; el.innerHTML = '<span class="pvnew">' + (st.pending + pv.gained) + '</span>'; undos.push(() => { el.innerHTML = old; }); }
+    const fr = stage.querySelector('[data-pv="frac"]');
+    if (fr) { const old = fr.innerHTML; fr.innerHTML = '<span class="pvnew">' + pv.pool + '/' + M.nextLevelCost(pv.level) + '</span>'; undos.push(() => { fr.innerHTML = old; }); }
   } else if (act === 'magic') redo('gold', M.magicCost(G, st.mag[b.dataset.e]));
   else if (act === 'spend') redo('pts', w === 'limit' ? M.limitStepCost(G, st) : w === 'mana' ? M.manaStepCost(G, st) : 1);
   if (act === 'magic') {
