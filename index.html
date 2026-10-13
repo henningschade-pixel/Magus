@@ -261,7 +261,8 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 #mpchip.off{color:var(--bad);border-color:var(--bad)}
 
 /* Aktiver Spieler: Leuchten nur am Fensterrand neben seinen Karten (unten = du, oben = Gegner) */
-#stage::after{content:"";position:absolute;inset:0;border-radius:10px;pointer-events:none;z-index:200;opacity:0;transition:opacity .25s}
+#stage{isolation:isolate}
+#stage::after{content:"";position:absolute;inset:0;border-radius:10px;pointer-events:none;z-index:-1;opacity:0;transition:opacity .25s}   /* vor dem Hintergrund, hinter allen anderen Elementen */
 #stage.turn-me::after{opacity:1;box-shadow:inset 0 -3px 0 rgba(210,173,79,.95),inset 0 -50px 50px -34px rgba(210,173,79,.4);animation:edgeme 1.7s ease-in-out infinite}
 #stage.turn-opp::after{opacity:1;box-shadow:inset 0 3px 0 rgba(210,173,79,.95),inset 0 50px 50px -34px rgba(210,173,79,.4);animation:edgeopp 1.7s ease-in-out infinite}
 @keyframes edgeme{0%,100%{box-shadow:inset 0 -3px 0 rgba(210,173,79,.7),inset 0 -40px 40px -34px rgba(210,173,79,.22)}50%{box-shadow:inset 0 -4px 0 #f2d27a,inset 0 -60px 60px -34px rgba(242,210,122,.45)}}
