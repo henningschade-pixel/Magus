@@ -358,9 +358,7 @@ function drawPhase(state, d) {
     if (parseCard(c.id).curse) { c.locked = false; old.push(c); d.hand[i] = null; }
     else if (!c.locked) { d.discard.push(c); d.hand[i] = null; }
   }
-  // Fluchkarten vom Ablagestapel werden beim Nachziehen zuerst gezogen: sie wandern oben auf den Zugstapel (gezogen wird von hinten)
-  const fresh = d.discard.filter(c => parseCard(c.id).curse);
-  if (fresh.length) { d.discard = d.discard.filter(c => !parseCard(c.id).curse); d.draw.push(...fresh); }
+  // Fluchkarten liegen zunächst auf dem Ablagestapel der Gegenseite. Sie kommen erst auf die Hand, wenn der Zugstapel leer ist und der Ablagestapel in den Zugstapel gemischt wird (fillHand).
   const replaced = d.hand.some(c => !c);
   if (replaced) fillHand(state, d);   // frisch gezogene Fluchkarten bleiben auf der Hand und belegen einen Platz
   // die alten Fluchkarten sind damit endgültig aus dem Spiel (nicht auf dem Ablagestapel)
