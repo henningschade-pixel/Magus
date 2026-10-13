@@ -1841,8 +1841,9 @@ function statsBlock(name, s, p, size, up, full) {
   const limPl = lc > 1 ? plc(up && anyT && s.limit < M.MAX_LIMIT, pend >= lc, 'limit', '+1 Ausspiellimit', lc) : pl(up && anyT && pend >= lc && s.limit < M.MAX_LIMIT, 'limit', '+1 Ausspiellimit (1 Upgrade-Punkt)');
   const slotPl = pl(up && anyT && pend > 0 && p.slots < M.MAX_SLOTS, 'slot', '+1 Handplatz (1 Upgrade-Punkt)');
   const sbar = (v, mx, cls) => '<div class="bar sb ' + cls + '"><i style="width:' + Math.max(0, v) / mx * 100 + '%"></i></div>';
-  const hp = '<div class="statrow">' + img('hp') + '<b>' + Math.max(0, s.hp) + '/' + s.maxHp + '</b>' + sbar(s.hp, s.maxHp, '') + hpPl + '</div>';
-  const mana = '<div class="statrow">' + img('mana') + '<b>' + s.mana + '/' + s.maxMana + '</b>' + sbar(s.mana, s.maxMana, 'mana') + manaPl + '</div>';
+  const lead = b => compact ? '' : (b || '<span class="up ph"></span>');   // Upgrade-Knöpfe stehen links neben dem Symbol
+  const hp = '<div class="statrow">' + lead(hpPl) + img('hp') + '<b>' + Math.max(0, s.hp) + '/' + s.maxHp + '</b>' + sbar(s.hp, s.maxHp, '') + '</div>';
+  const mana = '<div class="statrow">' + lead(manaPl) + img('mana') + '<b>' + s.mana + '/' + s.maxMana + '</b>' + sbar(s.mana, s.maxMana, 'mana') + '</div>';
   let h = '<h3><span class="hdr"><span class="hn">' + name + '</span>@@T@@@@G@@' + (p ? '<span class="hsp" title="Siegpunkte">★ <b>' + p.sp + '</b></span>' : '') + '</span></h3><div class="sbody"><div class="scol">';
   let ptsHdr = '';
   if (p) {   // Punkte + gemischte Zahl: offene Upgrade-Punkte, dazu (ganze Zahl) durch ein geplantes Opfer volle Punkte und der Bruch (Fortschritt/Preis der nächsten Stufe)
@@ -1862,13 +1863,13 @@ function statsBlock(name, s, p, size, up, full) {
       const n = Math.max(1, Math.min(sacN, s.gold, 4)), pv = M.previewTemple(p, n);
       sacBtn = '<button class="btn small sacbtn" data-act="temple" data-n="' + n + '" ' + (can ? '' : 'disabled') + ' title="Tempel: Punkte ' + p.temple.points + ', Stufe ' + p.temple.level + ', nächste Stufe kostet ' + M.nextLevelCost(p.temple.level) + '">Opfern</button>';
       const stp = '<div class="stepper"><button class="arr" data-act="sacdn" ' + (n > 1 ? '' : 'disabled') + '>◀</button><b title="+' + pv.points + ' Punkte → ' + (pv.gained ? '+' + pv.gained + ' Upgrade' : 'kein Upgrade') + '">' + n + '</b><button class="arr" data-act="sacup" ' + (n < Math.min(s.gold, 4) ? '' : 'disabled') + '>▶</button></div>';
-      sac = '<div class="sacbox">' + stp + sacBtn + '</div><span class="up ph"></span>';
+      sac = '<div class="sacbox">' + stp + sacBtn + '</div>';
     }
     const ph = '<span class="up ph"></span>';
     const tempRow = '';
     h = h.replace('@@T@@', tempRow);
-    h += '<div class="statrow">' + img('gold') + '<b>' + s.gold + '</b>' + sac + '</div>' + hp.replace(/<\/div>$/, (hpPl ? '' : ph) + '</div>') + mana.replace(/<\/div>$/, (manaPl ? '' : ph) + '</div>');
-    h += '<div class="statrow">' + img('limit') + '<b>' + s.limit + '</b>' + mk + mr + '<span class="plcol">' + (limPl || '<span class="up ph"></span>') + '</span></div>';
+    h += '<div class="statrow">' + ph + img('gold') + '<b>' + s.gold + '</b>' + sac + '</div>' + hp + mana;
+    h += '<div class="statrow">' + lead(limPl) + img('limit') + '<b>' + s.limit + '</b>' + mk + mr + '</div>';
   }
   h = h.replace('@@G@@', '').replace('@@T@@', '');
   const bsz = size || 140;
