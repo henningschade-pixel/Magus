@@ -200,7 +200,8 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .hdr{display:flex;align-items:center;gap:8px;width:100%}
 .hn{white-space:nowrap}
 .hsp{margin-left:auto;font-weight:400;color:var(--mute);font-size:17px;white-space:nowrap}.hsp b{color:var(--gold)}
-.pendhdr{float:none;white-space:nowrap;font-size:17px;font-variant-numeric:tabular-nums;color:var(--good)}.pendhdr b{color:#a9efb8}.pendhdr .pvnew{color:#e2ffe8;text-shadow:0 0 6px rgba(120,230,145,.8)}.pendhdr .pl{color:#5fa872}.pendhdr .mx{color:var(--good)}.pendhdr .mx.nw{color:#c4f7cf;text-shadow:0 0 6px rgba(120,230,145,.6)}.pendhdr .mx .w{font-weight:700;font-size:19px}
+.pendhdr{float:none;white-space:nowrap;font-size:17px;font-variant-numeric:tabular-nums;color:var(--good)}.pendhdr b{color:#a9efb8}.pendhdr .pvnew{color:#e2ffe8;text-shadow:0 0 6px rgba(120,230,145,.8)}.pendhdr .gneed{color:var(--mute);font-size:14px}
+.pendhdr .pl{color:#5fa872}.pendhdr .mx{color:var(--good)}.pendhdr .mx.nw{color:#c4f7cf;text-shadow:0 0 6px rgba(120,230,145,.6)}.pendhdr .mx .w{font-weight:700;font-size:19px}
 .temple{display:flex;align-items:center;gap:5px;flex:1;min-width:0;font-family:'Alegreya',serif;font-weight:400;font-size:14px;color:var(--mute)}
 .temple .tl{white-space:nowrap}
 .temple .bar.sb{flex:1;min-width:20px}
@@ -255,6 +256,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .mprow input:focus{outline:none;border-color:var(--gold)}
 #mpmsg{min-height:22px;font-size:15px}
 .mpcode{font-family:'Alegreya SC',serif;font-size:64px;letter-spacing:.2em;color:var(--gold);margin:10px 0}
+#homebtn.off{border-color:var(--bad);color:var(--bad)}
 #mpchip{position:absolute;left:56px;top:16px;z-index:250;font-size:15px;color:var(--mute);background:rgba(10,8,14,.7);border:1px solid var(--line);border-radius:14px;padding:3px 12px;pointer-events:none}
 #mpchip.off{color:var(--bad);border-color:var(--bad)}
 
@@ -1883,7 +1885,7 @@ function statsBlock(name, s, p, size, up, full) {
   if (p) {   // offene Upgrade-Punkte, dahinter als Bruch der Fortschritt zur nächsten Tempelstufe; das Ergebnis eines Opfers zeigt die Vorschau beim Überfahren des Opfern-Knopfes
     const lvl = p.temple.level;
     const tip = 'Offene Upgrade-Punkte (aufgespart). Der Bruch ist der Fortschritt zur nächsten Tempelstufe: ' + p.temple.points + ' von ' + M.nextLevelCost(lvl) + ' Punkten (Tempelstufe ' + lvl + ').';
-    ptsHdr = '<span class="pendhdr" title="' + tip + '">Punkte <b data-pv="pts">' + s.pending + '</b> <span class="mx" data-pv="frac">' + p.temple.points + '/' + M.nextLevelCost(lvl) + '</span></span>';
+    ptsHdr = '<span class="pendhdr" title="' + tip + '">Punkte <b data-pv="pts">' + s.pending + '</b> <span class="mx" data-pv="frac">' + fracHTML(p.temple.points, lvl) + '</span></span>';
   }
   h = h.replace('@@G@@', ptsHdr);
   if (compact) {
@@ -2058,6 +2060,9 @@ function comboPanel(cx) {
   }
   return '<div class="panel" style="' + box(LAYOUT.combo) + '">' + h + '</div>';
 }
+// Gold, das im Tempel eingesetzt werden müsste, um die nächste Tempelstufe zu erreichen (n Gold ergeben n(n+1)/2 Punkte)
+function goldForNext(pool, level) { const need = M.nextLevelCost(level) - pool; let n = 1; while (M.pointsForGold(n) < need && n < 20) n++; return need <= 0 ? 0 : n; }
+const fracHTML = (pool, level) => pool + '/' + M.nextLevelCost(level) + ' <span class="gneed" title="Gold, das im Tempel eingesetzt werden müsste, um die nächste Stufe zu erreichen">(' + goldForNext(pool, level) + ' Gold)</span>';
 let manaPv = 0;   // Manakosten der markierten Karten, als rote Vorschau am Mana-Wert
 function combatCenter(cx) {
   manaPv = 0;
@@ -2658,13 +2663,10 @@ function mpMsg(t, bad) { const m = document.getElementById('mpmsg'); if (m) { m.
 function mpCode() { const a = 'abcdefghjkmnpqrstuvwxyz23456789'; let s = ''; for (let i = 0; i < 5; i++) s += a[Math.random() * a.length | 0]; return s; }
 function mpSave() { try { if (MP && MP.started) sessionStorage.setItem(MP_KEY, JSON.stringify({ code: MP.code, seat: MP.seat, host: MP.host, seed: MP.seed, first: MP.first, rules: MP.rules, log: MP.log })); } catch (e) { } }
 function mpForget() { try { sessionStorage.removeItem(MP_KEY); } catch (e) { } }
-function mpChip() {
-  let c = document.getElementById('mpchip');
-  if (!MP) { if (c) c.remove(); return; }
-  if (!c) { c = document.createElement('div'); c.id = 'mpchip'; stage.appendChild(c); }
-  const on = MP.room.peers().some(p => !p.sameTab);
-  c.className = on ? '' : 'off';
-  c.textContent = 'Raum ' + MP.code.toUpperCase() + ' · ' + (on ? 'online' : 'offline');
+function mpOnline() { return !!MP && MP.room.peers().some(p => !p.sameTab); }
+function mpChip() {   // die Rauminformation steht im Home-Menü; der Home-Knopf wird rot, wenn der Mitspieler offline ist
+  const h = document.getElementById('homebtn'); if (h) h.classList.toggle('off', !!MP && !mpOnline());
+  const m = document.getElementById('mproom'); if (m && MP) { const on = mpOnline(); m.textContent = 'Raum ' + MP.code.toUpperCase() + ' · ' + (on ? 'online' : 'offline'); m.style.color = on ? '' : 'var(--bad)'; }
 }
 async function mpOpen(code, host) {
   const api = await mpRoomApi(); if (!api) { mpMsg('Mehrspieler ist hier nicht verfügbar.', true); return false; }
@@ -2746,7 +2748,7 @@ async function mpLeave() {
   if (!m) return;
   clearInterval(m.hello); clearInterval(m.beat); m.subs.forEach(u => { try { u(); } catch (e) { } });
   try { await m.room.leave(); } catch (e) { }
-  const c = document.getElementById('mpchip'); if (c) c.remove();
+  const hb = document.getElementById('homebtn'); if (hb) hb.classList.remove('off');
 }
 async function mpRestore() {   // nach Neuladen der Seite: laufende Partie wieder aufnehmen
   let sv = null; try { sv = JSON.parse(sessionStorage.getItem(MP_KEY) || 'null'); } catch (e) { }
@@ -2833,7 +2835,7 @@ stage.addEventListener('mouseover', e => {
     const el = stage.querySelector('[data-pv="pts"]');
     if (el && pv.gained > 0) { const old = el.innerHTML; el.innerHTML = '<span class="pvnew">' + (st.pending + pv.gained) + '</span>'; undos.push(() => { el.innerHTML = old; }); }
     const fr = stage.querySelector('[data-pv="frac"]');
-    if (fr) { const old = fr.innerHTML; fr.innerHTML = '<span class="pvnew">' + pv.pool + '/' + M.nextLevelCost(pv.level) + '</span>'; undos.push(() => { fr.innerHTML = old; }); }
+    if (fr) { const old = fr.innerHTML; fr.innerHTML = '<span class="pvnew">' + fracHTML(pv.pool, pv.level) + '</span>'; undos.push(() => { fr.innerHTML = old; }); }
   } else if (act === 'magic') redo('gold', M.magicCost(G, st.mag[b.dataset.e]));
   else if (act === 'spend') redo('pts', w === 'limit' ? M.limitStepCost(G, st) : w === 'mana' ? M.manaStepCost(G, st) : 1);
   if (act === 'magic') {
@@ -2857,10 +2859,11 @@ function homeMenu() {
   if (overlay.style.display === 'flex') return;
   clearTimeout(aiTimer);   // das Spiel pausiert, solange das Menü offen ist
   overlay.style.display = 'flex';
-  overlay.innerHTML = '<div class="box start" style="width:420px"><h1 style="font-size:44px">Menü</h1><div style="display:flex;flex-direction:column;gap:10px;align-self:stretch;margin-top:10px">' +
+  overlay.innerHTML = '<div class="box start" style="width:420px"><h1 style="font-size:44px">Menü</h1>' + (MP ? '<div id="mproom" style="font-size:19px;color:var(--mute);margin-top:-4px"></div>' : '') + '<div style="display:flex;flex-direction:column;gap:10px;align-self:stretch;margin-top:10px">' +
     '<button class="btn primary" style="font-size:21px;padding:10px" data-act="resume">Fortsetzen</button>' +
     (MP ? '' : '<button class="btn" style="font-size:21px;padding:10px" data-act="restart" title="Beginnt eine neue Partie gegen den Computer">Neu starten</button>') +
     '<button class="btn" style="font-size:21px;padding:10px" data-act="leave">' + (MP ? 'Partie verlassen' : 'Spiel verlassen') + '</button></div></div>';
+  mpChip();
 }
 const homeBtn = document.createElement('button');
 homeBtn.id = 'homebtn'; homeBtn.title = 'Menü: fortsetzen, neu starten, verlassen'; homeBtn.textContent = '⌂';
