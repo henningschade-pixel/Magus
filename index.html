@@ -1844,6 +1844,14 @@ function statsBlock(name, s, p, size, up, full) {
   const hp = '<div class="statrow">' + img('hp') + '<b>' + Math.max(0, s.hp) + '/' + s.maxHp + '</b>' + sbar(s.hp, s.maxHp, '') + hpPl + '</div>';
   const mana = '<div class="statrow">' + img('mana') + '<b>' + s.mana + '/' + s.maxMana + '</b>' + sbar(s.mana, s.maxMana, 'mana') + manaPl + '</div>';
   let h = '<h3><span class="hdr"><span class="hn">' + name + '</span>@@T@@@@G@@' + (p ? '<span class="hsp" title="Siegpunkte">★ <b>' + p.sp + '</b></span>' : '') + '</span></h3><div class="sbody"><div class="scol">';
+  let ptsHdr = '';
+  if (p) {   // Punkte + gemischte Zahl: offene Upgrade-Punkte, dazu (ganze Zahl) durch ein geplantes Opfer volle Punkte und der Bruch (Fortschritt/Preis der nächsten Stufe)
+    const lvl = p.temple.level, pv0 = up && s.gold >= 1 ? M.previewTemple(p, Math.max(1, Math.min(sacN, s.gold, 4))) : null;
+    const W = pv0 ? pv0.gained : 0, fh = pv0 ? pv0.pool : p.temple.points, fn = pv0 ? M.nextLevelCost(pv0.level) : M.nextLevelCost(lvl);
+    const tip = 'Offene Upgrade-Punkte (aufgespart) plus Fortschritt zur nächsten Tempelstufe: ' + p.temple.points + ' von ' + M.nextLevelCost(lvl) + ' Punkten (Tempelstufe ' + lvl + ')' + (pv0 ? '. Das geplante Opfer bringt +' + pv0.points + ' Punkte' + (W ? ', davon ' + W + ' voller Upgrade-Punkt' + (W === 1 ? '' : 'e') : '') + '.' : '.');
+    ptsHdr = '<span class="pendhdr" title="' + tip + '">Punkte <b>' + s.pending + '</b> <span class="pl">+</span> <span class="mx' + (pv0 ? ' nw' : '') + '">' + (W > 0 ? '<span class="w">' + W + '</span>' : '') + (fh > 0 || W === 0 ? (W > 0 ? ' ' : '') + fh + '/' + fn : '') + '</span></span>';
+  }
+  h = h.replace('@@G@@', ptsHdr);
   if (compact) {
     h += hp + mana;
     h += '<div class="statrow">' + img('gold') + '<b>' + s.gold + '</b>' + img('limit') + '<b>' + s.limit + '</b>' + mk + mr + '</div>';
@@ -1856,14 +1864,6 @@ function statsBlock(name, s, p, size, up, full) {
       const stp = '<div class="stepper"><button class="arr" data-act="sacdn" ' + (n > 1 ? '' : 'disabled') + '>◀</button><b title="+' + pv.points + ' Punkte → ' + (pv.gained ? '+' + pv.gained + ' Upgrade' : 'kein Upgrade') + '">' + n + '</b><button class="arr" data-act="sacup" ' + (n < Math.min(s.gold, 4) ? '' : 'disabled') + '>▶</button></div>';
       sac = '<div class="sacbox">' + stp + sacBtn + '</div><span class="up ph"></span>';
     }
-    let ptsHdr = '';
-    if (p) {   // Punkte + gemischte Zahl: offene Upgrade-Punkte, dazu (ganze Zahl) durch ein geplantes Opfer volle Punkte und der Bruch (Fortschritt/Preis der nächsten Stufe)
-      const lvl = p.temple.level, pv0 = up && s.gold >= 1 ? M.previewTemple(p, Math.max(1, Math.min(sacN, s.gold, 4))) : null;
-      const W = pv0 ? pv0.gained : 0, fh = pv0 ? pv0.pool : p.temple.points, fn = pv0 ? M.nextLevelCost(pv0.level) : M.nextLevelCost(lvl);
-      const tip = 'Offene Upgrade-Punkte (aufgespart) plus Fortschritt zur nächsten Tempelstufe: ' + p.temple.points + ' von ' + M.nextLevelCost(lvl) + ' Punkten (Tempelstufe ' + lvl + ')' + (pv0 ? '. Das geplante Opfer bringt +' + pv0.points + ' Punkte' + (W ? ', davon ' + W + ' voller Upgrade-Punkt' + (W === 1 ? '' : 'e') : '') + '.' : '.');
-      ptsHdr = '<span class="pendhdr" title="' + tip + '">Punkte <b>' + pend + '</b> <span class="pl">+</span> <span class="mx' + (pv0 ? ' nw' : '') + '">' + (W > 0 ? '<span class="w">' + W + '</span>' : '') + (fh > 0 || W === 0 ? (W > 0 ? ' ' : '') + fh + '/' + fn : '') + '</span></span>';
-    }
-    h = h.replace('@@G@@', ptsHdr);
     const ph = '<span class="up ph"></span>';
     const tempRow = '';
     h = h.replace('@@T@@', tempRow);
