@@ -1116,11 +1116,11 @@ function execSpend(state, pid, what) {
   const p = state.players[pid], s = p.stats, d = p.deck;
   if (s.pending <= 0) return fail('Keine offenen Upgrade-Punkte.');
   let cost = 1;
-  if (what === 'hp') { const n = state.rules.hpPerPoint || 1; s.maxHp += n; s.hp = Math.min(s.maxHp, s.hp + n); }
+  if (what === 'hp') { const n = state.rules.hpPerPoint || 1; s.maxHp += n; }   // Upgrade erhöht nur das Maximum, die aktuellen HP bleiben
   else if (what === 'mana') {
     cost = manaStepCost();
     if (s.pending < cost) return fail('Der nächste Mana-Schritt kostet ' + cost + ' Upgrade-Punkte.');
-    s.maxMana++; s.mana = Math.min(s.maxMana, s.mana + 1);
+    s.maxMana++;   // nur das Maximum steigt, das aktuelle Mana bleibt
   } else if (what === 'limit') {
     if (s.limit >= MAX_LIMIT) return fail('Das Ausspiellimit ist am Maximum (' + MAX_LIMIT + ').');
     cost = limitStepCost(state, s);
@@ -2461,7 +2461,7 @@ stage.addEventListener('mouseover', e => {
   const undos = [], redo = (key, cost) => {   // sinkende Werte (Gold, Upgrade-Punkte) gleichzeitig rot markieren
     const el = stage.querySelector('[data-pv="' + key + '"]'); if (!el || !(cost > 0)) return;
     const old = el.innerHTML, cur = key === 'gold' ? st.gold : st.pending;
-    el.innerHTML = old + ' <span class="pvdn">→ ' + Math.max(0, cur - cost) + '</span>'; undos.push(() => { el.innerHTML = old; });
+    el.innerHTML = '<span class="pvdn">' + Math.max(0, cur - cost) + '</span>'; undos.push(() => { el.innerHTML = old; });
   };
   if (act === 'magic') redo('gold', M.magicCost(G, st.mag[b.dataset.e]));
   else if (act === 'spend') redo('pts', w === 'limit' ? M.limitStepCost(G, st) : w === 'mana' ? M.manaStepCost(G, st) : 1);
@@ -2471,10 +2471,10 @@ stage.addEventListener('mouseover', e => {
   } else if (act === 'spend' && (w === 'hp' || w === 'mana' || w === 'limit')) {
     const v = b.closest('.statrow') && b.closest('.statrow').querySelector('[data-pv="' + w + '"]'); if (!v) return;
     const n = w === 'hp' ? (G.rules.hpPerPoint || 1) : 1, old = v.innerHTML;
-    const nw = w === 'hp' ? Math.min(st.maxHp + n, st.hp + n) + '/' + (st.maxHp + n) : w === 'mana' ? Math.min(st.maxMana + 1, st.mana + 1) + '/' + (st.maxMana + 1) : String(st.limit + 1);
-    v.innerHTML = old + ' <span class="pvnew">→ ' + nw + '</span>'; undos.push(() => { v.innerHTML = old; });
+    const nw = w === 'hp' ? st.hp + '/' + (st.maxHp + n) : w === 'mana' ? st.mana + '/' + (st.maxMana + 1) : String(st.limit + 1);
+    v.innerHTML = '<span class="pvnew">' + nw + '</span>'; undos.push(() => { v.innerHTML = old; });
   } else if (act === 'spend' && w === 'slot') {
-    const f = document.createElement('div'); f.className = 'pvfl'; f.textContent = 'Handplätze ' + G.players[ME].slots + ' → ' + (G.players[ME].slots + 1);
+    const f = document.createElement('div'); f.className = 'pvfl'; f.textContent = 'Handplätze ' + (G.players[ME].slots + 1);
     const r = b.getBoundingClientRect(), sr = stage.getBoundingClientRect(), k = sr.width / stage.offsetWidth;
     f.style.left = ((r.left - sr.left) / k - 60) + 'px'; f.style.top = ((r.top - sr.top) / k - 34) + 'px';
     stage.appendChild(f); undos.push(() => f.remove());
