@@ -2294,6 +2294,7 @@ function showFx() {
     if (e.n <= fxLast) continue;
     if (e.fx && e.fx.kind === 'mirror') MirrorFx.play(e.fx);
     const m = /^(Spiegel|Todes-Fluch): /.exec(e.txt); if (!m) continue;
+    if (m[1] === 'Todes-Fluch') Snd.play('curse', 0, 0.7);   // Fluch-Sound, wenn der Todes-Fluch Schaden macht
     const mirror = m[1] === 'Spiegel', victimMe = mirror ? e.pid !== ME : e.pid === ME;
     const d = document.createElement('div'); d.className = 'fxnote ' + (mirror ? 'mirror' : 'death');
     d.style.top = (victimMe ? 546 - k * 54 : 172 + k * 54) + 'px';
@@ -2335,7 +2336,7 @@ function render() {
     if (mkSeen && mkSeen.c === G.combat && (n(sa) < mkSeen.a || n(sb) < mkSeen.b)) Snd.play('break', 0, 0.7);
     mkSeen = { c: G.combat, a: n(sa), b: n(sb) };
     const dd = (sa.death || 0) + (sb.death || 0);   // Todes-Fluch-Marker hinzugekommen -> Fluch-Sound
-    if (dthSeen && dthSeen.c === G.combat && dd > dthSeen.n) { Snd.play('curse', 0, 0.7); CurseFx.play(); }
+    if (dthSeen && dthSeen.c === G.combat && dd > dthSeen.n) CurseFx.play();
     dthSeen = { c: G.combat, n: dd };
   } else { mkSeen = null; dthSeen = null; }
   { const mine = panels.querySelector('.sbody[data-lead]');   // Knopfspalte weich ein- und ausfahren
