@@ -65,13 +65,11 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .fxnote.mirror{border-color:var(--water);box-shadow:0 0 18px rgba(82,166,245,.5)}.fxnote.mirror i{color:var(--water)}
 @keyframes fxin{0%{opacity:0;transform:translateY(10px) scale(.96)}10%{opacity:1;transform:none}80%{opacity:1}100%{opacity:0;transform:translateY(-8px)}}
 .card.fadeout{pointer-events:none;z-index:400}
-/* Verbrennen zu Asche: die Karte vergraut, steigt auf und zerfällt von unten nach oben, graue Partikel steigen auf */
-.card.fadeout .inner{animation:burnash 1.2s ease-in forwards;-webkit-mask-image:linear-gradient(to top,transparent 0,transparent 40%,#000 62%,#000 100%);mask-image:linear-gradient(to top,transparent 0,transparent 40%,#000 62%,#000 100%);-webkit-mask-size:100% 320%;mask-size:100% 320%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
-.card.fadeout::after{content:"";position:absolute;left:-6px;right:-6px;bottom:-8px;height:70%;pointer-events:none;opacity:0;filter:grayscale(1) brightness(.85);background:radial-gradient(circle at 25% 85%,rgba(255,160,40,.9) 0 5px,transparent 6px),radial-gradient(circle at 70% 70%,rgba(255,210,90,.9) 0 4px,transparent 5px),radial-gradient(circle at 45% 55%,rgba(255,130,30,.85) 0 3px,transparent 4px),radial-gradient(circle at 82% 40%,rgba(255,190,80,.8) 0 3px,transparent 4px),radial-gradient(circle at 15% 50%,rgba(255,150,40,.8) 0 3px,transparent 4px);animation:burnsparks 1.2s ease-out forwards}
+/* Verbrennen (Verkohlen): die Karte vergraut und dunkelt ab, steigt auf und zerfällt von unten nach oben */
+.card.fadeout .inner{animation:burnash 1.2s ease-in forwards;-webkit-mask-image:linear-gradient(to top,transparent 0,transparent 40%,#000 62%,#000 100%);mask-image:linear-gradient(to top,transparent 0,transparent 40%,#000 62%,#000 100%);-webkit-mask-size:100% 193%;mask-size:100% 193%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
 @keyframes burnash{0%{translate:0 0;opacity:1;filter:none;-webkit-mask-position:0 0;mask-position:0 0}
- 50%{filter:grayscale(1) brightness(.75) contrast(1.15)}
- 100%{translate:0 -80px;scale:.94;opacity:0;filter:grayscale(1) brightness(.4) blur(2px);-webkit-mask-position:0 100%;mask-position:0 100%}}
-@keyframes burnsparks{0%{opacity:0;transform:translateY(10px)}25%{opacity:1}100%{opacity:0;transform:translateY(-130px)}}
+ 50%{filter:grayscale(.4) brightness(.64)}
+ 100%{translate:0 -70px;opacity:0;filter:grayscale(.8) brightness(.28) blur(2px);-webkit-mask-position:0 100%;mask-position:0 100%}}
 .slot-ph{position:absolute;width:128px;height:194px;border:2px dashed rgba(169,159,189,.28);border-radius:12px}
 .pilelabel{position:absolute;font-size:15px;color:var(--mute);text-align:center;width:110px}
 .pilehit{position:absolute;border-radius:12px;cursor:var(--cp);z-index:60}
