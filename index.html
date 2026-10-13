@@ -103,6 +103,10 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .rg{position:absolute;border-radius:50%;box-sizing:border-box;pointer-events:none}
 .rg.pv{border:2.5px solid #5fe07f;box-shadow:0 0 9px #5fe07faa;background:rgba(95,224,127,.25)}
 .pvdn{color:var(--bad);font-weight:700}
+.prow{min-height:26px;display:flex;justify-content:center;align-items:center;margin:4px 0}
+.pdots{display:inline-flex;gap:8px;align-items:center}
+.pdot{width:18px;height:18px;border-radius:50%;display:inline-block;background:radial-gradient(circle,#fff 0 18%,var(--c) 38%,transparent 72%);box-shadow:0 0 10px var(--c)}
+.pdot.F{--c:#ff7a3d}.pdot.E{--c:#93c24f}.pdot.W{--c:#52a6f5}
 .slotgh{position:absolute;width:128px;height:194px;border:2px dashed #5fe07f;border-radius:12px;background:rgba(95,224,127,.10);pointer-events:none;display:none}.slotgh.on{display:block}
 .pvnew{color:var(--good);font-weight:700}
 .pvfl{position:absolute;z-index:270;pointer-events:none;color:var(--good);font-weight:700;font-size:18px;background:rgba(14,10,22,.92);border:1px solid var(--good);border-radius:8px;padding:3px 9px;white-space:nowrap}
@@ -985,6 +989,7 @@ function execAttack(state) {
   if (cs.endTurn) cs.endTurn(state, side);
   c.ult = []; c.lf = 'self'; c.lfp = null; c.mel = null;
   const dmg = ev.prim ? ev.damage : 0;
+  if (dmg > 0) fxs.push({ kind: 'attack', who: side.ctrl, to: opp.ctrl, elem: ev.prim, n: dmg });
   log(state, side.name + ' greift an' + (ev.prim ? ' (' + NAMES[ev.prim] + ', Schaden ' + dmg + ')' : ' (nur Flüche)') + (texts.length ? ' – ' + texts.join(', ') : '') + '.', side.ctrl, fxs.length ? fxs : undefined);
   if (dmg > 0) { c.color = ev.prim; c.pending = dmg; c.turn = c.turn === 'a' ? 'b' : 'a'; c.action = 'defense'; }
   else { flushDefer(state); passAttackTurn(state, true); }
@@ -1006,7 +1011,9 @@ function execDefense(state, passOnly) {
   if (sel.length) consumeSelection(d, sel); else d.marks = [];
   const leftover = Math.max(0, c.pending - block) * (curses(state).weakDouble && side.stats.marks > 0 ? 2 : 1);
   side.stats.hp = Math.max(0, side.stats.hp - leftover);
-  log(state, side.name + ' verteidigt' + (block ? ' (Block ' + block + ')' : ' ohne Block') + ' und verliert ' + leftover + ' HP' + (curses(state).weakDouble && side.stats.marks > 0 && leftover ? ' (Schwäche: doppelter Schaden)' : '') + '.', side.ctrl);
+  const attacker = c.sides[c.turn === 'a' ? 'b' : 'a'], defEl = sel.length && sel[0].el && !sel[0].curse ? sel[0].el : c.color;
+  const defFx = { kind: 'defense', who: side.ctrl, to: attacker.ctrl, attElem: c.color, defElem: defEl, pending: c.pending, block };
+  log(state, side.name + ' verteidigt' + (block ? ' (Block ' + block + ')' : ' ohne Block') + ' und verliert ' + leftover + ' HP' + (curses(state).weakDouble && side.stats.marks > 0 && leftover ? ' (Schwäche: doppelter Schaden)' : '') + '.', side.ctrl, defFx);
   // Spiegel: Wer in der Farbe des Angriffs verteidigt, wirft alle Spiegelmarker als unblockbaren Schaden zurück.
   if (mirrorOn(state) && mirrorOf(side.stats, c.color) > 0 && (state.rules.mirrorTrigger === 'any' ? true : sel.some(x => !x.curse && x.el === c.color)) && !(state.rules.mirrorChoice && c.mr === 0)) {
     const att = c.sides[c.turn === 'a' ? 'b' : 'a'], step = state.rules.mirrorStep || 0, rel = Math.min(mirrorCap(side.stats, sel, c.color), state.rules.mirrorChoice ? Math.min(mirrorOf(side.stats, c.color), c.pending, c.mr == null ? 1 : c.mr) : (step > 0 ? Math.min(step, mirrorOf(side.stats, c.color)) : mirrorOf(side.stats, c.color))), r = rel * (state.rules.mirrorMult || 1);
@@ -2055,16 +2062,16 @@ function combatCenter(cx) {
   const icon = !my ? 'wait' : atk ? 'attack' : 'defense';
   let h = '<div class="combatcenter"><div class="sc" style="font-size:22px;color:var(--gold)">' + (c.mode === 'showdown' ? 'Showdown' : 'Kampf gegen ' + esc(c.sides.b.name)) + '</div>';
   h += '<img class="big" src="' + IMG[icon] + '">';
-  h += '<div style="font-size:19px;margin:2px 0">' + (my ? (atk ? 'Du greifst an' : 'Du verteidigst') : esc(actorSide.name) + ' ist am Zug (' + (atk ? 'Angriff' : 'Verteidigung') + ')') + '</div>';
-  if (!atk) h += '<div style="font-size:19px;color:#f7c98b">Eingehender Angriff: ' + c.pending + ' <span class="' + c.color + '">' + NAMES[c.color] + '</span></div>';
+  const pd = (n, el) => '<span class="pdots">' + Array.from({ length: Math.min(10, Math.max(0, n)) }, () => '<i class="pdot ' + el + '"></i>').join('') + '</span>';   // je Punkt ein Funke in der Farbe der Magie
+  if (!atk) h += '<div class="prow" title="Eingehender Angriff">' + pd(c.pending, c.color) + '</div>';
   let prev = '', canExec = false;
   if (my) {
     const sel = M.selection(cx.mine.deck);
     if (atk) {
-      if (!sel.length) prev = '<span class="note">Markiere Karten. Die erste markierte Karte bestimmt das Element des Angriffs.</span>';
+      if (!sel.length) prev = '';
       else {
         const ev = M.evalAttack(cx.myStats, sel);
-        prev = 'Schaden <b>' + (ev.prim ? ev.damage : 0) + '</b>' + (ev.prim ? ' <span class="' + ev.prim + '">' + NAMES[ev.prim] + '</span>' : '') + ' · Mana <b>' + ev.cost + '</b> von ' + cx.myStats.mana;
+        prev = '<div class="prow" title="Schaden ' + (ev.prim ? ev.damage : 0) + ', Mana ' + ev.cost + ' von ' + cx.myStats.mana + '">' + (ev.prim ? pd(ev.damage, ev.prim) : '') + '</div>';
         const pick2 = ev.levels.ulti > 0 && !(G.rules.ultiMode === 'death');
         canExec = ev.valid && ev.affordable && !(pick2 && c.ult.length !== 2);
         if (G.rules.lifeflowMode === 'any' && !cardCurses() && ev.valid && ev.levels.ew > 0 && !(ev.levels.ulti > 0 && G.rules.ultiMode === 'death')) prev += lfSummary(cx, ev.levels.ew);
@@ -2073,9 +2080,9 @@ function combatCenter(cx) {
       }
     } else {
       const ev = M.evalDefense(cx.myStats, sel, c.color, c.mr);
-      if (!sel.length) prev = '<span class="note">Markiere Karten im Element des Angriffs oder im überlegenen Element, oder nimm den Schaden.</span>';
+      if (!sel.length) prev = '';
       else if (!ev.valid) prev = '<span class="bad">' + esc(ev.reason) + '</span>';
-      else { prev = 'Block <b>' + ev.block + '</b> · Mana <b>' + ev.cost + '</b> von ' + cx.myStats.mana + ' · Schaden danach <b>' + Math.max(0, c.pending - ev.block) + '</b>'; canExec = ev.affordable; if (!ev.affordable) prev += '<div class="bad">Zu wenig Mana.</div>'; }
+      else { prev = '<div class="prow" title="Block ' + ev.block + ', Mana ' + ev.cost + ' von ' + cx.myStats.mana + ', Schaden danach ' + Math.max(0, c.pending - ev.block) + '">' + pd(ev.block, ev.el || c.color) + '</div>'; canExec = ev.affordable; if (!ev.affordable) prev += '<div class="bad">Zu wenig Mana.</div>'; }
     }
   }
   if (my && !atk && G.rules.mirrorChoice && (cx.myStats.mirror || 0) > 0) { const cap = Math.min(M.mirrorOf(cx.myStats, c.color), c.pending, M.mirrorCap(cx.myStats, M.selection(cx.mine.deck), c.color)), n = Math.min(cap, c.mr == null ? 1 : c.mr); prev += '<div class="mrsel">Spiegel ablegen: <button class="mini" data-act="mr" data-n="' + Math.max(0, n - 1) + '">−</button> <b>' + n + '</b> von ' + cap + ' <button class="mini" data-act="mr" data-n="' + Math.min(cap, n + 1) + '">+</button></div>'; }
@@ -2373,17 +2380,86 @@ const FlowFx = (() => {
       }
     });
   }
-  return { lifeflow, aggro };
+
+  /* Angriff und Verteidigung: je Punkt ein Funke in der Farbe der Magie fliegt von der Hand in die Mitte; Angriffs- und Verteidigungspunkte löschen sich gegenseitig aus, der Rest fliegt auf die HP */
+  const ELC = { F: '#ff7a3d', E: '#93c24f', W: '#52a6f5' };
+  let ex = null;
+  const center = () => { const b = LAYOUT.combat; return { x: b.left + b.w / 2, y: b.top + b.h / 2 + 6 }; };
+  function endEx() { if (ex) { cancelAnimationFrame(ex.raf); ex.cv.remove(); ex = null; } }
+  function arc(a, b, q, h) { const e = eio(q); return [lerp(a.x, b.x, e), lerp(a.y, b.y, e) - Math.sin(q * Math.PI) * h]; }
+  function trail(ctx, a, b, s, h, col, size) {
+    for (let j = 8; j >= 1; j--) { const q = clamp(s - j * .035); if (q <= 0) continue; const pp = arc(a, b, q, h); ctx.save(); ctx.globalAlpha = (1 - j / 9) * .6; orb(ctx, pp[0], pp[1], size * (1 - j / 12), col); ctx.restore(); }
+    const pp = arc(a, b, s, h); orb(ctx, pp[0], pp[1], size, col, '#ffffff');
+  }
+  function burst(ctx, x, y, g, col, seed) {
+    ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = rgba(lighten(col, .4), (1 - g) * .9); ctx.lineWidth = 3 * (1 - g) + .5; ctx.beginPath(); ctx.arc(x, y, 8 + g * 46, 0, 7); ctx.stroke();
+    const sr = rng(seed); for (let q = 0; q < 10; q++) { const a = sr() * Math.PI * 2, v = 20 + sr() * 50; ctx.fillStyle = rgba(lighten(col, .5), 1 - g); ctx.fillRect(x + Math.cos(a) * v * g - 1.5, y + Math.sin(a) * v * g - 1.5, 3, 3); } ctx.restore();
+  }
+  function startEx(fx, preArrived) {
+    endEx();
+    const cv = document.createElement('canvas'); cv.width = 1280; cv.height = 800; cv.style.cssText = 'position:absolute;left:0;top:0;width:1280px;height:800px;z-index:287;pointer-events:none'; stage.appendChild(cv);
+    const n = Math.max(1, Math.min(10, fx.n)), M0 = center(), H = handOf(fx.who), col = ELC[fx.elem] || ELC.W;
+    ex = { cv, ctx: cv.getContext('2d'), t0: performance.now(), n, M0, H, col, who: fx.who, to: fx.to, def: null, arrive: (n - 1) * .2 + .8 };
+    if (preArrived) ex.t0 -= (ex.arrive + 1) * 1000;
+    ex.orbs = []; for (let i = 0; i < n; i++) ex.orbs.push({ tx: M0.x + (i - (n - 1) / 2) * 38, ty: M0.y - 36, s0: i * .2, gone: false });
+    const loop = ts => { if (!ex || ex.cv !== cv) return; frameEx(ts); if (ex) ex.raf = requestAnimationFrame(loop); };
+    ex.raf = requestAnimationFrame(loop);
+  }
+  function frameEx(ts) {
+    const e = ex, ctx = e.ctx, t = (ts - e.t0) / 1000; ctx.clearRect(0, 0, 1280, 800);
+    const d = e.def, FL = .8, hp = d ? hpOf(d.who) : null;
+    // Angriffsfunken
+    e.orbs.forEach((o, i) => {
+      const s = seg(t, o.s0, o.s0 + FL), tgt = { x: o.tx, y: o.ty };
+      let x = o.tx, y = o.ty + Math.sin(t * 3 + i) * 3, show = s > 0;
+      if (s > 0 && s < 1) { trail(ctx, e.H, tgt, s, 90, e.col, 8); return; }
+      if (!show) return;
+      if (d) {
+        const tp = t - d.t1;   // ab hier läuft die Auflösung
+        if (i < d.pairs) { const m = seg(tp, 0, .35); x = lerp(o.tx, e.M0.x + (i - (d.pairs - 1) / 2) * 38, m); y = lerp(o.ty, e.M0.y, m); if (tp > .35) return; }
+        else { const f = seg(tp, .55, .55 + .8); if (f >= 1) return; if (f > 0) { const pp = arc({ x: o.tx, y: o.ty }, hp, f, 70); trail(ctx, { x: o.tx, y: o.ty }, hp, f, 70, e.col, 8); return; } }
+      }
+      orb(ctx, x, y, 8, e.col, '#ffffff');
+    });
+    if (!d) return;
+    const tp = t - d.t1;
+    // Verteidigungsfunken
+    for (let j = 0; j < d.b; j++) {
+      const s0 = d.t0 + j * .2 - 0, s = seg(t, s0, s0 + FL), tx = e.M0.x + (j - (d.b - 1) / 2) * 38, ty = e.M0.y + 36, dc = d.col;
+      if (s > 0 && s < 1) { trail(ctx, d.H, { x: tx, y: ty }, s, 90, dc, 8); continue; }
+      if (s <= 0) continue;
+      if (j < d.pairs) { const m = seg(tp, 0, .35); if (tp > .35) continue; orb(ctx, lerp(tx, e.M0.x + (j - (d.pairs - 1) / 2) * 38, m), lerp(ty, e.M0.y, m), 8, dc, '#ffffff'); }
+      else { const f = seg(tp, 0, .5); if (f >= 1) continue; ctx.save(); ctx.globalAlpha = 1 - f; orb(ctx, tx, ty - f * 14, 8 * (1 - f * .5), dc, '#ffffff'); ctx.restore(); }
+    }
+    // gegenseitiges Auflösen
+    for (let i = 0; i < d.pairs; i++) { const g = seg(tp, .3, .3 + .45); if (g > 0 && g < 1) burst(ctx, e.M0.x + (i - (d.pairs - 1) / 2) * 38, e.M0.y, g, i % 2 ? d.col : e.col, 11 + i); }
+    // Rest trifft die HP
+    const left = e.n - d.pairs;
+    for (let i = 0; i < left; i++) { const g = seg(tp, .55 + .8 + i * .0, .55 + .8 + .4); if (g > 0 && g < 1) burst(ctx, hp.x, hp.y, g, e.col, 31 + i); }
+    const tEnd = d.t1 + .55 + .8 + .5 + (left ? 0 : -1.2);
+    if (t > Math.max(tEnd, d.t1 + .9)) endEx();
+  }
+  function attack(fx) { if (off()) return; startEx(fx, false); }
+  function defense(fx) {
+    if (off()) return;
+    const pend = Math.max(1, Math.min(10, fx.pending)), b = Math.max(0, Math.min(10, fx.block));
+    if (!ex) startEx({ who: fx.to, to: fx.who, elem: fx.attElem, n: pend }, true);
+    const e = ex, now = (performance.now() - e.t0) / 1000, t0 = Math.max(now, e.arrive);
+    const pairs = Math.min(e.n, b), fl = .8, t1 = t0 + (b ? (b - 1) * .2 + fl + .15 : .15);
+    e.def = { who: fx.who, H: handOf(fx.who), col: ELC[fx.defElem] || ELC.W, b, pairs, t0, t1 };
+  }
+  function resetEx() { endEx(); }
+  return { lifeflow, aggro, attack, defense, resetEx };
 })();
 let leadPrev = null;
 let curKey = null, curDown = false, mkSeen = null, dthSeen = null, fxFor = null, fxLast = 0;
 // Sekundär ausgelöste Effekte (Spiegel wirft Schaden zurück, Todes-Fluch zehrt) kurz an der betroffenen Seite einblenden
 function showFx() {
-  if (fxFor !== G) { fxFor = G; fxLast = G.logN; return; }
+  if (fxFor !== G) { fxFor = G; fxLast = G.logN; FlowFx.resetEx(); return; }
   let k = 0;
   for (const e of G.log) {
     if (e.n <= fxLast) continue;
-    [].concat(e.fx || []).forEach(f => { if (f.kind === 'mirror') MirrorFx.play(f); else if (f.kind === 'lifeflow') FlowFx.lifeflow(f); else if (f.kind === 'aggro') FlowFx.aggro(f); });
+    [].concat(e.fx || []).forEach(f => { if (f.kind === 'mirror') MirrorFx.play(f); else if (f.kind === 'lifeflow') FlowFx.lifeflow(f); else if (f.kind === 'aggro') FlowFx.aggro(f); else if (f.kind === 'attack') FlowFx.attack(f); else if (f.kind === 'defense') FlowFx.defense(f); });
     const m = /^(Spiegel|Todes-Fluch): /.exec(e.txt); if (!m) continue;
     if (m[1] === 'Todes-Fluch') Snd.play('curse', 0, 0.7);   // Fluch-Sound, wenn der Todes-Fluch Schaden macht
     const mirror = m[1] === 'Spiegel', victimMe = mirror ? e.pid !== ME : e.pid === ME;
