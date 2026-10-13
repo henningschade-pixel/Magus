@@ -2479,8 +2479,8 @@ stage.addEventListener('mouseover', e => {
   } else if (act === 'spend' && (w === 'hp' || w === 'mana' || w === 'limit')) {
     const v = b.closest('.statrow') && b.closest('.statrow').querySelector('[data-pv="' + w + '"]'); if (!v) return;
     const n = w === 'hp' ? (G.rules.hpPerPoint || 1) : 1, old = v.innerHTML;
-    const nw = w === 'hp' ? st.hp + '/' + (st.maxHp + n) : w === 'mana' ? st.mana + '/' + (st.maxMana + 1) : String(st.limit + 1);
-    v.innerHTML = '<span class="pvnew">' + nw + '</span>'; undos.push(() => { v.innerHTML = old; });
+    const g = x => '<span class="pvnew">' + x + '</span>';   // bei HP und Mana ändert sich nur das Maximum (Nenner)
+    v.innerHTML = w === 'hp' ? Math.max(0, st.hp) + '/' + g(st.maxHp + n) : w === 'mana' ? st.mana + '/' + g(st.maxMana + 1) : g(st.limit + 1); undos.push(() => { v.innerHTML = old; });
   } else if (act === 'spend' && w === 'slot') {
     const gh = stage.querySelector('.slotgh'); if (gh) { gh.classList.add('on'); undos.push(() => gh.classList.remove('on')); }
   }
