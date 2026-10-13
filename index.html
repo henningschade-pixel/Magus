@@ -165,7 +165,9 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 #log div{opacity:.55}#log div:last-child{opacity:1;color:var(--bone)}
 #log.logpanel{padding:12px 14px;background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:12px;display:flex;flex-direction:column;overflow:hidden;text-align:left;color:var(--bone)}
 #log.logpanel h3{font-size:20px;color:var(--gold);margin-bottom:6px;flex:none}
-#log.logpanel .logl{flex:1;display:flex;flex-direction:column;justify-content:flex-end;overflow:hidden}
+#log.logpanel{pointer-events:auto}
+#log.logpanel .logl{flex:1;min-height:0;display:flex;flex-direction:column;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--mute) transparent}
+#log.logpanel .logl>div:first-child{margin-top:auto}
 #log.logpanel .logl div{opacity:.62;padding:2px 0 2px 8px;border-left:2px solid transparent;line-height:1.25}
 #log.logpanel .logl div.me{border-left-color:var(--gold)}#log.logpanel .logl div.op{border-left-color:var(--mute)}
 #log.logpanel .logl div:last-child{opacity:1}
@@ -2100,14 +2102,16 @@ function render() {
   else h += vendorPanel() + (G.camp ? campPanel() : monsterCards());
   if (banner && banner.until > Date.now()) h += '<div class="banner" data-act="dismiss" style="' + box(LAYOUT.banner) + '">' + banner.lines.map(esc).join('<br>') + '<small>Klicken zum Schließen</small></div>';
   panels.innerHTML = h;
+  const lg0 = logEl.querySelector('.logl'), lgKeep = lg0 && lg0.scrollHeight - lg0.scrollTop - lg0.clientHeight > 24 ? lg0.scrollTop : null;   // nicht am Ende: Leseposition merken
   if (cx.combat) {   // links: nur der Kampflog (Einträge seit Kampfbeginn)
     const from = cx.c.logFrom || 0;
     logEl.className = 'logpanel'; logEl.style.cssText = box(LAYOUT.combo);
-    logEl.innerHTML = '<h3>Kampflog</h3><div class="logl">' + G.log.filter(e => e.n > from).slice(-14).map(e => '<div class="' + (e.pid === ME ? 'me' : e.pid === null ? '' : 'op') + '">' + esc(e.txt) + '</div>').join('') + '</div>';
+    logEl.innerHTML = '<h3>Kampflog</h3><div class="logl">' + G.log.filter(e => e.n > from).slice(-300).map(e => '<div class="' + (e.pid === ME ? 'me' : e.pid === null ? '' : 'op') + '">' + esc(e.txt) + '</div>').join('') + '</div>';
   } else {
     logEl.className = 'logpanel'; logEl.style.cssText = box(LAYOUT.logPanel);
-    logEl.innerHTML = '<h3>Protokoll</h3><div class="logst">Abschnitt ' + G.stage + '/3 · Showdowns ' + G.showdown + '/3<br>Siegpunkte ' + G.players[ME].sp + ' : ' + G.players[OPP].sp + '</div><div class="logl">' + G.log.slice(-14).map(e => '<div class="' + (e.pid === ME ? 'me' : e.pid === null ? '' : 'op') + '">' + esc(e.txt) + '</div>').join('') + '</div>';
+    logEl.innerHTML = '<h3>Protokoll</h3><div class="logst">Abschnitt ' + G.stage + '/3 · Showdowns ' + G.showdown + '/3<br>Siegpunkte ' + G.players[ME].sp + ' : ' + G.players[OPP].sp + '</div><div class="logl">' + G.log.slice(-300).map(e => '<div class="' + (e.pid === ME ? 'me' : e.pid === null ? '' : 'op') + '">' + esc(e.txt) + '</div>').join('') + '</div>';
   }
+  { const lg = logEl.querySelector('.logl'); if (lg) lg.scrollTop = lgKeep === null ? lg.scrollHeight : lgKeep; }
   { const mc = cx.combat && G.combat.mode === 'monster' ? G.combat : null, side = mc ? (G.combat.sides.b.ctrl === ME ? 'bot' : 'top') : '';   // Farbe auf der Seite dessen, der das Monster steuert
     stage.dataset.top = side === 'top' ? mc.elem : ''; stage.dataset.bot = side === 'bot' ? mc.elem : ''; }
   if (cx.combat) {   // Marker (Schwäche, Spiegel, Tod) weg -> Sound
