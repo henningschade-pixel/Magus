@@ -2409,7 +2409,7 @@ const FlowFx = (() => {
     const n = Math.max(1, Math.min(10, fx.n)), M0 = center(), H = handOf(fx.who), col = ELC[fx.elem] || ELC.W;
     ex = { cv, ctx: cv.getContext('2d'), t0: performance.now(), n, M0, H, col, who: fx.who, to: fx.to, def: null, arrive: (n - 1) * .2 + .8 };
     if (preArrived) ex.t0 -= (ex.arrive + 1) * 1000;
-    ex.orbs = []; for (let i = 0; i < n; i++) ex.orbs.push({ tx: M0.x + (i - (n - 1) / 2) * 38, ty: M0.y - 36, s0: i * .2, gone: false });
+    ex.orbs = []; for (let i = 0; i < n; i++) ex.orbs.push({ tx: M0.x + (i - (n - 1) / 2) * 38, ty: M0.y + (fx.who === ME ? 36 : -36), s0: i * .2, gone: false });
     const loop = ts => { if (!ex || ex.cv !== cv) return; frameEx(ts); if (ex) ex.raf = requestAnimationFrame(loop); };
     ex.raf = requestAnimationFrame(loop);
   }
@@ -2420,7 +2420,7 @@ const FlowFx = (() => {
     e.orbs.forEach((o, i) => {
       const s = seg(t, o.s0, o.s0 + FL), tgt = { x: o.tx, y: o.ty };
       let x = o.tx, y = o.ty + Math.sin(t * 3 + i) * 3, show = s > 0;
-      if (s > 0 && s < 1) { trail(ctx, e.H, tgt, s, 90, e.col, 8); return; }
+      if (s > 0 && s < 1) { trail(ctx, e.H, tgt, s, 18, e.col, 8); return; }
       if (!show) return;
       if (d) {
         const tp = t - d.t1;   // ab hier läuft die Auflösung
@@ -2433,8 +2433,8 @@ const FlowFx = (() => {
     const tp = t - d.t1;
     // Verteidigungsfunken
     for (let j = 0; j < d.b; j++) {
-      const s0 = d.t0 + j * .2 - 0, s = seg(t, s0, s0 + FL), tx = e.M0.x + (j - (d.b - 1) / 2) * 38, ty = e.M0.y + 36, dc = d.col;
-      if (s > 0 && s < 1) { trail(ctx, d.H, { x: tx, y: ty }, s, 90, dc, 8); continue; }
+      const s0 = d.t0 + j * .2 - 0, s = seg(t, s0, s0 + FL), tx = e.M0.x + (j - (d.b - 1) / 2) * 38, ty = e.M0.y + (e.who === ME ? -36 : 36), dc = d.col;
+      if (s > 0 && s < 1) { trail(ctx, d.H, { x: tx, y: ty }, s, 18, dc, 8); continue; }
       if (s <= 0) continue;
       if (j < d.pairs) { const m = seg(tp, 0, .35); if (tp > .35) continue; orb(ctx, lerp(tx, e.M0.x + (j - (d.pairs - 1) / 2) * 38, m), lerp(ty, e.M0.y, m), 8, dc, '#ffffff'); }
       else { const f = seg(tp, 0, .5); if (f >= 1) continue; ctx.save(); ctx.globalAlpha = 1 - f; orb(ctx, tx, ty - f * 14, 8 * (1 - f * .5), dc, '#ffffff'); ctx.restore(); }
