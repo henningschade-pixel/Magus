@@ -2325,8 +2325,9 @@ const FlowFx = (() => {
         const r = rng(seed + i * 31 + 1);
         for (let k = 0; k < motes; k++) {
           const dl = r() * .08, ph = r() * 6.28, lat = (r() - .5) * 60, c2 = k % 2 ? B : G, toDraw = dr && k % 2 === 1, tg = toDraw ? dr : hp;
+          const hs = handOf(fx.who), cardsPt = { x: hs.x + (r() - .5) * 360, y: hs.y }, sx0 = toDraw ? mx : cardsPt.x, sy0 = toDraw ? my : cardsPt.y;   // Heilung geht von den Karten aus, der Nachziehmarker kommt von den aufgelösten Markern
           const s = seg(u, d + .03 + dl, d + .03 + dl + .26); if (s <= 0 || s >= 1) continue;
-          const pos = q => { const e = eio(q), cx = (mx + tg.x) / 2 + lat, cy = (my + tg.y) / 2 - 60; const x = (1 - e) * (1 - e) * mx + 2 * (1 - e) * e * cx + e * e * tg.x, y = (1 - e) * (1 - e) * my + 2 * (1 - e) * e * cy + e * e * tg.y, a = 10 * Math.sin(q * Math.PI); return [x + Math.cos(q * Math.PI * 4 + ph) * a, y + Math.sin(q * Math.PI * 4 + ph) * a]; };
+          const pos = q => { const e = eio(q), cx = (sx0 + tg.x) / 2 + lat, cy = (sy0 + tg.y) / 2 - 60; const x = (1 - e) * (1 - e) * sx0 + 2 * (1 - e) * e * cx + e * e * tg.x, y = (1 - e) * (1 - e) * sy0 + 2 * (1 - e) * e * cy + e * e * tg.y, a = 10 * Math.sin(q * Math.PI); return [x + Math.cos(q * Math.PI * 4 + ph) * a, y + Math.sin(q * Math.PI * 4 + ph) * a]; };
           for (let j = 4; j >= 1; j--) { const q = clamp(s - j * .02); if (q <= 0) continue; const pp = pos(q); ctx.save(); ctx.globalAlpha = (1 - j / 5) * .5; orb(ctx, pp[0], pp[1], 2, c2); ctx.restore(); }
           const pp = pos(s); orb(ctx, pp[0], pp[1], 2.8, c2, '#ffffff');
         }
