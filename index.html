@@ -383,7 +383,7 @@ function selection(d) {
   return d.marks.filter(i => d.hand[i]).map(i => Object.assign({ slot: i, card: d.hand[i] }, parseCard(d.hand[i].id)));
 }
 function consumeSelection(d, sel) {
-  sel.forEach(s => { d.discard.push(d.hand[s.slot]); d.hand[s.slot] = null; });
+  sel.forEach(s => { const c = d.hand[s.slot]; if (c) c.locked = false; d.discard.push(c); d.hand[s.slot] = null; });   // eine gespielte Karte verliert ihre Sperre
   d.marks = [];
 }
 // Markieren ist durch das Ausspiellimit begrenzt (bei Limit 1 ersetzt die neue Markierung die alte).
