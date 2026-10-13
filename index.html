@@ -2454,7 +2454,7 @@ stage.addEventListener('change', e => { const t = e.target; if (t.dataset && t.d
 let pvUndo = null;
 function pvClear() { if (pvUndo) { pvUndo(); pvUndo = null; } }
 stage.addEventListener('mouseover', e => {
-  const b = e.target.closest('button.up'); if (!b || b.disabled || b.classList.contains('off')) { if (!b) pvClear(); return; }
+  const b = e.target.closest('button.up, .sacbtn'); if (!b || b.disabled || b.classList.contains('off')) { if (!b) pvClear(); return; }
   pvClear();
   const st = G && G.players[ME].stats, w = b.dataset.w, act = b.dataset.act;
   if (!st) return;
@@ -2463,7 +2463,12 @@ stage.addEventListener('mouseover', e => {
     const old = el.innerHTML, cur = key === 'gold' ? st.gold : st.pending;
     el.innerHTML = '<span class="pvdn">' + Math.max(0, cur - cost) + '</span>'; undos.push(() => { el.innerHTML = old; });
   };
-  if (act === 'magic') redo('gold', M.magicCost(G, st.mag[b.dataset.e]));
+  if (act === 'temple') {   // Opfern: Gold sinkt (rot), Upgrade-Punkte steigen (grün)
+    const n = +b.dataset.n, pv = M.previewTemple(G.players[ME], n);
+    redo('gold', n);
+    const el = stage.querySelector('[data-pv="pts"]');
+    if (el && pv.gained > 0) { const old = el.innerHTML; el.innerHTML = '<span class="pvnew">' + (st.pending + pv.gained) + '</span>'; undos.push(() => { el.innerHTML = old; }); }
+  } else if (act === 'magic') redo('gold', M.magicCost(G, st.mag[b.dataset.e]));
   else if (act === 'spend') redo('pts', w === 'limit' ? M.limitStepCost(G, st) : w === 'mana' ? M.manaStepCost(G, st) : 1);
   if (act === 'magic') {
     const el = b.dataset.e, dot = b.parentElement.querySelector('.rg[data-e="' + el + '"][data-lv="' + (st.mag[el] + 1) + '"]');
@@ -2481,7 +2486,7 @@ stage.addEventListener('mouseover', e => {
   }
   pvUndo = () => { undos.forEach(u => u()); };
 });
-stage.addEventListener('mouseout', e => { const b = e.target.closest('button.up'); if (b && !(e.relatedTarget && b.contains(e.relatedTarget))) pvClear(); });
+stage.addEventListener('mouseout', e => { const b = e.target.closest('button.up, .sacbtn'); if (b && !(e.relatedTarget && b.contains(e.relatedTarget))) pvClear(); });
 stage.addEventListener('contextmenu', e => { const c = e.target.closest('.card.myhand'); if (c) { e.preventDefault(); act({ type: 'lock', slot: +c.dataset.slot }); } });
 
 const sndBtn = document.createElement('button');
