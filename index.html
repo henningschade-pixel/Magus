@@ -2057,7 +2057,9 @@ function comboPanel(cx) {
   }
   return '<div class="panel" style="' + box(LAYOUT.combo) + '">' + h + '</div>';
 }
+let manaPv = 0;   // Manakosten der markierten Karten, als rote Vorschau am Mana-Wert
 function combatCenter(cx) {
+  manaPv = 0;
   const c = cx.c, my = myTurn(), atk = c.action === 'attack';
   const actorSide = c.sides[c.turn];
   const icon = !my ? 'wait' : atk ? 'attack' : 'defense';
@@ -2069,6 +2071,7 @@ function combatCenter(cx) {
       if (!sel.length) prev = '';
       else {
         const ev = M.evalAttack(cx.myStats, sel);
+        if (ev.valid) manaPv = ev.cost;
         prev = '';
         const pick2 = ev.levels.ulti > 0 && !(G.rules.ultiMode === 'death');
         canExec = ev.valid && ev.affordable && !(pick2 && c.ult.length !== 2);
@@ -2080,7 +2083,7 @@ function combatCenter(cx) {
       const ev = M.evalDefense(cx.myStats, sel, c.color, c.mr);
       if (!sel.length) prev = '';
       else if (!ev.valid) prev = '<span class="bad">' + esc(ev.reason) + '</span>';
-      else { prev = ''; canExec = ev.affordable; if (!ev.affordable) prev += '<div class="bad">Zu wenig Mana.</div>'; }
+      else { if (ev.cost > 0) manaPv = ev.cost; prev = ''; canExec = ev.affordable; if (!ev.affordable) prev += '<div class="bad">Zu wenig Mana.</div>'; }
     }
   }
   if (my && !atk && G.rules.mirrorChoice && (cx.myStats.mirror || 0) > 0) { const cap = Math.min(M.mirrorOf(cx.myStats, c.color), c.pending, M.mirrorCap(cx.myStats, M.selection(cx.mine.deck), c.color)), n = Math.min(cap, c.mr == null ? 1 : c.mr); prev += '<div class="mrsel">Spiegel ablegen: <button class="mini" data-act="mr" data-n="' + Math.max(0, n - 1) + '">−</button> <b>' + n + '</b> von ' + cap + ' <button class="mini" data-act="mr" data-n="' + Math.min(cap, n + 1) + '">+</button></div>'; }
@@ -2505,6 +2508,7 @@ function render() {
     if (dthSeen && dthSeen.c === G.combat && dd > dthSeen.n) CurseFx.play();
     dthSeen = { c: G.combat, n: dd };
   } else { mkSeen = null; dthSeen = null; }
+  if (manaPv > 0 && cx.combat) { const mv = panels.querySelector('.sbody[data-lead] [data-pv="mana"]'), st = cx.myStats; if (mv) mv.innerHTML = '<span class="pvdn">' + Math.max(0, st.mana - manaPv) + '</span>/' + st.maxMana; }   // Mana nach dem Ausspielen in Rot
   { const mine = panels.querySelector('.sbody[data-lead]');   // Knopfspalte weich ein- und ausfahren
     if (mine) { const now = mine.classList.contains('hasup'); if (leadPrev !== null && leadPrev !== now) { mine.classList.toggle('hasup', leadPrev); void mine.offsetWidth; mine.classList.toggle('hasup', now); } leadPrev = now; } }
   showFx();
