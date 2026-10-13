@@ -65,6 +65,32 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .card.fadeout::before,.card.fadeout::after{content:"";position:absolute;left:-6px;right:-6px;bottom:-8px;height:70%;border-radius:50% 50% 30% 30%;pointer-events:none;opacity:0;mix-blend-mode:screen}
 .card.fadeout::before{background:radial-gradient(ellipse at 50% 100%,rgba(255,200,70,.95),rgba(255,110,20,.75) 38%,rgba(190,40,0,.35) 68%,transparent 80%);animation:burnglow 1.15s ease-out forwards}
 .card.fadeout::after{background:radial-gradient(circle at 25% 85%,rgba(255,160,40,.9) 0 5px,transparent 6px),radial-gradient(circle at 70% 70%,rgba(255,210,90,.9) 0 4px,transparent 5px),radial-gradient(circle at 45% 55%,rgba(255,130,30,.85) 0 3px,transparent 4px),radial-gradient(circle at 82% 40%,rgba(255,190,80,.8) 0 3px,transparent 4px),radial-gradient(circle at 15% 50%,rgba(255,150,40,.8) 0 3px,transparent 4px);animation:burnsparks 1.15s ease-out forwards}
+/* Varianten des Verbrennen-Effekts (Auswahl über den 🔥-Knopf links oben) */
+#stage[data-burn="aufsteigen"] .card.fadeout .inner{animation:burnrise 1s ease-in forwards;-webkit-mask-image:none;mask-image:none}
+#stage[data-burn="aufsteigen"] .card.fadeout::before,#stage[data-burn="aufsteigen"] .card.fadeout::after{display:none}
+#stage[data-burn="glut"] .card.fadeout .inner{animation:burnglut 1.15s ease-in forwards}
+#stage[data-burn="glut"] .card.fadeout::before{display:none}
+#stage[data-burn="asche"] .card.fadeout .inner{animation:burnash 1.2s ease-in forwards}
+#stage[data-burn="asche"] .card.fadeout::before{display:none}
+#stage[data-burn="asche"] .card.fadeout::after{filter:grayscale(1) brightness(.85)}
+#stage[data-burn="kohle"] .card.fadeout .inner{animation:burncoal 1.2s ease-in forwards}
+#stage[data-burn="kohle"] .card.fadeout::before{display:none}
+#stage[data-burn="rauch"] .card.fadeout .inner{animation:burnsmoke 1.1s ease-in forwards;-webkit-mask-image:none;mask-image:none}
+#stage[data-burn="rauch"] .card.fadeout::after{display:none}
+#stage[data-burn="rauch"] .card.fadeout::before{background:radial-gradient(ellipse at 50% 80%,rgba(190,190,200,.55),rgba(120,120,130,.3) 50%,transparent 75%);mix-blend-mode:normal;filter:blur(7px);animation:burnglow 1.1s ease-out forwards}
+@keyframes burnrise{0%{translate:0 0;opacity:1}100%{translate:0 -90px;scale:.95;opacity:0}}
+@keyframes burnglut{0%{translate:0 0;opacity:1;filter:none;-webkit-mask-position:0 0;mask-position:0 0}
+ 100%{translate:0 -90px;scale:.94;opacity:0;filter:brightness(.7);-webkit-mask-position:0 100%;mask-position:0 100%}}
+@keyframes burnash{0%{translate:0 0;opacity:1;filter:none;-webkit-mask-position:0 0;mask-position:0 0}
+ 50%{filter:grayscale(1) brightness(.75) contrast(1.15)}
+ 100%{translate:0 -80px;scale:.94;opacity:0;filter:grayscale(1) brightness(.4) blur(2px);-webkit-mask-position:0 100%;mask-position:0 100%}}
+@keyframes burncoal{0%{translate:0 0;opacity:1;filter:none;-webkit-mask-position:0 0;mask-position:0 0}
+ 45%{filter:brightness(.45) contrast(1.2) saturate(.5)}
+ 100%{translate:0 -70px;opacity:0;filter:brightness(.15) saturate(0);-webkit-mask-position:0 100%;mask-position:0 100%}}
+@keyframes burnsmoke{0%{translate:0 0;opacity:1;filter:none}
+ 60%{filter:grayscale(1) brightness(.8) blur(1.5px);opacity:.7}
+ 100%{translate:0 -110px;scale:1.08;opacity:0;filter:grayscale(1) brightness(.6) blur(6px)}}
+#burnbtn{position:absolute;left:12px;top:104px;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:rgba(10,8,14,.7);font-size:18px;cursor:var(--cp);z-index:250;padding:0}#burnbtn:hover{border-color:var(--gold)}
 @keyframes burnup{0%{translate:0 0;scale:1;opacity:1;filter:none;-webkit-mask-position:0 0;mask-position:0 0}
  22%{filter:brightness(1.5) sepia(.9) saturate(5) hue-rotate(-18deg)}
  55%{filter:brightness(.7) sepia(1) saturate(4) contrast(1.3);opacity:1}
@@ -2430,6 +2456,24 @@ stage.addEventListener('click', e => {
 stage.addEventListener('change', e => { const t = e.target; if (t.dataset && t.dataset.act === 'ult') act({ type: 'ult', key: t.dataset.k }); });
 stage.addEventListener('contextmenu', e => { const c = e.target.closest('.card.myhand'); if (c) { e.preventDefault(); act({ type: 'lock', slot: +c.dataset.slot }); } });
 
+/* Verbrennen-Effekt wählen: Knopf links oben wechselt die Variante und zeigt sie an einer Probekarte */
+const BURNS = [['flamme', 'Flamme (orange Glut)'], ['glut', 'Funken ohne Glühen'], ['kohle', 'Verkohlen'], ['asche', 'Asche'], ['rauch', 'Rauch'], ['aufsteigen', 'Nur aufsteigen']];
+let burnSel = 'flamme'; try { burnSel = localStorage.getItem('magus_burn') || 'flamme'; } catch (e) { }
+if (!BURNS.some(b => b[0] === burnSel)) burnSel = 'flamme';
+stage.dataset.burn = burnSel;
+const burnBtn = document.createElement('button');
+burnBtn.id = 'burnbtn'; burnBtn.textContent = '🔥';
+const burnTitle = () => { burnBtn.title = 'Verbrennen-Effekt: ' + BURNS.find(b => b[0] === burnSel)[1] + ' (Klick: nächste Variante)'; };
+burnTitle();
+burnBtn.addEventListener('click', e => {
+  e.stopPropagation();
+  burnSel = BURNS[(BURNS.findIndex(b => b[0] === burnSel) + 1) % BURNS.length][0]; stage.dataset.burn = burnSel; burnTitle();
+  try { localStorage.setItem('magus_burn', burnSel); } catch (x) { }
+  toast('Verbrennen: ' + BURNS.find(b => b[0] === burnSel)[1]);
+  const src = layerCards.querySelector('.card.myhand') || layerCards.querySelector('.card');   // Probe an einer Kopie einer Karte
+  if (src) { const c = src.cloneNode(true); c.classList.remove('marked', 'locked'); c.classList.add('fadeout'); layerCards.appendChild(c); setTimeout(() => c.remove(), 1300); }
+});
+stage.appendChild(burnBtn);
 const sndBtn = document.createElement('button');
 sndBtn.id = 'sndbtn'; sndBtn.title = 'Ton an/aus'; sndBtn.textContent = Snd.on ? '🔊' : '🔇';
 sndBtn.addEventListener('click', e => { e.stopPropagation(); sndBtn.textContent = Snd.toggle() ? '🔊' : '🔇'; });
