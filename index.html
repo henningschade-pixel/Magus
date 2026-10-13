@@ -64,6 +64,15 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .pilelabel{position:absolute;font-size:15px;color:var(--mute);text-align:center;width:110px}
 .pilehit{position:absolute;border-radius:12px;cursor:var(--cp);z-index:60}
 .pilehit:hover{box-shadow:0 0 0 2px var(--gold)}
+.dkpop{position:absolute;z-index:150;width:520px;box-sizing:border-box;background:rgba(14,10,22,.96);border:1px solid var(--gold);border-radius:14px;padding:14px 18px 12px;cursor:var(--cp)}
+.dkpop h4{margin:0 0 8px;font-family:'Alegreya SC',serif;font-size:22px;color:var(--gold);font-weight:400}
+.dkpop .dkbars{display:flex;align-items:flex-end;gap:8px;height:150px;border-bottom:1px solid var(--mute);padding:0 4px}
+.dkpop .dkcol{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%}
+.dkpop .dkbar{width:100%;max-width:44px;border-radius:4px 4px 0 0;min-height:2px}
+.dkpop .dkn{font-size:18px;line-height:1.1;margin-bottom:2px}
+.dkpop .dklab{display:flex;gap:8px;padding:3px 4px 0}
+.dkpop .dklab span{flex:1;text-align:center;font-size:17px}
+.dkpop small{display:block;color:var(--mute);font-size:15px;margin-top:6px}
 .pilehit.off{cursor:var(--cd)}.pilehit.off:hover{box-shadow:none}
 .freedraw{position:absolute;z-index:61;display:flex;align-items:center;gap:6px;background:rgba(10,8,14,.8);border:1px solid var(--gold);border-radius:20px;padding:2px 12px 2px 4px;cursor:var(--cp);font-size:17px}
 .freedraw img{width:34px;height:34px;object-fit:contain}
@@ -624,8 +633,8 @@ function curses(state) { return CURSE_SYSTEMS[state.rules.curses]; }
 /* Magus – Regelkern (Teil 5): Händler.
    Der Händler arbeitet mit den markierten Handkarten (Auswahl, begrenzt durch das Ausspiellimit):
    - Gratiskarte (F1/E1/W1): immer möglich; sie verlangt keine Markierung und verbraucht weder Karten noch Markierungen.
-   - Aufwertung: zwei gleiche markierte Karten ergeben die nächste Stufe, oder eine markierte Karte des überlegenen
-     Elements ergibt die nächste Stufe des Elements. Die markierten Karten verschwinden aus dem Spiel; die neue Karte kommt auf den Ablagestapel.
+   - Aufwertung: zwei gleiche markierte Karten ergeben die nächste Stufe (beide wandern auf den Ablagestapel, ebenso die neue Karte), oder eine markierte Karte des überlegenen
+     Elements ergibt die nächste Stufe des Elements (die bezahlte Karte verschwindet aus dem Spiel, die neue kommt auf den Ablagestapel).
    Der Kauf beendet den Zug. */
 
 // Alle Angebote zu einer Kartenmenge ([{slot, id}], ohne Flüche). ‚limit‘ begrenzt, wie viele Karten bezahlt werden können.
@@ -661,7 +670,7 @@ function execVendor(state, pid, a) {
   const want = JSON.stringify(a.cost || []);
   const opt = vendorChoices(sel, p.stats.limit).find(o => o.result === a.result && JSON.stringify(o.cost) === want);
   if (!opt) return fail(sel.length ? 'Mit den markierten Karten ist dieses Angebot nicht möglich.' : 'Markiere zuerst Karten aus deiner Hand.');
-  if (!opt.free) opt.slots.forEach(i => removeFromHand(d, i));   // bezahlte Karten verschwinden aus dem Spiel
+  if (!opt.free) opt.slots.forEach(i => { const c = removeFromHand(d, i); if (opt.cost.length === 2) { c.locked = false; d.discard.push(c); } });   // zwei gleiche Karten: beide kommen auf den Ablagestapel; eine überlegene Karte verschwindet aus dem Spiel
   if (!opt.free) d.marks = [];
   d.discard.push(mkCard(state, opt.result));
   log(state, p.name + ' tauscht beim Händler' + (opt.cost.length ? ' ' + opt.cost.join(' + ') + ' gegen ' : ' und erhält ') + opt.result + '.', pid);
@@ -1766,6 +1775,8 @@ function renderCards() {
   ph += lab(L_MY, cx.myDeck, true) + lab(L_OP, cx.oppDeck, false);
   const canDraw = canDrawNow();
   ph += '<div class="pilehit ' + (canDraw ? '' : 'off') + '" data-act="draw" title="Nachziehen: nicht gesperrte Karten ablegen und neu füllen" style="left:' + L_MY.draw.x + 'px;top:' + L_MY.draw.y + 'px;width:' + CW * L_MY.ps + 'px;height:' + CH * L_MY.ps + 'px"></div>';
+  ph += '<div class="pilehit" data-act="deckview" title="Dein Deck als Balkendiagramm (Stufen der Karten)" style="left:' + L_MY.disc.x + 'px;top:' + L_MY.disc.y + 'px;width:' + CW * L_MY.ps + 'px;height:' + CH * L_MY.ps + 'px"></div>';
+  if (deckView) ph += deckPopHTML(cx.myDeck);
   if (cx.combat && cx.myStats.freeDraws > 0) ph += '<div class="freedraw" data-act="freedraw" style="left:' + L_MY.draw.x + 'px;top:' + (L_MY.draw.y - 42) + 'px"><img src="' + IMG.gratis + '">' + cx.myStats.freeDraws + '× Nachziehen</div>';
   const pnd = G.players[ME].stats.pending;
   if (!cx.combat && pnd > 0 && G.players[ME].slots < M.MAX_SLOTS) {
@@ -1778,6 +1789,23 @@ function renderCards() {
     ph += mirrorStack(cx.oppStats, slotX(no - 1, no, L_OP) + CW * L_OP.s + 10, L_OP.y + 6, 'o');
   }
   layerPh.innerHTML = ph;
+}
+let deckView = false;
+// Deckverteilung: je Kartenart (F1 … W3, Flüche) ein Balken über Stapel, Hand und Ablage
+function deckPopHTML(deck) {
+  const all = deck.draw.concat(deck.discard, deck.hand.filter(Boolean)), cnt = {};
+  all.forEach(c => { cnt[c.id] = (cnt[c.id] || 0) + 1; });
+  const ids = []; M.ELEMENTS.forEach(e => [1, 2, 3].forEach(l => ids.push(e + l)));
+  Object.keys(cnt).filter(k => !ids.includes(k)).sort().forEach(k => ids.push(k));
+  const mx = Math.max(1, ...ids.map(k => cnt[k] || 0)), col = { F: 'var(--fire)', E: 'var(--earth)', W: 'var(--water)' };
+  let bars = '', labs = '';
+  ids.forEach(k => {
+    const n = cnt[k] || 0, e = k[0], zone = [['Stapel', deck.draw], ['Hand', deck.hand.filter(Boolean)], ['Ablage', deck.discard]].map(([nm, l]) => nm + ' ' + l.filter(c => c.id === k).length).join(', ');
+    bars += '<div class="dkcol" title="' + k + ': ' + n + ' (' + zone + ')"><div class="dkn">' + n + '</div><div class="dkbar" style="height:' + Math.round(n / mx * 112) + 'px;background:' + (col[e] || 'var(--curse)') + (n ? '' : ';opacity:.25') + '"></div></div>';
+    labs += '<span class="' + (col[e] ? e : 'C') + '">' + k + '</span>';
+  });
+  const L = L_MY;
+  return '<div class="dkpop" data-act="deckclose" style="left:' + Math.max(10, L.disc.x - 330) + 'px;top:' + Math.max(10, L.y - 270) + 'px"><h4>Dein Deck: ' + all.length + ' Karten</h4><div class="dkbars">' + bars + '</div><div class="dklab">' + labs + '</div><small>Stapel ' + deck.draw.length + ' · Hand ' + deck.hand.filter(Boolean).length + ' · Ablage ' + deck.discard.length + '. Klicken zum Schließen.</small></div>';
 }
 function canDrawNow() {
   if (!myTurn()) return false;
@@ -2339,6 +2367,8 @@ function onAct(d) {
     case 'mphost': mpHost(); break;
     case 'mpjoin': mpJoin(); break;
     case 'mpexit': mpLeave(); showStart(); break;
+    case 'deckview': deckView = !deckView; render(); break;
+    case 'deckclose': deckView = false; render(); break;
     case 'dismiss': banner = null; hold = 0; render(); break;
     case 'combat': act({ type: 'combat', elem: d.e }); break;
     case 'vendor': { const o = M.vendorOffers(G, ME)[+d.i]; if (o) act({ type: 'vendor', result: o.result, cost: o.cost }); break; }
