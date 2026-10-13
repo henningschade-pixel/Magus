@@ -633,8 +633,8 @@ function curses(state) { return CURSE_SYSTEMS[state.rules.curses]; }
 /* Magus – Regelkern (Teil 5): Händler.
    Der Händler arbeitet mit den markierten Handkarten (Auswahl, begrenzt durch das Ausspiellimit):
    - Gratiskarte (F1/E1/W1): immer möglich; sie verlangt keine Markierung und verbraucht weder Karten noch Markierungen.
-   - Aufwertung: zwei gleiche markierte Karten ergeben die nächste Stufe (beide wandern auf den Ablagestapel, ebenso die neue Karte), oder eine markierte Karte des überlegenen
-     Elements ergibt die nächste Stufe des Elements (die bezahlte Karte verschwindet aus dem Spiel, die neue kommt auf den Ablagestapel).
+   - Aufwertung: zwei gleiche markierte Karten ergeben die nächste Stufe, oder eine markierte Karte des überlegenen
+     Elements ergibt die nächste Stufe des Elements. Die bezahlten Karten kommen auf den Ablagestapel, ebenso die neue Karte (das Deck wächst um 1).
    Der Kauf beendet den Zug. */
 
 // Alle Angebote zu einer Kartenmenge ([{slot, id}], ohne Flüche). ‚limit‘ begrenzt, wie viele Karten bezahlt werden können.
@@ -670,7 +670,7 @@ function execVendor(state, pid, a) {
   const want = JSON.stringify(a.cost || []);
   const opt = vendorChoices(sel, p.stats.limit).find(o => o.result === a.result && JSON.stringify(o.cost) === want);
   if (!opt) return fail(sel.length ? 'Mit den markierten Karten ist dieses Angebot nicht möglich.' : 'Markiere zuerst Karten aus deiner Hand.');
-  if (!opt.free) opt.slots.forEach(i => { const c = removeFromHand(d, i); if (opt.cost.length === 2) { c.locked = false; d.discard.push(c); } });   // zwei gleiche Karten: beide kommen auf den Ablagestapel; eine überlegene Karte verschwindet aus dem Spiel
+  if (!opt.free) opt.slots.forEach(i => { const c = removeFromHand(d, i); c.locked = false; d.discard.push(c); });   // bezahlte Karten kommen auf den Ablagestapel
   if (!opt.free) d.marks = [];
   d.discard.push(mkCard(state, opt.result));
   log(state, p.name + ' tauscht beim Händler' + (opt.cost.length ? ' ' + opt.cost.join(' + ') + ' gegen ' : ' und erhält ') + opt.result + '.', pid);
