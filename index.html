@@ -100,6 +100,9 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .bar.sb{flex:1;min-width:24px;height:9px}
 .bd{position:relative;flex:none}.bd img{width:100%;height:100%;display:block}
 .rg{position:absolute;border-radius:50%;box-sizing:border-box;pointer-events:none}
+.rg.pv{border:2.5px solid #5fe07f;box-shadow:0 0 9px #5fe07faa;background:rgba(95,224,127,.25)}
+.pvnew{color:var(--good);font-weight:700}
+.pvfl{position:absolute;z-index:270;pointer-events:none;color:var(--good);font-weight:700;font-size:18px;background:rgba(14,10,22,.92);border:1px solid var(--good);border-radius:8px;padding:3px 9px;white-space:nowrap}
 .rg.on{border:2.5px solid #f2c850;box-shadow:0 0 6px #f2c850aa;background:rgba(242,200,80,.18)}
 .lfsel{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;flex-basis:100%}.lfsel .mini{font-size:13px;padding:2px 7px}.mini{font:700 14px Alegreya,serif;padding:2px 8px;border-radius:10px;border:1px solid #8a7a50;background:#2b2b30;color:#d8c9a0;cursor:var(--cp)}.mini.on{background:#e8c35a;color:#2a1a05}
 .mr{color:#7fd4ff;font-size:18px;font-weight:700;margin-left:8px;white-space:nowrap;cursor:help}
@@ -1832,7 +1835,7 @@ function boardHTML(mag, size) {
     const ang = (a - 90) * Math.PI / 180;
     for (let lv = 1; lv <= 3; lv++) {
       const r = orbit + lv * gap, x = size / 2 + Math.cos(ang) * r, y = size / 2 + Math.sin(ang) * r;
-      h += '<i class="rg' + (lv <= mag[e] ? ' on' : '') + '" style="left:' + (x - dr - 1) + 'px;top:' + (y - dr - 1) + 'px;width:' + (2 * dr + 2) + 'px;height:' + (2 * dr + 2) + 'px"></i>';
+      h += '<i class="rg' + (lv <= mag[e] ? ' on' : '') + '" data-e="' + e + '" data-lv="' + lv + '" style="left:' + (x - dr - 1) + 'px;top:' + (y - dr - 1) + 'px;width:' + (2 * dr + 2) + 'px;height:' + (2 * dr + 2) + 'px"></i>';
     }
   });
   return h + '</div>';
@@ -1852,8 +1855,8 @@ function statsBlock(name, s, p, size, up, full) {
   const slotPl = pl(up && anyT && pend > 0 && p.slots < M.MAX_SLOTS, 'slot', '+1 Handplatz (1 Upgrade-Punkt)');
   const sbar = (v, mx, cls) => '<div class="bar sb ' + cls + '"><i style="width:' + Math.max(0, v) / mx * 100 + '%"></i></div>';
   const lead = b => compact ? '' : (b || '<span class="up ph"></span>');   // Upgrade-Knöpfe stehen links neben dem Symbol
-  const hp = '<div class="statrow">' + lead(hpPl) + img('hp') + '<b>' + Math.max(0, s.hp) + '/' + s.maxHp + '</b>' + sbar(s.hp, s.maxHp, '') + '</div>';
-  const mana = '<div class="statrow">' + lead(manaPl) + img('mana') + '<b>' + s.mana + '/' + s.maxMana + '</b>' + sbar(s.mana, s.maxMana, 'mana') + '</div>';
+  const hp = '<div class="statrow">' + lead(hpPl) + img('hp') + '<b data-pv="hp">' + Math.max(0, s.hp) + '/' + s.maxHp + '</b>' + sbar(s.hp, s.maxHp, '') + '</div>';
+  const mana = '<div class="statrow">' + lead(manaPl) + img('mana') + '<b data-pv="mana">' + s.mana + '/' + s.maxMana + '</b>' + sbar(s.mana, s.maxMana, 'mana') + '</div>';
   let h = '<h3><span class="hdr"><span class="hn">' + name + '</span>@@T@@@@G@@' + (p ? '<span class="hsp" title="Siegpunkte">★ <b>' + p.sp + '</b></span>' : '') + '</span></h3><div class="sbody"><div class="scol">';
   let ptsHdr = '';
   if (p) {   // Punkte + gemischte Zahl: offene Upgrade-Punkte, dazu (ganze Zahl) durch ein geplantes Opfer volle Punkte und der Bruch (Fortschritt/Preis der nächsten Stufe)
@@ -1865,7 +1868,7 @@ function statsBlock(name, s, p, size, up, full) {
   h = h.replace('@@G@@', ptsHdr);
   if (compact) {
     h += hp + mana;
-    h += '<div class="statrow">' + img('gold') + '<b>' + s.gold + '</b>' + img('limit') + '<b>' + s.limit + '</b>' + mk + mr + '</div>';
+    h += '<div class="statrow">' + img('gold') + '<b>' + s.gold + '</b>' + img('limit') + '<b data-pv="limit">' + s.limit + '</b>' + mk + mr + '</div>';
   } else {
     let sac = '', sacBtn = '';
     if (up && s.gold >= 1) {
@@ -1879,7 +1882,7 @@ function statsBlock(name, s, p, size, up, full) {
     const tempRow = '';
     h = h.replace('@@T@@', tempRow);
     h += '<div class="statrow">' + ph + img('gold') + '<b>' + s.gold + '</b>' + sac + '</div>' + hp + mana;
-    h += '<div class="statrow">' + lead(limPl) + img('limit') + '<b>' + s.limit + '</b>' + mk + mr + '</div>';
+    h += '<div class="statrow">' + lead(limPl) + img('limit') + '<b data-pv="limit">' + s.limit + '</b>' + mk + mr + '</div>';
   }
   h = h.replace('@@G@@', '').replace('@@T@@', '');
   const bsz = size || 140;
@@ -2446,6 +2449,30 @@ stage.addEventListener('click', e => {
   }
 });
 stage.addEventListener('change', e => { const t = e.target; if (t.dataset && t.dataset.act === 'ult') act({ type: 'ult', key: t.dataset.k }); });
+/* Vorschau beim Überfahren eines Plus-Knopfes: neue Werte in Grün, neue Magiestufe grün eingekreist */
+let pvUndo = null;
+function pvClear() { if (pvUndo) { pvUndo(); pvUndo = null; } }
+stage.addEventListener('mouseover', e => {
+  const b = e.target.closest('button.up'); if (!b || b.disabled || b.classList.contains('off')) { if (!b) pvClear(); return; }
+  pvClear();
+  const st = G && G.players[ME].stats, w = b.dataset.w, act = b.dataset.act;
+  if (!st) return;
+  if (act === 'magic') {
+    const el = b.dataset.e, dot = b.parentElement.querySelector('.rg[data-e="' + el + '"][data-lv="' + (st.mag[el] + 1) + '"]');
+    if (dot) { dot.classList.add('pv'); pvUndo = () => dot.classList.remove('pv'); }
+  } else if (act === 'spend' && (w === 'hp' || w === 'mana' || w === 'limit')) {
+    const v = b.closest('.statrow') && b.closest('.statrow').querySelector('[data-pv="' + w + '"]'); if (!v) return;
+    const n = w === 'hp' ? (G.rules.hpPerPoint || 1) : 1, old = v.innerHTML;
+    const nw = w === 'hp' ? Math.min(st.maxHp + n, st.hp + n) + '/' + (st.maxHp + n) : w === 'mana' ? Math.min(st.maxMana + 1, st.mana + 1) + '/' + (st.maxMana + 1) : String(st.limit + 1);
+    v.innerHTML = old + ' <span class="pvnew">→ ' + nw + '</span>'; pvUndo = () => { v.innerHTML = old; };
+  } else if (act === 'spend' && w === 'slot') {
+    const f = document.createElement('div'); f.className = 'pvfl'; f.textContent = 'Handplätze ' + G.players[ME].slots + ' → ' + (G.players[ME].slots + 1);
+    const r = b.getBoundingClientRect(), sr = stage.getBoundingClientRect(), k = sr.width / stage.offsetWidth;
+    f.style.left = ((r.left - sr.left) / k - 60) + 'px'; f.style.top = ((r.top - sr.top) / k - 34) + 'px';
+    stage.appendChild(f); pvUndo = () => f.remove();
+  }
+});
+stage.addEventListener('mouseout', e => { const b = e.target.closest('button.up'); if (b && !(e.relatedTarget && b.contains(e.relatedTarget))) pvClear(); });
 stage.addEventListener('contextmenu', e => { const c = e.target.closest('.card.myhand'); if (c) { e.preventDefault(); act({ type: 'lock', slot: +c.dataset.slot }); } });
 
 const sndBtn = document.createElement('button');
