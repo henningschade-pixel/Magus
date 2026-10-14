@@ -2575,7 +2575,7 @@ function drawClash(ctx,p,style,x,y,g,ea,ed,seed){
   const hpOf = pid => U(at(panelOf(pid) && panelOf(pid).querySelector('[data-pv="hp"]')) || { x: 1000, y: pid === ME ? 700 : 70 });
   const handOf = pid => { const L = pid === ME ? L_MY : L_OP; return U({ x: L.cx, y: L.y + CH * L.s / 2 }); };
   const center = () => { const b = LAYOUT.combat; return U({ x: b.left + b.w / 2, y: b.top + b.h / 2 + 6 }); };
-  let ex = null;
+  let ex = null, queue = [];   // Folgt ein Angriff, während der vorige noch aufgelöst wird, wartet er in der Schlange
   function endEx() { if (ex) { cancelAnimationFrame(ex.raf); ex.cv.remove(); ex = null; } }
   const off = () => FAST || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
   function slotY(e, isAtk) { const bottom = e.who === ME; return e.C0.y + ((bottom === isAtk) ? 34 : -34); }
@@ -2628,19 +2628,25 @@ function drawClash(ctx,p,style,x,y,g,ea,ed,seed){
       ctx.restore();
     }
     if (T.left) { const q = seg(t, T.tH + T.hf, T.tH + T.hf + .2) * (1 - seg(t, T.tH + T.hf + .5, T.tH + T.hf + .7)); if (q > 0) { ctx.save(); ctx.font = '700 20px Alegreya, serif'; ctx.textAlign = 'center'; ctx.fillStyle = rgba('#ff6b6b', q); ctx.fillText('−' + T.left, hp.x, hp.y - 14 - 10 * seg(t, T.tH + T.hf, T.tH + T.hf + .7)); ctx.restore(); } }
-    if (d && t > T.end) endEx();
+    if (d && t > T.end) { endEx(); next(); }
   }
-  function attack(fx) { if (off()) return; startEx(fx, false); }
+  function next() { const q = queue.shift(); if (!q) return; startEx(q.fx, false); if (q.def) applyDef(q.def); }
+  function attack(fx) { if (off()) return; if (ex && ex.def) queue.push({ fx, def: null }); else startEx(fx, false); }
   function defense(fx) {
     if (off()) return;
-    const pend = Math.max(1, Math.min(10, fx.pending)), bb = Math.max(0, Math.min(10, fx.block));
+    if (queue.length) { queue[queue.length - 1].def = fx; return; }
+    const pend = Math.max(1, Math.min(10, fx.pending));
     if (!ex) startEx({ who: fx.to, to: fx.who, elem: fx.attElem, n: pend }, true);
+    applyDef(fx);
+  }
+  function applyDef(fx) {
+    const bb = Math.max(0, Math.min(10, fx.block));
     const e = ex, p = e.p, now = (performance.now() - e.t0) / 1000, tD = Math.max(now, e.tAe + p.hover), pairs = Math.min(e.n, bb);
     const tDe = bb ? tD + (bb - 1) * p.gap + p.flight : tD, tC = tDe + .12, tK = tC + (pairs ? .3 : 0), left = e.n - pairs, tH = tK + (pairs ? .45 : 0);
     p.def = fx.defElem || fx.attElem;
     e.def = { H: handOf(fx.who), hp: hpOf(fx.who), b: bb, T: { tA: 0, tD, tC, tK, tH, hf: .8, cl: .6, pairs, left, end: (left ? tH + .8 + .7 : tK + .6) + .3 } };
   }
-  return { attack, defense, reset: endEx };
+  return { attack, defense, reset() { queue = []; endEx(); } };
 })();
 let leadPrev = null;
 let curKey = null, curDown = false, mkSeen = null, dthSeen = null, fxFor = null, fxLast = 0;
