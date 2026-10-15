@@ -2947,7 +2947,11 @@ function earthFormRaw(ctx, x, by, seed, i, t, tCrack, tRise, endAt, ending) {
     const earthHit = (el, starts, N) => { if (el !== 'E') return; for (let i = 0; i < N; i++) { const ta = starts + i * p.gap + p.flight; if (t > ta && t < ta + .4) amp += p.shake * p.heavy * 7 * Math.exp(-(t - ta) * 9); } };
     earthHit(p.atk, 0, n); if (d) earthHit(p.def, T.tD, b);
     ctx.setTransform(SC, 0, 0, SC, 0, 0); ctx.translate(Math.sin(t * 95) * amp, Math.cos(t * 80) * amp * .7);
-    const slotA = i => ({ x: C0.x + (i - (n - 1) / 2) * p.spread, y: slotY(e, true) }), slotD = j => ({ x: C0.x + (j - (b - 1) / 2) * p.spread, y: slotY(e, false) });
+    const grid = (i, cnt, isAtk) => {   // ab 6 Geschossen zweizeilig, damit die Magie nicht aus der Kampfbox ragt; jede Zeile mittig, die zweite weiter von der Mitte entfernt
+      const rows = cnt > 5 ? 2 : 1, per = Math.ceil(cnt / rows), row = Math.floor(i / per), inRow = row < rows - 1 ? per : cnt - per * row, y0 = slotY(e, isAtk), sg = y0 >= C0.y ? 1 : -1;
+      return { x: C0.x + (i % per - (inRow - 1) / 2) * p.spread, y: rows === 1 ? y0 : C0.y + sg * (20 + row * 24), cy: rows === 1 ? C0.y : C0.y + (row ? 14 : -14) };   // cy: Treffpunkt der Paare
+    };
+    const slotA = i => grid(i, n, true), slotD = j => grid(j, b, false);
     for (let i = 0; i < n; i++) {   // Angriffsfunken
       const s0 = i * p.gap, s = seg(t, s0, s0 + p.flight), sl = slotA(i), paired = i < T.pairs;
       if (s <= 0) continue;
@@ -2956,7 +2960,7 @@ function earthFormRaw(ctx, x, by, seed, i, t, tCrack, tRise, endAt, ending) {
         if (paired || t < T.tH) continue;
       } else {
         if (s < 1) { drawProjectile(ctx, p, p.atk, HA, sl, s, seeds[i], t); continue; }
-        if (paired && t >= T.tC) { const m = seg(t, T.tC, T.tK); if (m >= 1) continue; drawIdle(ctx, p, p.atk, sl.x, lerp(sl.y, C0.y, m * m), seeds[i], t, 1); continue; }
+        if (paired && t >= T.tC) { const m = seg(t, T.tC, T.tK); if (m >= 1) continue; drawIdle(ctx, p, p.atk, sl.x, lerp(sl.y, sl.cy, m * m), seeds[i], t, 1); continue; }
       }
       if (!paired && t >= T.tH) {
         const hpt = { x: hp.x - 40 + (i % 3) * 40, y: hp.y };
@@ -2970,13 +2974,13 @@ function earthFormRaw(ctx, x, by, seed, i, t, tCrack, tRise, endAt, ending) {
       if (s <= 0) continue;
       if (p.def === 'E') { earthForm(ctx, sl.x, sl.y, seeds[10 + j], j, t, s0, s0 + p.flight - EP.rise, T.tK, paired ? 'zerbersten' : 'versinken'); continue; }
       if (s < 1) { drawProjectile(ctx, p, p.def, HD, sl, s, seeds[10 + j], t); continue; }
-      if (paired && t >= T.tC) { const m = seg(t, T.tC, T.tK); if (m >= 1) continue; drawIdle(ctx, p, p.def, sl.x, lerp(sl.y, C0.y, m * m), seeds[10 + j], t, 1); continue; }
+      if (paired && t >= T.tC) { const m = seg(t, T.tC, T.tK); if (m >= 1) continue; drawIdle(ctx, p, p.def, sl.x, lerp(sl.y, sl.cy, m * m), seeds[10 + j], t, 1); continue; }
       if (t >= T.tK) { const f = seg(t, T.tK, T.tK + .5); if (f >= 1) continue; ctx.save(); ctx.globalAlpha = 1 - f; drawIdle(ctx, p, p.def, sl.x, sl.y - f * 14, seeds[10 + j], t, 1 - f); ctx.restore(); continue; }
       drawIdle(ctx, p, p.def, sl.x, sl.y, seeds[10 + j], t, 1);
     }
     for (let i = 0; i < T.pairs; i++) {   // Auflösung der Paare
       const g = seg(t, T.tK, T.tK + T.cl); if (g <= 0 || g >= 1) continue;
-      drawClash(ctx, p, clashStyle(p, p.atk, p.def), C0.x + (i - (T.pairs - 1) / 2) * p.spread, C0.y, g, p.atk, p.def, seeds[i] + 3);
+      drawClash(ctx, p, clashStyle(p, p.atk, p.def), grid(i, T.pairs, true).x, grid(i, T.pairs, true).cy, g, p.atk, p.def, seeds[i] + 3);
     }
     if (d && d.mir) drawMirrorFx(ctx, e, T, d, t);
     for (let i = 0; i < T.left; i++) {   // Rest trifft die HP
