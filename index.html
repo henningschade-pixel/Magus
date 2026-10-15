@@ -54,7 +54,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .card .face.back{transform:rotateY(180deg)}
 .card.myhand{cursor:var(--cp)}
 .card.myhand:hover .face.front{filter:brightness(1.18)}
-.card[data-ord]:not([data-ord=""])::after{content:attr(data-ord);position:absolute;left:6px;top:6px;width:22px;height:22px;border-radius:50%;background:var(--gold);color:#1a1408;font:700 14px/22px Alegreya,serif;text-align:center;z-index:5;box-shadow:0 0 6px rgba(0,0,0,.6)}
+.card[data-ord]:not([data-ord=""])::after{content:attr(data-ord);position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:34px;height:34px;border-radius:50%;background:rgba(210,173,79,.92);color:#1a1408;font:700 22px/34px Alegreya,serif;text-align:center;z-index:5;box-shadow:0 0 10px rgba(0,0,0,.7)}
 .card.marked .face.front{box-shadow:0 0 0 3px var(--gold),0 0 22px rgba(210,173,79,.65)}
 .card.bad .face.front{box-shadow:0 0 0 3px var(--bad)}
 .card .lockbtn{position:absolute;right:4px;top:4px;width:30px;height:30px;border-radius:50%;background:rgba(10,8,14,.78) center/60% no-repeat;border:1px solid var(--line);opacity:0;transition:opacity .15s;cursor:var(--cp)}
