@@ -1925,8 +1925,8 @@ function statsBlock(name, s, p, size, up, full) {
   }
   h = h.replace('@@G@@', ptsHdr);
   if (compact) {
-    h += hp + mana;
-    h += '<div class="statrow">' + img('gold') + '<b data-pv="gold">' + s.gold + '</b>' + img('limit') + '<b data-pv="limit">' + s.limit + '</b>' + mk + mr + '</div>';
+    h += '<div class="statrow">' + img('gold') + '<b data-pv="gold">' + s.gold + '</b></div>' + hp + mana;   // gleiche Reihenfolge wie beim Spieler: Gold, HP, Mana, Limit
+    h += '<div class="statrow">' + img('limit') + '<b data-pv="limit">' + s.limit + '</b>' + mk + mr + '</div>';
   } else {
     let sac = '', sacBtn = '';
     if (up && s.gold >= 1) {
