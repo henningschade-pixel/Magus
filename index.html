@@ -450,7 +450,7 @@ function magicProgress(p) { return (p.stats.mag.F - 1) + (p.stats.mag.E - 1) + (
 const MONSTER = {
   profile: { F: { primary: 'F', secondary: 'E' }, E: { primary: 'E', secondary: 'W' }, W: { primary: 'W', secondary: 'F' } },
   stage1Temple: { F: [], E: [], W: [] },
-  temple: { 2: { F: ['limit', 'hp', 'mana', 'hp', 'hp', 'hp', 'hp', 'hp'], E: ['limit', 'hp', 'mana', 'hp', 'hp', 'hp', 'hp', 'hp'], W: ['limit', 'hp', 'mana', 'hp', 'hp', 'hp', 'hp', 'hp'] }, 3: { F: ['hp', 'limit', 'mana', 'hp', 'hp', 'hp', 'hp', 'mana', 'mana', 'mana'], E: ['hp', 'limit', 'mana', 'hp', 'hp', 'hp', 'hp', 'mana', 'mana', 'mana'], W: ['hp', 'limit', 'mana', 'hp', 'hp', 'hp', 'hp', 'mana', 'mana', 'mana'] } },   // inkl. Skalierung auf die höheren Belohnungen (2g/2up, 3g/3up) und Start-Mana 4
+  temple: { 2: { F: ['limit', 'hp', 'hp', 'hp', 'hp', 'hp', 'mana'], E: ['limit', 'hp', 'hp', 'hp', 'hp', 'hp', 'mana'], W: ['limit', 'hp', 'hp', 'hp', 'hp', 'hp', 'mana'] }, 3: { F: ['hp', 'limit', 'hp', 'hp', 'mana'], E: ['hp', 'limit', 'hp', 'hp', 'mana'], W: ['hp', 'limit', 'hp', 'hp', 'mana'] } },   // inkl. Skalierung auf die höheren Belohnungen (2g/2up, 3g/3up) und Start-Mana 4
   magic: { 2: [3, 2, 1], 3: [3, 2, 1] },                                  // Stufen von Haupt-, Neben- und drittem Element
   deck: {
     2: (P, S, T) => [P + '3', P + '2', P + '2', P + '2', S + '2', S + '2', T + '1', T + '1', P + '1'],
@@ -460,8 +460,8 @@ const MONSTER = {
   variants: {
     temple1: { F: [[], ['mana']], E: [[], ['mana']], W: [[], ['mana']] },
     temple: {   // Stufe II/III: Grundform (Limit, Zäh, Mana), dazu ohne Mana (ruhiger) und mit doppeltem Mana (zielt auf Dauerdruck); gemessen etwa gleich schwer für den Spieler
-      2: { F: [['limit', 'hp', 'mana', 'hp', 'hp', 'hp', 'hp', 'hp'], ['limit', 'hp', 'hp', 'hp', 'hp', 'hp', 'hp'], ['limit', 'hp', 'mana', 'mana', 'hp', 'hp', 'hp', 'hp', 'hp']], E: [['limit', 'hp', 'mana', 'hp', 'hp', 'hp', 'hp', 'hp'], ['limit', 'hp', 'hp', 'hp', 'hp', 'hp', 'hp'], ['limit', 'hp', 'mana', 'mana', 'hp', 'hp', 'hp', 'hp', 'hp']], W: [['limit', 'hp', 'mana', 'hp', 'hp', 'hp', 'hp', 'hp'], ['limit', 'hp', 'hp', 'hp', 'hp', 'hp', 'hp'], ['limit', 'hp', 'mana', 'mana', 'hp', 'hp', 'hp', 'hp', 'hp']] },
-      3: { F: [['hp', 'limit', 'mana', 'hp', 'hp', 'hp', 'hp', 'mana', 'mana', 'mana'], ['hp', 'limit', 'hp', 'hp', 'hp', 'hp', 'mana', 'mana', 'mana'], ['hp', 'limit', 'mana', 'mana', 'hp', 'hp', 'hp', 'hp', 'mana', 'mana', 'mana']], E: [['hp', 'limit', 'mana', 'hp', 'hp', 'hp', 'hp', 'mana', 'mana', 'mana'], ['hp', 'limit', 'hp', 'hp', 'hp', 'hp', 'mana', 'mana', 'mana'], ['hp', 'limit', 'mana', 'mana', 'hp', 'hp', 'hp', 'hp', 'mana', 'mana', 'mana']], W: [['hp', 'limit', 'mana', 'hp', 'hp', 'hp', 'hp', 'mana', 'mana', 'mana'], ['hp', 'limit', 'hp', 'hp', 'hp', 'hp', 'mana', 'mana', 'mana'], ['hp', 'limit', 'mana', 'mana', 'hp', 'hp', 'hp', 'hp', 'mana', 'mana', 'mana']] },
+      2: { F: [['limit', 'hp', 'hp', 'hp', 'hp', 'hp', 'mana'], ['limit', 'hp', 'hp', 'hp', 'hp', 'hp'], ['limit', 'hp', 'hp', 'hp', 'hp', 'hp', 'mana', 'mana']], E: [['limit', 'hp', 'hp', 'hp', 'hp', 'hp', 'mana'], ['limit', 'hp', 'hp', 'hp', 'hp', 'hp'], ['limit', 'hp', 'hp', 'hp', 'hp', 'hp', 'mana', 'mana']], W: [['limit', 'hp', 'hp', 'hp', 'hp', 'hp', 'mana'], ['limit', 'hp', 'hp', 'hp', 'hp', 'hp'], ['limit', 'hp', 'hp', 'hp', 'hp', 'hp', 'mana', 'mana']] },
+      3: { F: [['hp', 'limit', 'hp', 'hp', 'mana'], ['hp', 'limit', 'hp', 'hp'], ['hp', 'limit', 'hp', 'hp', 'mana', 'mana']], E: [['hp', 'limit', 'hp', 'hp', 'mana'], ['hp', 'limit', 'hp', 'hp'], ['hp', 'limit', 'hp', 'hp', 'mana', 'mana']], W: [['hp', 'limit', 'hp', 'hp', 'mana'], ['hp', 'limit', 'hp', 'hp'], ['hp', 'limit', 'hp', 'hp', 'mana', 'mana']] },
     },
     swap: { F: { primary: 'F', secondary: 'W' }, E: { primary: 'E', secondary: 'F' }, W: { primary: 'W', secondary: 'E' } },   // Neben- und drittes Element getauscht
     deck: {   // Deckformen: Grundform, breit (mehr Nebenelement), spitz (stärkere Spitze, schwächere Basis)
@@ -1375,7 +1375,7 @@ return { ELEMENTS, SUPERIOR, NAMES, START_DECK, MAX_MAGIC, MAX_SLOTS, MIN_SLOTS,
 // Alle Gewichte der KI an einer Stelle (abgestimmt per Selbstspiel: Änderungen wurden nur übernommen, wenn sie sich in 800 Partien mit getauschten Plätzen klar durchsetzten). Pro Platz überschreibbar (setParams), damit Varianten gegeneinander spielen können.
 const DEFAULTS = {
   limitA: 1, slotA: 3, manaA: 4, hpA: 4, limitB: 3, slotB: 5,          // Ausbaureihenfolge der Upgrade-Punkte
-  cBase: 16.8, cHp: 3, cMana: 1.5, cWt: 2.8, cMon: 0.8, minHp: 2, minMana: 3,   // Lust, ein Monster anzugreifen
+  cBase: 16.8, cHp: 3, cMana: 1.5, cWt: 2.8, cMon: 0.8, minHp: 1, minMana: 3,   // Lust, ein Monster anzugreifen
   dBase: 7, dCurse: 4, dEmpty: 12, dSlot: 2, dNorm: 5,                    // Lust, nachzuziehen
   vUp: 8.85, vUpW: 1.4,                                                       // Händler-Aufwertung
   smart: 1, wMark: 0.5, keepB: 3, keepOn: 0, wDeath: 6, wDraw: 1.6, wFW: 2, wFE: 0.9, wEW: 2.8, aDmg: 1.5, aCost: 1.5, aCurse: 1.6, aThr: 0.5, oHits: 8, oFree: 3, stallDec: 0.25, stallFrom: 24,   // Angriffsbewertung
