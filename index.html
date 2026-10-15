@@ -2663,16 +2663,26 @@ function drawProjectile(ctx,p,el,a,b,q,seed,t){
   }
   if(heavy){ctx.save();ctx.globalAlpha=.55;orbGlow(ctx,P[0],P[1],size*.85,col,'#b9e070');ctx.restore();ribbon(ctx,pos,q,'#93c24f',size*.7,.2*p.trail,t,seed)}
   if(p.look==='kugel')orbGlow(ctx,P[0],P[1],size,col,'#fff');
-  else if(el==='F'){orbGlow(ctx,P[0],P[1],size*1.1,col,'#fff6c8');orbGlow(ctx,P[0]+Math.sin(t*40)*2,P[1]-3,size*.6,'#ffd27a','#fff')}
+  else if(el==='F'){orbGlow(ctx,P[0],P[1],size*1.15,col,'#ffb347');orbGlow(ctx,P[0],P[1]-size*.25,size*.55,'#ff8a2f')}   // ruhiger Feuerball ohne hellen Kernpunkt
   else if(el==='E')rock(ctx,P[0],P[1],size*1.1,q*5+seed,seed,col);
   else waterBody(ctx,P[0],P[1],size*1.6,ang,t,seed,p);
   return P;
 }
 // Ruhende Funken in der Mitte (schweben leicht)
+// Feuerpartikel: Funken lösen sich vom Feuerball und steigen auf, werden kleiner und verglühen (ruhige Position, kein Wabern)
+function fireEmbers(ctx,x,y,size,t,seed){
+  const rn=rng(Math.floor(seed*7)+11),N=14;
+  for(let k=0;k<N;k++){
+    const r1=rn(),r2=rn(),r3=rn(),ph=((t*(.55+r1*.5)+k/N+r2)%1),life=1-ph;
+    const px=x+(r3-.5)*size*1.6+Math.sin(ph*5+k)*size*.35*ph,py=y-size*.2-ph*size*(4.2+r1*2.2);
+    const col=ph<.35?'#ffd27a':ph<.7?'#ff9a3d':'#e0501f';
+    ctx.save();ctx.globalAlpha=Math.min(1,life*1.6)*.85;orbGlow(ctx,px,py,Math.max(.6,size*(.28+r2*.18)*life),col);ctx.restore();
+  }
+}
 function drawIdle(ctx,p,el,x,y,seed,t,alpha){
-  const col=EL[el],size=8*p.size;ctx.save();ctx.globalAlpha=alpha;y+=Math.sin(t*3+seed)*3;
+  const col=EL[el],size=8*p.size;ctx.save();ctx.globalAlpha=alpha;if(el!=='F')y+=Math.sin(t*3+seed)*3;
   if(p.look==='kugel')orbGlow(ctx,x,y,size,col,'#fff');
-  else if(el==='F'){orbGlow(ctx,x,y,size*1.1,col,'#fff6c8');orbGlow(ctx,x+Math.sin(t*30+seed)*2,y-4,size*.6,'#ffd27a','#fff')}
+  else if(el==='F'){orbGlow(ctx,x,y,size*1.15,col,'#ffb347');orbGlow(ctx,x,y-size*.25,size*.55,'#ff8a2f');fireEmbers(ctx,x,y,size,t,seed)}
   else if(el==='E'){const R2=size*1.1*(1.15+.45*p.heavy*(p.look==='kugel'?0:1));ctx.save();ctx.globalAlpha*=.5;orbGlow(ctx,x,y,R2*.7,col,'#b9e070');ctx.restore();rock(ctx,x,y,R2,seed+.3,seed,col);for(let k=0;k<3;k++){const a=t*1.8+k*2.1+seed;chunk(ctx,x+Math.cos(a)*R2*1.7,y+Math.sin(a)*R2*.7-4,2.4,a*2,.9,'#8aa05a',seed+k)}}
   else{waterBody(ctx,x,y,size*1.6,0,t,seed,p);ctx.strokeStyle=rgba(col,.4*(1-((t*1.2+seed)%1)));ctx.lineWidth=1.5;ctx.beginPath();ctx.ellipse(x,y+size*1.3,size*(1+((t*1.2+seed)%1)*1.6),size*.4*(1+((t*1.2+seed)%1)*1.6),0,0,7);ctx.stroke()}
   ctx.restore();
