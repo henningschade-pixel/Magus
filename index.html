@@ -1374,12 +1374,12 @@ return { ELEMENTS, SUPERIOR, NAMES, START_DECK, MAX_MAGIC, MAX_SLOTS, MIN_SLOTS,
 /* ---------- Stellschrauben ---------- */
 // Alle Gewichte der KI an einer Stelle (abgestimmt per Selbstspiel: Änderungen wurden nur übernommen, wenn sie sich in 800 Partien mit getauschten Plätzen klar durchsetzten). Pro Platz überschreibbar (setParams), damit Varianten gegeneinander spielen können.
 const DEFAULTS = {
-  limitA: 2, slotA: 4, manaA: 4, hpA: 4, limitB: 3, slotB: 5,          // Ausbaureihenfolge der Upgrade-Punkte
+  limitA: 1, slotA: 3, manaA: 4, hpA: 4, limitB: 3, slotB: 5,          // Ausbaureihenfolge der Upgrade-Punkte
   cBase: 16.8, cHp: 3, cMana: 1.5, cWt: 2.8, cMon: 0.8, minHp: 2, minMana: 3,   // Lust, ein Monster anzugreifen
   dBase: 7, dCurse: 4, dEmpty: 12, dSlot: 2, dNorm: 5,                    // Lust, nachzuziehen
-  vUp: 7.35, vUpW: 1.4,                                                       // Händler-Aufwertung
-  smart: 1, wMark: 0.5, keepB: 3, keepOn: 0, wDeath: 6, wDraw: 1.6, wFW: 2, wFE: 0.9, wEW: 2.8, aDmg: 1.5, aCost: 1.1, aCurse: 1.6, aThr: 0.2, oHits: 8, oFree: 3, stallDec: 0.25, stallFrom: 24,   // Angriffsbewertung
-  rW: 0, rRef: 3, dRec: 0,                                                 // Erholen als Manaquelle: Angriffsschwelle steigt bei wenig Mana, Verzicht auf Verteidigung bringt Mana
+  vUp: 8.85, vUpW: 1.4,                                                       // Händler-Aufwertung
+  smart: 1, wMark: 0.5, keepB: 3, keepOn: 0, wDeath: 6, wDraw: 1.6, wFW: 2, wFE: 0.9, wEW: 2.8, aDmg: 1.5, aCost: 1.5, aCurse: 1.6, aThr: 0.5, oHits: 8, oFree: 3, stallDec: 0.25, stallFrom: 24,   // Angriffsbewertung
+  rW: 0, rRef: 3, dRec: 0, dU: 2,                                                 // Erholen als Manaquelle: Angriffsschwelle steigt bei wenig Mana, Verzicht auf Verteidigung bringt Mana
   dLeth: 40, dPend: 6, dCost: 1.4, dKeep: 0.9, mirW: 4, mirAvoid: 2, lfOpp: 2, lfOppW: 0.8,                            // Verteidigungsbewertung
   mBase: 14, mCost: 2.1, mCnt: 0.7, mTop: 2,                              // Magie kaufen
 };
@@ -1677,6 +1677,7 @@ function combatPlan(state, pid) {
       score -= rel * Q.mirW + (rel * (state.rules.mirrorMult || 1) >= opp.stats.hp ? 60 : 0);
     }
     if (dcom && ev.ord) { const o = c.sides[c.turn === 'a' ? 'b' : 'a']; score -= ordComboWorth(side, o, Q, state.rules, M.levelsFor(state.rules, ev), ev); }
+    if (dcom && Q.dU > 0 && ev.levels && ev.levels.ulti > 0 && state.rules.ultiMode === 'death') { const o = c.sides[c.turn === 'a' ? 'b' : 'a']; score -= Q.dU * ev.levels.ulti * Q.wDeath * (o.stats.death >= ev.levels.ulti ? 0.1 : 1) * Math.max(0.4, Math.min(1.4, o.stats.hp / 4)); }   // Ultimate in der Verteidigung: Todes-Fluch für den Angreifer
     if (score < best.score) best = { score, ord: sub };
   }
   if (!best.ord.length) return [A({ type: 'pass' })];
