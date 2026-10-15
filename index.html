@@ -723,7 +723,8 @@ function comboLevels(tiers, mag, prim) {
   const present = ['F', 'E', 'W'].filter(e => tiers[e].length);
   if (prim && present.length === 2 && present.includes(prim)) {
     const other = present.find(e => e !== prim), key = ORD_COMBO[prim + other];
-    lv.ord = { key, lvl: pair(prim, other), el: key === 'bm' ? 'F' : key === 'bg' ? 'E' : null };
+    const eff = e => tiers[e].reduce((a, t) => a + Math.min(t, mag[e]), 0);   // je Farbe die Summe der Kartenwerte (höchstens Magiestufe je Karte): mehrere Karten ergeben zusammen die Stufe
+    lv.ord = { key, lvl: Math.max(0, Math.min(3, eff(prim), eff(other))), el: key === 'bm' ? 'F' : key === 'bg' ? 'E' : null };
   }
   return lv;
 }
@@ -1263,7 +1264,7 @@ function applyWorld(state, a) {
 // lifeflowMode 'any': S Marker beliebig vom Brett (eigene/gegnerische Fluch- und Spiegelmarker), je entferntem Marker 1 HP ('removed', Variante 'flat' = S HP).
 // lifeflowMode: 'classic' (S HP heilen und S eigene Fluchmarker herunternehmen) oder 'choice' (S HP heilen und S Marker wegnehmen: eigene Fluchmarker oder die Spiegelmarker des Gegners).
 // firstPlayerGold: zusätzliches Startgold für den Beginnenden (Ausgleich zum Vorteil des zweiten Spielers).
-const DEFAULT_RULES = { magicCost: [0, 1, 3], limitCost: 2, curses: 'deathcards', ultiMode: 'death', limitFirstStepCost: 2, secondPlayerPending: 0, campActions: 0, showdownAttacker: 'behind', firstPlayerGold: 0, controlMode: 'mirror', comboMode: 'ordered', defenseCombos: false, mirrorDecay: 0, mirrorTrigger: 'any', mirrorFree: false, mirrorMult: 1, mirrorStep: 1, mirrorChoice: false, mirrorMana: 0, mirrorHeal: 0, hpPerPoint: 2, lifeflowMode: 'any', lifeflowDrawAll: true, lifeflowHealMode: 'flat', lifeflowHeal: 1, lifeflowMana: false, monsterVariants: true, monstersPerStage: 3, fightReset: true, fightCarry: true, stagePoints: [0, 1, 1, 1], stageGold: [0, 1, 1, 1], startGold: 0, secondPlayerGold: 0, loserStarts: true, loserUp: 1, winSp: 4, freshHands: false, showdownRestore: false, lootShare: 0, lootPot: false, lifeflowDraw: 1 };
+const DEFAULT_RULES = { magicCost: [0, 1, 3], limitCost: 2, curses: 'deathcards', ultiMode: 'death', limitFirstStepCost: 2, secondPlayerPending: 0, campActions: 0, showdownAttacker: 'behind', firstPlayerGold: 0, controlMode: 'mirror', comboMode: 'ordered', defenseCombos: true, mirrorDecay: 0, mirrorTrigger: 'any', mirrorFree: false, mirrorMult: 1, mirrorStep: 1, mirrorChoice: false, mirrorMana: 0, mirrorHeal: 0, hpPerPoint: 2, lifeflowMode: 'any', lifeflowDrawAll: true, lifeflowHealMode: 'flat', lifeflowHeal: 1, lifeflowMana: false, monsterVariants: true, monstersPerStage: 3, fightReset: true, fightCarry: true, stagePoints: [0, 1, 1, 1], stageGold: [0, 1, 1, 1], startGold: 0, secondPlayerGold: 0, loserStarts: true, loserUp: 1, winSp: 4, freshHands: false, showdownRestore: false, lootShare: 0, lootPot: false, lifeflowDraw: 1 };
 
 function newPlayer(state, name, ai) {
   const p = { name, ai: !!ai, stats: newStats(), temple: { points: 0, level: 0 }, sp: 0, slots: MIN_SLOTS };
@@ -1825,10 +1826,10 @@ function createCard(card) {
   d.querySelector('.lockbtn').style.backgroundImage = 'url(' + IMG.lock + ')';
   return d;
 }
-function isFirstAtk(deck, i) {   // goldener Rahmen nur auf der ersten markierten Elementkarte im eigenen Angriff (sie bestimmt Angriffsfarbe und Kombo)
-  if (!G || G.phase !== 'combat' || !G.combat || G.combat.action !== 'attack') return false;
-  const f = deck.marks.find(k => deck.hand[k] && !M.parseCard(deck.hand[k].id).curse);
-  return f === i;
+function isFirstAtk(deck, i) {   // goldener Rahmen auf allen markierten Karten der ersten Farbe (Angriffs- bzw. Verteidigungsfarbe); Kombokarten der zweiten Farbe bleiben ohne Rahmen
+  if (!G || G.phase !== 'combat' || !G.combat || !['attack', 'defense'].includes(G.combat.action)) return false;
+  const ids = deck.marks.filter(k => deck.hand[k]).map(k => M.parseCard(deck.hand[k].id)), first = ids.find(p => !p.curse), me = M.parseCard(deck.hand[i] && deck.hand[i].id);
+  return !!first && !me.curse && me.el === first.el;
 }
 function place(card, s) {
   let rec = els.get(card.uid);
@@ -2205,7 +2206,7 @@ function comboRef(cx) {
     ['fe', 'Aggro', 'F', 'E', n => G.rules.curses === 'deathcards' ? 'Lege ' + n + (n === 1 ? ' Fluch' : ' Flüche') + ' auf den Ablagestapel deines Gegners. Beim nächsten Nachziehen kommen sie zuerst auf seine Hand und belegen Plätze, beim darauffolgenden Nachziehen sind sie dauerhaft vernichtet.' : 'Nach dem Zug ' + (n + 1) + ' Schwäche-Marker: Gegner erleidet doppelten Schaden; −1 nach jedem seiner Angriffszüge.'],
     ['ew', 'Lifeflow', 'E', 'W', n => G.rules.lifeflowMode === 'plain' ? 'Heile um ' + n + ' und erhalte ' + n + ' Nachziehtoken.' : (G.rules.lifeflowHealMode === 'flat' ? 'Heile um ' + n + ', entferne ' + n + ' Marker und erhalte für jeden einen Nachziehtoken.' : 'Entferne ' + n + ' Marker: je Marker 1 HP und 1 Nachziehtoken.')],
   ];
-  let h = '<h3 style="margin-bottom:3px" title="S = Minimum aus beiden Magiewerten und den höchsten markierten Kartenstufen (max. 3). Kombos kosten 0 Mana.">Kombo-Übersicht <span class="note" style="font-size:13px">S = Kombostufe</span></h3>';
+  let h = '<h3 style="margin-bottom:3px" title="S = die kleinere der beiden Kartensummen (Kartenstufe, je Karte höchstens deine Magiestufe), höchstens 3. Kombokarten kosten kein Mana.">Kombo-Übersicht <span class="note" style="font-size:13px">S = Kombostufe</span></h3>';
   if (G.rules.comboMode === 'ordered') {
     const normals = sel.filter(c => !c.curse), cols = [...new Set(normals.map(c => c.el))], prim = normals.length ? normals[0].el : null;
     const o = ev && ev.valid && ev.ord && !(ev.levels.ulti > 0) ? ev.ord : null, uS0 = Math.min(3, mag.F, mag.E, mag.W);
@@ -2221,7 +2222,7 @@ function comboRef(cx) {
     } else if (cols.length === 2 && o) {   // zwei Farben: genau eine Kombo, mit erreichter Stufe
       const r = ORD_ROWS.find(x => x[0] === o.key);
       h += row(r[1], [r[2], r[3]], o.lvl, ordText(r[0], o.lvl), true);
-      h += '<div class="note" style="margin-top:4px;font-size:13px">Stufe = kleinster Wert aus den Magiestufen beider Farben und den markierten Kartenstufen (höchstens 3). Eine dritte Farbe (' + el(M.ELEMENTS.find(x => !cols.includes(x))) + ') würde daraus die Ultimate machen.</div>';
+      h += '<div class="note" style="margin-top:4px;font-size:13px">Stufe = die kleinere der beiden Kartensummen (je Karte höchstens deine Magiestufe), höchstens 3. Mehrere Karten einer Farbe zählen zusammen. Eine dritte Farbe (' + el(M.ELEMENTS.find(x => !cols.includes(x))) + ') würde daraus die Ultimate machen.</div>';
     } else {   // alle drei Farben: Ultimate
       h += row('Ultimate', ['F', 'E', 'W'], lv.ulti, 'Todes-Fluch: Der Gegner bekommt ' + (lv.ulti || 'S') + ' Todesmarker und verliert ' + (lv.ulti || 'S') + ' HP am Ende jeder seiner Angriffsphasen bis Kampfende. Die Kombos entfallen.', lv.ulti > 0);
     }
