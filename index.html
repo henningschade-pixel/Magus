@@ -2854,7 +2854,13 @@ function mound(ctx,x,y,w,e,a){   // aufgeworfene Erde am Fuß
   const g=ctx.createRadialGradient(x,y,0,x,y,rw);g.addColorStop(0,'rgba(84,68,48,.95)');g.addColorStop(1,'rgba(84,68,48,0)');ctx.fillStyle=g;ctx.beginPath();ctx.ellipse(x,y+2,rw,rw*.32,0,0,7);ctx.fill();ctx.restore();
 }
 
+const EARTH_SCALE = .5;   // Darstellung der Erdmagie im Spiel (Werkstattgröße = 1)
 function earthForm(ctx, x, by, seed, i, t, tCrack, tRise, endAt, ending) {
+  ctx.save(); ctx.translate(x, by); ctx.scale(EARTH_SCALE, EARTH_SCALE); ctx.translate(-x, -by);
+  earthFormRaw(ctx, x, by, seed, i, t, tCrack, tRise, endAt, ending);
+  ctx.restore();
+}
+function earthFormRaw(ctx, x, by, seed, i, t, tCrack, tRise, endAt, ending) {
   const p = EP; MOSS = p.moss;
   const form = formOf(p, i), endP = seg(t, endAt, endAt + p.endT), crackFade = 1 - endP;
   eCracks(ctx, x, by, seg(t, tCrack, tRise), seed, p, crackFade);
