@@ -54,6 +54,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .card .face.back{transform:rotateY(180deg)}
 .card.myhand{cursor:var(--cp)}
 .card.myhand:hover .face.front{filter:brightness(1.18)}
+.card.fd .face.front{box-shadow:0 0 0 3px #ff6b3d,0 0 22px rgba(255,107,61,.75)}
 .card.first .face.front{box-shadow:0 0 0 3px var(--gold),0 0 22px rgba(210,173,79,.65)}
 .card.bad .face.front{box-shadow:0 0 0 3px var(--bad)}
 .card .lockbtn{position:absolute;right:4px;top:4px;width:30px;height:30px;border-radius:50%;background:rgba(10,8,14,.78) center/60% no-repeat;border:1px solid var(--line);opacity:0;transition:opacity .15s;cursor:var(--cp)}
@@ -968,7 +969,12 @@ function applyComboPlan(state, side, opp, plan, ev, texts, fxs) {
     else if (k === 'fw') { side.stats.freeDraws += lvl; texts.push('Control ' + lvl + ': ' + lvl + ' Gratis-Nachziehen'); }
     if (k === 'fe' && cs.deferInflict) { const n = lvl + (cs.inflictBonus || 0); c.defer = { to: opp, n }; texts.push('Aggro ' + lvl + ': ' + n + ' Schwäche-Marker für ' + opp.name + ' (nach diesem Zug)'); }
     else if (k === 'fe') { texts.push('Aggro ' + lvl + ': ' + cs.inflict(state, opp, lvl)); fxs.push({ kind: 'aggro', who: side.ctrl, to: opp.ctrl, n: lvl }); }
-    if (k === 'rm') { const take = Math.min(lvl, Math.max(0, opp.stats.mana)); opp.stats.mana -= take; texts.push('Entzug ' + lvl + ': ' + opp.name + ' verliert ' + take + ' Mana'); if (take > 0) fxs.push({ kind: 'drain', who: side.ctrl, to: opp.ctrl, n: take }); }
+    if (k === 'rm' && state.rules.rmMode !== 'drain') {   // Zerrüttung: Der Gegner muss S Handkarten seiner Wahl abwerfen
+      const n = Math.min(lvl, opp.deck.hand.filter(Boolean).length);
+      if (n > 0) { c.forced = { pid: opp.ctrl, n }; fxs.push({ kind: 'ruin', who: side.ctrl, to: opp.ctrl, n }); }
+      texts.push('Zerrüttung ' + lvl + ': ' + opp.name + ' muss ' + n + ' Handkarte' + (n === 1 ? '' : 'n') + ' seiner Wahl abwerfen');
+    }
+    else if (k === 'rm') { const take = Math.min(lvl, Math.max(0, opp.stats.mana)); opp.stats.mana -= take; texts.push('Entzug ' + lvl + ': ' + opp.name + ' verliert ' + take + ' Mana'); if (take > 0) fxs.push({ kind: 'drain', who: side.ctrl, to: opp.ctrl, n: take }); }
     else if (k === 'gh') {
       const before = side.stats.hp; side.stats.hp = Math.min(side.stats.maxHp, before + lvl * (state.rules.lifeflowHeal || 1));
       texts.push('Heilung ' + lvl + ': +' + (side.stats.hp - before) + ' HP'); fxs.push({ kind: 'lifeflow', who: side.ctrl, to: opp.ctrl, got: {}, removed: 0, heal: side.stats.hp - before, draws: 0 });
@@ -1084,6 +1090,18 @@ function execDefense(state, passOnly) {
 
 function applyCombat(state, a) {
   const c = state.combat, pid = a.pid;
+  if (c.forced) {   // Zerrüttung: Der Betroffene wählt die Karten, die er abwerfen muss; vorher ist keine andere Aktion möglich
+    if (a.type !== 'fd') return fail(c.forced.pid === pid ? 'Zerrüttung: Wähle zuerst ' + c.forced.n + ' Handkarte' + (c.forced.n === 1 ? '' : 'n') + ' zum Abwerfen.' : 'Der Gegner wählt gerade seine Abwurfkarten.');
+    if (c.forced.pid !== pid) return fail('Der Gegner wählt gerade seine Abwurfkarten.');
+    const v = c.sides.a.ctrl === pid ? c.sides.a : c.sides.b, dd = v.deck, slots = [...new Set((Array.isArray(a.slots) ? a.slots : []).map(Number))].filter(i => Number.isInteger(i) && dd.hand[i]);
+    const need = Math.min(c.forced.n, dd.hand.filter(Boolean).length);
+    if (slots.length !== need) return fail('Wähle genau ' + need + ' Handkarte' + (need === 1 ? '' : 'n') + ' zum Abwerfen.');
+    slots.forEach(i => { const cd = dd.hand[i]; cd.locked = false; dd.discard.push(cd); dd.hand[i] = null; });
+    dd.marks = [];
+    c.forced = null;
+    log(state, v.name + ' wirft ' + slots.length + ' Handkarte' + (slots.length === 1 ? '' : 'n') + ' ab (Zerrüttung).', pid);
+    return { ok: true };
+  }
   const side = c.sides[c.turn], opp = c.sides[c.turn === 'a' ? 'b' : 'a'];
   const mine = c.sides.a.ctrl === pid ? c.sides.a : c.sides.b;     // (in Monsterkämpfen kontrolliert jeder genau eine Seite)
   if (a.type === 'lock') { const e = toggleLock(mine.deck, a.slot); return e ? fail(e) : { ok: true }; }
@@ -1264,7 +1282,7 @@ function applyWorld(state, a) {
 // lifeflowMode 'any': S Marker beliebig vom Brett (eigene/gegnerische Fluch- und Spiegelmarker), je entferntem Marker 1 HP ('removed', Variante 'flat' = S HP).
 // lifeflowMode: 'classic' (S HP heilen und S eigene Fluchmarker herunternehmen) oder 'choice' (S HP heilen und S Marker wegnehmen: eigene Fluchmarker oder die Spiegelmarker des Gegners).
 // firstPlayerGold: zusätzliches Startgold für den Beginnenden (Ausgleich zum Vorteil des zweiten Spielers).
-const DEFAULT_RULES = { magicCost: [0, 1, 3], limitCost: 2, curses: 'deathcards', ultiMode: 'death', limitFirstStepCost: 2, secondPlayerPending: 0, campActions: 0, showdownAttacker: 'behind', firstPlayerGold: 0, controlMode: 'mirror', comboMode: 'ordered', defenseCombos: true, mirrorDecay: 0, mirrorTrigger: 'any', mirrorFree: false, mirrorMult: 1, mirrorStep: 1, mirrorChoice: false, mirrorMana: 0, mirrorHeal: 0, hpPerPoint: 2, lifeflowMode: 'any', lifeflowDrawAll: true, lifeflowHealMode: 'flat', lifeflowHeal: 1, lifeflowMana: false, monsterVariants: true, monstersPerStage: 3, fightReset: true, fightCarry: true, stagePoints: [0, 1, 1, 1], stageGold: [0, 1, 1, 1], startGold: 0, secondPlayerGold: 0, loserStarts: true, loserUp: 1, winSp: 4, freshHands: false, showdownRestore: false, lootShare: 0, lootPot: false, lifeflowDraw: 1 };
+const DEFAULT_RULES = { magicCost: [0, 1, 3], limitCost: 2, curses: 'deathcards', ultiMode: 'death', limitFirstStepCost: 2, secondPlayerPending: 0, campActions: 0, showdownAttacker: 'behind', firstPlayerGold: 0, controlMode: 'mirror', comboMode: 'ordered', rmMode: 'discard', defenseCombos: true, mirrorDecay: 0, mirrorTrigger: 'any', mirrorFree: false, mirrorMult: 1, mirrorStep: 1, mirrorChoice: false, mirrorMana: 0, mirrorHeal: 0, hpPerPoint: 2, lifeflowMode: 'any', lifeflowDrawAll: true, lifeflowHealMode: 'flat', lifeflowHeal: 1, lifeflowMana: false, monsterVariants: true, monstersPerStage: 3, fightReset: true, fightCarry: true, stagePoints: [0, 1, 1, 1], stageGold: [0, 1, 1, 1], startGold: 0, secondPlayerGold: 0, loserStarts: true, loserUp: 1, winSp: 4, freshHands: false, showdownRestore: false, lootShare: 0, lootPot: false, lifeflowDraw: 1 };
 
 function newPlayer(state, name, ai) {
   const p = { name, ai: !!ai, stats: newStats(), temple: { points: 0, level: 0 }, sp: 0, slots: MIN_SLOTS };
@@ -1320,7 +1338,7 @@ function applyInner(state, a) {
 // Wer ist gerade am Zug (Spieler-Index) oder null, wenn das Spiel vorbei ist.
 function actor(state) {
   if (state.over) return null;
-  if (state.phase === 'combat') return state.combat.sides[state.combat.turn].ctrl;
+  if (state.phase === 'combat') return state.combat.forced ? state.combat.forced.pid : state.combat.sides[state.combat.turn].ctrl;   // Zerrüttung: erst wählt der Betroffene seine Abwurfkarten
   return state.turn;
 }
 function handCounts(d) { const c = {}; d.hand.forEach(x => { if (x) c[x.id] = (c[x.id] || 0) + 1; }); return c; }
@@ -1573,7 +1591,14 @@ function keepLocks(state, side, opp, hand, Q) {
   }
   return bestS.map(h => h.slot);
 }
+// Zerrüttung: Die KI wirft zuerst Flüche, dann die schwächsten Karten ab (gesperrte Karten möglichst nicht)
+function forcedPick(state, pid) {
+  const c = state.combat, v = c.sides.a.ctrl === pid ? c.sides.a : c.sides.b, d = v.deck, mag = v.stats.mag;
+  const cards = d.hand.map((h, slot) => h ? { slot, v: (M.parseCard(h.id).curse ? -5 : M.parseCard(h.id).tier + 0.15 * (mag[M.parseCard(h.id).el] || 0)) + (h.locked ? 4 : 0) } : null).filter(Boolean).sort((x, y) => x.v - y.v || x.slot - y.slot);
+  return cards.slice(0, Math.min(c.forced.n, cards.length)).map(x => x.slot);
+}
 function combatPlan(state, pid) {
+  if (state.combat.forced && state.combat.forced.pid === pid) return [{ pid, type: 'fd', slots: forcedPick(state, pid) }];
   const c = state.combat, side = c.sides[c.turn], opp = c.sides[c.turn === 'a' ? 'b' : 'a'];
   const d = side.deck, hand = handList(d), A = a => Object.assign({ pid }, a);
   const s = side.stats, Q = P(pid);
@@ -1655,6 +1680,7 @@ function fallback(state, pid) {
   const A = a => Object.assign({ pid }, a);
   if (state.phase === 'combat') {
     const c = state.combat;
+    if (c.forced) return [A({ type: 'fd', slots: forcedPick(state, pid) })];
     return c.action === 'defense' ? [A({ type: 'pass' })] : [A({ type: 'recover' }), A({ type: 'draw' }), A({ type: 'pass' })];
   }
   return state.camp ? [A({ type: 'pass' })] : [A({ type: 'draw' })];
@@ -1846,7 +1872,7 @@ function place(card, s) {
   const d = rec.el; rec.frame = frame;
   d.style.transform = 'translate(' + s.x + 'px,' + s.y + 'px) rotate(' + (s.rot || 0) + 'deg) scale(' + s.sc + ')';
   d.style.zIndex = s.z;
-  d.classList.toggle('down', !!s.down); d.classList.toggle('marked', !!s.marked); d.classList.toggle('first', !!s.first); d.classList.toggle('locked', !!s.locked);
+  d.classList.toggle('down', !!s.down); d.classList.toggle('marked', !!s.marked); d.classList.toggle('first', !!s.first); d.classList.toggle('fd', !!s.fd); d.classList.toggle('locked', !!s.locked);
   d.classList.toggle('myhand', !!s.mine); d.dataset.slot = s.slot === undefined ? '' : s.slot;
   d.style.pointerEvents = s.mine ? 'auto' : 'none';
 }
@@ -1861,8 +1887,9 @@ function layoutDeck(deck, L, mine) {
   const n = deck.hand.length;
   deck.hand.forEach((c, i) => {
     if (!c) return;
-    const marked = deck.marks.includes(i);
-    place(c, { x: slotX(i, n, L), y: L.y + (marked ? L.raise : 0), sc: L.s, down: !mine, z: 20 + i + (marked ? 30 : 0), marked, locked: mine && c.locked, mine, slot: i, spawn, zone: 'hand', first: mine && marked && isFirstAtk(deck, i)});
+    if (!forcedMe()) fdSel.clear();
+    const fdm = mine && forcedMe() && fdSel.has(i), marked = deck.marks.includes(i) || fdm;
+    place(c, { x: slotX(i, n, L), y: L.y + (marked ? L.raise : 0), sc: L.s, down: !mine, z: 20 + i + (marked ? 30 : 0), marked, fd: fdm, locked: mine && c.locked, mine, slot: i, spawn, zone: 'hand', first: mine && marked && !fdm && isFirstAtk(deck, i)});
   });
 }
 function renderCards() {
@@ -2068,11 +2095,11 @@ function campPanel() {
   return '<div class="panel" style="' + box(LAYOUT.camp) + '">' + h + '</div>';
 }
 /* ---------- Kampf ---------- */
-const ORD_ROWS = [['ra', 'Aggro', 'F', 'E'], ['rm', 'Entzug', 'F', 'W'], ['bm', 'Spiegel', 'W', 'F'], ['bg', 'Spiegel', 'W', 'E'], ['gh', 'Heilung', 'E', 'W'], ['gr', 'Läuterung', 'E', 'F']];
+const ORD_ROWS = [['ra', 'Aggro', 'F', 'E'], ['rm', 'Zerrüttung', 'F', 'W'], ['bm', 'Spiegel', 'W', 'F'], ['bg', 'Spiegel', 'W', 'E'], ['gh', 'Heilung', 'E', 'W'], ['gr', 'Läuterung', 'E', 'F']];
 function ordText(k, lv, short) {
   if (k === 'ra' && lv === 'S') return 'Lege S Fluchkarten auf den Ablagestapel der Gegenseite; sie kommen beim nächsten Nachziehen des Gegners zuerst auf seine Hand und werden beim darauffolgenden Nachziehen dauerhaft vernichtet';
   if (k === 'ra') return short && G.rules.curses === 'deathcards' ? lv + (lv === 1 ? ' Fluch' : ' Flüche') + ' auf den Ablagestapel der Gegenseite' : comboText('fe', lv);
-  if (k === 'rm') return 'Der Gegner verliert ' + lv + ' Mana (nie unter 0)';
+  if (k === 'rm') return G.rules.rmMode === 'drain' ? 'Der Gegner verliert ' + lv + ' Mana (nie unter 0)' : 'Der Gegner muss ' + (lv === 'S' ? 'S' : lv) + ' Handkarte' + (lv === 1 ? '' : 'n') + ' seiner Wahl abwerfen';
   if (k === 'bm' || k === 'bg') return 'Dein ' + (k === 'bm' ? 'roter' : 'grüner') + ' Spiegel steht danach auf ' + lv + ' Marker (nicht addiert, höchstens 3 insgesamt)';
   if (k === 'gh') return 'Heile um ' + lv + ' HP';
   return 'Entferne ' + lv + ' Marker vom Brett (anklicken) und erhalte für jeden einen Nachziehtoken';
@@ -2166,6 +2193,14 @@ function combatCenter(cx) {
   const actorSide = c.sides[c.turn];
   const icon = !my ? 'wait' : atk ? 'attack' : 'defense';
   let h = '<div class="combatcenter"><div class="sc" style="font-size:22px;color:var(--gold)">' + (c.mode === 'showdown' ? 'Showdown' : 'Kampf gegen ' + esc(c.sides.b.name)) + '</div>';
+  if (c.forced) {   // Zerrüttung: Abwurf wählen (ich) bzw. warten (Gegner)
+    const vs = c.sides.a.ctrl === c.forced.pid ? c.sides.a : c.sides.b, need = Math.min(c.forced.n, vs.deck.hand.filter(Boolean).length);
+    h += c.forced.pid === ME
+      ? '<div class="preview"><b>Zerrüttung:</b> Wähle ' + need + ' Handkarte' + (need === 1 ? '' : 'n') + ', die du abwerfen musst (' + fdSel.size + '/' + need + '). Klicke die Karten an.</div><div class="btnrow"><button class="btn primary" data-act="fd" ' + (fdSel.size === need ? '' : 'disabled') + '>Abwerfen</button></div>'
+      : '<div class="preview"><b>Zerrüttung:</b> ' + esc(vs.name) + ' wählt ' + need + ' Handkarte' + (need === 1 ? '' : 'n') + ' zum Abwerfen …</div>';
+    h += '</div>';
+    return '<div class="panel" style="' + box(LAYOUT.combat, 'padding:10px 14px') + '">' + h + '</div>';
+  }
   let prev = '', canExec = false;
   if (my) {
     const sel = M.selection(cx.mine.deck);
@@ -2534,8 +2569,32 @@ const FlowFx = (() => {
       if (tu > 0) { ctx.save(); ctx.font = '700 22px Alegreya, serif'; ctx.textAlign = 'center'; ctx.fillStyle = rgba(lighten(B, .45), tu); ctx.shadowColor = B; ctx.shadowBlur = 10; ctx.fillText('−' + n + ' Mana', Mp.x + 110, Mp.y + 6 - 12 * seg(t, t0 + .1, t0 + 1)); ctx.restore(); }
     });
   }
+  /* Zerrüttung: Ein Feuer-Wasser-Blitz fährt in die Hand des Gegners, aus der Hand lösen sich Funken (die Karten, die er abwerfen muss) */
+  function ruin(fx) {
+    if (off()) return;
+    const n = Math.max(1, fx.n || 1), H = handOf(fx.who), T = handOf(fx.to), flight = .55, dur = .12 + flight + 1.1;
+    run(dur, (ctx, t, u) => {
+      const ca = seg(t, 0, .2) * (1 - seg(t, flight - .1, flight));
+      if (ca > 0) { const rot = t * 9; orb(ctx, H.x + Math.cos(rot) * 12, H.y + Math.sin(rot) * 12, 4 + ca * 8, F); orb(ctx, H.x - Math.cos(rot) * 12, H.y - Math.sin(rot) * 12, 4 + ca * 8, B); }
+      const s = seg(t, .12, .12 + flight);
+      if (s > 0 && s < 1) {
+        const pos = q => { const e = eio(q); return [lerp(H.x, T.x, e), lerp(H.y, T.y, e) - Math.sin(q * Math.PI) * 80]; };
+        for (let j = 14; j >= 1; j--) { const q = clamp(s - j * .025); if (q <= 0) continue; const pp = pos(q); ctx.save(); ctx.globalAlpha = (1 - j / 15) * .75; orb(ctx, pp[0], pp[1], 1.5 + 4 * (1 - j / 15), j % 2 ? F : B); ctx.restore(); }
+        const pp = pos(s); orb(ctx, pp[0], pp[1], 8, F, '#ffb347');
+      }
+      const t0 = .12 + flight, g = seg(t, t0, t0 + .4);
+      if (g > 0 && g < 1) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = rgba('#ffb347', (1 - g) * .9); ctx.lineWidth = 3 * (1 - g) + .5; ctx.shadowColor = F; ctx.shadowBlur = 12; ctx.beginPath(); ctx.ellipse(T.x, T.y, 20 + g * 130, 8 + g * 34, 0, 0, 7); ctx.stroke(); ctx.restore(); }
+      for (let i = 0; i < n * 5; i++) {   // Funken steigen aus der Hand auf
+        const r = rng(91 + i * 7), a0 = t0 + .05 + r() * .25, q = seg(t, a0, a0 + .9); if (q <= 0 || q >= 1) continue;
+        const x = T.x + (r() - .5) * 300 + Math.sin(q * 8 + i) * 6, y = T.y - 20 - q * 70 * (.6 + r());
+        ctx.save(); ctx.globalAlpha = 1 - q * q; orb(ctx, x, y, 3.2 * (1 - q * .6), q < .5 ? '#ffd27a' : '#ff7a3d'); ctx.restore();
+      }
+      const tu = seg(t, t0 + .1, t0 + .3) * (1 - seg(t, t0 + .75, t0 + 1.05));
+      if (tu > 0) { ctx.save(); ctx.font = '700 22px Alegreya, serif'; ctx.textAlign = 'center'; ctx.fillStyle = rgba('#ffb347', tu); ctx.shadowColor = F; ctx.shadowBlur = 10; ctx.fillText('−' + n + (n === 1 ? ' Karte' : ' Karten'), T.x, T.y - 70 - 12 * seg(t, t0 + .1, t0 + 1)); ctx.restore(); }
+    });
+  }
   const attack = fx => KampfFx.attack(fx), defense = fx => KampfFx.defense(fx), resetEx = () => KampfFx.reset();
-  return { lifeflow, aggro, drain, attack, defense, resetEx, wait: () => KampfFx.remaining(), hp: pid => hpOf(pid) };
+  return { lifeflow, aggro, drain, ruin, attack, defense, resetEx, wait: () => KampfFx.remaining(), hp: pid => hpOf(pid) };
 })();
 
 /* ---------- Kampffunken (Vorlage „Wucht“ aus der Kampfeffekt-Werkstatt): je Punkt ein Element-Funke von der Hand in die Mitte, Angriff und Verteidigung prallen aufeinander, der Rest trifft die HP ---------- */
@@ -2845,6 +2904,8 @@ function drawClash(ctx,p,style,x,y,g,ea,ed,seed){
   return { attack, defense, reset() { queue = []; endEx(); }, remaining() { if (!ex || !ex.def) return 0; return Math.max(0, ex.def.T.end - (performance.now() - ex.t0) / 1000); } };
 })();
 let leadPrev = null;
+const fdSel = new Set();   // Zerrüttung: von mir gewählte Abwurfkarten (Handplätze)
+const forcedMe = () => !!(G && G.phase === 'combat' && G.combat && G.combat.forced && G.combat.forced.pid === ME);
 let curKey = null, curDown = false, mkSeen = null, dthSeen = null, fxFor = null, fxLast = 0;
 // Sekundär ausgelöste Effekte (Spiegel wirft Schaden zurück, Todes-Fluch zehrt) kurz an der betroffenen Seite einblenden
 function showFx() {
@@ -2852,7 +2913,7 @@ function showFx() {
   let k = 0;
   for (const e of G.log) {
     if (e.n <= fxLast) continue;
-    const go = f => { if (f.kind === 'mirror') { if (!f.inline) MirrorFx.play(f); } else if (f.kind === 'lifeflow') FlowFx.lifeflow(f); else if (f.kind === 'aggro') FlowFx.aggro(f); else if (f.kind === 'drain') FlowFx.drain(f); else if (f.kind === 'attack') FlowFx.attack(f); else if (f.kind === 'defense') FlowFx.defense(f); };
+    const go = f => { if (f.kind === 'mirror') { if (!f.inline) MirrorFx.play(f); } else if (f.kind === 'lifeflow') FlowFx.lifeflow(f); else if (f.kind === 'aggro') FlowFx.aggro(f); else if (f.kind === 'drain') FlowFx.drain(f); else if (f.kind === 'ruin') FlowFx.ruin(f); else if (f.kind === 'attack') FlowFx.attack(f); else if (f.kind === 'defense') FlowFx.defense(f); };
     [].concat(e.fx || []).forEach(f => { if (f.late) setTimeout(() => go(f), Math.round(1000 * FlowFx.wait()) + 150); else go(f); });   // Kombo der Verteidigung erst nach der Kampfanimation
     const m = /^(Spiegel|Todes-Fluch): /.exec(e.txt); if (!m) continue;
     if (m[1] === 'Todes-Fluch') Snd.play('curse', 0, 0.7);   // Fluch-Sound, wenn der Todes-Fluch Schaden macht
@@ -3169,6 +3230,7 @@ function onAct(d) {
     case 'spend': act({ type: 'spend', what: d.w }); break;
     case 'magic': act({ type: 'magic', elem: d.e }); break;
     case 'discard': act({ type: 'discardCurses' }); break;
+    case 'fd': act({ type: 'fd', slots: [...fdSel] }); fdSel.clear(); break;
     case 'draw': if (canDrawNow()) act({ type: 'draw' }); else if (myTurn()) toast('Jetzt ist kein Nachziehen möglich.'); break;
     case 'freedraw': act({ type: 'freeDraw' }); break;
     case 'attack': act({ type: 'attack' }); break;
@@ -3198,6 +3260,12 @@ stage.addEventListener('click', e => {
   if (t) { if (t.tagName === 'INPUT') return; onAct(t.dataset); return; }
   const c = e.target.closest('.card.myhand');
   if (c) {
+    if (G.phase === 'combat' && G.combat.forced) {   // Zerrüttung: Abwurfkarten wählen statt markieren
+      if (!forcedMe()) { toast('Der Gegner wählt gerade seine Abwurfkarten.'); return; }
+      const sl = +c.dataset.slot, need = Math.min(G.combat.forced.n, G.players[ME].deck.hand.filter(Boolean).length);
+      if (fdSel.has(sl)) fdSel.delete(sl); else { if (fdSel.size >= need) fdSel.clear(); fdSel.add(sl); }
+      render(); return;
+    }
     if (G.phase === 'combat' && !myTurn()) { toast('Die Gegenseite ist am Zug.'); return; }
     act({ type: 'mark', slot: +c.dataset.slot });
   }
