@@ -1713,7 +1713,7 @@ const NAMES = M.NAMES;
 const $ = id => document.getElementById(id);
 const stage = $('stage'), layerPh = $('ph'), layerCards = $('cards'), panels = $('panels'), logEl = $('log'), toastEl = $('toast'), overlay = $('overlay');
 const CURSES = (/[?&]fluch=(\w+)/.exec(location.search) || [])[1];   // z. B. ?fluch=cards (Fluchkarten-System, siehe docs/fluchkarten.md)
-let fxUntil = 0;   // Zeitpunkt, bis zu dem eine Kampfanimation läuft (die Siegmeldung wartet darauf)
+let fxUntil = 0, lateN = 0;   // Zeitpunkt, bis zu dem eine Kampfanimation läuft (die Siegmeldung wartet darauf)
 let sacN = 1, G = null, hold = 0, aiTimer = null, banner = null, seenCombat = null, toastTimer = null, started = false;
 
 /* ---------- Layout: alle Maße der 1280×800-Bühne an einer Stelle ---------- */
@@ -2598,7 +2598,7 @@ const FlowFx = (() => {
     });
   }
   const attack = fx => KampfFx.attack(fx), defense = fx => KampfFx.defense(fx), resetEx = () => KampfFx.reset();
-  return { lifeflow, aggro, drain, ruin, attack, defense, resetEx, wait: () => KampfFx.remaining(), hp: pid => hpOf(pid) };
+  return { lifeflow, aggro, drain, ruin, attack, defense, resetEx, wait: () => KampfFx.remaining(), busy: () => KampfFx.busy(), hp: pid => hpOf(pid) };
 })();
 
 /* ---------- Kampffunken (Vorlage „Wucht“ aus der Kampfeffekt-Werkstatt): je Punkt ein Element-Funke von der Hand in die Mitte, Angriff und Verteidigung prallen aufeinander, der Rest trifft die HP ---------- */
@@ -2998,7 +2998,7 @@ function earthFormRaw(ctx, x, by, seed, i, t, tCrack, tRise, endAt, ending) {
     fxUntil = Math.max(fxUntil, Date.now() + (e.def.T.end - now) * 1000);
     if (mir && mir.broken > 0 && !off()) Snd.play('break', Math.max(0, tH + .5 - now), 0.7);   // Bruch-Sound beim Einschlag der Funken
   }
-  return { attack, defense, reset() { queue = []; endEx(); }, remaining() { if (!ex || !ex.def) return 0; return Math.max(0, ex.def.T.end - (performance.now() - ex.t0) / 1000); } };
+  return { attack, defense, reset() { queue = []; endEx(); }, busy() { return queue.length > 0 || !!(ex && (ex.def || performance.now() - ex.t0 < 3000)); }, remaining() { if (!ex || !ex.def) return 0; return Math.max(0, ex.def.T.end - (performance.now() - ex.t0) / 1000); } };
 })();
 let leadPrev = null;
 const fdSel = new Set();   // Zerrüttung: von mir gewählte Abwurfkarten (Handplätze)
@@ -3011,7 +3011,7 @@ function showFx() {
   for (const e of G.log) {
     if (e.n <= fxLast) continue;
     const go = f => { if (f.kind === 'mirror') { if (!f.inline) MirrorFx.play(f); } else if (f.kind === 'lifeflow') FlowFx.lifeflow(f); else if (f.kind === 'aggro') FlowFx.aggro(f); else if (f.kind === 'drain') FlowFx.drain(f); else if (f.kind === 'ruin') FlowFx.ruin(f); else if (f.kind === 'attack') FlowFx.attack(f); else if (f.kind === 'defense') FlowFx.defense(f); };
-    [].concat(e.fx || []).forEach(f => { if (f.late) setTimeout(() => go(f), Math.round(1000 * FlowFx.wait()) + 150); else go(f); });   // Kombo der Verteidigung erst nach der Kampfanimation
+    [].concat(e.fx || []).forEach(f => { if (f.late) { lateN++; setTimeout(() => { lateN--; go(f); }, Math.round(1000 * FlowFx.wait()) + 150); } else go(f); });   // Kombo der Verteidigung erst nach der Kampfanimation
     const m = /^(Spiegel|Todes-Fluch): /.exec(e.txt); if (!m) continue;
     if (m[1] === 'Todes-Fluch') Snd.play('curse', 0, 0.7);   // Fluch-Sound, wenn der Todes-Fluch Schaden macht
     const mirror = m[1] === 'Spiegel', victimMe = mirror ? e.pid !== ME : e.pid === ME;
@@ -3036,7 +3036,7 @@ function render() {
   let h = sidePanels(cx);
   if (cx.combat) h += combatCenter(cx) + comboRef(cx);
   else h += vendorPanel() + (G.camp ? campPanel() : monsterCards());
-  if (banner && banner.from !== null && banner.from <= Date.now() && banner.until > Date.now()) h += '<div class="banner" data-act="dismiss" style="' + box(LAYOUT.banner) + '">' + banner.lines.map(esc).join('<br>') + '<small>Klicken zum Schließen</small></div>';
+  if (banner && banner.shown && banner.until > Date.now()) h += '<div class="banner" data-act="dismiss" style="' + box(LAYOUT.banner) + '">' + banner.lines.map(esc).join('<br>') + '<small>Klicken zum Schließen</small></div>';
   panels.innerHTML = h;
   const lg0 = logEl.querySelector('.logl'), lgKeep = lg0 && lg0.scrollHeight - lg0.scrollTop - lg0.clientHeight > 24 ? lg0.scrollTop : null;   // nicht am Ende: Leseposition merken
   if (cx.combat) {   // links: nur der Kampflog (Einträge seit Kampfbeginn)
@@ -3063,10 +3063,10 @@ function render() {
   { const mine = panels.querySelector('.sbody[data-lead]');   // Knopfspalte weich ein- und ausfahren
     if (mine) { const now = mine.classList.contains('hasup'); if (leadPrev !== null && leadPrev !== now) { mine.classList.toggle('hasup', leadPrev); void mine.offsetWidth; mine.classList.toggle('hasup', now); } leadPrev = now; } }
   showFx();
-  if (banner && banner.from === null) {   // Siegmeldung: erst wenn die Kampfanimation fertig ist
+  if (banner && !banner.shown) {   // Siegmeldung: erst wenn alle Kampfanimationen (auch wartende) fertig sind und der Schaden verrechnet ist
     const now = Date.now();
-    banner.from = Math.max(now, fxUntil) + (FAST ? 0 : 250); banner.until = banner.from + (FAST ? 0 : 3600); hold = banner.from + (FAST ? 0 : 2600);
-    if (!FAST) { setTimeout(render, banner.from - now + 40); setTimeout(render, banner.until - now + 100); }
+    if (!FAST && (FlowFx.busy() || lateN > 0 || now < fxUntil + 250)) { if (!banner.tm) { banner.tm = setTimeout(() => { if (banner) banner.tm = 0; render(); }, 260); } }
+    else { banner.shown = true; banner.from = now; banner.until = now + (FAST ? 0 : 3600); hold = now + (FAST ? 0 : 2600); if (!FAST) setTimeout(render, 3700); setTimeout(render, 0); }
   }
   stage.classList.toggle('turn-me', !G.over && myTurn());
   stage.classList.toggle('turn-opp', !G.over && !myTurn());
@@ -3104,7 +3104,8 @@ function checkCombatEnd(prevLog) {
   if (G.lastCombat && G.lastCombat !== seenCombat) {
     seenCombat = G.lastCombat;
     const lines = G.log.filter(e => e.n > prevLog).slice(-3).map(e => e.txt);
-    banner = { lines, from: null, until: 0 };   // erscheint erst nach den Kampfanimationen (siehe render)
+    hold = Date.now() + (FAST ? 0 : 9000);   // bis die Meldung gezeigt wurde, wartet der Computer
+    banner = { lines, shown: false, from: 0, until: 0, tm: 0 };   // erscheint erst nach den Kampfanimationen (siehe render)
   }
 }
 function act(a) {
