@@ -1054,12 +1054,13 @@ function execDefense(state, passOnly) {
     block = ev.block || 0; cost = ev.cost || 0; defEv = ev;
   }
   side.stats.mana -= cost;
+  if (passOnly) side.stats.mana = Math.min(side.stats.maxMana, side.stats.mana + 1);   // „Erholen“ in der Verteidigung: wie im Angriffszug +1 Mana
   if (sel.length) consumeSelection(d, sel); else d.marks = [];
   const leftover = Math.max(0, c.pending - block) * (curses(state).weakDouble && side.stats.marks > 0 ? 2 : 1);
   side.stats.hp = Math.max(0, side.stats.hp - leftover);
   const attacker = c.sides[c.turn === 'a' ? 'b' : 'a'], defEl = sel.length && sel[0].el && !sel[0].curse ? sel[0].el : c.color;
   const defFx = { kind: 'defense', who: side.ctrl, to: attacker.ctrl, attElem: c.color, defElem: defEl, pending: c.pending, block };
-  log(state, side.name + ' verteidigt' + (block ? ' (Block ' + block + ')' : ' ohne Block') + ' und verliert ' + leftover + ' HP' + (curses(state).weakDouble && side.stats.marks > 0 && leftover ? ' (Schwäche: doppelter Schaden)' : '') + '.', side.ctrl, defFx);
+  log(state, side.name + (passOnly ? ' erholt sich (+1 Mana)' : ' verteidigt' + (block ? ' (Block ' + block + ')' : ' ohne Block')) + ' und verliert ' + leftover + ' HP' + (curses(state).weakDouble && side.stats.marks > 0 && leftover ? ' (Schwäche: doppelter Schaden)' : '') + '.', side.ctrl, defFx);
   // Spiegel (Standard): Gegen jeden Angriff in der Farbe des Spiegels wirkt automatisch ein Marker, sobald eine reguläre Verteidigung (mindestens eine Elementkarte) ausgeführt wird, egal in welcher Farbe; ohne Verteidigung (Erholen) wirkt er nicht. Die Verteidigung kostet wie ohne Spiegel. Der Marker wird verbraucht und wirft 1 unblockbaren Schaden zurück.
   if (mirrorOn(state) && !passOnly && sel.some(x => !x.curse) && mirrorOf(side.stats, c.color) > 0 && (state.rules.mirrorTrigger === 'any' ? true : sel.some(x => !x.curse && x.el === c.color)) && !(state.rules.mirrorChoice && c.mr === 0)) {
     const att = c.sides[c.turn === 'a' ? 'b' : 'a'], step = state.rules.mirrorStep || 0, rel = Math.min(state.rules.mirrorChoice ? mirrorCap(side.stats, sel, c.color) : c.pending, state.rules.mirrorChoice ? Math.min(mirrorOf(side.stats, c.color), c.pending, c.mr == null ? 1 : c.mr) : (step > 0 ? Math.min(step, mirrorOf(side.stats, c.color)) : mirrorOf(side.stats, c.color))), r = rel * (state.rules.mirrorMult || 1);
