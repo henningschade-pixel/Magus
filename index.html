@@ -1379,6 +1379,7 @@ const DEFAULTS = {
   dBase: 7, dCurse: 4, dEmpty: 12, dSlot: 2, dNorm: 5,                    // Lust, nachzuziehen
   vUp: 7.35, vUpW: 1.4,                                                       // Händler-Aufwertung
   smart: 1, wMark: 0.5, keepB: 3, keepOn: 0, wDeath: 6, wDraw: 1.6, wFW: 2, wFE: 0.9, wEW: 2.8, aDmg: 1.5, aCost: 1.1, aCurse: 1.6, aThr: 0.2, oHits: 8, oFree: 3, stallDec: 0.25, stallFrom: 24,   // Angriffsbewertung
+  rW: 0, rRef: 3, dRec: 0,                                                 // Erholen als Manaquelle: Angriffsschwelle steigt bei wenig Mana, Verzicht auf Verteidigung bringt Mana
   dLeth: 40, dPend: 6, dCost: 1.4, dKeep: 0.9, mirW: 4, mirAvoid: 2, lfOpp: 2, lfOppW: 0.8,                            // Verteidigungsbewertung
   mBase: 14, mCost: 2.1, mCnt: 0.7, mTop: 2,                              // Magie kaufen
 };
@@ -1618,8 +1619,9 @@ function combatPlan(state, pid) {
   const d = side.deck, hand = handList(d), A = a => Object.assign({ pid }, a);
   const s = side.stats, Q = P(pid);
   if (c.action === 'attack') {
-    const best = bestAttack(side, opp, hand, Q, state);
-    if (best && best.value > Q.aThr - Q.stallDec * Math.max(0, Math.floor(((c.turns || 0) - Q.stallFrom) / 2))) {   // lange ohne Angriff: Schwelle sinkt, damit die KI nicht endlos nachzieht
+    const best = bestAttack(side, opp, hand, Q, state), gain = M.recoverGain ? M.recoverGain(state) : 1;
+    const lowMana = Q.rW * gain * Math.max(0, Q.rRef - s.mana);   // wenig Mana: nur noch starke Angriffe, sonst lieber erholen
+    if (best && best.value > Q.aThr + lowMana - Q.stallDec * Math.max(0, Math.floor(((c.turns || 0) - Q.stallFrom) / 2))) {   // lange ohne Angriff: Schwelle sinkt, damit die KI nicht endlos nachzieht
       const acts = best.ord.map(h => A({ type: 'mark', slot: h.slot }));
       best.ult.forEach(k => acts.push(A({ type: 'ult', key: k })));
       const lvB = M.levelsFor(state.rules, best.ev), ordered = state.rules.comboMode === 'ordered';
@@ -1641,6 +1643,7 @@ function combatPlan(state, pid) {
     if (s.freeDraws > 0 && canDraw(d) && hand.length < d.hand.length) return [A({ type: 'freeDraw' })];
     if (s.freeDraws > 0 && canDraw(d) && (!best || best.value <= Q.aThr)) return [A({ type: 'freeDraw' })];
     if (s.mana <= 0 || !hand.length) { if (hand.length === 0 && canDraw(d)) return [A({ type: 'draw' })]; return [A({ type: 'recover' })]; }
+    if (Q.rW > 0 && s.mana < Q.rRef && s.mana < s.maxMana) return [A({ type: 'recover' })];
     if (canDraw(d)) {
       const acts = [];
       if (Q.keepOn) {   // (bei schwachem Angriff) Kombo-Bausteine behalten
@@ -1656,7 +1659,7 @@ function combatPlan(state, pid) {
   const color = c.color, pend = c.pending, lethal = pend * (M.curses(state).weakDouble && (s.marks || 0) > 0 ? 2 : 1) >= s.hp;
   const dcom = !!(state.rules.defenseCombos && state.rules.comboMode === 'ordered');   // Variante: zweite Farbe als Kombokarte in der Verteidigung
   const cand = hand.filter(h => (h.curse ? !M.curses(state).curseCards : (dcom || h.el === color || h.el === M.SUPERIOR[color])));
-  let best = { score: pend * (lethal ? Q.dLeth : Q.dPend), ord: [] };
+  let best = { score: pend * (lethal ? Q.dLeth : Q.dPend) - Q.dRec * Math.min(M.recoverGain ? M.recoverGain(state) : 1, s.maxMana - s.mana), ord: [] };   // Verzicht auf Verteidigung bringt Mana
   const variants = [];
   for (const sub0 of subsets(cand, Math.max(1, s.limit))) {
     if (!dcom) { variants.push(sub0); continue; }
