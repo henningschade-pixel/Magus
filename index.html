@@ -764,13 +764,14 @@ function evalDefense(stats, cards, color, mr, rules) {
   const combos = !!(rules && rules.defenseCombos && rules.comboMode === 'ordered');   // Variante: Karten einer zweiten Farbe sind Kombokarten (blocken nicht, kosten kein Mana, zählen aufs Limit)
   const same = normals.filter(c => c.el === el), other = normals.filter(c => c.el !== el);
   if (other.length && !combos) return { valid: false, reason: 'Alle Karten der Verteidigung müssen dasselbe Element haben.' };
-  if (other.length && new Set(other.map(c => c.el)).size > 1) return { valid: false, reason: 'In der Verteidigung ist neben der Verteidigungsfarbe nur eine zweite Farbe für den Kombo erlaubt.' };
+  const ulti = other.length && new Set(other.map(c => c.el)).size > 1;   // alle drei Farben: Ultimate auch in der Verteidigung
+  if (ulti && !(rules && rules.ultiMode === 'death')) return { valid: false, reason: 'In der Verteidigung ist neben der Verteidigungsfarbe nur eine zweite Farbe für den Kombo erlaubt.' };
   if (el && el !== color && el !== SUPERIOR[color]) return { valid: false, reason: NAMES[el] + ' kann nicht gegen ' + NAMES[color] + ' verteidigen.' };
   const free = stats.mirrorFree && mirrorOf(stats, color) > 0 && mr !== 0;   // Spiegel mit Rabatt: Verteidigung in der Farbe des Angriffs kostet kein Mana, aber nur, wenn der Spiegel auch eingesetzt wird
   const cost = curses.reduce((n, c) => n + c.tier, 0) + (el === color && !free ? same.length : 0);
   let block = 0; same.forEach(c => { block += Math.min(c.tier, stats.mag[el]); });
   const out = { valid: true, el, cost, block, affordable: stats.mana >= cost, levels: { fw: 0, fe: 0, ew: 0, ulti: 0 }, ord: null };
-  if (other.length) { const tiers = { F: [], E: [], W: [] }; normals.forEach(c => tiers[c.el].push(c.tier)); const lv = comboLevels(tiers, stats.mag, el); out.ord = lv.ord && lv.ord.lvl > 0 ? lv.ord : null; }
+  if (other.length) { const tiers = { F: [], E: [], W: [] }; normals.forEach(c => tiers[c.el].push(c.tier)); const lv = comboLevels(tiers, stats.mag, el); out.ord = !ulti && lv.ord && lv.ord.lvl > 0 ? lv.ord : null; if (ulti) out.levels.ulti = lv.ulti; }
   return out;
 }
 
@@ -1077,6 +1078,10 @@ function execDefense(state, passOnly) {
     if (inline) defFx.mirror = { markers: mBefore, broken: rel, r };
     log(state, 'Spiegel: ' + side.name + ' wirft ' + r + ' Schaden auf ' + att.name + ' zurück.', side.ctrl, { kind: 'mirror', elem: c.color, markers: mBefore, broken: rel, att: att.ctrl, r, inline });
     }
+  }
+  if (defEv && defEv.levels && defEv.levels.ulti > 0 && state.rules.defenseCombos && state.rules.comboMode === 'ordered' && state.rules.ultiMode === 'death' && side.stats.hp > 0) {   // Ultimate in der Verteidigung: Todes-Fluch für den Angreifer
+    attacker.stats.death = Math.max(attacker.stats.death || 0, defEv.levels.ulti);
+    log(state, side.name + ' wirkt eine Ultimate: Ultimate ' + defEv.levels.ulti + ': Todes-Fluch für ' + attacker.name + ' (' + attacker.stats.death + ' HP am Ende jeder seiner Angriffsphasen bis Kampfende).', side.ctrl, { kind: 'aggro', who: side.ctrl, to: attacker.ctrl, n: defEv.levels.ulti, late: true });
   }
   if (defEv && defEv.ord && state.rules.defenseCombos && state.rules.comboMode === 'ordered' && side.stats.hp > 0) {   // Kombo der Verteidigung: erst nach der Verteidigung (und dem Spiegelrückwurf)
     const lvs = levelsFor(state.rules, defEv), plan = [], texts = [], fxs = [];
