@@ -1064,7 +1064,7 @@ function execDefense(state, passOnly) {
     if (state.rules.mirrorMana) side.stats.mana = Math.min(side.stats.maxMana, side.stats.mana + rel * state.rules.mirrorMana);
     const inline = leftover > 0;   // Es geht Schaden durch: Der Spiegel wird im Kampfeffekt gezeigt (Funken treffen ihn), nicht als eigene Animation
     if (inline) defFx.mirror = { markers: mBefore, broken: rel, r };
-    log(state, 'Spiegel: ' + side.name + ' wirft ' + r + ' Schaden auf ' + att.name + ' zurück.', side.ctrl, { kind: 'mirror', elem: c.color, markers: mBefore, broken: rel, att: att.ctrl, inline });
+    log(state, 'Spiegel: ' + side.name + ' wirft ' + r + ' Schaden auf ' + att.name + ' zurück.', side.ctrl, { kind: 'mirror', elem: c.color, markers: mBefore, broken: rel, att: att.ctrl, r, inline });
     }
   }
   if (defEv && defEv.ord && state.rules.defenseCombos && state.rules.comboMode === 'ordered' && side.stats.hp > 0) {   // Kombo der Verteidigung: erst nach der Verteidigung (und dem Spiegelrückwurf)
@@ -2392,11 +2392,13 @@ const MirrorFx = (() => {
       if (g < 1) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const fl = ctx.createRadialGradient(I.x, I.y, 0, I.x, I.y, 70 * (1 - g) + 10); fl.addColorStop(0, 'rgba(255,255,255,' + (.9 * (1 - g)) + ')'); fl.addColorStop(1, rgba(col, 0)); ctx.fillStyle = fl; ctx.beginPath(); ctx.arc(I.x, I.y, 80, 0, 7); ctx.fill(); ctx.strokeStyle = rgba(lighten(col, .5), 1 - g); ctx.lineWidth = 2.5 * (1 - g) + .5; ctx.beginPath(); ctx.ellipse(I.x, I.y, g * 90 * .5, g * 90, 0, 0, 7); ctx.stroke(); const sr = rng(p.seed + 11); for (let k = 0; k < 18; k++) { const a = sr() * Math.PI * 2, v = 40 + sr() * 110; ctx.fillStyle = rgba(lighten(col, .6), 1 - g); ctx.fillRect(I.x + Math.cos(a) * v * g - 1.5, I.y + Math.sin(a) * v * g - 1.5, 3, 3); } ctx.restore(); }
     }
     if (u >= SH && u < SH + .1) { const f = 1 - seg(u, SH, SH + .1); ctx.save(); ctx.globalCompositeOperation = 'lighter'; const fl = ctx.createRadialGradient(S.x, S.y, 0, S.x, S.y, R * 1.3); fl.addColorStop(0, 'rgba(255,255,255,' + (.55 * f) + ')'); fl.addColorStop(1, rgba(col, 0)); ctx.fillStyle = fl; ctx.fillRect(S.x - 400, S.y - 400, 800, 800); ctx.restore(); }
-    if (u > SH + .02) {   // Rückwurf zum Angreifer
+    if (u > SH + .02) {   // Rückwurf zum Angreifer (auf seine HP-Leiste)
+      const tx = p.hpT ? p.hpT.x : aT, ty = p.hpT ? p.hpT.y : aY;
       const r = seg(u, SH + .02, SH + .27);
-      if (r < 1) { const e = eio(r); for (let i = 12; i >= 1; i--) { const bb = clamp(e - i * .02); ctx.save(); ctx.globalAlpha = (1 - i / 13) * .55; orb(ctx, lerp(I.x, aT, bb), lerp(I.y, aY, bb) - Math.sin(bb * Math.PI) * 16, 11 - i * .5, col, lighten(col, .7)); ctx.restore(); } orb(ctx, lerp(I.x, aT, e), lerp(I.y, aY, e) - Math.sin(e * Math.PI) * 16, 13, col, '#ffffff'); }
+      if (r < 1) { const e = eio(r); for (let i = 12; i >= 1; i--) { const bb = clamp(e - i * .02); ctx.save(); ctx.globalAlpha = (1 - i / 13) * .55; orb(ctx, lerp(I.x, tx, bb), lerp(I.y, ty, bb) - Math.sin(bb * Math.PI) * 16, 11 - i * .5, col, lighten(col, .7)); ctx.restore(); } orb(ctx, lerp(I.x, tx, e), lerp(I.y, ty, e) - Math.sin(e * Math.PI) * 16, 13, col, '#ffffff'); }
       const h = seg(u, SH + .27, SH + .5);
-      if (h > 0 && h < 1) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = rgba(lighten(col, .5), 1 - h); ctx.lineWidth = 3 * (1 - h) + .5; ctx.beginPath(); ctx.ellipse(aT, aY, h * 70, h * 90, 0, 0, 7); ctx.stroke(); ctx.restore(); }
+      if (h > 0 && h < 1) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = rgba(lighten(col, .5), 1 - h); ctx.lineWidth = 3 * (1 - h) + .5; ctx.beginPath(); ctx.ellipse(tx, ty, p.hpT ? 14 + h * 40 : h * 70, p.hpT ? 6 + h * 16 : h * 90, 0, 0, 7); ctx.stroke(); ctx.restore(); }
+      if (p.hpT && p.r > 0) { const q = seg(u, SH + .27, SH + .33) * (1 - seg(u, SH + .45, SH + .55)); if (q > 0) { ctx.save(); ctx.font = '700 20px Alegreya, serif'; ctx.textAlign = 'center'; ctx.fillStyle = rgba('#ff6b6b', q); ctx.fillText('−' + p.r, tx, ty - 14 - 10 * seg(u, SH + .27, SH + .55)); ctx.restore(); } }
     }
     ctx.restore();
   }
@@ -2405,7 +2407,8 @@ const MirrorFx = (() => {
     const quiet = FAST || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
     Snd.play('break', quiet ? 0 : .42 * D.dur, 0.7);   // Bruch-Sound erst, wenn das Projektil den Spiegel trifft (Einschlag bei 42 % der Dauer)
     if (quiet) return;
-    const p = Object.assign({}, D, { elem: fx.elem, markers: fx.markers, broken: fx.broken, fromTop: fx.att !== ME });
+    const KK = 1.5, hp0 = FlowFx.hp(fx.att);   // reflektierter Schaden fliegt auf die HP-Leiste des Angreifers
+    const p = Object.assign({}, D, { elem: fx.elem, markers: fx.markers, broken: fx.broken, fromTop: fx.att !== ME, r: fx.r, hpT: hp0 ? { x: (hp0.x - 640 + 360 * KK) / KK, y: (hp0.y - 400 + 240 * KK) / KK } : null });
     if (!cv) { cv = document.createElement('canvas'); cv.width = 1280; cv.height = 800; cv.style.cssText = 'position:absolute;left:0;top:0;width:1280px;height:800px;z-index:288;pointer-events:none'; stage.appendChild(cv); }
     cancelAnimationFrame(raf);
     const ctx = cv.getContext('2d'), k = 1.5, t0 = performance.now(), mine = cv;
@@ -2532,7 +2535,7 @@ const FlowFx = (() => {
     });
   }
   const attack = fx => KampfFx.attack(fx), defense = fx => KampfFx.defense(fx), resetEx = () => KampfFx.reset();
-  return { lifeflow, aggro, drain, attack, defense, resetEx, wait: () => KampfFx.remaining() };
+  return { lifeflow, aggro, drain, attack, defense, resetEx, wait: () => KampfFx.remaining(), hp: pid => hpOf(pid) };
 })();
 
 /* ---------- Kampffunken (Vorlage „Wucht“ aus der Kampfeffekt-Werkstatt): je Punkt ein Element-Funke von der Hand in die Mitte, Angriff und Verteidigung prallen aufeinander, der Rest trifft die HP ---------- */
@@ -2762,6 +2765,7 @@ function drawClash(ctx,p,style,x,y,g,ea,ed,seed){
       if (q < 1) drawProjectile(ctx, e.p, e.p.atk, M, tgt, q, e.seeds[12 + k], t);
       else { const h = seg(t, s0 + .6, s0 + 1.05); if (h < 1) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = rgba(lighten(col, .5), (1 - h) * .9); ctx.lineWidth = 3 * (1 - h) + .5; ctx.beginPath(); ctx.ellipse(tgt.x, tgt.y, 8 + h * 44, 4 + h * 18, 0, 0, 7); ctx.stroke(); ctx.restore(); } }
     }
+    if (m.r > 0) { const t1 = tI + .15 + .6, q = seg(t, t1, t1 + .1) * (1 - seg(t, t1 + .35, t1 + .5)); if (q > 0) { ctx.save(); ctx.font = '700 20px Alegreya, serif'; ctx.textAlign = 'center'; ctx.fillStyle = rgba('#ff6b6b', q); ctx.fillText('−' + m.r, d.ha.x, d.ha.y - 14 - 10 * seg(t, t1, t1 + .5)); ctx.restore(); } }
   }
   function frame(ts) {
     const e = ex, ctx = e.ctx, p = e.p, t = (ts - e.t0) / 1000, n = e.n, C0 = e.C0, d = e.def;
