@@ -1,3 +1,4 @@
 dist/
 tools/balance/opt.log
 tools/balance/.gen/
+tools/balance/champion.json
