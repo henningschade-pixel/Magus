@@ -54,8 +54,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .card .face.back{transform:rotateY(180deg)}
 .card.myhand{cursor:var(--cp)}
 .card.myhand:hover .face.front{filter:brightness(1.18)}
-.card[data-ord]:not([data-ord=""])::after{content:attr(data-ord);position:absolute;left:50%;top:7px;transform:translateX(-50%);width:20px;height:20px;border-radius:50%;background:rgba(210,173,79,.55);color:rgba(26,20,8,.9);font:700 13px/20px Alegreya,serif;text-align:center;z-index:5}
-.card.marked .face.front{box-shadow:0 0 0 3px var(--gold),0 0 22px rgba(210,173,79,.65)}
+.card.first .face.front{box-shadow:0 0 0 3px var(--gold),0 0 22px rgba(210,173,79,.65)}
 .card.bad .face.front{box-shadow:0 0 0 3px var(--bad)}
 .card .lockbtn{position:absolute;right:4px;top:4px;width:30px;height:30px;border-radius:50%;background:rgba(10,8,14,.78) center/60% no-repeat;border:1px solid var(--line);opacity:0;transition:opacity .15s;cursor:var(--cp)}
 .card.myhand:hover .lockbtn,.card.locked .lockbtn{opacity:1}
@@ -1791,6 +1790,11 @@ function createCard(card) {
   d.querySelector('.lockbtn').style.backgroundImage = 'url(' + IMG.lock + ')';
   return d;
 }
+function isFirstAtk(deck, i) {   // goldener Rahmen nur auf der ersten markierten Elementkarte im eigenen Angriff (sie bestimmt Angriffsfarbe und Kombo)
+  if (!G || G.phase !== 'combat' || !G.combat || G.combat.action !== 'attack') return false;
+  const f = deck.marks.find(k => deck.hand[k] && !M.parseCard(deck.hand[k].id).curse);
+  return f === i;
+}
 function place(card, s) {
   let rec = els.get(card.uid);
   if (!rec) {
@@ -1806,8 +1810,8 @@ function place(card, s) {
   const d = rec.el; rec.frame = frame;
   d.style.transform = 'translate(' + s.x + 'px,' + s.y + 'px) rotate(' + (s.rot || 0) + 'deg) scale(' + s.sc + ')';
   d.style.zIndex = s.z;
-  d.classList.toggle('down', !!s.down); d.classList.toggle('marked', !!s.marked); d.classList.toggle('locked', !!s.locked);
-  d.classList.toggle('myhand', !!s.mine); d.dataset.slot = s.slot === undefined ? '' : s.slot; d.dataset.ord = s.ord || '';
+  d.classList.toggle('down', !!s.down); d.classList.toggle('marked', !!s.marked); d.classList.toggle('first', !!s.first); d.classList.toggle('locked', !!s.locked);
+  d.classList.toggle('myhand', !!s.mine); d.dataset.slot = s.slot === undefined ? '' : s.slot;
   d.style.pointerEvents = s.mine ? 'auto' : 'none';
 }
 function slotX(i, n, L) {
@@ -1822,7 +1826,7 @@ function layoutDeck(deck, L, mine) {
   deck.hand.forEach((c, i) => {
     if (!c) return;
     const marked = deck.marks.includes(i);
-    place(c, { x: slotX(i, n, L), y: L.y + (marked ? L.raise : 0), sc: L.s, down: !mine, z: 20 + i + (marked ? 30 : 0), marked, locked: mine && c.locked, mine, slot: i, spawn, zone: 'hand', ord: mine && marked && G.rules.comboMode === 'ordered' && G.phase === 'combat' && deck.marks.length > 1 ? deck.marks.indexOf(i) + 1 : 0 });
+    place(c, { x: slotX(i, n, L), y: L.y + (marked ? L.raise : 0), sc: L.s, down: !mine, z: 20 + i + (marked ? 30 : 0), marked, locked: mine && c.locked, mine, slot: i, spawn, zone: 'hand', first: mine && marked && isFirstAtk(deck, i)});
   });
 }
 function renderCards() {
