@@ -978,7 +978,7 @@ function execAttack(state) {
     else if (k === 'fw') { side.stats.freeDraws += lvl; texts.push('Control ' + lvl + ': ' + lvl + ' Gratis-Nachziehen'); }
     if (k === 'fe' && cs.deferInflict) { const n = lvl + (cs.inflictBonus || 0); c.defer = { to: opp, n }; texts.push('Aggro ' + lvl + ': ' + n + ' Schwäche-Marker für ' + opp.name + ' (nach diesem Zug)'); }
     else if (k === 'fe') { texts.push('Aggro ' + lvl + ': ' + cs.inflict(state, opp, lvl)); fxs.push({ kind: 'aggro', who: side.ctrl, to: opp.ctrl, n: lvl }); }
-    if (k === 'rm') { const take = Math.min(lvl, Math.max(0, opp.stats.mana)); opp.stats.mana -= take; texts.push('Entzug ' + lvl + ': ' + opp.name + ' verliert ' + take + ' Mana'); }
+    if (k === 'rm') { const take = Math.min(lvl, Math.max(0, opp.stats.mana)); opp.stats.mana -= take; texts.push('Entzug ' + lvl + ': ' + opp.name + ' verliert ' + take + ' Mana'); if (take > 0) fxs.push({ kind: 'drain', who: side.ctrl, to: opp.ctrl, n: take }); }
     else if (k === 'gh') {
       const before = side.stats.hp; side.stats.hp = Math.min(side.stats.maxHp, before + lvl * (state.rules.lifeflowHeal || 1));
       texts.push('Heilung ' + lvl + ': +' + (side.stats.hp - before) + ' HP'); fxs.push({ kind: 'lifeflow', who: side.ctrl, to: opp.ctrl, got: {}, removed: 0, heal: side.stats.hp - before, draws: 0 });
@@ -2196,7 +2196,7 @@ const CurseFx = (() => {
   const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x)), lerp = (a, b, t) => a + (b - a) * t, seg = (u, a, b) => clamp((u - a) / (b - a));
   const eo = x => 1 - Math.pow(1 - x, 3), eio = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
   function rng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
-  const rgba = (hex, a) => { const n = parseInt(hex.slice(1), 16); return 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + clamp(a) + ')'; };
+  const rgba = (hex, a) => { if (hex[0] === 'r') return hex.replace('rgb(', 'rgba(').replace(')', ',' + clamp(a) + ')'); const n = parseInt(hex.slice(1), 16); return 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + clamp(a) + ')'; };
   const lighten = (hex, k) => { const n = parseInt(hex.slice(1), 16), f = c => Math.round(c + (255 - c) * k); return 'rgb(' + f(n >> 16 & 255) + ',' + f(n >> 8 & 255) + ',' + f(n & 255) + ')'; };
   const P = { color: '#a67bff', size: 1.2, tilt: .42, rings: 2, runes: 14, lineW: 2.5, glow: 14, flicker: .4, particles: 50, pillar: .6, dark: .55, finish: 'implode', shake: .5, dur: 4, seed: 3 };   // Werte der Effektwerkstatt (lila)
   function glowLine(ctx, col, w, glow, alpha, draw) {
@@ -2277,7 +2277,7 @@ const MirrorFx = (() => {
   const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x)), lerp = (a, b, t) => a + (b - a) * t, seg = (u, a, b) => clamp((u - a) / (b - a));
   const eo = x => 1 - Math.pow(1 - x, 3), eio = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
   function rng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
-  const rgba = (hex, a) => { const n = parseInt(hex.slice(1), 16); return 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + clamp(a) + ')'; };
+  const rgba = (hex, a) => { if (hex[0] === 'r') return hex.replace('rgb(', 'rgba(').replace(')', ',' + clamp(a) + ')'); const n = parseInt(hex.slice(1), 16); return 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + clamp(a) + ')'; };
   const lighten = (hex, k) => { const n = parseInt(hex.slice(1), 16), f = c => Math.round(c + (255 - c) * k); return 'rgb(' + f(n >> 16 & 255) + ',' + f(n >> 8 & 255) + ',' + f(n & 255) + ')'; };
   const EL = { F: '#ff7a3d', E: '#93c24f', W: '#52a6f5' };
   const D = { size: 1, cracks: 8, shards: 12, crackT: .12, scatter: 1, gravity: 1, shine: .6, shake: .5, dur: 3, seed: 7 };   // Werte der Effektwerkstatt
@@ -2372,7 +2372,7 @@ const FlowFx = (() => {
   const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x)), lerp = (a, b, t) => a + (b - a) * t, seg = (u, a, b) => clamp((u - a) / (b - a));
   const eo = x => 1 - Math.pow(1 - x, 3), eio = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
   function rng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
-  const rgba = (hex, a) => { const n = parseInt(hex.slice(1), 16); return 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + clamp(a) + ')'; };
+  const rgba = (hex, a) => { if (hex[0] === 'r') return hex.replace('rgb(', 'rgba(').replace(')', ',' + clamp(a) + ')'); const n = parseInt(hex.slice(1), 16); return 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + clamp(a) + ')'; };
   const lighten = (hex, k) => { const n = parseInt(hex.slice(1), 16), f = c => Math.round(c + (255 - c) * k); return 'rgb(' + f(n >> 16 & 255) + ',' + f(n >> 8 & 255) + ',' + f(n & 255) + ')'; };
   const G = '#93c24f', B = '#52a6f5', F = '#ff7a3d';
   function orb(ctx, x, y, r, col, core) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(x, y, 0, x, y, r * 3); g.addColorStop(0, rgba(core || '#ffffff', 1)); g.addColorStop(.25, rgba(col, .85)); g.addColorStop(1, rgba(col, 0)); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r * 3, 0, 7); ctx.fill(); ctx.restore(); }
@@ -2402,12 +2402,12 @@ const FlowFx = (() => {
     run(dur, (ctx, t, u) => {
       srcs.forEach((m, i) => {
         const d = d0 + i * .06, col = i % 2 ? B : G, mx = m.x + (i - (srcs.length - 1) / 2) * 16, my = m.y;
-        const bs = seg(u, d - .02, d + .1);
+        const bs = (fx.removed || 0) > 0 ? seg(u, d - .02, d + .1) : 0;   // Marker-Auflösung nur, wenn wirklich Marker entfernt wurden
         if (bs > 0 && bs < 1) { ctx.save(); ctx.translate(mx, my); ctx.rotate(Math.PI / 4); ctx.scale(1 + bs * .8, 1 + bs * .8); ctx.globalAlpha = 1 - bs; ctx.shadowColor = col; ctx.shadowBlur = 8; ctx.fillStyle = rgba(col, .55); ctx.fillRect(-9, -9, 18, 18); ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.strokeRect(-9, -9, 18, 18); ctx.restore(); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = rgba(lighten(col, .4), 1 - bs); ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(mx, my, 10 + bs * 34, 0, 7); ctx.stroke(); ctx.restore(); }
         const r = rng(seed + i * 31 + 1);
         for (let k = 0; k < motes; k++) {
-          const dl = r() * .08, ph = r() * 6.28, lat = (r() - .5) * 60, c2 = k % 2 ? B : G, toDraw = dr && k % 2 === 1, tg = toDraw ? dr : hp;
-          const hs = handOf(fx.who), cardsPt = { x: hs.x + (r() - .5) * 360, y: hs.y }, sx0 = toDraw ? mx : cardsPt.x, sy0 = toDraw ? my : cardsPt.y;   // Heilung geht von den Karten aus, der Nachziehmarker kommt von den aufgelösten Markern
+          const dl = r() * .08, ph = r() * 6.28, lat = (r() - .5) * 60, c2 = k % 2 ? B : G, noHeal = !(fx.heal > 0), toDraw = dr && (noHeal || k % 2 === 1), tg = toDraw ? dr : noHeal ? { x: m.x, y: m.y - 90 } : hp;
+          const hs = handOf(fx.who), cardsPt = { x: hs.x + (r() - .5) * 360, y: hs.y }, sx0 = toDraw || noHeal ? mx : cardsPt.x, sy0 = toDraw || noHeal ? my : cardsPt.y;   // Heilung geht von den Karten aus, der Nachziehmarker kommt von den aufgelösten Markern
           const s = seg(u, d + .03 + dl, d + .03 + dl + .26); if (s <= 0 || s >= 1) continue;
           const pos = q => { const e = eio(q), cx = (sx0 + tg.x) / 2 + lat, cy = (sy0 + tg.y) / 2 - 60; const x = (1 - e) * (1 - e) * sx0 + 2 * (1 - e) * e * cx + e * e * tg.x, y = (1 - e) * (1 - e) * sy0 + 2 * (1 - e) * e * cy + e * e * tg.y, a = 10 * Math.sin(q * Math.PI); return [x + Math.cos(q * Math.PI * 4 + ph) * a, y + Math.sin(q * Math.PI * 4 + ph) * a]; };
           for (let j = 4; j >= 1; j--) { const q = clamp(s - j * .02); if (q <= 0) continue; const pp = pos(q); ctx.save(); ctx.globalAlpha = (1 - j / 5) * .5; orb(ctx, pp[0], pp[1], 2, c2); ctx.restore(); }
@@ -2454,8 +2454,33 @@ const FlowFx = (() => {
     });
   }
 
+  /* Entzug: ein Mana-Blitz fährt von der Hand des Angreifers in den Manawert des Gegners, die Manakugeln lösen sich heraus und verglühen */
+  function drain(fx) {
+    if (off()) return;
+    const n = Math.max(1, fx.n || 1), H = handOf(fx.who), Mp = at(panelOf(fx.to) && panelOf(fx.to).querySelector('[data-pv="mana"]')) || { x: 1000, y: fx.to === ME ? 730 : 100 }, flight = .55, dur = flight + .25 + .9 + n * .08;
+    run(dur, (ctx, t, u) => {
+      const ca = seg(t, 0, .2) * (1 - seg(t, flight - .1, flight));
+      if (ca > 0) { const rot = t * 9; orb(ctx, H.x + Math.cos(rot) * 12, H.y + Math.sin(rot) * 12, 4 + ca * 8, B); orb(ctx, H.x - Math.cos(rot) * 12, H.y - Math.sin(rot) * 12, 4 + ca * 8, '#6d7dff'); }
+      const s = seg(t, .12, .12 + flight);
+      if (s > 0 && s < 1) {
+        const pos = q => { const e = eio(q); return [lerp(H.x, Mp.x, e), lerp(H.y, Mp.y, e) - Math.sin(q * Math.PI) * 90]; };
+        for (let j = 14; j >= 1; j--) { const q = clamp(s - j * .025); if (q <= 0) continue; const pp = pos(q); ctx.save(); ctx.globalAlpha = (1 - j / 15) * .7; orb(ctx, pp[0], pp[1], 1.5 + 4 * (1 - j / 15), j % 2 ? B : '#9ab8ff'); ctx.restore(); }
+        const pp = pos(s); orb(ctx, pp[0], pp[1], 8, B, '#ffffff');
+      }
+      const t0 = .12 + flight;
+      const g = seg(t, t0, t0 + .35);
+      if (g > 0 && g < 1) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = rgba(lighten(B, .4), (1 - g) * .9); ctx.lineWidth = 3 * (1 - g) + .5; ctx.shadowColor = B; ctx.shadowBlur = 12; ctx.beginPath(); ctx.ellipse(Mp.x, Mp.y, 10 + g * 50, 6 + g * 20, 0, 0, 7); ctx.stroke(); ctx.restore(); }
+      for (let i = 0; i < n; i++) {   // herausgelöste Manakugeln steigen auf und verglühen
+        const a0 = t0 + .05 + i * .08, q = seg(t, a0, a0 + .9); if (q <= 0 || q >= 1) continue;
+        const ang = (i - (n - 1) / 2) * .7 - Math.PI / 2, d = 18 + eo(q) * 46, x = Mp.x + Math.cos(ang) * d + Math.sin(q * 9 + i) * 5, y = Mp.y + Math.sin(ang) * d - q * 22;
+        ctx.save(); ctx.globalAlpha = 1 - q * q; orb(ctx, x, y, 4.5 * (1 - q * .6), B, '#ffffff'); ctx.restore();
+      }
+      const tu = seg(t, t0 + .1, t0 + .3) * (1 - seg(t, t0 + .7, t0 + 1));
+      if (tu > 0) { ctx.save(); ctx.font = '700 22px Alegreya, serif'; ctx.textAlign = 'center'; ctx.fillStyle = rgba(lighten(B, .45), tu); ctx.shadowColor = B; ctx.shadowBlur = 10; ctx.fillText('−' + n + ' Mana', Mp.x + 110, Mp.y + 6 - 12 * seg(t, t0 + .1, t0 + 1)); ctx.restore(); }
+    });
+  }
   const attack = fx => KampfFx.attack(fx), defense = fx => KampfFx.defense(fx), resetEx = () => KampfFx.reset();
-  return { lifeflow, aggro, attack, defense, resetEx };
+  return { lifeflow, aggro, drain, attack, defense, resetEx };
 })();
 
 /* ---------- Kampffunken (Vorlage „Wucht“ aus der Kampfeffekt-Werkstatt): je Punkt ein Element-Funke von der Hand in die Mitte, Angriff und Verteidigung prallen aufeinander, der Rest trifft die HP ---------- */
@@ -2463,7 +2488,7 @@ const KampfFx = (() => {
   const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x)), lerp = (a, b, t) => a + (b - a) * t, seg = (u, a, b) => clamp((u - a) / (b - a));
   const eo = x => 1 - Math.pow(1 - x, 3), eio = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
   function rng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
-  const rgba = (hex, a) => { const n = parseInt(hex.slice(1), 16); return 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + clamp(a) + ')'; };
+  const rgba = (hex, a) => { if (hex[0] === 'r') return hex.replace('rgb(', 'rgba(').replace(')', ',' + clamp(a) + ')'); const n = parseInt(hex.slice(1), 16); return 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + clamp(a) + ')'; };
   const lighten = (hex, k) => { const n = parseInt(hex.slice(1), 16), f = c => Math.round(c + (255 - c) * k); return 'rgb(' + f(n >> 16 & 255) + ',' + f(n >> 8 & 255) + ',' + f(n & 255) + ')'; };
   const EL = { F: '#ff7a3d', E: '#93c24f', W: '#52a6f5' };
 /* ---------- Funken je Element ---------- */
@@ -2761,7 +2786,7 @@ function showFx() {
   let k = 0;
   for (const e of G.log) {
     if (e.n <= fxLast) continue;
-    [].concat(e.fx || []).forEach(f => { if (f.kind === 'mirror') { if (!f.inline) MirrorFx.play(f); } else if (f.kind === 'lifeflow') FlowFx.lifeflow(f); else if (f.kind === 'aggro') FlowFx.aggro(f); else if (f.kind === 'attack') FlowFx.attack(f); else if (f.kind === 'defense') FlowFx.defense(f); });
+    [].concat(e.fx || []).forEach(f => { if (f.kind === 'mirror') { if (!f.inline) MirrorFx.play(f); } else if (f.kind === 'lifeflow') FlowFx.lifeflow(f); else if (f.kind === 'aggro') FlowFx.aggro(f); else if (f.kind === 'drain') FlowFx.drain(f); else if (f.kind === 'attack') FlowFx.attack(f); else if (f.kind === 'defense') FlowFx.defense(f); });
     const m = /^(Spiegel|Todes-Fluch): /.exec(e.txt); if (!m) continue;
     if (m[1] === 'Todes-Fluch') Snd.play('curse', 0, 0.7);   // Fluch-Sound, wenn der Todes-Fluch Schaden macht
     const mirror = m[1] === 'Spiegel', victimMe = mirror ? e.pid !== ME : e.pid === ME;
