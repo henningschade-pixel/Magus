@@ -745,8 +745,9 @@ function evalAttack(stats, cards) {
   const cost = same.length + curses.reduce((n, c) => n + c.tier, 0);
   let damage = 0; same.forEach(c => { damage += Math.min(c.tier, stats.mag[prim]); });
   const tiers = { F: [], E: [], W: [] }; normals.forEach(c => tiers[c.el].push(c.tier));
-  const levels = comboLevels(tiers, stats.mag, prim), ord = levels.ord;
+  const levels = comboLevels(tiers, stats.mag, prim);
   if (stats.noCombo) for (const k of stats.noCombo) levels[k] = 0; // nur für Simulationen
+  const ord = levels.ord && !(stats.noCombo && stats.noCombo.includes(levels.ord.key)) ? levels.ord : null;
   return { valid: true, prim, cost, damage, levels, ord, curses: curses.length, affordable: stats.mana >= cost };
 }
 // mr: gewählte Zahl der Spiegelmarker (0 = Spiegel wird nicht eingesetzt, dann kostet die Verteidigung normal; ohne Angabe wird der Spiegel eingesetzt).
