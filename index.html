@@ -3074,6 +3074,7 @@ function render() {
   stage.classList.toggle('turn-opp', !G.over && !myTurn());
   setCursor(cx.combat && cx.mine.kind === 'monster' ? 'monster' : 'human');
   renderCards();
+  pvSticky();
   if (G.over) showEnd();
 }
 function showStart() {
@@ -3378,8 +3379,13 @@ stage.addEventListener('change', e => { const t = e.target; if (t.dataset && t.d
 /* Vorschau beim Überfahren eines Plus-Knopfes: neue Werte in Grün, neue Magiestufe grün eingekreist */
 let pvUndo = null;
 function pvClear() { if (pvUndo) { pvUndo(); pvUndo = null; } }
+let pvHover = false;   // true, solange die Maus auf einem Vorschau-Knopf liegt (dann hat dessen Vorschau Vorrang vor der Opfer-Vorschau)
+function pvSticky() { if (pvHover || !G) return; pvClear(); const sb = stage.querySelector('.sacbtn:not([disabled])'); if (sb) pvShow(sb); }   // Opfer-Vorschau steht dauerhaft, passend zur Pfeil-Einstellung
 stage.addEventListener('mouseover', e => {
-  const b = e.target.closest('button.up, .sacbtn'); if (!b || b.disabled || b.classList.contains('off')) { if (!b) pvClear(); return; }
+  const b = e.target.closest('button.up, .sacbtn'); if (!b || b.disabled || b.classList.contains('off')) { if (!b) { pvHover = false; pvSticky(); } return; }
+  pvHover = true; pvShow(b);
+});
+function pvShow(b) {
   pvClear();
   const st = G && G.players[ME].stats, w = b.dataset.w, act = b.dataset.act;
   if (!st) return;
@@ -3409,8 +3415,8 @@ stage.addEventListener('mouseover', e => {
     const gh = stage.querySelector('.slotgh'); if (gh) { gh.classList.add('on'); undos.push(() => gh.classList.remove('on')); }
   }
   pvUndo = () => { undos.forEach(u => u()); };
-});
-stage.addEventListener('mouseout', e => { const b = e.target.closest('button.up, .sacbtn'); if (b && !(e.relatedTarget && b.contains(e.relatedTarget))) pvClear(); });
+}
+stage.addEventListener('mouseout', e => { const b = e.target.closest('button.up, .sacbtn'); if (b && !(e.relatedTarget && b.contains(e.relatedTarget))) { pvHover = false; pvClear(); pvSticky(); } });
 stage.addEventListener('contextmenu', e => { const c = e.target.closest('.card.myhand'); if (c) { e.preventDefault(); act({ type: 'lock', slot: +c.dataset.slot }); } });
 
 /* Home-Knopf: Menü zum Fortsetzen, Neustarten oder Verlassen */
