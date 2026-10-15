@@ -54,6 +54,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .card .face.back{transform:rotateY(180deg)}
 .card.myhand{cursor:var(--cp)}
 .card.myhand:hover .face.front{filter:brightness(1.18)}
+.card[data-ord]:not([data-ord=""])::after{content:attr(data-ord);position:absolute;left:6px;top:6px;width:22px;height:22px;border-radius:50%;background:var(--gold);color:#1a1408;font:700 14px/22px Alegreya,serif;text-align:center;z-index:5;box-shadow:0 0 6px rgba(0,0,0,.6)}
 .card.marked .face.front{box-shadow:0 0 0 3px var(--gold),0 0 22px rgba(210,173,79,.65)}
 .card.bad .face.front{box-shadow:0 0 0 3px var(--bad)}
 .card .lockbtn{position:absolute;right:4px;top:4px;width:30px;height:30px;border-radius:50%;background:rgba(10,8,14,.78) center/60% no-repeat;border:1px solid var(--line);opacity:0;transition:opacity .15s;cursor:var(--cp)}
@@ -1080,7 +1081,7 @@ function applyCombat(state, a) {
       if (at >= 0) c.ult.splice(at, 1); else { if (c.ult.length >= 2) return fail('Es sind höchstens zwei Kombos wählbar.'); c.ult.push(a.key); }
       return { ok: true };
     }
-    case 'lfp': { if (c.action !== 'attack') return fail('Nur im Angriffszug.'); if (state.rules.lifeflowMode !== 'any') return fail('Keine Wahl in dieser Regelvariante.'); const ok = ['sc', 'oc', 'sm', 'om', 'sd', 'od']; c.lfp = a.pick === null ? null : (Array.isArray(a.pick) ? a.pick : []).filter(x => typeof x === 'string' && ok.includes(x.split(':')[0]) && (x.indexOf(':') < 0 || ELEMENTS.includes(x.split(':')[1]))).slice(0, 3); return { ok: true }; }
+    case 'lfp': { if (c.action !== 'attack') return fail('Nur im Angriffszug.'); if (state.rules.lifeflowMode !== 'any' && state.rules.comboMode !== 'ordered') return fail('Keine Wahl in dieser Regelvariante.'); const ok = ['sc', 'oc', 'sm', 'om', 'sd', 'od']; c.lfp = a.pick === null ? null : (Array.isArray(a.pick) ? a.pick : []).filter(x => typeof x === 'string' && ok.includes(x.split(':')[0]) && (x.indexOf(':') < 0 || ELEMENTS.includes(x.split(':')[1]))).slice(0, 3); return { ok: true }; }
     case 'mel': { if (c.action !== 'attack') return fail('Nur im Angriffszug.'); if (!mirrorOn(state)) return fail('Kein Spiegel in dieser Regelvariante.'); if (!ELEMENTS.includes(a.el)) return fail('Unbekanntes Element.'); c.mel = a.el; c.melTurn = c.turns; return { ok: true }; }
     case 'lf': { if (c.action !== 'attack') return fail('Nur im Angriffszug.'); if (state.rules.lifeflowMode !== 'choice') return fail('Keine Wahl in dieser Regelvariante.'); c.lf = a.target === 'opp' ? 'opp' : 'self'; return { ok: true }; }
     case 'mr': { if (c.action !== 'defense') return fail('Nur in der Verteidigung.'); if (!state.rules.mirrorChoice) return fail('Keine Wahl in dieser Regelvariante.'); const have = Math.min(mirrorOf(side.stats, c.color), c.pending); c.mr = Math.max(0, Math.min(have, Math.floor(+a.n) || 0)); return { ok: true }; }
@@ -1245,7 +1246,7 @@ function applyWorld(state, a) {
 // lifeflowMode 'any': S Marker beliebig vom Brett (eigene/gegnerische Fluch- und Spiegelmarker), je entferntem Marker 1 HP ('removed', Variante 'flat' = S HP).
 // lifeflowMode: 'classic' (S HP heilen und S eigene Fluchmarker herunternehmen) oder 'choice' (S HP heilen und S Marker wegnehmen: eigene Fluchmarker oder die Spiegelmarker des Gegners).
 // firstPlayerGold: zusätzliches Startgold für den Beginnenden (Ausgleich zum Vorteil des zweiten Spielers).
-const DEFAULT_RULES = { magicCost: [0, 1, 3], limitCost: 2, curses: 'deathcards', ultiMode: 'death', limitFirstStepCost: 2, secondPlayerPending: 0, campActions: 0, showdownAttacker: 'behind', firstPlayerGold: 0, controlMode: 'mirror', comboMode: 'classic', mirrorDecay: 0, mirrorTrigger: 'any', mirrorFree: false, mirrorMult: 1, mirrorStep: 1, mirrorChoice: false, mirrorMana: 0, mirrorHeal: 0, hpPerPoint: 2, lifeflowMode: 'any', lifeflowDrawAll: true, lifeflowHealMode: 'flat', lifeflowHeal: 1, lifeflowMana: false, monsterVariants: true, monstersPerStage: 3, fightReset: true, fightCarry: true, stagePoints: [0, 1, 1, 1], stageGold: [0, 1, 1, 1], startGold: 0, secondPlayerGold: 0, loserStarts: true, loserUp: 1, winSp: 4, freshHands: false, showdownRestore: false, lootShare: 0, lootPot: false, lifeflowDraw: 1 };
+const DEFAULT_RULES = { magicCost: [0, 1, 3], limitCost: 2, curses: 'deathcards', ultiMode: 'death', limitFirstStepCost: 2, secondPlayerPending: 0, campActions: 0, showdownAttacker: 'behind', firstPlayerGold: 0, controlMode: 'mirror', comboMode: 'ordered', mirrorDecay: 0, mirrorTrigger: 'any', mirrorFree: false, mirrorMult: 1, mirrorStep: 1, mirrorChoice: false, mirrorMana: 0, mirrorHeal: 0, hpPerPoint: 2, lifeflowMode: 'any', lifeflowDrawAll: true, lifeflowHealMode: 'flat', lifeflowHeal: 1, lifeflowMana: false, monsterVariants: true, monstersPerStage: 3, fightReset: true, fightCarry: true, stagePoints: [0, 1, 1, 1], stageGold: [0, 1, 1, 1], startGold: 0, secondPlayerGold: 0, loserStarts: true, loserUp: 1, winSp: 4, freshHands: false, showdownRestore: false, lootShare: 0, lootPot: false, lifeflowDraw: 1 };
 
 function newPlayer(state, name, ai) {
   const p = { name, ai: !!ai, stats: newStats(), temple: { points: 0, level: 0 }, sp: 0, slots: MIN_SLOTS };
@@ -1494,12 +1495,21 @@ function bestAttack(side, opp, hand, Q, state0) {
       if (state0.rules.lifeflowMode === 'plain') w.ew = (hurt > 0 ? Q.wEW : 0.6) + Q.wDraw;
       const oppMir = (opp.stats.mirror || 0) + (state0.rules.lifeflowDraw ? (opp.stats.marks || 0) : 0);
       if (state0.rules.lifeflowMode !== 'plain' && oppMir > 0 && Q.lfOppW > 0) w.ew = Math.max(w.ew, 1.5 + oppMir * Q.lfOppW);   // Lifeflow kann den Spiegel des Gegners abbauen
+      const ordered = state0.rules.comboMode === 'ordered', lvs = M.levelsFor(state0.rules, ev);
+      if (ordered) {   // geordnete Kombos: Spiegelfarbe fest (rot/grün), Läuterung entfernt nur Marker, Heilung und Entzug getrennt
+        const oMir = (opp.stats.mirror || 0) + (state0.rules.lifeflowDraw ? (opp.stats.marks || 0) : 0);
+        w.ew = (myM + oMir > 0) ? 1.2 + myM * 0.8 + oMir * Math.max(0.3, Q.lfOppW || 0) : 0.1;
+        w.rm = opp.stats.mana > 0 ? 0.8 : 0;
+        if (ev.ord && ev.ord.el && pickMirrorEl(side, opp) !== ev.ord.el) w.fw *= 0.5;
+      }
       let combo = 0, ult = [];
       if (ev.levels.ulti > 0 && state0.rules.ultiMode === 'death') {
         combo = ev.levels.ulti * Q.wDeath * (opp.stats.death >= ev.levels.ulti ? 0.1 : 1) * (Q.smart ? Math.max(0.4, Math.min(1.4, opp.stats.hp / 4)) : 1);
       } else if (ev.levels.ulti > 0) {
         const keys = ['fw', 'fe', 'ew'].sort((a, b) => w[b] - w[a]).slice(0, 2);
         ult = keys; keys.forEach(k => { combo += ev.levels.ulti * w[k]; });
+      } else if (ordered) {
+        combo = lvs.fw * w.fw + lvs.fe * w.fe + lvs.ew * w.ew + Math.min(lvs.rm, opp.stats.mana) * (w.rm || 0) + Math.min(lvs.gh * (state0.rules.lifeflowHeal || 1), hurt) * Q.wEW + (lvs.gh > 0 && hurt === 0 ? 0.1 : 0);
       } else ['fw', 'fe', 'ew'].forEach(k => { combo += Q.smart && state0.rules.lifeflowMode === 'plain' ? comboValue(k, ev.levels[k], side, opp, Q, state0.rules) : ev.levels[k] * w[k]; });
       const dmg = ev.prim ? ev.damage : 0;
       let value = dmg * Q.aDmg + combo - ev.cost * Q.aCost + ev.curses * Q.aCurse;
@@ -1547,9 +1557,10 @@ function combatPlan(state, pid) {
     if (best && best.value > Q.aThr - Q.stallDec * Math.max(0, Math.floor(((c.turns || 0) - Q.stallFrom) / 2))) {   // lange ohne Angriff: Schwelle sinkt, damit die KI nicht endlos nachzieht
       const acts = best.ord.map(h => A({ type: 'mark', slot: h.slot }));
       best.ult.forEach(k => acts.push(A({ type: 'ult', key: k })));
-      const usesEw = best.ev.levels.ulti > 0 ? best.ult.includes('ew') : best.ev.levels.ew > 0;
-      if (usesEw && state.rules.lifeflowMode === 'any') {
-        const lvl = best.ev.levels.ulti > 0 ? best.ev.levels.ulti : best.ev.levels.ew, pick = [];
+      const lvB = M.levelsFor(state.rules, best.ev), ordered = state.rules.comboMode === 'ordered';
+      const usesEw = best.ev.levels.ulti > 0 ? best.ult.includes('ew') : lvB.ew > 0;
+      if (usesEw && (state.rules.lifeflowMode === 'any' || ordered)) {
+        const lvl = best.ev.levels.ulti > 0 ? best.ev.levels.ulti : lvB.ew, pick = [];
         for (let i = 0; i < Math.min(lvl, s.marks || 0); i++) pick.push('sc');
         for (let i = 0; pick.length < lvl && i < (s.death || 0); i++) pick.push('sd');
         for (let i = 0; pick.length < lvl && i < (opp.stats.mirror || 0); i++) pick.push('om');
@@ -1557,7 +1568,7 @@ function combatPlan(state, pid) {
         acts.push(A({ type: 'lfp', pick }));
       }
       if (usesEw && state.rules.lifeflowMode === 'choice' && (opp.stats.mirror || 0) > 0 && ((s.marks || 0) === 0 || opp.stats.mirror >= Q.lfOpp)) acts.push(A({ type: 'lf', target: 'opp' }));
-      if (Q.smart && state.rules.controlMode === 'mirror' && best.ev.levels.fw > 0 && !(best.ev.levels.ulti > 0 && state.rules.ultiMode === 'death')) acts.push(A({ type: 'mel', el: pickMirrorEl(side, opp) }));
+      if (Q.smart && !ordered && state.rules.controlMode === 'mirror' && best.ev.levels.fw > 0 && !(best.ev.levels.ulti > 0 && state.rules.ultiMode === 'death')) acts.push(A({ type: 'mel', el: pickMirrorEl(side, opp) }));
       acts.push(A({ type: 'attack' }));
       return acts;
     }
@@ -1796,7 +1807,7 @@ function place(card, s) {
   d.style.transform = 'translate(' + s.x + 'px,' + s.y + 'px) rotate(' + (s.rot || 0) + 'deg) scale(' + s.sc + ')';
   d.style.zIndex = s.z;
   d.classList.toggle('down', !!s.down); d.classList.toggle('marked', !!s.marked); d.classList.toggle('locked', !!s.locked);
-  d.classList.toggle('myhand', !!s.mine); d.dataset.slot = s.slot === undefined ? '' : s.slot;
+  d.classList.toggle('myhand', !!s.mine); d.dataset.slot = s.slot === undefined ? '' : s.slot; d.dataset.ord = s.ord || '';
   d.style.pointerEvents = s.mine ? 'auto' : 'none';
 }
 function slotX(i, n, L) {
@@ -1811,7 +1822,7 @@ function layoutDeck(deck, L, mine) {
   deck.hand.forEach((c, i) => {
     if (!c) return;
     const marked = deck.marks.includes(i);
-    place(c, { x: slotX(i, n, L), y: L.y + (marked ? L.raise : 0), sc: L.s, down: !mine, z: 20 + i + (marked ? 30 : 0), marked, locked: mine && c.locked, mine, slot: i, spawn, zone: 'hand' });
+    place(c, { x: slotX(i, n, L), y: L.y + (marked ? L.raise : 0), sc: L.s, down: !mine, z: 20 + i + (marked ? 30 : 0), marked, locked: mine && c.locked, mine, slot: i, spawn, zone: 'hand', ord: mine && marked && G.rules.comboMode === 'ordered' && G.phase === 'combat' && deck.marks.length > 1 ? deck.marks.indexOf(i) + 1 : 0 });
   });
 }
 function renderCards() {
@@ -2017,6 +2028,14 @@ function campPanel() {
   return '<div class="panel" style="' + box(LAYOUT.camp) + '">' + h + '</div>';
 }
 /* ---------- Kampf ---------- */
+const ORD_ROWS = [['ra', 'Aggro', 'F', 'E'], ['rm', 'Entzug', 'F', 'W'], ['bm', 'Spiegel', 'W', 'F'], ['bg', 'Spiegel', 'W', 'E'], ['gh', 'Heilung', 'E', 'W'], ['gr', 'Läuterung', 'E', 'F']];
+function ordText(k, lv, short) {
+  if (k === 'ra') return short && G.rules.curses === 'deathcards' ? lv + (lv === 1 ? ' Fluch' : ' Flüche') + ' auf den Ablagestapel der Gegenseite' : comboText('fe', lv);
+  if (k === 'rm') return 'Der Gegner verliert ' + lv + ' Mana (nie unter 0)';
+  if (k === 'bm' || k === 'bg') return 'Dein ' + (k === 'bm' ? 'roter' : 'grüner') + ' Spiegel steht danach auf ' + lv + ' Marker (nicht addiert, höchstens 3 insgesamt)';
+  if (k === 'gh') return 'Heile um ' + lv + ' HP';
+  return 'Entferne ' + lv + ' Marker vom Brett (anklicken) und erhalte für jeden einen Nachziehtoken';
+}
 function comboText(k, lv) {
   if (lv <= 0) return 'kein Effekt';
   if (k === 'fw' && G.rules.controlMode === 'mirror') return 'Bringe deinen Spiegel gegen eine Magie deiner Wahl auf ' + lv + ' Marker (nicht addiert, höchstens 3)';
@@ -2040,11 +2059,12 @@ function lfPicks(cx, lvl) {
 }
 // Lifeflow: Marker direkt auf dem Brett anklicken. lfCtx liefert die Wahl, solange ich einen Lifeflow-Angriff vorbereite.
 function lfCtx() {
-  if (!G || G.phase !== 'combat' || G.rules.lifeflowMode !== 'any' || cardCurses() || !myTurn()) return null;
+  if (!G || G.phase !== 'combat' || (G.rules.lifeflowMode !== 'any' && G.rules.comboMode !== 'ordered') || cardCurses() || !myTurn()) return null;
   const cx = ctx(), c = cx.c; if (c.action !== 'attack') return null;
   const ev = M.evalAttack(cx.myStats, M.selection(cx.mine.deck));
-  if (!ev.valid || !(ev.levels.ew > 0) || (ev.levels.ulti > 0 && G.rules.ultiMode === 'death')) return null;
-  return { cx, c, lvl: ev.levels.ew, picks: lfExpand(lfPicks(cx, ev.levels.ew), cx) };
+  const lw = ev.valid ? M.levelsFor(G.rules, ev).ew : 0;
+  if (!ev.valid || !(lw > 0) || (ev.levels.ulti > 0 && G.rules.ultiMode === 'death')) return null;
+  return { cx, c, lvl: lw, picks: lfExpand(lfPicks(cx, lw), cx) };
 }
 // Spiegelmarker einer Wahl auf konkrete Farben abbilden (in der Reihenfolge, in der die Engine sie wegnimmt)
 function lfExpand(picks, cx) {
@@ -2067,13 +2087,23 @@ function lfSummary(cx, lvl) {
 function comboPanel(cx) {
   const c = cx.c, my = myTurn() && c.action === 'attack';
   let h = '<h3>Kombos</h3>';
-  const defs = [['fw', 'Control', 'Feuer + Wasser'], ['fe', 'Aggro', 'Feuer + Erde'], ['ew', 'Lifeflow', 'Erde + Wasser']];
+  const ordP = G.rules.comboMode === 'ordered';
+  const defs = ordP ? ORD_ROWS.map(r => [r[0], r[1], NAMES[r[2]] + ' + ' + NAMES[r[3]]]) : [['fw', 'Control', 'Feuer + Wasser'], ['fe', 'Aggro', 'Feuer + Erde'], ['ew', 'Lifeflow', 'Erde + Wasser']];
   if (c.action === 'defense' || !my) {
     h += '<div class="note">Kombos wirken nur im eigenen Angriff.</div>';
     defs.forEach(d => { h += '<div class="combo"><div>' + d[1] + '<small>' + d[2] + '</small></div><span class="note">nicht zulässig</span></div>'; });
   } else {
     const ev = M.evalAttack(cx.myStats, M.selection(cx.mine.deck));
     const lv = ev.valid ? ev.levels : { fw: 0, fe: 0, ew: 0, ulti: 0 };
+    if (ordP) {
+      const dth = lv.ulti > 0, o = ev.valid && ev.ord && !dth ? ev.ord : null;
+      h += '<div class="note" style="margin-bottom:8px">' + (dth ? 'Ultimate Stufe ' + lv.ulti + ': Todes-Fluch – der Gegner verliert ' + lv.ulti + ' HP am Ende jeder eigenen Angriffsphase bis Kampfende. Die Einzel-Kombos entfallen.' : 'Die erste markierte Karte bestimmt Angriffsfarbe und Rolle, die zweite Farbe die Wirkung.') + '</div>';
+      defs.forEach(d => {
+        const l = o && o.key === d[0] ? o.lvl : 0;
+        h += '<div class="combo ' + (l > 0 ? 'on' : '') + '"><div>' + d[1] + '<small>' + d[2] + ' · ' + (l > 0 ? ordText(d[0], l) : 'kein Effekt') + '</small></div></div>';
+      });
+      return '<div class="panel" style="' + box(LAYOUT.combo) + '">' + h + '</div>';
+    }
     h += '<div class="note" style="margin-bottom:8px">' + (lv.ulti && G.rules.ultiMode === 'death' ? 'Ultimate Stufe ' + lv.ulti + ': Todes-Fluch – der Gegner verliert ' + lv.ulti + ' HP am Ende jeder eigenen Angriffsphase bis Kampfende (je ein Todesmarker pro HP; nur Lifeflow kann Marker entfernen). Die Einzel-Kombos entfallen.' : lv.ulti ? 'Ultimate Stufe ' + lv.ulti + ': wähle genau zwei Kombos.' : 'Markiere Karten zweier Elemente für einen Kombo.') + '</div>';
     defs.forEach(d => {
       const dth = lv.ulti && G.rules.ultiMode === 'death', l = dth ? 0 : lv.ulti ? lv.ulti : lv[d[0]], on = l > 0 && (!lv.ulti || c.ult.includes(d[0]));
@@ -2106,8 +2136,9 @@ function combatCenter(cx) {
         prev = '';
         const pick2 = ev.levels.ulti > 0 && !(G.rules.ultiMode === 'death');
         canExec = ev.valid && ev.affordable && !(pick2 && c.ult.length !== 2);
-        if (G.rules.lifeflowMode === 'any' && !cardCurses() && ev.valid && ev.levels.ew > 0 && !(ev.levels.ulti > 0 && G.rules.ultiMode === 'death')) prev += lfSummary(cx, ev.levels.ew);
-        if (G.rules.controlMode === 'mirror' && ev.valid && ev.levels.fw > 0 && !(ev.levels.ulti > 0 && G.rules.ultiMode === 'death')) { const cur = (c.mel && c.melTurn === c.turns && c.mel) || M.defaultMirrorEl(cx.theirs); prev += '<div class="mrsel">Spiegel gegen: ' + M.ELEMENTS.map(e => '<button class="mini ' + e + (e === cur ? ' on' : '') + '" data-act="mel" data-e="' + e + '">' + M.NAMES[e] + '</button>').join(' ') + '</div>'; }
+        const lvC = ev.valid ? M.levelsFor(G.rules, ev) : ev.levels, ordC = G.rules.comboMode === 'ordered';
+        if ((G.rules.lifeflowMode === 'any' || ordC) && !cardCurses() && ev.valid && lvC.ew > 0 && !(ev.levels.ulti > 0 && G.rules.ultiMode === 'death')) prev += lfSummary(cx, lvC.ew);
+        if (!ordC && G.rules.controlMode === 'mirror' && ev.valid && ev.levels.fw > 0 && !(ev.levels.ulti > 0 && G.rules.ultiMode === 'death')) { const cur = (c.mel && c.melTurn === c.turns && c.mel) || M.defaultMirrorEl(cx.theirs); prev += '<div class="mrsel">Spiegel gegen: ' + M.ELEMENTS.map(e => '<button class="mini ' + e + (e === cur ? ' on' : '') + '" data-act="mel" data-e="' + e + '">' + M.NAMES[e] + '</button>').join(' ') + '</div>'; }
         if (!ev.affordable) prev += '<div class="bad">Zu wenig Mana.</div>'; else if (pick2 && c.ult.length !== 2) prev += '<div class="bad">Wähle zwei Kombos links.</div>';
       }
     } else {
@@ -2135,6 +2166,16 @@ function comboRef(cx) {
     ['ew', 'Lifeflow', 'E', 'W', n => G.rules.lifeflowMode === 'plain' ? 'Heile um ' + n + ' und erhalte ' + n + ' Nachziehtoken.' : (G.rules.lifeflowHealMode === 'flat' ? 'Heile um ' + n + ', entferne ' + n + ' Marker und erhalte für jeden einen Nachziehtoken.' : 'Entferne ' + n + ' Marker: je Marker 1 HP und 1 Nachziehtoken.')],
   ];
   let h = '<h3 style="margin-bottom:3px" title="S = Minimum aus beiden Magiewerten und den höchsten markierten Kartenstufen (max. 3). Kombos kosten 0 Mana.">Kombo-Übersicht <span class="note" style="font-size:13px">S = Kombostufe</span></h3>';
+  if (G.rules.comboMode === 'ordered') {
+    const o = ev && ev.valid && ev.ord && !(ev.levels.ulti > 0) ? ev.ord : null, uS0 = Math.min(3, mag.F, mag.E, mag.W);
+    h += '<div class="note" style="margin-bottom:4px">Die erste markierte Karte bestimmt die Rolle: Feuer aggressiv, Wasser defensiv, Erde heilend.</div>';
+    ORD_ROWS.forEach(r => {
+      const maxS = Math.min(3, mag[r[2]], mag[r[3]]), on = o && o.key === r[0];
+      h += '<div class="cref' + (on ? ' on' : '') + '"><b>' + r[1] + '</b> ' + el(r[2]) + ' + ' + el(r[3]) + ' <span class="note">· Magie: bis S ' + maxS + (on ? ' · markiert: S ' + o.lvl : '') + '</span><small>' + ordText(r[0], on ? o.lvl : Math.max(1, maxS), true) + '</small></div>';
+    });
+    h += '<div class="cref' + (lv.ulti > 0 ? ' on' : '') + '"><b>Ultimate</b> ' + el('F') + ' + ' + el('E') + ' + ' + el('W') + ' <span class="note">· Magie: bis S ' + uS0 + (lv.ulti > 0 ? ' · markiert: S ' + lv.ulti : '') + '</span><small>Todes-Fluch: Der Gegner verliert S HP am Ende jeder seiner Angriffsphasen bis Kampfende.</small></div>';
+    return '<div class="panel" style="' + box(LAYOUT.oppInfo, 'overflow-y:auto;padding:10px 12px') + '">' + h + '</div>';
+  }
   rows.forEach(r => {
     const maxS = Math.min(3, mag[r[2]], mag[r[3]]), on = lv[r[0]] > 0 || (lv.ulti > 0 && def);
     h += '<div class="cref' + (lv[r[0]] > 0 && !(lv.ulti && def) ? ' on' : '') + '"><b>' + r[1] + '</b> ' + el(r[2]) + ' + ' + el(r[3]) + ' <span class="note">· Magie: bis S ' + maxS + (lv[r[0]] > 0 && !(lv.ulti && def) ? ' · markiert: S ' + lv[r[0]] : '') + '</span><small>' + (def ? r[4](lv[r[0]] > 0 ? lv[r[0]] : Math.max(1, maxS)) : comboText(r[0], Math.max(1, maxS))) + '</small></div>';
