@@ -751,16 +751,21 @@ function evalAttack(stats, cards) {
   return { valid: true, prim, cost, damage, levels, ord, curses: curses.length, affordable: stats.mana >= cost };
 }
 // mr: gewählte Zahl der Spiegelmarker (0 = Spiegel wird nicht eingesetzt, dann kostet die Verteidigung normal; ohne Angabe wird der Spiegel eingesetzt).
-function evalDefense(stats, cards, color, mr) {
+function evalDefense(stats, cards, color, mr, rules) {
   if (!cards.length) return { valid: true, cost: 0, block: 0, empty: true };
   const curses = cards.filter(c => c.curse), normals = cards.filter(c => !c.curse);
   const el = normals.length ? normals[0].el : null;
-  if (normals.some(c => c.el !== el)) return { valid: false, reason: 'Alle Karten der Verteidigung müssen dasselbe Element haben.' };
+  const combos = !!(rules && rules.defenseCombos && rules.comboMode === 'ordered');   // Variante: Karten einer zweiten Farbe sind Kombokarten (blocken nicht, kosten kein Mana, zählen aufs Limit)
+  const same = normals.filter(c => c.el === el), other = normals.filter(c => c.el !== el);
+  if (other.length && !combos) return { valid: false, reason: 'Alle Karten der Verteidigung müssen dasselbe Element haben.' };
+  if (other.length && new Set(other.map(c => c.el)).size > 1) return { valid: false, reason: 'In der Verteidigung ist neben der Verteidigungsfarbe nur eine zweite Farbe für den Kombo erlaubt.' };
   if (el && el !== color && el !== SUPERIOR[color]) return { valid: false, reason: NAMES[el] + ' kann nicht gegen ' + NAMES[color] + ' verteidigen.' };
   const free = stats.mirrorFree && mirrorOf(stats, color) > 0 && mr !== 0;   // Spiegel mit Rabatt: Verteidigung in der Farbe des Angriffs kostet kein Mana, aber nur, wenn der Spiegel auch eingesetzt wird
-  const cost = curses.reduce((n, c) => n + c.tier, 0) + (el === color && !free ? normals.length : 0);
-  let block = 0; normals.forEach(c => { block += Math.min(c.tier, stats.mag[el]); });
-  return { valid: true, el, cost, block, affordable: stats.mana >= cost };
+  const cost = curses.reduce((n, c) => n + c.tier, 0) + (el === color && !free ? same.length : 0);
+  let block = 0; same.forEach(c => { block += Math.min(c.tier, stats.mag[el]); });
+  const out = { valid: true, el, cost, block, affordable: stats.mana >= cost, levels: { fw: 0, fe: 0, ew: 0, ulti: 0 }, ord: null };
+  if (other.length) { const tiers = { F: [], E: [], W: [] }; normals.forEach(c => tiers[c.el].push(c.tier)); const lv = comboLevels(tiers, stats.mag, el); out.ord = lv.ord && lv.ord.lvl > 0 ? lv.ord : null; }
+  return out;
 }
 
 /* ---------- Kampfablauf ---------- */
@@ -954,25 +959,9 @@ function flushDefer(state) {
   const oth = c.sides[c.sides.a === d.to ? 'b' : 'a'];
   log(state, curses(state).inflict(state, d.to, d.n) + '.', undefined, { kind: 'aggro', who: oth.ctrl, to: d.to.ctrl, n: d.n });
 }
-function execAttack(state) {
-  const c = state.combat, side = c.sides[c.turn], opp = c.sides[c.turn === 'a' ? 'b' : 'a'];
-  const d = side.deck, sel = selection(d);
-  const ev = evalAttack(side.stats, sel);
-  if (!ev.valid) return fail(ev.reason);
-  if (!ev.affordable) return fail('Zu wenig Mana (' + ev.cost + ' nötig).');
-  let plan = [];
-  const ordered = state.rules.comboMode === 'ordered', lvs = levelsFor(state.rules, ev);
-  const death = ev.levels.ulti > 0 && state.rules.ultiMode === 'death';
-  if (death) plan = [];
-  else if (ev.levels.ulti > 0) {
-    const ch = c.ult.filter(k => ['fw', 'fe', 'ew'].includes(k));
-    if (ch.length !== 2) return fail('Ultimate: wähle genau zwei Kombos.');
-    plan = ch.map(k => [k, ev.levels.ulti]);
-  } else for (const k of ordered ? ['fw', 'fe', 'ew', 'rm', 'gh'] : ['fw', 'fe', 'ew']) if (lvs[k] > 0) plan.push([k, lvs[k]]);
-  side.stats.mana -= ev.cost;
-  consumeSelection(d, sel);
-  decayMirror(state, side);
-  const texts = [], cs = curses(state), fxs = [];
+// Wirkung der Kombos (Angriff und, in der Variante defenseCombos, nach der Verteidigung): plan = [[Schlüssel, Stufe], ...]
+function applyComboPlan(state, side, opp, plan, ev, texts, fxs) {
+  const c = state.combat, cs = curses(state), ordered = state.rules.comboMode === 'ordered';
   for (const [k, lvl] of plan) {
     if (k === 'fw' && mirrorOn(state)) { const mel = ordered && ev.ord && ev.ord.el ? ev.ord.el : (c.mel && c.melTurn === c.turns && c.mel) || defaultMirrorEl(opp); mirrorAdd(side.stats, mel, lvl); if (state.rules.mirrorFree) side.stats.mirrorFree = true; texts.push('Spiegel ' + lvl + ' (' + NAMES[mel] + ', ' + (side.stats.mirror || 0) + ' Marker)'); }
     else if (k === 'fw') { side.stats.freeDraws += lvl; texts.push('Control ' + lvl + ': ' + lvl + ' Gratis-Nachziehen'); }
@@ -1013,6 +1002,27 @@ function execAttack(state) {
       } else texts.push('Lifeflow ' + lvl + ': +' + (side.stats.hp - before) + ' HP' + cs.relieve(state, side, lvl));
     }
   }
+}
+function execAttack(state) {
+  const c = state.combat, side = c.sides[c.turn], opp = c.sides[c.turn === 'a' ? 'b' : 'a'];
+  const d = side.deck, sel = selection(d);
+  const ev = evalAttack(side.stats, sel);
+  if (!ev.valid) return fail(ev.reason);
+  if (!ev.affordable) return fail('Zu wenig Mana (' + ev.cost + ' nötig).');
+  let plan = [];
+  const ordered = state.rules.comboMode === 'ordered', lvs = levelsFor(state.rules, ev);
+  const death = ev.levels.ulti > 0 && state.rules.ultiMode === 'death';
+  if (death) plan = [];
+  else if (ev.levels.ulti > 0) {
+    const ch = c.ult.filter(k => ['fw', 'fe', 'ew'].includes(k));
+    if (ch.length !== 2) return fail('Ultimate: wähle genau zwei Kombos.');
+    plan = ch.map(k => [k, ev.levels.ulti]);
+  } else for (const k of ordered ? ['fw', 'fe', 'ew', 'rm', 'gh'] : ['fw', 'fe', 'ew']) if (lvs[k] > 0) plan.push([k, lvs[k]]);
+  side.stats.mana -= ev.cost;
+  consumeSelection(d, sel);
+  decayMirror(state, side);
+  const texts = [], cs = curses(state), fxs = [];
+  applyComboPlan(state, side, opp, plan, ev, texts, fxs);
   if (death) { opp.stats.death = Math.max(opp.stats.death || 0, ev.levels.ulti); texts.push('Ultimate ' + ev.levels.ulti + ': Todes-Fluch für ' + opp.name + ' (' + opp.stats.death + ' HP am Ende jeder seiner Angriffsphasen bis Kampfende)'); }
   if (cs.endTurn) cs.endTurn(state, side);
   c.ult = []; c.lf = 'self'; c.lfp = null; c.mel = null;
@@ -1027,13 +1037,13 @@ function execAttack(state) {
 function execDefense(state, passOnly) {
   const c = state.combat, side = c.sides[c.turn];
   const d = side.deck;
-  let block = 0, cost = 0, sel = [];
+  let block = 0, cost = 0, sel = [], defEv = null;
   if (!passOnly) {
     sel = selection(d);
-    const ev = evalDefense(side.stats, sel, c.color, c.mr);
+    const ev = evalDefense(side.stats, sel, c.color, c.mr, state.rules);
     if (!ev.valid) return fail(ev.reason);
     if (ev.affordable === false) return fail('Zu wenig Mana (' + ev.cost + ' nötig).');
-    block = ev.block || 0; cost = ev.cost || 0;
+    block = ev.block || 0; cost = ev.cost || 0; defEv = ev;
   }
   side.stats.mana -= cost;
   if (sel.length) consumeSelection(d, sel); else d.marks = [];
@@ -1055,6 +1065,13 @@ function execDefense(state, passOnly) {
     if (inline) defFx.mirror = { markers: mBefore, broken: rel, r };
     log(state, 'Spiegel: ' + side.name + ' wirft ' + r + ' Schaden auf ' + att.name + ' zurück.', side.ctrl, { kind: 'mirror', elem: c.color, markers: mBefore, broken: rel, att: att.ctrl, inline });
     }
+  }
+  if (defEv && defEv.ord && state.rules.defenseCombos && state.rules.comboMode === 'ordered' && side.stats.hp > 0) {   // Kombo der Verteidigung: erst nach der Verteidigung (und dem Spiegelrückwurf)
+    const lvs = levelsFor(state.rules, defEv), plan = [], texts = [], fxs = [];
+    for (const k of ['fw', 'fe', 'ew', 'rm', 'gh']) if (lvs[k] > 0) plan.push([k, lvs[k]]);
+    applyComboPlan(state, side, attacker, plan, defEv, texts, fxs);
+    fxs.forEach(f => { f.late = true; });
+    if (texts.length) log(state, side.name + ' wirkt einen Kombo: ' + texts.join(', ') + '.', side.ctrl, fxs.length ? fxs : undefined);
   }
   const attSide = c.sides[c.turn === 'a' ? 'b' : 'a'];   // wer gerade angegriffen hat: seine Angriffsphase endet mit dieser Verteidigung
   c.action = 'attack'; c.color = null; c.pending = 0; c.ult = []; c.mr = null;
@@ -1246,7 +1263,7 @@ function applyWorld(state, a) {
 // lifeflowMode 'any': S Marker beliebig vom Brett (eigene/gegnerische Fluch- und Spiegelmarker), je entferntem Marker 1 HP ('removed', Variante 'flat' = S HP).
 // lifeflowMode: 'classic' (S HP heilen und S eigene Fluchmarker herunternehmen) oder 'choice' (S HP heilen und S Marker wegnehmen: eigene Fluchmarker oder die Spiegelmarker des Gegners).
 // firstPlayerGold: zusätzliches Startgold für den Beginnenden (Ausgleich zum Vorteil des zweiten Spielers).
-const DEFAULT_RULES = { magicCost: [0, 1, 3], limitCost: 2, curses: 'deathcards', ultiMode: 'death', limitFirstStepCost: 2, secondPlayerPending: 0, campActions: 0, showdownAttacker: 'behind', firstPlayerGold: 0, controlMode: 'mirror', comboMode: 'ordered', mirrorDecay: 0, mirrorTrigger: 'any', mirrorFree: false, mirrorMult: 1, mirrorStep: 1, mirrorChoice: false, mirrorMana: 0, mirrorHeal: 0, hpPerPoint: 2, lifeflowMode: 'any', lifeflowDrawAll: true, lifeflowHealMode: 'flat', lifeflowHeal: 1, lifeflowMana: false, monsterVariants: true, monstersPerStage: 3, fightReset: true, fightCarry: true, stagePoints: [0, 1, 1, 1], stageGold: [0, 1, 1, 1], startGold: 0, secondPlayerGold: 0, loserStarts: true, loserUp: 1, winSp: 4, freshHands: false, showdownRestore: false, lootShare: 0, lootPot: false, lifeflowDraw: 1 };
+const DEFAULT_RULES = { magicCost: [0, 1, 3], limitCost: 2, curses: 'deathcards', ultiMode: 'death', limitFirstStepCost: 2, secondPlayerPending: 0, campActions: 0, showdownAttacker: 'behind', firstPlayerGold: 0, controlMode: 'mirror', comboMode: 'ordered', defenseCombos: false, mirrorDecay: 0, mirrorTrigger: 'any', mirrorFree: false, mirrorMult: 1, mirrorStep: 1, mirrorChoice: false, mirrorMana: 0, mirrorHeal: 0, hpPerPoint: 2, lifeflowMode: 'any', lifeflowDrawAll: true, lifeflowHealMode: 'flat', lifeflowHeal: 1, lifeflowMana: false, monsterVariants: true, monstersPerStage: 3, fightReset: true, fightCarry: true, stagePoints: [0, 1, 1, 1], stageGold: [0, 1, 1, 1], startGold: 0, secondPlayerGold: 0, loserStarts: true, loserUp: 1, winSp: 4, freshHands: false, showdownRestore: false, lootShare: 0, lootPot: false, lifeflowDraw: 1 };
 
 function newPlayer(state, name, ai) {
   const p = { name, ai: !!ai, stats: newStats(), temple: { points: 0, level: 0 }, sp: 0, slots: MIN_SLOTS };
@@ -1478,6 +1495,13 @@ function pickMirrorEl(side, opp) {
   }
   return best;
 }
+// Wert eines geordneten Kombos (ohne Ultimate) für die KI; gleiche Gewichte wie im Angriff
+function ordComboWorth(side, opp, Q, rules, lvs, ev) {
+  const st = side.stats, hurt = st.maxHp - st.hp, myM = st.marks || 0, oMir = (opp.stats.mirror || 0) + (rules.lifeflowDraw ? (opp.stats.marks || 0) : 0);
+  const wEw = (myM + oMir > 0) ? 1.2 + myM * 0.8 + oMir * Math.max(0.3, Q.lfOppW || 0) : 0.1;
+  let wFw = Q.wFW; if (ev.ord && ev.ord.el && pickMirrorEl(side, opp) !== ev.ord.el) wFw *= 0.5;
+  return lvs.fw * wFw + lvs.fe * ((opp.stats.marks || 0) >= 3 ? 0.4 : Q.wFE) + lvs.ew * wEw + Math.min(lvs.rm, opp.stats.mana) * (opp.stats.mana > 0 ? 0.8 : 0) + Math.min(lvs.gh * (rules.lifeflowHeal || 1), hurt) * Q.wEW + (lvs.gh > 0 && hurt === 0 ? 0.1 : 0);
+}
 function bestAttack(side, opp, hand, Q, state0) {
   const stats = side.stats, lim = Math.max(1, stats.limit);
   if (M.curses(state0).curseCards) hand = hand.filter(h => !h.curse);   // im Fluchkartensystem „deathcards“ lassen sich Flüche nicht ausspielen
@@ -1588,10 +1612,17 @@ function combatPlan(state, pid) {
   }
   // Verteidigung
   const color = c.color, pend = c.pending, lethal = pend * (M.curses(state).weakDouble && (s.marks || 0) > 0 ? 2 : 1) >= s.hp;
-  const cand = hand.filter(h => (h.curse ? !M.curses(state).curseCards : (h.el === color || h.el === M.SUPERIOR[color])));
+  const dcom = !!(state.rules.defenseCombos && state.rules.comboMode === 'ordered');   // Variante: zweite Farbe als Kombokarte in der Verteidigung
+  const cand = hand.filter(h => (h.curse ? !M.curses(state).curseCards : (dcom || h.el === color || h.el === M.SUPERIOR[color])));
   let best = { score: pend * (lethal ? Q.dLeth : Q.dPend), ord: [] };
-  for (const sub of subsets(cand, Math.max(1, s.limit))) {
-    const ev = M.evalDefense(s, sub, color);
+  const variants = [];
+  for (const sub0 of subsets(cand, Math.max(1, s.limit))) {
+    if (!dcom) { variants.push(sub0); continue; }
+    const firsts = [...new Set(sub0.filter(h => !h.curse).map(h => h.el))];
+    if (firsts.length <= 1) variants.push(sub0); else firsts.forEach(f => variants.push(sub0.filter(h => h.el === f).concat(sub0.filter(h => h.el !== f))));   // die erste Karte bestimmt die Verteidigungsfarbe
+  }
+  for (const sub of variants) {
+    const ev = M.evalDefense(s, sub, color, undefined, state.rules);
     if (!ev.valid || ev.affordable === false) continue;
     const left = Math.max(0, pend - (ev.block || 0)) * (M.curses(state).weakDouble && (s.marks || 0) > 0 ? 2 : 1);
     const nCurse = sub.filter(h => h.curse).length;
@@ -1600,6 +1631,7 @@ function combatPlan(state, pid) {
       const opp = c.sides[c.turn === 'a' ? 'b' : 'a'], st = state.rules.mirrorStep || 0, rel = Math.min(M.mirrorOf(s, color), st > 0 ? st : 9);
       score -= rel * Q.mirW + (rel * (state.rules.mirrorMult || 1) >= opp.stats.hp ? 60 : 0);
     }
+    if (dcom && ev.ord) { const o = c.sides[c.turn === 'a' ? 'b' : 'a']; score -= ordComboWorth(side, o, Q, state.rules, M.levelsFor(state.rules, ev), ev); }
     if (score < best.score) best = { score, ord: sub };
   }
   if (!best.ord.length) return [A({ type: 'pass' })];
@@ -2148,10 +2180,10 @@ function combatCenter(cx) {
         if (!ev.affordable) prev += '<div class="bad">Zu wenig Mana.</div>'; else if (pick2 && c.ult.length !== 2) prev += '<div class="bad">Wähle zwei Kombos links.</div>';
       }
     } else {
-      const ev = M.evalDefense(cx.myStats, sel, c.color, c.mr);
+      const ev = M.evalDefense(cx.myStats, sel, c.color, c.mr, G.rules);
       if (!sel.length) prev = '';
       else if (!ev.valid) prev = '<span class="bad">' + esc(ev.reason) + '</span>';
-      else { if (ev.cost > 0) manaPv = ev.cost; prev = ''; canExec = ev.affordable; if (!ev.affordable) prev += '<div class="bad">Zu wenig Mana.</div>'; }
+      else { if (ev.cost > 0) manaPv = ev.cost; prev = ''; canExec = ev.affordable; if (ev.ord) { const r = ORD_ROWS.find(x => x[0] === ev.ord.key); prev += '<div class="note"><b>' + r[1] + '</b> Stufe ' + ev.ord.lvl + ' nach der Verteidigung: ' + ordText(r[0], ev.ord.lvl) + '</div>'; } if (!ev.affordable) prev += '<div class="bad">Zu wenig Mana.</div>'; }
     }
   }
   if (my && !atk && G.rules.mirrorChoice && (cx.myStats.mirror || 0) > 0) { const cap = Math.min(M.mirrorOf(cx.myStats, c.color), c.pending, M.mirrorCap(cx.myStats, M.selection(cx.mine.deck), c.color)), n = Math.min(cap, c.mr == null ? 1 : c.mr); prev += '<div class="mrsel">Spiegel ablegen: <button class="mini" data-act="mr" data-n="' + Math.max(0, n - 1) + '">−</button> <b>' + n + '</b> von ' + cap + ' <button class="mini" data-act="mr" data-n="' + Math.min(cap, n + 1) + '">+</button></div>'; }
@@ -2497,7 +2529,7 @@ const FlowFx = (() => {
     });
   }
   const attack = fx => KampfFx.attack(fx), defense = fx => KampfFx.defense(fx), resetEx = () => KampfFx.reset();
-  return { lifeflow, aggro, drain, attack, defense, resetEx };
+  return { lifeflow, aggro, drain, attack, defense, resetEx, wait: () => KampfFx.remaining() };
 })();
 
 /* ---------- Kampffunken (Vorlage „Wucht“ aus der Kampfeffekt-Werkstatt): je Punkt ein Element-Funke von der Hand in die Mitte, Angriff und Verteidigung prallen aufeinander, der Rest trifft die HP ---------- */
@@ -2793,7 +2825,7 @@ function drawClash(ctx,p,style,x,y,g,ea,ed,seed){
     e.def = { H: handOf(fx.who), hp: hpOf(fx.who), ha: hpOf(fx.to), b: bb, mir, T: { tA: 0, tD, tC, tK, tH, hf, cl: .6, pairs, left, end: (left ? tH + hf + .7 + (mir ? .6 : 0) : tK + .6) + .3 } };
     if (mir && mir.broken > 0 && !off()) Snd.play('break', Math.max(0, tH + .5 - now), 0.7);   // Bruch-Sound beim Einschlag der Funken
   }
-  return { attack, defense, reset() { queue = []; endEx(); } };
+  return { attack, defense, reset() { queue = []; endEx(); }, remaining() { if (!ex || !ex.def) return 0; return Math.max(0, ex.def.T.end - (performance.now() - ex.t0) / 1000); } };
 })();
 let leadPrev = null;
 let curKey = null, curDown = false, mkSeen = null, dthSeen = null, fxFor = null, fxLast = 0;
@@ -2803,7 +2835,8 @@ function showFx() {
   let k = 0;
   for (const e of G.log) {
     if (e.n <= fxLast) continue;
-    [].concat(e.fx || []).forEach(f => { if (f.kind === 'mirror') { if (!f.inline) MirrorFx.play(f); } else if (f.kind === 'lifeflow') FlowFx.lifeflow(f); else if (f.kind === 'aggro') FlowFx.aggro(f); else if (f.kind === 'drain') FlowFx.drain(f); else if (f.kind === 'attack') FlowFx.attack(f); else if (f.kind === 'defense') FlowFx.defense(f); });
+    const go = f => { if (f.kind === 'mirror') { if (!f.inline) MirrorFx.play(f); } else if (f.kind === 'lifeflow') FlowFx.lifeflow(f); else if (f.kind === 'aggro') FlowFx.aggro(f); else if (f.kind === 'drain') FlowFx.drain(f); else if (f.kind === 'attack') FlowFx.attack(f); else if (f.kind === 'defense') FlowFx.defense(f); };
+    [].concat(e.fx || []).forEach(f => { if (f.late) setTimeout(() => go(f), Math.round(1000 * FlowFx.wait()) + 150); else go(f); });   // Kombo der Verteidigung erst nach der Kampfanimation
     const m = /^(Spiegel|Todes-Fluch): /.exec(e.txt); if (!m) continue;
     if (m[1] === 'Todes-Fluch') Snd.play('curse', 0, 0.7);   // Fluch-Sound, wenn der Todes-Fluch Schaden macht
     const mirror = m[1] === 'Spiegel', victimMe = mirror ? e.pid !== ME : e.pid === ME;
