@@ -88,7 +88,10 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .pilehit.off{cursor:var(--cd)}.pilehit.off:hover{box-shadow:none}
 .freedraw{position:absolute;z-index:61;display:flex;align-items:center;gap:6px;background:rgba(10,8,14,.8);border:1px solid var(--gold);border-radius:20px;padding:2px 12px 2px 4px;cursor:var(--cp);font-size:17px}
 .freedraw img{width:34px;height:34px;object-fit:contain}
-.freedraw.opp{cursor:default;pointer-events:none;font-size:15px}
+.freedraw.opp{cursor:default;pointer-events:none;font-size:15px;color:inherit;font-family:inherit}
+.freedraw.opp.lf{pointer-events:auto;cursor:var(--cp);border:1px dashed rgba(210,173,79,.8)}
+.freedraw.opp.lf.sel{background:rgba(242,210,122,.35)}
+.freedraw.opp .lfb{font-style:normal;font-size:12px;color:var(--gold)}
 /* Panels, Spielerstatus, Händler, Monster */
 .panel{position:absolute;background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:12px;padding:12px 14px;overflow:hidden}
 .panel h3{font-size:20px;color:var(--gold);margin-bottom:6px}
@@ -981,16 +984,16 @@ function applyComboPlan(state, side, opp, plan, ev, texts, fxs) {
       texts.push('Heilung ' + lvl + ': +' + (side.stats.hp - before) + ' HP'); fxs.push({ kind: 'lifeflow', who: side.ctrl, to: opp.ctrl, got: {}, removed: 0, heal: side.stats.hp - before, draws: 0 });
     }
     else if (k === 'ew' && (ordered || state.rules.lifeflowMode === 'any')) {   // S Marker beliebig vom Brett nehmen, je entferntem Marker 1 HP heilen (geordnet: ohne Heilung)
-      const before = side.stats.hp, picks = lifeflowPicks(state, side, opp, lvl), names = { sd: 'eigene Todesmarker', od: 'Todesmarker des Gegners', sc: 'eigene Fluchmarker', oc: 'Fluchmarker des Gegners', sm: 'eigene Spiegelmarker', om: 'Spiegelmarker des Gegners' };
+      const before = side.stats.hp, picks = lifeflowPicks(state, side, opp, lvl), names = { sd: 'eigene Todesmarker', od: 'Todesmarker des Gegners', sc: 'eigene Fluchmarker', oc: 'Fluchmarker des Gegners', sm: 'eigene Spiegelmarker', om: 'Spiegelmarker des Gegners', ot: 'Nachziehtoken des Gegners' };
       const got = {}; let removed = 0;
       for (const pk of picks) {
         const [kk, mel] = pk.split(':');   // Spiegelmarker können mit Farbe gewählt werden, z. B. 'om:F'
-        const tgt = kk[0] === 's' ? side : opp, key = kk[1] === 'c' ? 'marks' : kk[1] === 'd' ? 'death' : 'mirror';
+        const tgt = kk[0] === 's' ? side : opp, key = kk[1] === 'c' ? 'marks' : kk[1] === 'd' ? 'death' : kk[1] === 't' ? 'freeDraws' : 'mirror';
         if ((tgt.stats[key] || 0) <= 0) continue;
         if (key === 'mirror') { if (mel && mirrorOf(tgt.stats, mel) > 0) mirrorTake(tgt.stats, mel, 1); else mirrorTakeAny(tgt.stats, 1); } else { tgt.stats[key]--; if (key === 'death' && tgt.stats.death <= 0) delete tgt.stats.death; }
         removed++; got[kk] = (got[kk] || 0) + 1;
       }
-      const od = state.rules.lifeflowDrawAll ? removed : (got.oc || 0) + (got.om || 0), dr = od * (state.rules.lifeflowDraw || 0);   // Gratis-Nachziehen je entferntem Marker (lifeflowDrawAll) oder nur je gegnerischem
+      const od = state.rules.lifeflowDrawAll ? removed - (got.ot || 0) : (got.oc || 0) + (got.om || 0), dr = od * (state.rules.lifeflowDraw || 0);   // Gratis-Nachziehen je entferntem Marker (lifeflowDrawAll) oder nur je gegnerischem
       if (dr) side.stats.freeDraws += dr;
       const heal = ordered ? 0 : state.rules.lifeflowHealMode === 'flat' ? lvl : removed;
       side.stats.hp = Math.min(side.stats.maxHp, side.stats.hp + heal * (state.rules.lifeflowHeal || 1));
@@ -1119,7 +1122,7 @@ function applyCombat(state, a) {
       if (at >= 0) c.ult.splice(at, 1); else { if (c.ult.length >= 2) return fail('Es sind höchstens zwei Kombos wählbar.'); c.ult.push(a.key); }
       return { ok: true };
     }
-    case 'lfp': { if (c.action !== 'attack') return fail('Nur im Angriffszug.'); if (state.rules.lifeflowMode !== 'any' && state.rules.comboMode !== 'ordered') return fail('Keine Wahl in dieser Regelvariante.'); const ok = ['sc', 'oc', 'sm', 'om', 'sd', 'od']; c.lfp = a.pick === null ? null : (Array.isArray(a.pick) ? a.pick : []).filter(x => typeof x === 'string' && ok.includes(x.split(':')[0]) && (x.indexOf(':') < 0 || ELEMENTS.includes(x.split(':')[1]))).slice(0, 3); return { ok: true }; }
+    case 'lfp': { if (c.action !== 'attack') return fail('Nur im Angriffszug.'); if (state.rules.lifeflowMode !== 'any' && state.rules.comboMode !== 'ordered') return fail('Keine Wahl in dieser Regelvariante.'); const ok = ['sc', 'oc', 'sm', 'om', 'sd', 'od', 'ot']; c.lfp = a.pick === null ? null : (Array.isArray(a.pick) ? a.pick : []).filter(x => typeof x === 'string' && ok.includes(x.split(':')[0]) && (x.indexOf(':') < 0 || ELEMENTS.includes(x.split(':')[1]))).slice(0, 3); return { ok: true }; }
     case 'mel': { if (c.action !== 'attack') return fail('Nur im Angriffszug.'); if (!mirrorOn(state)) return fail('Kein Spiegel in dieser Regelvariante.'); if (!ELEMENTS.includes(a.el)) return fail('Unbekanntes Element.'); c.mel = a.el; c.melTurn = c.turns; return { ok: true }; }
     case 'lf': { if (c.action !== 'attack') return fail('Nur im Angriffszug.'); if (state.rules.lifeflowMode !== 'choice') return fail('Keine Wahl in dieser Regelvariante.'); c.lf = a.target === 'opp' ? 'opp' : 'self'; return { ok: true }; }
     case 'mr': { if (c.action !== 'defense') return fail('Nur in der Verteidigung.'); if (!state.rules.mirrorChoice) return fail('Keine Wahl in dieser Regelvariante.'); const have = Math.min(mirrorOf(side.stats, c.color), c.pending); c.mr = Math.max(0, Math.min(have, Math.floor(+a.n) || 0)); return { ok: true }; }
@@ -1617,6 +1620,7 @@ function combatPlan(state, pid) {
         for (let i = 0; pick.length < lvl && i < (s.death || 0); i++) pick.push('sd');
         for (let i = 0; pick.length < lvl && i < (opp.stats.mirror || 0); i++) pick.push('om');
         if (state.rules.lifeflowDraw && !state.rules.lifeflowDrawAll) for (let i = 0; pick.length < lvl && i < (opp.stats.marks || 0); i++) pick.push('oc');
+        for (let i = 0; pick.length < lvl && i < (opp.stats.freeDraws || 0); i++) pick.push('ot');
         acts.push(A({ type: 'lfp', pick }));
       }
       if (usesEw && state.rules.lifeflowMode === 'choice' && (opp.stats.mirror || 0) > 0 && ((s.marks || 0) === 0 || opp.stats.mirror >= Q.lfOpp)) acts.push(A({ type: 'lf', target: 'opp' }));
@@ -1919,7 +1923,10 @@ function renderCards() {
   ph += '<div class="pilehit" data-act="deckview" title="Dein Deck als Balkendiagramm (Stufen der Karten)" style="left:' + L_MY.disc.x + 'px;top:' + L_MY.disc.y + 'px;width:' + CW * L_MY.ps + 'px;height:' + CH * L_MY.ps + 'px"></div>';
   if (deckView) ph += deckPopHTML(cx.myDeck);
   if (cx.combat && cx.myStats.freeDraws > 0) ph += '<div class="freedraw" data-act="freedraw" style="left:' + L_MY.draw.x + 'px;top:' + (L_MY.draw.y - 42) + 'px"><img src="' + IMG.gratis + '">' + cx.myStats.freeDraws + '× Nachziehen</div>';
-  if (cx.combat && cx.oppStats.freeDraws > 0) ph += '<div class="freedraw opp" style="left:' + L_OP.draw.x + 'px;top:' + (L_OP.draw.y + CH * L_OP.ps + 22) + 'px"><img src="' + IMG.gratis + '">' + cx.oppStats.freeDraws + '× Nachziehen</div>';
+  if (cx.combat && cx.oppStats.freeDraws > 0) {   // gegnerische Nachziehtokens; im Läuterungs-Angriff anklickbar (werden zerstört, nicht gutgeschrieben)
+    const lf = lfCtx(), sel = lf ? lf.picks.filter(p => p === 'ot').length : 0, pos = 'left:' + L_OP.draw.x + 'px;top:' + (L_OP.draw.y + CH * L_OP.ps + 22) + 'px', inner = '<img src="' + IMG.gratis + '">' + cx.oppStats.freeDraws + '× Nachziehen' + (sel ? '<i class="lfb">✓' + sel + '</i>' : '');
+    ph += lf ? '<button class="freedraw opp lf' + (sel ? ' sel' : '') + '" data-act="lfm" data-k="ot" title="Läuterung: gegnerische Nachziehtokens zerstören (Klick: einen mehr, nach dem Maximum wieder alle weg). Sie werden nicht gutgeschrieben." style="' + pos + '">' + inner + '</button>' : '<div class="freedraw opp" style="' + pos + '">' + inner + '</div>';
+  }
   const pnd = G.players[ME].stats.pending;
   if (!cx.combat && pnd > 0 && G.players[ME].slots < M.MAX_SLOTS) {
     const canSlot = myTurn();
@@ -2106,7 +2113,7 @@ function ordText(k, lv, short) {
   if (k === 'rm') return G.rules.rmMode === 'drain' ? 'Der Gegner verliert ' + lv + ' Mana (nie unter 0)' : 'Der Gegner muss ' + (lv === 'S' ? 'S' : lv) + ' Handkarte' + (lv === 1 ? '' : 'n') + ' seiner Wahl abwerfen';
   if (k === 'bm' || k === 'bg') return 'Dein ' + (k === 'bm' ? 'roter' : 'grüner') + ' Spiegel steht danach auf ' + lv + ' Marker (nicht addiert, höchstens 3 insgesamt)';
   if (k === 'gh') return 'Heile um ' + lv + ' HP';
-  return 'Entferne ' + lv + ' beliebige Marker vom Brett (anklicken, auch eigene und Spiegelmarker) und erhalte für jeden einen Nachziehtoken';
+  return 'Entferne ' + lv + ' beliebige Marker vom Brett (anklicken, auch eigene, Spiegelmarker und gegnerische Nachziehtokens, die dann nur zerstört werden) und erhalte für jeden einen Nachziehtoken';
 }
 function comboText(k, lv) {
   if (lv <= 0) return 'kein Effekt';
@@ -2147,12 +2154,12 @@ function lfExpand(picks, cx) {
 }
 function lfHave(cx, k, e) {
   const w = k[0] === 's' ? cx.myStats : cx.oppStats, t = k[1];
-  return t === 'c' ? (w.marks || 0) : t === 'd' ? (w.death || 0) : (e ? M.mirrorOf(w, e) : (w.mirror || 0));
+  return t === 'c' ? (w.marks || 0) : t === 'd' ? (w.death || 0) : t === 't' ? (w.freeDraws || 0) : (e ? M.mirrorOf(w, e) : (w.mirror || 0));
 }
 function lfSummary(cx, lvl) {
   const L = lfCtx(), picks = L ? L.picks : lfExpand(lfPicks(cx, lvl), cx), cnt = {};
   picks.forEach(p => { cnt[p] = (cnt[p] || 0) + 1; });
-  const nm = { sd: 'eigener Todesmarker', od: 'Todesmarker des Gegners', sc: 'eigener Fluch', oc: 'Fluch des Gegners', sm: 'eigener Spiegel', om: 'Spiegel des Gegners' };
+  const nm = { sd: 'eigener Todesmarker', od: 'Todesmarker des Gegners', sc: 'eigener Fluch', oc: 'Fluch des Gegners', sm: 'eigener Spiegel', om: 'Spiegel des Gegners', ot: 'Nachziehtoken des Gegners' };
   const chips = Object.keys(cnt).map(p => { const [k, e] = p.split(':'); return '<span class="lfchip">' + nm[k] + (e ? ' ' + NAMES[e] : '') + (cnt[p] > 1 ? ' ×' + cnt[p] : '') + '</span>'; }).join('');
   return '<div class="lfsum"><div class="note">Klicke beliebige Marker auf dem Brett (Totenköpfe und Spiegelsteine, auch deine eigenen). Gewählt: <b>' + picks.length + '/' + lvl + '</b></div><div class="lfchips">' + (chips || '<span class="note">kein Marker gewählt (nur Heilung)</span>') + '</div><button class="mini" data-act="lfauto" title="Wieder die automatische Auswahl verwenden">Automatisch</button></div>';
 }
@@ -3349,7 +3356,7 @@ function onAct(d) {
     case 'lfm': {
       const L = lfCtx(); if (!L) break;
       const k = d.k, e = d.e || '', key = e ? k + ':' + e : k, have = lfHave(L.cx, k, e), n = L.picks.filter(x => x === key).length;
-      let m = e ? (n + 1 <= Math.min(have, L.lvl) ? n + 1 : 0) : (n > +d.i ? +d.i : +d.i + 1);   // Spiegelstein: einen mehr, nach dem Maximum alle weg; Totenkopf: bis hierhin wählen oder ab hier abwählen
+      let m = (e || k === 'ot') ? (n + 1 <= Math.min(have, L.lvl) ? n + 1 : 0) : (n > +d.i ? +d.i : +d.i + 1);   // Spiegelstein: einen mehr, nach dem Maximum alle weg; Totenkopf: bis hierhin wählen oder ab hier abwählen
       m = Math.min(m, have, L.lvl);
       const others = L.picks.filter(x => x !== key);
       while (others.length + m > L.lvl && others.length) others.shift();   // voll: die älteste andere Wahl weicht
