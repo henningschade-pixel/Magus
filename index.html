@@ -2680,30 +2680,6 @@ function chunk(ctx,x,y,sz,rot,al,col,seed){const rn=rng(seed);ctx.save();ctx.tra
   for(let k=0;k<5;k++){const a=k/5*Math.PI*2,r=sz*(.6+rn()*.6);k?ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r):ctx.moveTo(Math.cos(a)*r,Math.sin(a)*r)}
   ctx.closePath();ctx.fillStyle=col;ctx.fill();ctx.strokeStyle='rgba(20,16,10,.7)';ctx.lineWidth=1;ctx.stroke();ctx.restore()}
 // Erde: kräftiger Einschlag mit Blitz, Staubring, Brocken und Staubwolken
-function earthImpact(ctx,x,y,age,seed,p,alpha){
-  if(age<=0||age>1.1)return;const H=p.heavy,sr=rng(seed),a=alpha;
-  ctx.save();
-  if(age<.18){ctx.globalCompositeOperation='lighter';const f=1-age/.18,g=ctx.createRadialGradient(x,y,0,x,y,70*H*(.5+age*3));g.addColorStop(0,'rgba(235,255,190,'+(.9*f*a)+')');g.addColorStop(1,rgba(EL.E,0));ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,80*H,0,7);ctx.fill();ctx.globalCompositeOperation='source-over'}
-  const rg=clamp(age/.5);ctx.strokeStyle='rgba(176,150,100,'+((1-rg)*.8*a)+')';ctx.lineWidth=5*(1-rg)+1;ctx.beginPath();ctx.ellipse(x,y+10,18+rg*95*H,(18+rg*95*H)*.32,0,0,7);ctx.stroke();   // Staubring am Boden
-  for(let k=0;k<12;k++){const ang=-Math.PI/2+(sr()-.5)*2.4,v=(90+sr()*140)*H,vx=Math.cos(ang)*v*.8,vy=Math.sin(ang)*v,gr=520;
-    const px=x+vx*age,py=y+vy*age+.5*gr*age*age,al=clamp(1-age/1.0)*a;if(al<=0)continue;chunk(ctx,px,py,3+sr()*5*H,sr()*6+age*(sr()-.5)*16,al,k%3?'#6b6246':'#8aa05a',seed+k)}   // Brocken fliegen hoch und fallen zurück
-  for(let k=0;k<7;k++){const px=x+(sr()-.5)*90*H*Math.min(1,age*2.5),py=y+6-age*30*sr()-sr()*8,r=(12+sr()*16)*H*(.5+age),al=Math.sin(Math.PI*clamp(age/1))*.38*a;
-    const dg=ctx.createRadialGradient(px,py,0,px,py,r);dg.addColorStop(0,'rgba(160,140,100,'+al+')');dg.addColorStop(1,'rgba(160,140,100,0)');ctx.fillStyle=dg;ctx.beginPath();ctx.arc(px,py,r,0,7);ctx.fill()}   // Staubwolken
-  ctx.restore();
-}
-// Erde: Risse im Boden beim Einschlag (wachsen kurz nach der Ankunft, bleiben bis zur Auflösung)
-function drawCracks(ctx,x,y,age,seed,p,alpha){
-  if(age<=0)return;const g=eo(clamp(age/.14)),sr=rng(seed),R=(62+sr()*20)*p.heavy;
-  ctx.save();ctx.translate(x,y+4);ctx.scale(1,.55);ctx.lineCap='round';ctx.lineJoin='round';
-  ctx.strokeStyle='rgba(34,26,16,'+(.9*alpha)+')';
-  for(let k=0;k<7;k++){const a=k/7*Math.PI*2+(sr()-.5)*.6,len=R*(.6+sr()*.6)*g;let px=0,py=0;
-    for(let q=1;q<=5;q++){const aa=a+(sr()-.5)*.6,nx=px+Math.cos(aa)*len/5,ny=py+Math.sin(aa)*len/5,w=3.6*(1-(q-1)/5)+.35;
-      ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(nx,ny);ctx.stroke();
-      if(q===3&&sr()>.4){const ba=aa+(sr()>.5?1:-1)*.7;ctx.lineWidth=1.1;ctx.beginPath();ctx.moveTo(nx,ny);ctx.lineTo(nx+Math.cos(ba)*len*.3,ny+Math.sin(ba)*len*.3);ctx.stroke()}
-      px=nx;py=ny}}
-  if(age<.5){const dg=ctx.createRadialGradient(0,0,0,0,0,R*.9);dg.addColorStop(0,'rgba(150,130,90,'+(.45*(1-age/.5))+')');dg.addColorStop(1,'rgba(150,130,90,0)');ctx.fillStyle=dg;ctx.beginPath();ctx.arc(0,0,R*.9,0,7);ctx.fill()}
-  ctx.restore();
-}
 // Ein Funke am Ort q (0..1) seines Fluges von a nach b
 function drawProjectile(ctx,p,el,a,b,q,seed,t){
   const col=EL[el],heavy=el==='E'&&p.look!=='kugel',pos=s=>{const e=heavy?Math.pow(s,1.7):eio(s);return[lerp(a.x,b.x,e),lerp(a.y,b.y,e)-Math.sin(s*Math.PI)*p.arc*(heavy?.55:1)]};
@@ -2793,6 +2769,104 @@ function drawClash(ctx,p,style,x,y,g,ea,ed,seed){
   function endEx() { if (ex) { cancelAnimationFrame(ex.raf); ex.cv.remove(); ex = null; } }
   const off = () => FAST || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
   function slotY(e, isAtk) { const bottom = e.who === ME; return e.C0.y + ((bottom === isAtk) ? 34 : -34); }
+/* ---------- Erde: Die Formationen brechen in der Mitte aus dem Boden (Werte der Erd-Werkstatt) ---------- */
+const EP = { form: 'natur', height: 1.3, width: 1.2, variety: .8, moss: .8, crackT: .5, rise: .32, overshoot: .15, shake: 1, dust: 1, debris: 1, cracks: 1, glow: .25, ending: 'zerbersten', endT: .6, seed: 7 };
+const STONE={hi:'#98a06e',mid:'#6c7551',lo:'#434b33',dk:'#272c1d',dirt:'#4f4a30',dust:'138,136,98'};
+const GREEN='#93c24f';
+function mix(a,b,k){const f=h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)],x=f(a),y=f(b);return 'rgb('+x.map((v,i)=>Math.round(v+(y[i]-v)*k)).join(',')+')'}
+
+function eCracks(ctx,x,y,prog,seed,p,alpha){   // Risse im Boden: dunkel, nach außen feiner, ohne Kontur
+  if(prog<=0)return;const sr=rng(seed),R=(46+sr()*18)*p.cracks*(.7+.3*Math.min(1.4,p.width)),g=eo(prog);
+  ctx.save();ctx.translate(x,y+3);ctx.scale(1,.5);ctx.lineCap='round';
+  if(p.glow>0){const gg=ctx.createRadialGradient(0,0,0,0,0,R*.9);gg.addColorStop(0,'rgba(147,194,79,'+(.4*p.glow*prog*alpha)+')');gg.addColorStop(1,'rgba(147,194,79,0)');ctx.fillStyle=gg;ctx.beginPath();ctx.arc(0,0,R*.9,0,7);ctx.fill()}
+  ctx.strokeStyle='rgba(30,23,15,'+(.92*alpha)+')';
+  for(let k=0;k<8;k++){const a=k/8*Math.PI*2+(sr()-.5)*.6,len=R*(.55+sr()*.6)*g;let px=0,py=0;
+    for(let q=1;q<=5;q++){const aa=a+(sr()-.5)*.6,nx=px+Math.cos(aa)*len/5,ny=py+Math.sin(aa)*len/5;ctx.lineWidth=3.4*(1-(q-1)/5)+.35;ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(nx,ny);ctx.stroke();
+      if(q===3&&sr()>.45){const ba=aa+(sr()>.5?1:-1)*.7;ctx.lineWidth=1.1;ctx.beginPath();ctx.moveTo(nx,ny);ctx.lineTo(nx+Math.cos(ba)*len*.3,ny+Math.sin(ba)*len*.3);ctx.stroke()}px=nx;py=ny}}
+  ctx.restore();
+}
+function poly(ctx,pts,fill,seam){ctx.beginPath();pts.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]));ctx.closePath();ctx.fillStyle=fill;ctx.fill();if(seam){ctx.strokeStyle='rgba(20,16,10,.35)';ctx.lineWidth=1;ctx.stroke()}}
+let MOSS=.8;
+function facetGrad(ctx,x0,y0,x1,y1,a,b){const g=ctx.createLinearGradient(x0,y0,x1,y1);g.addColorStop(0,mix(a,'#5f8a2c',MOSS*.45));g.addColorStop(1,b);return g}   // unten Moos, oben Fels
+function spike(ctx,x,y,w,hh,seed){   // Felsspitze mit Facetten und Bruchlinien
+  const rn=rng(seed),tipx=x+(rn()-.5)*w*.45,tipy=y-hh,m=x+(rn()-.5)*w*.2;
+  poly(ctx,[[x-w/2,y],[tipx,tipy],[m,y+3]],facetGrad(ctx,x-w/2,y,tipx,tipy,STONE.mid,STONE.hi),true);
+  poly(ctx,[[m,y+3],[tipx,tipy],[x+w/2,y]],facetGrad(ctx,m,y,x+w/2,tipy,STONE.lo,STONE.dk),true);
+  ctx.strokeStyle='rgba(20,16,10,.45)';ctx.lineWidth=1.1;
+  for(let k=1;k<=3;k++){const f=k/4.2,ly=y-hh*f,lw=w*(1-f)*.5;ctx.beginPath();ctx.moveTo(lerp(x-w/2,tipx,f),ly);ctx.lineTo(lerp(m,tipx,f)+lw*.2,ly+(rn()-.5)*5);ctx.lineTo(lerp(x+w/2,tipx,f),ly+(rn()-.5)*4);ctx.stroke()}
+  ctx.strokeStyle='rgba(235,225,200,.35)';ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(x-w/2+2,y-2);ctx.lineTo(tipx,tipy);ctx.stroke();
+}
+function cluster(ctx,x,y,p,hh,seed){spike(ctx,x-p.width*20,y,p.width*17,hh*.55,seed+1);spike(ctx,x+p.width*21,y,p.width*19,hh*.68,seed+2);spike(ctx,x,y,p.width*30,hh,seed)}
+function boulder(ctx,x,y,p,hh,seed){   // Felsbrocken aus Facetten
+  const rn=rng(seed),r=Math.max(22,hh*.36),cx=x,cy=y-r*.8,n=9,pts=[];
+  for(let k=0;k<n;k++){const a=k/n*Math.PI*2+rn()*.3,rr=r*(.78+rn()*.4);pts.push([cx+Math.cos(a)*rr*p.width*1.05,cy+Math.sin(a)*rr*.95])}
+  for(let k=0;k<n;k++){const a=pts[k],b=pts[(k+1)%n],mid=(k/n*Math.PI*2),lit=.5+.5*Math.cos(mid-3.6);
+    const c=Math.round(66+lit*92),mo=MOSS*(.25+.5*(1-lit)*rn());poly(ctx,[[cx+(rn()-.5)*r*.3,cy-r*.2],a,b],mix('#'+[c,Math.round(c*.94),Math.round(c*.74)].map(v=>v.toString(16).padStart(2,'0')).join(''),'#6fa334',mo),true)}
+  ctx.strokeStyle='rgba(20,16,10,.4)';ctx.lineWidth=1.1;ctx.beginPath();for(let k=0;k<3;k++){const a=rn()*6.28;ctx.moveTo(cx+Math.cos(a)*r*.2,cy+Math.sin(a)*r*.2);ctx.lineTo(cx+Math.cos(a+.4)*r*.8,cy+Math.sin(a+.4)*r*.8)}ctx.stroke();
+}
+function pillar(ctx,x,y,p,hh,seed){   // Säule aus Segmenten
+  const rn=rng(seed),w=30*p.width,N=4,sh=hh/N;
+  for(let k=0;k<N;k++){const yb=y-k*sh,yt=yb-sh,wb=w*(1-k*.1),wt=w*(1-(k+1)*.1),ox=(rn()-.5)*6;
+    poly(ctx,[[x-wb/2+ox*.3,yb],[x-wt/2+ox,yt],[x+ox*.5,yt+2],[x,yb+2]],facetGrad(ctx,x-wb/2,yb,x,yt,STONE.mid,STONE.hi),true);
+    poly(ctx,[[x,yb+2],[x+ox*.5,yt+2],[x+wt/2+ox,yt],[x+wb/2+ox*.3,yb]],facetGrad(ctx,x,yb,x+wb/2,yt,STONE.lo,STONE.dk),true)}
+  const wt=w*(1-N*.1),yt=y-hh;poly(ctx,[[x-wt/2,yt],[x,yt-5],[x+wt/2,yt],[x,yt+4]],STONE.hi,true);
+}
+function roots(ctx,x,y,p,hh,seed,g){   // Wurzelranken brechen aus dem Boden, mit Moos und Blättern
+  const rn=rng(seed),N=4+Math.round(rn()*2);
+  for(let k=0;k<N;k++){
+    const ox=(k-(N-1)/2)*p.width*10+(rn()-.5)*6,h=hh*(.5+rn()*.6),sway=(rn()-.5)*46,curl=(rn()>.5?1:-1)*(10+rn()*20),leaf=[.55,.85];
+    const pt=s=>{const u=s*Math.min(1,g);return[x+ox+Math.sin(u*Math.PI*1.4)*curl+sway*u*.5,y-u*h*Math.min(1.15,.4+g*.7)]};
+    ctx.lineCap='round';
+    for(let s=0;s<.999;s+=.07){const a=pt(s),b=pt(s+.07),w=(10*(1-s)+2)*p.width;
+      ctx.strokeStyle='#3b2e1f';ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();
+      ctx.strokeStyle='#62502f';ctx.lineWidth=w*.35;ctx.beginPath();ctx.moveTo(a[0]-w*.18,a[1]);ctx.lineTo(b[0]-w*.18,b[1]);ctx.stroke();
+      if(((s*14)|0)%3===0&&MOSS>0){ctx.strokeStyle='rgba(120,170,60,'+(.75*MOSS)+')';ctx.lineWidth=w*.8;ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke()}}
+    leaf.forEach((s,j)=>{if(s>Math.min(1,g))return;const q=pt(s);[-1,1].forEach(d=>{ctx.save();ctx.translate(q[0],q[1]);ctx.rotate(d*(.9+rn()*.4)-1.2);ctx.beginPath();ctx.ellipse(6,0,6.5,2.6,0,0,7);ctx.fillStyle=j%2?'#9bcb54':'#76a63a';ctx.fill();ctx.restore()})});
+  }
+}
+function grass(ctx,x,y,w,e,a,seed){if(e<=0)return;const rn=rng(seed);ctx.save();ctx.globalAlpha=a;for(let k=0;k<12;k++){const bx=x+(rn()-.5)*w*1.7,len=(6+rn()*13)*Math.min(1,e*1.4),lean=(bx-x)/w*.5+(rn()-.5)*.3;ctx.beginPath();ctx.moveTo(bx-1.6,y+2);ctx.lineTo(bx+Math.sin(lean)*len,y+2-Math.cos(lean)*len);ctx.lineTo(bx+1.6,y+2);ctx.closePath();ctx.fillStyle=k%3?'#7fb040':'#a6d460';ctx.fill()}ctx.restore()}
+function leafBit(ctx,x,y,r,rot,a,k){ctx.save();ctx.translate(x,y);ctx.rotate(rot);ctx.globalAlpha=a;ctx.beginPath();ctx.ellipse(0,0,r*1.7,r*.7,0,0,7);ctx.fillStyle=k%2?'#8fc04a':'#6c9a35';ctx.fill();ctx.restore()}
+const NATUR=['spitzen','wurzeln','brocken','saeule','wurzeln','spitzen','brocken'];
+function formOf(p,i){return p.form==='mix'?['spitzen','brocken','spitzen','saeule'][i%4]:p.form==='natur'?NATUR[(i+(p.seed|0))%NATUR.length]:p.form}
+function eDust(ctx,x,y,age,seed,p,scale){
+  if(age<=0||p.dust<=0)return;const rn=rng(seed),life=1.1,u=age/life;if(u>=1)return;
+  for(let k=0;k<7;k++){const a=Math.PI+rn()*Math.PI,v=40+rn()*70,r0=7+rn()*8,e=eo(clamp(u*1.2));
+    const px=x+Math.cos(a)*v*e*1.1*scale,py=y-4+Math.sin(a)*v*e*.35-e*14,rr=(r0+e*24)*scale;
+    const g=ctx.createRadialGradient(px,py,0,px,py,rr);g.addColorStop(0,'rgba('+STONE.dust+','+(.38*(1-u)*Math.min(1.3,p.dust))+')');g.addColorStop(1,'rgba('+STONE.dust+',0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(px,py,rr,0,7);ctx.fill()}
+}
+function eChunk(ctx,x,y,r,rot,a,seed){const rn=rng(seed);ctx.save();ctx.translate(x,y);ctx.rotate(rot);ctx.globalAlpha=a;ctx.beginPath();for(let k=0;k<5;k++){const t=k/5*6.28,rr=r*(.6+rn()*.6);const px=Math.cos(t)*rr,py=Math.sin(t)*rr;k?ctx.lineTo(px,py):ctx.moveTo(px,py)}ctx.closePath();ctx.fillStyle=rn()>.5?STONE.lo:STONE.mid;ctx.fill();ctx.restore()}
+function eDebris(ctx,x,y,age,seed,p,power){   // Brocken fliegen hoch und fallen zurück
+  if(age<=0||p.debris<=0)return;const rn=rng(seed),N=Math.round(10*p.debris*power);
+  for(let k=0;k<N;k++){const a=-Math.PI/2+(rn()-.5)*2.1,v=(130+rn()*190)*power,life=.9+rn()*.5,ag=age-rn()*.05;if(ag<=0||ag>=life)continue;
+    const px=x+Math.cos(a)*v*ag,py=y+Math.sin(a)*v*ag+.5*560*ag*ag;if(py>y+6)continue;
+    if(rn()<.38*p.moss+.12)leafBit(ctx,px,py,1.7+rn()*2.4,ag*(rn()*14-7),1-Math.pow(ag/life,3),k);else eChunk(ctx,px,py,1.8+rn()*3.6,ag*(rn()*14-7),1-Math.pow(ag/life,3),seed+k)}
+}
+function mound(ctx,x,y,w,e,a){   // aufgeworfene Erde am Fuß
+  if(e<=0)return;ctx.save();ctx.globalAlpha=a;const rw=w*.9*Math.min(1,e*1.3);
+  const g=ctx.createRadialGradient(x,y,0,x,y,rw);g.addColorStop(0,'rgba(84,68,48,.95)');g.addColorStop(1,'rgba(84,68,48,0)');ctx.fillStyle=g;ctx.beginPath();ctx.ellipse(x,y+2,rw,rw*.32,0,0,7);ctx.fill();ctx.restore();
+}
+
+function earthForm(ctx, x, by, seed, i, t, tCrack, tRise, endAt, ending) {
+  const p = EP; MOSS = p.moss;
+  const form = formOf(p, i), endP = seg(t, endAt, endAt + p.endT), crackFade = 1 - endP;
+  eCracks(ctx, x, by, seg(t, tCrack, tRise), seed, p, crackFade);
+  const r = seg(t, tRise, tRise + p.rise), e = r < 1 ? eo(r) * (1 + p.overshoot * Math.sin(r * Math.PI)) : 1;
+  const rv = rng(seed + 99), vh = 1 + (rv() - .5) * .9 * p.variety, vw = 1 + (rv() - .5) * .7 * p.variety, lean = (rv() - .5) * .4 * p.variety, pp = Object.assign({}, p, { width: p.width * vw });
+  const hh = (form === 'brocken' ? 80 : form === 'saeule' ? 118 : form === 'wurzeln' ? 112 : 104) * p.height * vh;
+  if (t < tRise) return;
+  const vis = ending === 'versinken' ? 1 - eio(endP) : 1, alpha = ending === 'zerbersten' ? clamp(1 - endP * 3) : 1;
+  if (alpha > 0 && vis > 0) {
+    ctx.save(); ctx.beginPath(); ctx.rect(0, 0, 4000, by + 2); ctx.clip(); ctx.globalAlpha = alpha;
+    const lift = form === 'wurzeln' ? 0 : hh * (1 - e * vis), yy = by + lift;
+    ctx.translate(x, by); ctx.rotate(form === 'wurzeln' ? 0 : lean); ctx.translate(-x, -by);
+    if (form === 'spitzen') cluster(ctx, x, yy, pp, hh, seed); else if (form === 'brocken') boulder(ctx, x, yy, pp, hh, seed); else if (form === 'wurzeln') roots(ctx, x, by, pp, hh, seed, e * vis); else pillar(ctx, x, yy, pp, hh, seed);
+    ctx.restore();
+  }
+  mound(ctx, x, by, p.width * 38, e, 1 - endP);
+  grass(ctx, x, by, p.width * 34, e, 1 - endP, seed + 21);
+  eDust(ctx, x, by, t - tRise, seed + 3, p, 1); eDebris(ctx, x, by, t - tRise, seed + 5, p, 1);
+  if (endP > 0) { const ag = t - endAt; if (ending === 'zerbersten') { eDebris(ctx, x, by - hh * .45, ag, seed + 9, p, 1.3); eDust(ctx, x, by, ag, seed + 11, p, 1.2); } else eDust(ctx, x, by, ag, seed + 11, p, 1); }
+}
   function startEx(fx, pre) {
     endEx();
     const cv = document.createElement('canvas'); cv.width = 1280; cv.height = 800; cv.style.cssText = 'position:absolute;left:0;top:0;width:1280px;height:800px;z-index:287;pointer-events:none'; stage.appendChild(cv);
@@ -2849,21 +2923,25 @@ function drawClash(ctx,p,style,x,y,g,ea,ed,seed){
     for (let i = 0; i < n; i++) {   // Angriffsfunken
       const s0 = i * p.gap, s = seg(t, s0, s0 + p.flight), sl = slotA(i), paired = i < T.pairs;
       if (s <= 0) continue;
-      if (s < 1) { drawProjectile(ctx, p, p.atk, HA, sl, s, seeds[i], t); continue; }
-      if (p.atk === 'E') { const age = t - (s0 + p.flight), fade = t >= T.tK ? 1 - seg(t, T.tK, T.tK + .6) : 1; drawCracks(ctx, sl.x, sl.y + 12, age, seeds[i] + 9, p, fade); earthImpact(ctx, sl.x, sl.y + 8, age, seeds[i] + 4, p, fade); }
-      if (paired && t >= T.tC) { const m = seg(t, T.tC, T.tK); if (m >= 1) continue; drawIdle(ctx, p, p.atk, sl.x, lerp(sl.y, C0.y, m * m), seeds[i], t, 1); continue; }
+      if (p.atk === 'E') {   // Erde bricht am Platz aus dem Boden, zerbirst beim Aufprall; der Rest fliegt als Brocken zu den HP
+        earthForm(ctx, sl.x, sl.y, seeds[i], i, t, s0, s0 + p.flight - EP.rise, paired ? T.tK : T.tH, 'zerbersten');
+        if (paired || t < T.tH) continue;
+      } else {
+        if (s < 1) { drawProjectile(ctx, p, p.atk, HA, sl, s, seeds[i], t); continue; }
+        if (paired && t >= T.tC) { const m = seg(t, T.tC, T.tK); if (m >= 1) continue; drawIdle(ctx, p, p.atk, sl.x, lerp(sl.y, C0.y, m * m), seeds[i], t, 1); continue; }
+      }
       if (!paired && t >= T.tH) {
         const hpt = { x: hp.x - 40 + (i % 3) * 40, y: hp.y };
         if (d.mir) { const M = mirPos(e), f1 = seg(t, T.tH, T.tH + .5), f2 = seg(t, T.tH + .5, T.tH + .95); if (f2 >= 1) continue; if (f2 > 0) { drawProjectile(ctx, p, p.atk, M, hpt, f2, seeds[i], t); continue; } if (f1 > 0) { drawProjectile(ctx, p, p.atk, { x: sl.x, y: sl.y }, M, f1, seeds[i], t); continue; } }
         else { const f = seg(t, T.tH, T.tH + T.hf); if (f >= 1) continue; if (f > 0) { drawProjectile(ctx, p, p.atk, { x: sl.x, y: sl.y }, hpt, f, seeds[i], t); continue; } }
       }
-      drawIdle(ctx, p, p.atk, sl.x, sl.y, seeds[i], t, 1);
+      if (p.atk !== 'E') drawIdle(ctx, p, p.atk, sl.x, sl.y, seeds[i], t, 1);
     }
     for (let j = 0; j < b; j++) {   // Verteidigungsfunken
       const s0 = T.tD + j * p.gap, s = seg(t, s0, s0 + p.flight), sl = slotD(j), paired = j < T.pairs;
       if (s <= 0) continue;
+      if (p.def === 'E') { earthForm(ctx, sl.x, sl.y, seeds[10 + j], j, t, s0, s0 + p.flight - EP.rise, T.tK, paired ? 'zerbersten' : 'versinken'); continue; }
       if (s < 1) { drawProjectile(ctx, p, p.def, HD, sl, s, seeds[10 + j], t); continue; }
-      if (p.def === 'E') { const age = t - (s0 + p.flight), fade = t >= T.tK ? 1 - seg(t, T.tK, T.tK + .6) : 1; drawCracks(ctx, sl.x, sl.y + 12, age, seeds[10 + j] + 9, p, fade); earthImpact(ctx, sl.x, sl.y + 8, age, seeds[10 + j] + 4, p, fade); }
       if (paired && t >= T.tC) { const m = seg(t, T.tC, T.tK); if (m >= 1) continue; drawIdle(ctx, p, p.def, sl.x, lerp(sl.y, C0.y, m * m), seeds[10 + j], t, 1); continue; }
       if (t >= T.tK) { const f = seg(t, T.tK, T.tK + .5); if (f >= 1) continue; ctx.save(); ctx.globalAlpha = 1 - f; drawIdle(ctx, p, p.def, sl.x, sl.y - f * 14, seeds[10 + j], t, 1 - f); ctx.restore(); continue; }
       drawIdle(ctx, p, p.def, sl.x, sl.y, seeds[10 + j], t, 1);
