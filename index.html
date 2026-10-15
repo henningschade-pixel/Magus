@@ -1019,9 +1019,9 @@ function execDefense(state, passOnly) {
   const attacker = c.sides[c.turn === 'a' ? 'b' : 'a'], defEl = sel.length && sel[0].el && !sel[0].curse ? sel[0].el : c.color;
   const defFx = { kind: 'defense', who: side.ctrl, to: attacker.ctrl, attElem: c.color, defElem: defEl, pending: c.pending, block };
   log(state, side.name + ' verteidigt' + (block ? ' (Block ' + block + ')' : ' ohne Block') + ' und verliert ' + leftover + ' HP' + (curses(state).weakDouble && side.stats.marks > 0 && leftover ? ' (Schwäche: doppelter Schaden)' : '') + '.', side.ctrl, defFx);
-  // Spiegel: Wer in der Farbe des Angriffs verteidigt, wirft alle Spiegelmarker als unblockbaren Schaden zurück.
+  // Spiegel (Standard): Gegen jeden Angriff in der Farbe des Spiegels wirkt automatisch ein Marker, egal womit verteidigt wird; die Verteidigung kostet wie ohne Spiegel. Der Marker wird verbraucht und wirft 1 unblockbaren Schaden zurück.
   if (mirrorOn(state) && mirrorOf(side.stats, c.color) > 0 && (state.rules.mirrorTrigger === 'any' ? true : sel.some(x => !x.curse && x.el === c.color)) && !(state.rules.mirrorChoice && c.mr === 0)) {
-    const att = c.sides[c.turn === 'a' ? 'b' : 'a'], step = state.rules.mirrorStep || 0, rel = Math.min(mirrorCap(side.stats, sel, c.color), state.rules.mirrorChoice ? Math.min(mirrorOf(side.stats, c.color), c.pending, c.mr == null ? 1 : c.mr) : (step > 0 ? Math.min(step, mirrorOf(side.stats, c.color)) : mirrorOf(side.stats, c.color))), r = rel * (state.rules.mirrorMult || 1);
+    const att = c.sides[c.turn === 'a' ? 'b' : 'a'], step = state.rules.mirrorStep || 0, rel = Math.min(state.rules.mirrorChoice ? mirrorCap(side.stats, sel, c.color) : c.pending, state.rules.mirrorChoice ? Math.min(mirrorOf(side.stats, c.color), c.pending, c.mr == null ? 1 : c.mr) : (step > 0 ? Math.min(step, mirrorOf(side.stats, c.color)) : mirrorOf(side.stats, c.color))), r = rel * (state.rules.mirrorMult || 1);
     if (rel > 0) {
     const mBefore = mirrorOf(side.stats, c.color);
     mirrorTake(side.stats, c.color, rel);
@@ -1223,7 +1223,7 @@ function applyWorld(state, a) {
 // lifeflowMode 'any': S Marker beliebig vom Brett (eigene/gegnerische Fluch- und Spiegelmarker), je entferntem Marker 1 HP ('removed', Variante 'flat' = S HP).
 // lifeflowMode: 'classic' (S HP heilen und S eigene Fluchmarker herunternehmen) oder 'choice' (S HP heilen und S Marker wegnehmen: eigene Fluchmarker oder die Spiegelmarker des Gegners).
 // firstPlayerGold: zusätzliches Startgold für den Beginnenden (Ausgleich zum Vorteil des zweiten Spielers).
-const DEFAULT_RULES = { magicCost: [0, 1, 3], limitCost: 2, curses: 'deathcards', ultiMode: 'death', limitFirstStepCost: 2, secondPlayerPending: 0, campActions: 0, showdownAttacker: 'behind', firstPlayerGold: 0, controlMode: 'mirror', mirrorDecay: 0, mirrorTrigger: 'same', mirrorFree: true, mirrorMult: 1, mirrorStep: 1, mirrorChoice: true, mirrorMana: 0, mirrorHeal: 0, hpPerPoint: 2, lifeflowMode: 'any', lifeflowDrawAll: true, lifeflowHealMode: 'flat', lifeflowHeal: 1, lifeflowMana: false, monsterVariants: true, monstersPerStage: 3, fightReset: true, fightCarry: true, stagePoints: [0, 1, 1, 1], stageGold: [0, 1, 1, 1], startGold: 0, secondPlayerGold: 0, loserStarts: true, loserUp: 1, winSp: 4, freshHands: false, showdownRestore: false, lootShare: 0, lootPot: false, lifeflowDraw: 1 };
+const DEFAULT_RULES = { magicCost: [0, 1, 3], limitCost: 2, curses: 'deathcards', ultiMode: 'death', limitFirstStepCost: 2, secondPlayerPending: 0, campActions: 0, showdownAttacker: 'behind', firstPlayerGold: 0, controlMode: 'mirror', mirrorDecay: 0, mirrorTrigger: 'any', mirrorFree: false, mirrorMult: 1, mirrorStep: 1, mirrorChoice: false, mirrorMana: 0, mirrorHeal: 0, hpPerPoint: 2, lifeflowMode: 'any', lifeflowDrawAll: true, lifeflowHealMode: 'flat', lifeflowHeal: 1, lifeflowMana: false, monsterVariants: true, monstersPerStage: 3, fightReset: true, fightCarry: true, stagePoints: [0, 1, 1, 1], stageGold: [0, 1, 1, 1], startGold: 0, secondPlayerGold: 0, loserStarts: true, loserUp: 1, winSp: 4, freshHands: false, showdownRestore: false, lootShare: 0, lootPot: false, lifeflowDraw: 1 };
 
 function newPlayer(state, name, ai) {
   const p = { name, ai: !!ai, stats: newStats(), temple: { points: 0, level: 0 }, sp: 0, slots: MIN_SLOTS };
@@ -1682,7 +1682,7 @@ function mirrorStack(s, x, y, who) {
   let t = '';
   for (const e of M.ELEMENTS) {
     const n = (s.mirrorEl && s.mirrorEl[e]) || 0; if (n <= 0) continue;
-    const tip = 'Spiegel ' + M.NAMES[e] + ' ×' + n + ': Verteidigst du gegen einen ' + M.NAMES[e] + '-Angriff in dieser Farbe, kostet es kein Mana und du wirfst bis zu so viele Marker, wie Schaden eingeht, als 1 Schaden je Marker zurück. Marker werden dabei verbraucht.';
+    const tip = 'Spiegel ' + M.NAMES[e] + ' ×' + n + ': Gegen einen ' + M.NAMES[e] + '-Angriff wirkt automatisch ein Marker (egal womit du verteidigst, die Kosten bleiben wie ohne Spiegel): Er wirft 1 Schaden auf den Angreifer zurück und wird verbraucht.';
     if (L) {
       const sel = L.picks.filter(p => p === who + 'm:' + e).length;
       t += '<button class="mtok ' + e + ' lf' + (sel ? ' sel' : '') + '" data-act="lfm" data-k="' + who + 'm" data-e="' + e + '" title="Lifeflow: Spiegelmarker ' + M.NAMES[e] + ' wählen (Klick: einen mehr, nach dem Maximum wieder alle weg). ' + sel + ' von ' + n + ' gewählt.">' + n + (sel ? '<i class="lfb">✓' + sel + '</i>' : '') + '</button>';
@@ -1694,7 +1694,7 @@ function mirrorStack(s, x, y, who) {
 function mirrorBadge(s) {
   if (G.rules.controlMode !== 'mirror') return '';
   const n = s.mirror || 0, st = G.rules.mirrorStep || 0, mult = G.rules.mirrorMult || 1;
-  const tip = 'Spiegel: ' + n + ' Marker. Bei jeder Verteidigung' + (G.rules.mirrorTrigger === 'any' ? '' : ' in der Farbe des Angriffs') + (G.rules.mirrorFree ? ' (Angriffsfarbe ohne Mana, solange du den Spiegel ablegst)' : '') + ' legst du ' + (G.rules.mirrorChoice ? 'höchstens so viele Marker wie Schaden eingeht' : (st > 0 ? st + ' Marker' : 'alle Marker')) + ' ab: je ' + mult + ' Schaden je Marker auf den Angreifer' + (G.rules.mirrorHeal ? ', du heilst ' + G.rules.mirrorHeal + ' HP je Marker' : '') + (G.rules.mirrorMana ? ', +' + G.rules.mirrorMana + ' Mana je Marker für dich' : '') + (G.rules.mirrorDecay > 0 ? '. Ein Marker zerfällt je eigenem Zug.' : '.');
+  const tip = 'Spiegel: ' + n + ' Marker. Gegen jeden Angriff in der Farbe eines Markers' + (G.rules.mirrorTrigger === 'any' ? '' : ' (verteidigt in dieser Farbe)') + (G.rules.mirrorFree ? ' (Angriffsfarbe ohne Mana, solange du den Spiegel ablegst)' : '') + ' legst du ' + (G.rules.mirrorChoice ? 'höchstens so viele Marker wie Schaden eingeht' : (st > 0 ? st + ' Marker' : 'alle Marker')) + ' ab: je ' + mult + ' Schaden je Marker auf den Angreifer' + (G.rules.mirrorHeal ? ', du heilst ' + G.rules.mirrorHeal + ' HP je Marker' : '') + (G.rules.mirrorMana ? ', +' + G.rules.mirrorMana + ' Mana je Marker für dich' : '') + (G.rules.mirrorDecay > 0 ? '. Ein Marker zerfällt je eigenem Zug.' : '.');
   return '<span class="mk mkm" title="' + tip + '">' + marks(n, 'mir') + '</span>';
 }
 // Marker untereinander: Fluchmarker (violett), Spiegelmarker (blau), Todes-Fluch als Text.
