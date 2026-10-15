@@ -631,7 +631,7 @@ const CURSE_SYSTEMS = {
   deathcards: {
     id: 'deathcards', cardCurses: false, curseCards: true,
     inflict(state, victim, level) {
-      const n = Math.max(1, Math.min(3, level));
+      const n = state.rules.comboMode === 'ordered' ? 2 * Math.max(1, Math.min(3, level)) : Math.max(1, Math.min(3, level));   // geordnete Kombos: Aggro S = 2/4/6 Flüche
       for (let i = 0; i < n; i++) victim.deck.discard.push(mkCard(state, 'C1'));
       return n + ' Fluchkarte' + (n > 1 ? 'n' : '') + ' auf den Ablagestapel von ' + victim.name;
     },
@@ -1503,7 +1503,7 @@ function comboValue(k, lvl, side, opp, Q, rules) {
   }
   if (k === 'fe') {
     if (rules.curses === 'weak') { const n = lvl + 1; return Math.min(n, Math.max(0, 3 - opM)) * Q.wFE * lvl / n; }
-    return lvl * Q.wFE;
+    return lvl * Q.wFE * (rules.comboMode === 'ordered' ? 2 : 1);   // Aggro legt im geordneten Modus 2·S Flüche
   }
   if (rules.lifeflowMode === 'plain') { const heal = Math.min(lvl * (rules.lifeflowHeal || 1), st.maxHp - st.hp); return heal * Q.wEW + lvl * Q.wDraw * (rules.lifeflowDraw ? 1 : 0) + (heal === 0 ? 0.3 * lvl : 0); }
   return lvl * ((st.maxHp - st.hp > 0 || (st.marks || 0) > 0 || (st.death || 0) > 0) ? Q.wEW : 0.4);
@@ -2108,8 +2108,8 @@ function campPanel() {
 /* ---------- Kampf ---------- */
 const ORD_ROWS = [['ra', 'Aggro', 'F', 'E'], ['rm', 'Zerrüttung', 'F', 'W'], ['bm', 'Spiegel', 'W', 'F'], ['bg', 'Spiegel', 'W', 'E'], ['gh', 'Heilung', 'E', 'W'], ['gr', 'Läuterung', 'E', 'F']];
 function ordText(k, lv, short) {
-  if (k === 'ra' && lv === 'S') return 'Lege S Fluchkarten auf den Ablagestapel der Gegenseite; sie kommen beim nächsten Nachziehen des Gegners zuerst auf seine Hand und werden beim darauffolgenden Nachziehen dauerhaft vernichtet';
-  if (k === 'ra') return short && G.rules.curses === 'deathcards' ? lv + (lv === 1 ? ' Fluch' : ' Flüche') + ' auf den Ablagestapel der Gegenseite' : comboText('fe', lv);
+  if (k === 'ra' && lv === 'S') return 'Lege 2·S Fluchkarten (2/4/6) auf den Ablagestapel der Gegenseite; sie kommen beim nächsten Nachziehen des Gegners zuerst auf seine Hand und werden beim darauffolgenden Nachziehen dauerhaft vernichtet';
+  if (k === 'ra') return short && G.rules.curses === 'deathcards' ? 2 * lv + ' Flüche' + ' auf den Ablagestapel der Gegenseite' : comboText('fe', lv);
   if (k === 'rm') return G.rules.rmMode === 'drain' ? 'Der Gegner verliert ' + lv + ' Mana (nie unter 0)' : 'Der Gegner muss ' + (lv === 'S' ? 'S' : lv) + ' Handkarte' + (lv === 1 ? '' : 'n') + ' seiner Wahl abwerfen';
   if (k === 'bm' || k === 'bg') return 'Dein ' + (k === 'bm' ? 'roter' : 'grüner') + ' Spiegel steht danach auf ' + lv + ' Marker (nicht addiert, höchstens 3 insgesamt)';
   if (k === 'gh') return 'Heile um ' + lv + ' HP';
@@ -2121,7 +2121,7 @@ function comboText(k, lv) {
   if (!cardCurses() && k === 'ew' && G.rules.lifeflowMode === 'plain') return '+' + lv + ' HP und ' + lv * (G.rules.lifeflowDraw || 0) + ' Gratis-Nachziehen';
   if (!cardCurses() && k === 'ew' && G.rules.lifeflowMode === 'any') return (G.rules.lifeflowHealMode === 'flat' ? 'Heile um ' + lv + ', entferne ' + lv + ' Marker' : 'Entferne ' + lv + ' Marker: je 1 HP') + (G.rules.lifeflowDraw ? ' und erhalte für jeden einen Nachziehtoken' : '');
   if (!cardCurses() && k === 'ew' && G.rules.lifeflowMode === 'choice') return '+' + lv + ' HP, ' + lv + ' Marker weg (eigene Fluchmarker oder Spiegel des Gegners)';
-  if (G.rules.curses === 'deathcards' && k === 'fe') return 'Lege ' + lv + (lv > 1 ? ' Flüche' : ' Fluch') + ' auf den Ablagestapel der Gegenseite; sie kommen beim nächsten Nachziehen des Gegners zuerst auf seine Hand und werden beim darauffolgenden Nachziehen dauerhaft vernichtet';
+  if (G.rules.curses === 'deathcards' && k === 'fe') return 'Lege ' + (G.rules.comboMode === 'ordered' ? 2 * lv : lv) + ' Flüche' + ' auf den Ablagestapel der Gegenseite; sie kommen beim nächsten Nachziehen des Gegners zuerst auf seine Hand und werden beim darauffolgenden Nachziehen dauerhaft vernichtet';
   if (G.rules.curses === 'weak' && k === 'fe') return (lv + 1) + ' Schwäche-Marker für die Gegenseite nach diesem Zug (S+1, höchstens 3): doppelter Schaden, solange einer liegt';
   if (!cardCurses()) return k === 'fw' ? lv + ' Gratis-Nachziehen' : k === 'fe' ? lv + ' Fluchmarker für die Gegenseite' : '+' + lv + ' HP, ' + lv + ' Marker weniger';
   return k === 'fw' ? lv + ' Gratis-Nachziehen' : k === 'fe' ? lv + ' Fluch' + (lv > 1 ? 'e' : '') + ' für die Gegenseite' : '+' + lv + ' HP';
