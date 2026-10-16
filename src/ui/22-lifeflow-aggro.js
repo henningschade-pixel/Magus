@@ -29,7 +29,7 @@ const FlowFx = (() => {
     const n = Math.max(1, fx.removed || 1), seed = 5, hp = hpOf(fx.who), dr = fx.draws > 0 ? drawOf(fx.who) : null;
     const srcs = [], kinds = [];
     Object.keys(fx.got || {}).forEach(k => { for (let i = 0; i < fx.got[k]; i++) { srcs.push(markOf(k[0] === 's' ? fx.who : fx.to)); kinds.push(k); } });
-    while (srcs.length < n) { srcs.push(markOf(fx.who)); kinds.push('sc'); }
+    while (srcs.length < n) { srcs.push(markOf(fx.who)); kinds.push('sd'); }
     const dur = 2.6, d0 = .10, motes = 14;
     run(dur, (ctx, t, u) => {
       srcs.forEach((m, i) => {

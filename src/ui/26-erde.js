@@ -292,7 +292,7 @@ function renderInner() {
   { const mc = cx.combat && G.combat.mode === 'monster' ? G.combat : null, side = mc ? (G.combat.sides.b.ctrl === ME ? 'bot' : 'top') : '';   // Farbe auf der Seite dessen, der das Monster steuert
     stage.dataset.top = side === 'top' ? mc.elem : ''; stage.dataset.bot = side === 'bot' ? mc.elem : ''; }
   if (cx.combat) {   // Marker (Schwäche, Spiegel, Tod) weg -> Sound
-    const sa = G.combat.sides.a.stats, sb = G.combat.sides.b.stats, n = x => (x.marks || 0) + (x.mirror || 0) + (x.death || 0);
+    const sa = G.combat.sides.a.stats, sb = G.combat.sides.b.stats, n = x => (x.mirror || 0) + (x.death || 0);
     const mirNew = G.log.some(e => e.n > fxLast && [].concat(e.fx || []).some(f => f.kind === 'mirror'));   // beim Spiegelbruch spielt die Animation den Sound selbst, zum Einschlag
     if (mkSeen && mkSeen.c === G.combat && (n(sa) < mkSeen.a || n(sb) < mkSeen.b) && !mirNew) Snd.play('break', 0, 0.7);
     mkSeen = { c: G.combat, a: n(sa), b: n(sb) };

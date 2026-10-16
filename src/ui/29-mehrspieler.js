@@ -79,7 +79,6 @@ function mpRecv(from, list) {
     if (!r.ok) { toast('Synchronisierung fehlgeschlagen: ' + r.error); return; }
     MP.log.push(a); applied++;
     checkCombatEnd(prev);
-    if (G.phase === 'combat') M.combatTick(G);   // wie pump(): gleiche Schrittfolge auf beiden Geräten
   }
   if (applied) { mpSave(); pump(); }
 }
@@ -115,7 +114,7 @@ async function mpRestore() {   // nach Neuladen der Seite: laufende Partie wiede
   if (!sv || !(await mpRoomApi())) return;
   if (!(await mpOpen(sv.code, sv.host))) return;
   MP.seat = sv.seat; mpStart(sv.seed, sv.first, sv.rules);
-  sv.log.forEach(a => { const prev = G.logN, r = M.apply(G, a); if (r.ok) { MP.log.push(a); checkCombatEnd(prev); if (G.phase === 'combat') M.combatTick(G); } });
+  sv.log.forEach(a => { const prev = G.logN, r = M.apply(G, a); if (r.ok) { MP.log.push(a); checkCombatEnd(prev); } });
   endView = null; modal = null; introSeen = G.phase === 'combat' && G.combat.mode === 'showdown' ? G.showdown : -1; hold = 0;
   mpSave(); pump();
   mpEmit('need', { from: MP.log.length }); if (!MP.host) mpEmit('hello', { v: BUILD });

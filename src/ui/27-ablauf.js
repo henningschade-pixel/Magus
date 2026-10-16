@@ -4,7 +4,7 @@ function newGame() {
   ME = 0; OPP = 1;
   clearTimeout(aiTimer);
   els.forEach(r => r.el.remove()); els.clear();
-  G = M.newGame({ seed: (/[?&]seed=(\d+)/.exec(location.search) || [0, (Math.random() * 2 ** 31) | 0])[1] | 0, names: ['Du', 'Computer'], ai: [false, true], rules: CURSES ? { curses: CURSES } : {} });
+  G = M.newGame({ seed: (/[?&]seed=(\d+)/.exec(location.search) || [0, (Math.random() * 2 ** 31) | 0])[1] | 0, names: ['Du', 'Computer'], ai: [false, true] });
   M.record(G); G.keepSnap = true;
   seenCombat = null; endView = null; modal = null; introSeen = -1; hold = 0; started = true;
   overlay.style.display = 'none'; overlay.innerHTML = '';
@@ -69,7 +69,6 @@ function pump() {
   clearTimeout(aiTimer);
   checkShowdownIntro();
   if (endView || modal) { render(); return; }   // Ergebnis- und Ankündigungsbildschirm: Spiel pausiert bis zum Klick
-  if (G && !G.over && G.phase === 'combat') { const pl = G.logN; if (M.combatTick(G)) { checkCombatEnd(pl); } else if (G.logN > pl && !cardCurses()) toast(G.rules.curses === 'weak' || G.rules.curses === 'deathcards' ? 'Todes-Fluch: HP-Verlust.' : 'Ein Fluchmarker wird gegen 1 HP getauscht.'); }
   render();
   if (!G || G.over) return;
   const who = M.actor(G);

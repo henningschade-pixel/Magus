@@ -6,7 +6,6 @@ const ELEMENTS = ['F', 'E', 'W'];
 const SUPERIOR = { F: 'W', W: 'E', E: 'F' };     // überlegenes Element gegen X
 const NAMES = { F: 'Feuer', E: 'Erde', W: 'Wasser' };
 const START_DECK = ['F1','F1','F1','E1','E1','E1','W1','W1','W1'];
-const MAX_MARKS = 3;                               // Fluchmarker (Fluchsystem „markers“)
 const MAX_MAGIC = 3, MAX_SLOTS = 5, MIN_SLOTS = 3, MAX_LIMIT = 5;
 const MAX_COMBAT_TURNS = 400;                      // Sicherung gegen Endlosschleifen, keine Spielregel
 
@@ -101,9 +100,9 @@ function consumeSelection(d, sel) {
   d.marks = [];
 }
 // Markieren ist durch das Ausspiellimit begrenzt (bei Limit 1 ersetzt die neue Markierung die alte).
-function toggleMark(d, slot, limit, noCurse) {
+function toggleMark(d, slot, limit) {
   if (!d.hand[slot]) return 'Hier liegt keine Karte.';
-  if (parseCard(d.hand[slot].id).curse && noCurse) return 'Fluchkarten lassen sich nicht ausspielen. Sie werden nur durch Nachziehen abgeworfen.';
+  if (parseCard(d.hand[slot].id).curse) return 'Fluchkarten lassen sich nicht ausspielen. Sie werden nur durch Nachziehen abgeworfen.';
   const at = d.marks.indexOf(slot);
   if (at >= 0) { d.marks.splice(at, 1); return null; }
   if (d.marks.length >= limit) {

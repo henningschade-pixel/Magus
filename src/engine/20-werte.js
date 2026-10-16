@@ -1,7 +1,7 @@
 /* Magus – Regelkern (Teil 2): Werte, Upgrade-Kosten, Tempel. */
 
 function newStats() {
-  return { gold: 3, hp: 3, maxHp: 3, mana: 4, maxMana: 4, limit: 1, mag: { F: 1, E: 1, W: 1 }, pending: 0, freeDraws: 0, marks: 0 };
+  return { gold: 3, hp: 3, maxHp: 3, mana: 4, maxMana: 4, limit: 1, mag: { F: 1, E: 1, W: 1 }, pending: 0, freeDraws: 0 };
 }
 function regen(stats, n) {   // n = Gewinn an HP und Mana (Regel regenByStage: je Abschnitt 1/2/3)
   n = n || 1;

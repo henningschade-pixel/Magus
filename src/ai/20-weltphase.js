@@ -73,11 +73,6 @@ function worldPlan(state, pid) {
       if (free) cands.push({ score: 5 + R(), acts: [A({ type: 'vendor', result: best + '1', cost: [] })] });
     }
   }
-  if (!camp && curses.length && M.curses(state).discardAction) {   // nur im Fluchsystem „cards“
-    const acts = curses.slice(0, Math.max(1, s.limit)).map(h => A({ type: 'mark', slot: h.slot }));
-    acts.push(A({ type: 'discardCurses' }));
-    cands.push({ score: 6 + curses.length * 4 + R(), acts });
-  }
   if (!camp) {
     const alive = M.ELEMENTS.filter(e => M.monsterAlive(state.monsters[e]));
     if (alive.length && s.hp >= Q.minHp && s.mana >= Q.minMana && normals.length >= 1) {

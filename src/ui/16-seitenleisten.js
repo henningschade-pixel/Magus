@@ -13,9 +13,8 @@ function boardHTML(mag, size) {
 }
 function statsBlock(name, s, p, size, up, full) {
   const img = k => '<img src="' + IMG[k] + '">', compact = !full;
-  const mkT = G.rules.curses === 'weak' ? 'Schwäche: solange ein Marker liegt, erleidest du doppelten Schaden. Nach jedem eigenen Angriffszug fällt ein Marker weg, am Kampfende alle. Lifeflow nimmt Marker herunter.' : 'Zu Beginn deines Zuges wird ein Fluchmarker gegen 1 HP getauscht. Lifeflow nimmt Marker herunter.';
   const lfc = lfCtx(), who = lfc ? (s === lfc.cx.myStats ? 's' : s === lfc.cx.oppStats ? 'o' : null) : null;
-  const mk = !cardCurses() ? markCol(s, mkT, who) : '', mr = '';
+  const mk = markCol(s, who), mr = '';
   const my = myTurn(), anyT = my, pend = up ? s.pending : 0, lc = up ? M.limitStepCost(G, s) : 1, mc = up ? M.manaStepCost(G, s) : 1;
   const pl = (ok, w, title, attr) => ok ? '<button class="up pt" data-act="' + (attr || 'spend') + '" ' + (attr ? 'data-e' : 'data-w') + '="' + w + '" title="' + title + '"></button>' : '';
   const hpPl = pl(up && anyT && pend > 0, 'hp', '+' + (G.rules.hpPerPoint || 1) + ' max. HP (1 Upgrade-Punkt)');

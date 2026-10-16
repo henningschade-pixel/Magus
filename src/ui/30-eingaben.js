@@ -22,7 +22,6 @@ function onAct(d) {
     case 'temple': act({ type: 'temple', amount: +d.n }); break;
     case 'spend': act({ type: 'spend', what: d.w }); break;
     case 'magic': act({ type: 'magic', elem: d.e }); break;
-    case 'discard': act({ type: 'discardCurses' }); break;
     case 'fd': act({ type: 'fd', slots: [...fdSel] }); fdSel.clear(); break;
     case 'draw': if (canDrawNow()) act({ type: 'draw' }); else if (myTurn()) toast('Jetzt ist kein Nachziehen möglich.'); break;
     case 'freedraw': act({ type: 'freeDraw' }); break;

@@ -24,7 +24,6 @@ function endTurn(state, pid, kind) {
   regen(state.players[nx].stats, regenGain(state));
   state.turn = nx; state.worldTurns++;
   if (state.worldTurns % 2 === 0) regenMonsters(state);   // Monster erholen sich am Ende jeder Runde (nach den Zügen beider Spieler)
-  curses(state).turnStart(state, nx, state.players[nx].stats, false, state.players[nx].name);
 }
 
 function execSpend(state, pid, what) {
@@ -74,11 +73,9 @@ function execMagic(state, pid, e) {
 function applyWorld(state, a) {
   const pid = a.pid, p = state.players[pid], d = p.deck, s = p.stats;
   // Markieren und Sperren sind auch außerhalb des eigenen Zuges möglich.
-  if (a.type === 'mark') { const e = toggleMark(d, a.slot, s.limit, curses(state).curseCards); return e ? fail(e) : { ok: true }; }
+  if (a.type === 'mark') { const e = toggleMark(d, a.slot, s.limit); return e ? fail(e) : { ok: true }; }
   if (a.type === 'lock') { const e = toggleLock(d, a.slot); return e ? fail(e) : { ok: true }; }
   if (state.turn !== pid) return fail('Du bist nicht am Zug.');
-  const viaCurses = curses(state).worldAction(state, a, { p, pid, d });
-  if (viaCurses) return viaCurses;
   switch (a.type) {
     case 'draw': {
       if (!campAllowed(state, pid, 'draw')) return fail('In der Erholungsphase nicht mehr erlaubt.');

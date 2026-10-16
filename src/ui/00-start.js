@@ -9,7 +9,6 @@ let ME = 0, OPP = 1;   // Blickrichtung: im Mehrspielermodus sitzt der Gast auf 
 const NAMES = M.NAMES;
 const $ = id => document.getElementById(id);
 const stage = $('stage'), layerPh = $('ph'), layerCards = $('cards'), panels = $('panels'), logEl = $('log'), toastEl = $('toast'), overlay = $('overlay');
-const CURSES = (/[?&]fluch=(\w+)/.exec(location.search) || [])[1];   // z. B. ?fluch=cards (Fluchkarten-System, siehe docs/fluchkarten.md)
 let fxUntil = 0, lateN = 0;   // Zeitpunkt, bis zu dem eine Kampfanimation läuft (die Siegmeldung wartet darauf)
 let sacN = 1, G = null, hold = 0, aiTimer = null, endView = null, modal = null, introSeen = -1, preStats = null, seenCombat = null, toastTimer = null, started = false;
 
