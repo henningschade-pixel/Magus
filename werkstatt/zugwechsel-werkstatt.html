@@ -1,0 +1,275 @@
+<title>Zugwechsel-Werkstatt</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700&family=Cinzel:wght@500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: links die Bühne (Zugwechsel in Echtgröße) mit Vergleich der Wanderwege darunter, rechts die Regler und der Export. Dunkle Optik wie im Spiel. */
+:root{
+  --ink:#141416; --panel:#232327; --panel2:#2e2e33; --line:#4d4d55; --gold:#d2ad4f; --bone:#efe6d2; --mute:#aaaab2; --water:#52a6f5; --good:#7fd08a;
+  --f-display:"Cinzel",Georgia,serif; --f-body:"Alegreya Sans","Segoe UI",system-ui,sans-serif; --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--ink);color:var(--bone);font:16px/1.45 var(--f-body);margin:0;padding-block:20px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+h1{font:700 26px/1.1 var(--f-display);letter-spacing:.06em;margin:0;color:var(--gold)}
+header p{margin:6px 0 0;color:var(--mute);max-width:64ch}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--water);outline-offset:2px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:18px;align-items:start}
+@media(max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+.left{display:flex;flex-direction:column;gap:12px;min-width:0}
+.stage{position:relative;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#0c0c0e;aspect-ratio:8/5}
+canvas{display:block;width:100%;height:100%}
+.hud{position:absolute;left:10px;top:8px;font:500 11px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--mute);background:rgba(12,12,14,.7);padding:3px 8px;border-radius:4px;pointer-events:none}
+.transport{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+.btn{font:500 14px var(--f-body);background:var(--panel2);color:var(--bone);border:1px solid var(--line);border-radius:6px;padding:7px 14px;cursor:pointer}
+.btn:hover{border-color:var(--gold)}
+.btn.primary{background:var(--gold);color:var(--ink);border-color:var(--gold);font-weight:700}
+.opt{display:flex;align-items:center;gap:6px;color:var(--mute);font-size:14px}
+select,input[type=text]{background:var(--panel2);color:var(--bone);border:1px solid var(--line);border-radius:6px;padding:5px 8px;font:inherit;min-width:0}
+input[type=text]{width:100%}
+input[type=range]{width:100%;accent-color:var(--gold);margin:0}
+h2{font:700 13px var(--f-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--mute);margin:0 0 8px}
+.cmp{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+@media(max-width:520px){.cmp{grid-template-columns:minmax(0,1fr)}}
+.cell{display:flex;flex-direction:column;gap:4px;min-width:0}
+.cell label{font:500 12px var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--mute);cursor:pointer;display:flex;gap:6px;align-items:center}
+.cell .stage{cursor:pointer;aspect-ratio:8/5}
+.cell.sel .stage{border-color:var(--gold)}
+.side{display:flex;flex-direction:column;gap:14px;min-width:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.row{display:grid;grid-template-columns:1fr;gap:2px}
+.row .top{display:flex;justify-content:space-between;gap:8px;font-size:14px;color:var(--bone)}
+.row .top output{font:400 12px var(--f-mono);color:var(--gold)}
+.note{font-size:13px;color:var(--mute)}
+textarea{width:100%;min-height:110px;background:#0e0e10;color:var(--bone);border:1px solid var(--line);border-radius:6px;font:400 12px/1.4 var(--f-mono);padding:8px;resize:vertical}
+.ok{color:var(--good);font-size:13px;min-height:18px}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+</style>
+<div class="wrap">
+<header>
+  <h1>Zugwechsel-Werkstatt</h1>
+  <p>Der goldene Rand zeigt, wer am Zug ist. Hier stellst du ein, wie er am Zugende auf die andere Seite wandert und ob "Du bist am Zug" eingeblendet wird. Rechts alles einstellen, links die Wirkung beurteilen, am Ende den Export an Claude schicken.</p>
+</header>
+<div class="grid">
+  <div class="left">
+    <div class="stage"><canvas id="main" width="1280" height="800"></canvas><div class="hud" id="hud"></div></div>
+    <div class="transport">
+      <button class="btn primary" id="go" type="button">Zug wechseln</button>
+      <label class="opt"><input type="checkbox" id="auto" checked> automatisch wiederholen</label>
+      <label class="opt">Tempo <select id="speed"><option value="1">normal</option><option value="2">halb so schnell</option><option value="4">Zeitlupe</option></select></label>
+    </div>
+    <div>
+      <h2>Wanderwege im Vergleich (Klick wählt aus)</h2>
+      <div class="cmp" id="cmp"></div>
+    </div>
+  </div>
+  <div class="side">
+    <div class="card" id="c-weg"><h2>Wanderweg</h2></div>
+    <div class="card" id="c-zeit"><h2>Zeit</h2></div>
+    <div class="card" id="c-licht"><h2>Licht</h2></div>
+    <div class="card" id="c-ein"><h2>Einblendung</h2></div>
+    <div class="card">
+      <h2>Export</h2>
+      <p class="note">Schick den Text an Claude, zum Beispiel mit "Übernehmen:" davor.</p>
+      <textarea id="out" readonly></textarea>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn primary" id="copy" type="button">Kopieren</button><span class="ok" id="ok"></span></div>
+    </div>
+  </div>
+</div>
+</div>
+<script>
+/* ---------- Werte ---------- */
+const DEF = { route:'gesplittet', dur:1.1, pause:.15, ease:'sanft', width:4, glow:26, head:1, tail:.35, comet:.8, inner:70, pulse:.35,
+  bStyle:'pille', bText:'Du bist am Zug', bTextOpp:'Gegner ist am Zug', bShowOpp:true, bDur:1.6, bSize:44, bY:46, bDelay:.05, bAlways:false };
+const P = Object.assign({}, DEF);
+try { const s = JSON.parse(localStorage.getItem('tw') || 'null'); if (s) Object.assign(P, s); } catch (e) {}
+const ROUTES = [
+  ['mitte','Linie durch die Mitte','Eine Lichtlinie fährt in voller Breite quer durch das Spielfeld.'],
+  ['welle','Welle durch die Mitte','Ein weiches Lichtband zieht über das Feld, die Ränder blenden über.'],
+  ['gesplittet','Rand entlang, gesplittet','Der Rand teilt sich in der Mitte. Zwei Lichtköpfe laufen links und rechts hinauf und treffen sich oben.'],
+  ['einseitig','Rand entlang, eine Seite','Ein Lichtkopf läuft nur links am Rand hinauf, die rechte Hälfte blendet über.'],
+  ['blende','Überblenden','Kein Weg: Der untere Rand erlischt, der obere leuchtet auf.']
+];
+const EASES = [['sanft','sanft (an und aus)'],['aus','schnell, dann langsam'],['ein','langsam, dann schnell'],['linear','gleichmäßig']];
+const STYLES = [['pille','Pille in der Mitte'],['band','Band über die ganze Breite'],['rand','Schriftzug am leuchtenden Rand'],['keine','keine Einblendung']];
+const SECTIONS = {
+  'c-weg': [['sel','route','Wanderweg',ROUTES.map(r=>[r[0],r[1]])],['txt','routeNote']],
+  'c-zeit': [['rng','dur','Dauer der Wanderung',.3,2.5,.05,' s'],['rng','pause','Pause vor dem Start',0,.6,.05,' s'],['sel','ease','Bewegung',EASES]],
+  'c-licht': [['rng','width','Dicke der Linie',1,12,.5,' px'],['rng','glow','Leuchten',0,60,1,''],['rng','head','Helligkeit des Kopfes',0,1.5,.05,''],['rng','tail','Verzögerung des Schweifs',0,.8,.05,''],['rng','comet','Schweif sichtbar',0,1,.05,''],['rng','inner','Innenglühen',0,160,5,' px'],['rng','pulse','Atmen im Ruhezustand',0,1,.05,'']],
+  'c-ein': [['sel','bStyle','Stil',STYLES],['rng','bSize','Schriftgröße',20,80,1,' px'],['rng','bY','Höhe (Band, Pille)',15,85,1,' %'],['rng','bDelay','Verzögerung nach der Wanderung',0,1,.05,' s'],['rng','bDur','Sichtbar',.4,4,.1,' s'],['chk','bAlways','dauerhaft sichtbar, solange der Zug läuft'],['chk','bShowOpp','auch beim Zug des Gegners zeigen'],['str','bText','Text bei meinem Zug'],['str','bTextOpp','Text beim Zug des Gegners']]
+};
+const $ = id => document.getElementById(id);
+function build() {
+  for (const [cid, items] of Object.entries(SECTIONS)) {
+    const card = $(cid);
+    for (const it of items) {
+      const d = document.createElement('div'); d.className = 'row';
+      if (it[0] === 'rng') {
+        d.innerHTML = '<div class="top"><label for="p_' + it[1] + '">' + it[2] + '</label><output id="o_' + it[1] + '"></output></div><input type="range" id="p_' + it[1] + '" min="' + it[3] + '" max="' + it[4] + '" step="' + it[5] + '">';
+        const inp = d.querySelector('input'); inp.value = P[it[1]];
+        const upd = () => { P[it[1]] = +inp.value; d.querySelector('output').textContent = (+inp.value).toFixed(it[5] < 1 ? (it[5] < .1 ? 2 : 2) : 0).replace(/\.?0+$/, '') + it[6]; changed(); };
+        inp.addEventListener('input', upd); d.querySelector('output').textContent = (+P[it[1]]).toFixed(2).replace(/\.?0+$/, '') + it[6];
+      } else if (it[0] === 'sel') {
+        d.innerHTML = '<div class="top"><label for="p_' + it[1] + '">' + it[2] + '</label></div><select id="p_' + it[1] + '">' + it[3].map(o => '<option value="' + o[0] + '">' + o[1] + '</option>').join('') + '</select>';
+        const s = d.querySelector('select'); s.value = P[it[1]]; s.addEventListener('change', () => { P[it[1]] = s.value; changed(); if (it[1] === 'route') routeNote(); });
+      } else if (it[0] === 'chk') {
+        d.innerHTML = '<label class="opt"><input type="checkbox" id="p_' + it[1] + '"> ' + it[2] + '</label>';
+        const c = d.querySelector('input'); c.checked = !!P[it[1]]; c.addEventListener('change', () => { P[it[1]] = c.checked; changed(); });
+      } else if (it[0] === 'str') {
+        d.innerHTML = '<div class="top"><label for="p_' + it[1] + '">' + it[2] + '</label></div><input type="text" id="p_' + it[1] + '" maxlength="40">';
+        const t = d.querySelector('input'); t.value = P[it[1]]; t.addEventListener('input', () => { P[it[1]] = t.value; changed(); });
+      } else { d.innerHTML = '<p class="note" id="' + it[1] + '"></p>'; }
+      card.appendChild(d);
+    }
+  }
+  const cmp = $('cmp');
+  for (const r of ROUTES) {
+    const c = document.createElement('div'); c.className = 'cell'; c.dataset.r = r[0];
+    c.innerHTML = '<label>' + r[1] + '</label><div class="stage"><canvas width="640" height="400"></canvas></div>';
+    c.addEventListener('click', () => { P.route = r[0]; $('p_route').value = r[0]; changed(); routeNote(); });
+    cmp.appendChild(c); r.push(c.querySelector('canvas'));
+  }
+  routeNote();
+}
+function routeNote() { const r = ROUTES.find(x => x[0] === P.route); $('routeNote').textContent = r[2]; document.querySelectorAll('.cell').forEach(c => c.classList.toggle('sel', c.dataset.r === P.route)); }
+function changed() {
+  try { localStorage.setItem('tw', JSON.stringify(P)); } catch (e) {}
+  const out = {}; for (const k of Object.keys(DEF)) out[k] = P[k];
+  $('out').value = JSON.stringify({ effekt: 'zugwechsel', werte: out });
+}
+/* ---------- Zeichnen ---------- */
+const W = 1280, H = 800, GOLD = '210,173,79';
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x)), lerp = (a, b, t) => a + (b - a) * t;
+const EF = { sanft: x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2, aus: x => 1 - Math.pow(1 - x, 3), ein: x => x * x * x, linear: x => x };
+const bg = document.createElement('canvas'); bg.width = W; bg.height = H;
+(function () {   // Attrappe des Spielfelds, damit man die Lesbarkeit beurteilen kann
+  const c = bg.getContext('2d');
+  const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#3a2a22'); g.addColorStop(.5, '#26262a'); g.addColorStop(1, '#2b2a25'); c.fillStyle = g; c.fillRect(0, 0, W, H);
+  c.globalAlpha = .06; for (let i = 0; i < 160; i++) { c.fillStyle = i % 2 ? '#fff' : '#000'; c.fillRect((i * 97) % W, (i * 53) % H, 40 + (i * 7) % 90, 1); } c.globalAlpha = 1;
+  const box = (x, y, w, h, f) => { c.fillStyle = f || 'rgba(30,30,36,.92)'; c.strokeStyle = 'rgba(120,120,130,.35)'; c.lineWidth = 1; c.beginPath(); c.roundRect(x, y, w, h, 10); c.fill(); c.stroke(); };
+  for (let i = 0; i < 4; i++) { box(220 + i * 150, 18, 96, 130, 'rgba(14,14,18,.95)'); box(220 + i * 150, 652, 96, 130, 'rgba(14,14,18,.95)'); }
+  box(940, 14, 330, 130); box(940, 654, 330, 132);
+  box(24, 190, 340, 410); box(380, 190, 540, 410); box(936, 190, 320, 410);
+  c.fillStyle = '#d2ad4f'; c.font = '700 22px Cinzel, Georgia, serif'; c.textAlign = 'center'; c.fillText('KAMPF GEGEN FEUERMONSTER', 650, 230);
+  c.fillStyle = 'rgba(210,173,79,.7)'; c.fillRect(420, 540, 150, 40); c.fillStyle = 'rgba(70,70,76,.9)'; for (let i = 0; i < 3; i++) c.fillRect(590 + i * 105, 540, 95, 40);
+})();
+function easeOf() { return EF[P.ease] || EF.sanft; }
+// Pfad vom unteren Rand nach oben, von der Mitte aus links herum: Länge L1 (unten halb), L2 (Seite), L3 (oben halb)
+function geo() { const m = P.width / 2 + 1, L1 = W / 2 - m, L2 = H - 2 * m; return { m, L1, L2, L3: L1, Pn: L1 + L2 + L1 }; }
+function ptAt(d, side) {
+  const { m, L1, L2 } = geo(); let x, y;
+  if (d <= L1) { x = W / 2 - d; y = H - m; } else if (d <= L1 + L2) { x = m; y = H - m - (d - L1); } else { x = m + (d - L1 - L2); y = m; }
+  return [side > 0 ? W - x : x, y];
+}
+function edgeLine(c, y, a, x0 = 0, x1 = W) {   // Randlinie mit Leuchten und Innenglühen
+  if (a <= 0) return;
+  c.save(); c.globalAlpha = clamp(a);
+  const up = y < H / 2, gh = P.inner;
+  if (gh > 0) { const g = c.createLinearGradient(0, up ? 0 : H, 0, up ? gh : H - gh); g.addColorStop(0, 'rgba(' + GOLD + ',.4)'); g.addColorStop(1, 'rgba(' + GOLD + ',0)'); c.fillStyle = g; c.fillRect(x0, up ? 0 : H - gh, x1 - x0, gh); }
+  c.shadowColor = 'rgba(' + GOLD + ',.95)'; c.shadowBlur = P.glow; c.strokeStyle = 'rgba(' + GOLD + ',.95)'; c.lineWidth = P.width; c.lineCap = 'round';
+  c.beginPath(); c.moveTo(x0, y); c.lineTo(x1, y); c.stroke(); c.restore();
+}
+function pathInterval(c, a, b, side, shade, alpha) {   // beleuchtetes Stück [a,b] des Randpfads, zum Kopf (b) hin heller
+  if (Math.abs(b - a) < 1 || alpha <= 0) return;
+  const step = 14, n = Math.max(2, Math.ceil(Math.abs(b - a) / step));
+  c.save(); c.lineCap = 'round'; c.shadowColor = 'rgba(' + GOLD + ',.95)'; c.shadowBlur = P.glow; c.lineWidth = P.width;
+  let prev = ptAt(a, side);
+  for (let i = 1; i <= n; i++) {
+    const d = lerp(a, b, i / n), p = ptAt(d, side), f = i / n;
+    const al = alpha * lerp(1, .12 + .88 * Math.pow(f, 1.6), shade);
+    c.strokeStyle = 'rgba(' + GOLD + ',' + clamp(al) + ')'; c.beginPath(); c.moveTo(prev[0], prev[1]); c.lineTo(p[0], p[1]); c.stroke(); prev = p;
+  }
+  c.restore();
+}
+function headGlow(c, x, y, a) {
+  if (a <= 0) return; const r = 24 + P.glow;
+  const g = c.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, 'rgba(255,236,170,' + clamp(.9 * a * P.head) + ')'); g.addColorStop(1, 'rgba(' + GOLD + ',0)');
+  c.save(); c.fillStyle = g; c.beginPath(); c.arc(x, y, r, 0, 7); c.fill(); c.restore();
+}
+function draw(c, canvas, k, route, t) {
+  c.setTransform(canvas.width / W, 0, 0, canvas.width / W, 0, 0); c.drawImage(bg, 0, 0);
+  const g = geo(), ease = easeOf(), up = SIM.side === 1;   // up: Zug wandert nach oben
+  const t1 = t - SIM.t0 - P.pause, u = SIM.t0 < -1e8 ? 1 : clamp(t1 / P.dur), e = ease(u);
+  const breath = 1 - P.pulse * .3 * (.5 + .5 * Math.sin(t * 3.6));
+  const yB = H - g.m, yT = g.m;
+  const rest = (side, a) => edgeLine(c, side === 0 ? yB : yT, a * breath);
+  if (u <= 0) { rest(1 - SIM.side, 1); }
+  else if (u >= 1) { rest(SIM.side, 1); }
+  else if (route === 'blende') { rest(1 - SIM.side, 1 - e); rest(SIM.side, e); }
+  else if (route === 'mitte') {
+    const y0 = up ? yB : yT, y1 = up ? yT : yB, y = lerp(y0, y1, e), dir = up ? 1 : -1;
+    const trail = Math.round(2 + 7 * P.comet), gap = 14 + 40 * P.tail;   // Schweif aus blasser werdenden Geisterlinien
+    for (let i = trail; i >= 1; i--) { const yy = y + dir * i * gap * Math.sin(Math.PI * u); const f = 1 - i / (trail + 1); if ((up && yy <= yB) || (!up && yy >= yT)) edgeLineSimple(c, yy, .4 * f * f * P.comet); }
+    edgeLine(c, y, 1);
+  } else if (route === 'welle') {
+    const y = lerp(up ? yB : yT, up ? yT : yB, e), bh = 120 + 380 * (1 - P.tail * .6);
+    const gr = c.createLinearGradient(0, y - bh, 0, y + bh); gr.addColorStop(0, 'rgba(' + GOLD + ',0)'); gr.addColorStop(.5, 'rgba(' + GOLD + ',' + (.38 * Math.sin(Math.PI * clamp(u * 1.0)) + .06) + ')'); gr.addColorStop(1, 'rgba(' + GOLD + ',0)');
+    c.fillStyle = gr; c.fillRect(0, y - bh, W, bh * 2);
+    rest(1 - SIM.side, clamp(1 - e * 1.6)); rest(SIM.side, clamp(e * 1.6 - .6));
+  } else {   // Rand entlang
+    const Pn = g.Pn, tau = P.tail * .8, hp = ease(clamp(u / (1 - tau))), tp = ease(clamp((u - tau) / (1 - tau)));
+    const sides = route === 'gesplittet' ? [-1, 1] : [-1], shade = P.comet * Math.sin(Math.PI * u);
+    const mapD = d => up ? d : Pn - d;   // kommt der Zug von oben, läuft der Pfad rückwärts
+    const tail = lerp(0, g.L1 + g.L2, tp), head = lerp(g.L1, Pn, hp);
+    for (const sd of sides) {
+      pathInterval(c, mapD(tail), mapD(head), sd, shade, 1);
+      const hd = ptAt(mapD(head), sd); headGlow(c, hd[0], hd[1], Math.sin(Math.PI * u));
+    }
+    if (route === 'einseitig') { rest(1 - SIM.side, clamp(1 - e * 2.2) * .9); rest(SIM.side, clamp(e * 2.2 - 1.2) * .9); }
+  }
+  // Einblendung
+  if (P.bStyle !== 'keine') banner(c, t, k);
+}
+function edgeLineSimple(c, y, a) {
+  c.save(); c.globalAlpha = clamp(a); c.shadowColor = 'rgba(' + GOLD + ',.9)'; c.shadowBlur = P.glow * .6; c.strokeStyle = 'rgba(' + GOLD + ',.9)'; c.lineWidth = P.width; c.beginPath(); c.moveTo(0, y); c.lineTo(W, y); c.stroke(); c.restore();
+}
+function banner(c, t, k) {
+  if (SIM.t0 < -1e8) return;
+  const mine = SIM.side === 0; if (!mine && !P.bShowOpp) return;
+  const t0 = SIM.t0 + P.pause + P.dur + P.bDelay, el = t - t0; if (el < 0) return;
+  const fade = .28; let a = P.bAlways ? clamp(el / fade) : Math.min(clamp(el / fade), clamp((P.bDur - el) / fade)); if (a <= 0) return;
+  const txt = (mine ? P.bText : P.bTextOpp).toUpperCase(), fs = P.bSize, y = H * P.bY / 100;
+  c.save(); c.globalAlpha = a; c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = '700 ' + fs + 'px Cinzel, Georgia, serif';
+  const lift = (1 - a) * 14, col = mine ? '#f2d27a' : '#cfc7b4';
+  c.letterSpacing = Math.round(fs * .12) + 'px';
+  if (P.bStyle === 'band') {
+    const h = fs * 2.2, g = c.createLinearGradient(0, 0, W, 0); g.addColorStop(0, 'rgba(8,6,12,0)'); g.addColorStop(.2, 'rgba(8,6,12,.82)'); g.addColorStop(.8, 'rgba(8,6,12,.82)'); g.addColorStop(1, 'rgba(8,6,12,0)');
+    c.fillStyle = g; c.fillRect(0, y - h / 2 + lift, W, h); c.fillStyle = 'rgba(' + GOLD + ',.55)'; c.fillRect(W * .2, y - h / 2 + lift, W * .6, 1.5); c.fillRect(W * .2, y + h / 2 + lift, W * .6, 1.5);
+    c.fillStyle = col; c.fillText(txt, W / 2, y + lift);
+  } else if (P.bStyle === 'pille') {
+    const w = c.measureText(txt).width + fs * 1.6, h = fs * 1.9;
+    c.fillStyle = 'rgba(14,10,22,.92)'; c.strokeStyle = 'rgba(' + GOLD + ',.9)'; c.lineWidth = 2; c.beginPath(); c.roundRect(W / 2 - w / 2, y - h / 2 + lift, w, h, h / 2); c.fill(); c.stroke();
+    c.fillStyle = col; c.fillText(txt, W / 2, y + lift);
+  } else {   // am Rand: Schriftzug über der leuchtenden Randlinie
+    c.font = '700 ' + Math.round(fs * .55) + 'px Cinzel, Georgia, serif'; c.letterSpacing = Math.round(fs * .12) + 'px'; c.shadowColor = 'rgba(' + GOLD + ',.8)'; c.shadowBlur = 12;
+    c.fillStyle = col; c.fillText(txt, W / 2, mine ? H - 30 - (1 - a) * -8 : 30 + (1 - a) * -8);
+  }
+  c.restore();
+}
+/* ---------- Ablauf ---------- */
+const SIM = { side: 1, t0: -1e9 };
+function toggle() { SIM.side = 1 - SIM.side; SIM.t0 = now(); }
+let speed = 1, clock = 0, last = performance.now();
+const now = () => clock;
+const mainC = $('main'), mctx = mainC.getContext('2d');
+function frame() {
+  const ts = performance.now(); clock += Math.min(.1, (ts - last) / 1000) / speed; last = ts;
+  const t = now(), hold = P.pause + P.dur + P.bDelay + Math.max(P.bAlways ? 1.2 : P.bDur, .8) + .6;
+  if ($('auto').checked && t - SIM.t0 > hold) toggle();
+  draw(mctx, mainC, 1, P.route, t);
+  for (const r of ROUTES) { const cv = r[3]; if (cv) draw(cv.getContext('2d'), cv, .5, r[0], t); }
+  $('hud').textContent = (SIM.side === 0 ? 'Du bist am Zug · unten' : 'Gegner am Zug · oben');
+  requestAnimationFrame(frame);
+}
+$('go').addEventListener('click', toggle);
+$('speed').addEventListener('change', e => { speed = +e.target.value; });
+$('copy').addEventListener('click', async () => {
+  const ta = $('out'); try { await navigator.clipboard.writeText(ta.value); $('ok').textContent = 'Kopiert.'; } catch (e) { ta.select(); $('ok').textContent = 'Markiert: mit Strg+C kopieren.'; }
+  setTimeout(() => { $('ok').textContent = ''; }, 2500);
+});
+build(); changed();
+SIM.side = 1; setTimeout(toggle, 500);
+requestAnimationFrame(frame);
+</script>

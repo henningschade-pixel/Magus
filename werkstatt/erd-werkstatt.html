@@ -1,0 +1,346 @@
+<title>Erd-Werkstatt</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700&family=Cinzel:wght@500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: links die Bühne mit Zeitleiste und Phasen, rechts die Regler, darunter der Export. Dunkle Optik wie im Spiel. */
+:root{
+  --ink:#141416; --panel:#232327; --panel2:#2e2e33; --line:#4d4d55; --gold:#d2ad4f; --bone:#efe6d2; --mute:#aaaab2;
+  --fire:#ff7a3d; --earth:#93c24f; --water:#52a6f5; --bad:#ea5a5e; --good:#7fd08a;
+  --f-display:"Cinzel",Georgia,serif; --f-body:"Alegreya Sans","Segoe UI",system-ui,sans-serif; --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--ink);color:var(--bone);font:16px/1.45 var(--f-body);margin:0;padding-inline:16px;padding-block:20px 40px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+header p{margin:4px 0 0;color:var(--mute);max-width:62ch}
+h1{font:700 26px/1.1 var(--f-display);letter-spacing:.06em;margin:0;color:var(--gold)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--water);outline-offset:2px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 350px;gap:18px;align-items:start}
+@media(max-width:880px){.grid{grid-template-columns:minmax(0,1fr)}}
+.stagebox{display:flex;flex-direction:column;gap:10px;min-width:0}
+.stage{position:relative;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#0c0c0e;aspect-ratio:3/2}
+canvas{display:block;width:100%;height:100%}
+.hud{position:absolute;left:10px;top:8px;font:500 11px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--mute);background:rgba(12,12,14,.7);padding:3px 8px;border-radius:4px;pointer-events:none}
+.transport{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.btn{font:500 14px var(--f-body);background:var(--panel2);color:var(--bone);border:1px solid var(--line);border-radius:6px;padding:7px 14px;cursor:pointer}
+.btn:hover{border-color:var(--gold)}
+.btn.primary{background:var(--gold);color:var(--ink);border-color:var(--gold);font-weight:700;min-width:92px}
+.scrub{flex:1 1 220px;min-width:0}
+input[type=range]{width:100%;accent-color:var(--gold);margin:0}
+.time{font:400 12px var(--f-mono);color:var(--mute);min-width:104px;text-align:right}
+.opt{display:flex;align-items:center;gap:6px;color:var(--mute);font-size:14px}
+select{background:var(--panel2);color:var(--bone);border:1px solid var(--line);border-radius:6px;padding:5px 8px;font:inherit}
+.phases{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:500 12px var(--f-mono);letter-spacing:.05em;text-transform:uppercase;background:transparent;color:var(--mute);border:1px solid var(--line);border-radius:999px;padding:4px 11px;cursor:pointer}
+.chip[aria-current=true]{color:var(--ink);background:var(--bone);border-color:var(--bone)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.panel h2{font:700 12px var(--f-display);letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin:6px 0 -4px}
+.panel h2:first-child{margin-top:0}
+.presets{display:flex;flex-wrap:wrap;gap:6px}
+.ctl{display:flex;flex-direction:column;gap:4px}
+.ctl .row{display:flex;justify-content:space-between;gap:10px;font-size:14px}
+.ctl .row output{font:400 12px var(--f-mono);color:var(--mute)}
+.ctl small{color:var(--mute);font-size:12.5px}
+.seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{flex:1;font:inherit;font-size:14px;background:var(--panel2);color:var(--mute);border:0;border-right:1px solid var(--line);padding:6px 4px;cursor:pointer}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed=true]{background:var(--bone);color:var(--ink);font-weight:700}
+.tools{display:flex;gap:8px;flex-wrap:wrap}
+.export{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px;display:grid;gap:10px}
+.export h2{font:700 12px var(--f-display);letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin:0}
+.export p{margin:0;color:var(--mute);font-size:14px}
+textarea{width:100%;min-height:150px;background:var(--ink);color:var(--bone);border:1px solid var(--line);border-radius:6px;padding:10px;font:12.5px/1.5 var(--f-mono);resize:vertical}
+.msg{font-size:14px;min-height:1.4em}.msg.err{color:var(--bad)}.msg.ok{color:var(--good)}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+</style>
+<div class="wrap">
+  <header>
+    <h1>Erd-Werkstatt</h1>
+    <p>Die Erde bricht in der Mitte aus dem Boden: Risse, Ausbruch, Stand und Ende. Form, Zahl, Höhe und Tempo einstellen, die Zeitleiste zeigt jede Phase. Die Werte unten kopieren und schicken.</p>
+  </header>
+  <div class="grid">
+    <section class="stagebox" aria-label="Vorschau">
+      <div class="stage"><canvas id="cv" aria-label="Effektvorschau"></canvas><div class="hud" id="hud">Aufbau</div></div>
+      <div class="transport">
+        <button class="btn primary" id="play" type="button">Pause</button>
+        <button class="btn" id="restart" type="button">Neu starten</button>
+        <div class="scrub"><input type="range" id="scrub" min="0" max="1000" value="0" aria-label="Zeitleiste"></div>
+        <div class="time" id="time">0.00 / 0.00 s</div>
+      </div>
+      <div class="transport">
+        <label class="opt"><input type="checkbox" id="loop" checked> Wiederholen</label>
+        <label class="opt">Tempo <select id="speed"><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1" selected>1×</option></select></label>
+      </div>
+      <div class="phases" id="phases" aria-label="Phasen"></div>
+    </section>
+    <aside class="panel" id="panel" aria-label="Regler"></aside>
+  </div>
+  <section class="export">
+    <h2>Werte für das Spiel</h2>
+    <p>Kopiere die Werte oder füge gespeicherte Werte ein und übernimm sie.</p>
+    <textarea id="json" spellcheck="false" aria-label="Effektwerte als JSON"></textarea>
+    <div class="tools"><button class="btn primary" id="copy" type="button">Kopieren</button><button class="btn" id="apply" type="button">Eingefügte Werte übernehmen</button><button class="btn" id="reset" type="button">Zurücksetzen</button></div>
+    <div class="msg" id="msg" role="status"></div>
+  </section>
+</div>
+<script>
+(function(){
+const W=720,H=480;
+const clamp=(x,a=0,b=1)=>Math.min(b,Math.max(a,x)),lerp=(a,b,t)=>a+(b-a)*t,seg=(u,a,b)=>clamp((u-a)/(b-a));
+const eo=x=>1-Math.pow(1-x,3),eio=x=>x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;
+function rng(seed){let a=seed>>>0;return()=>{a=(a+0x6D2B79F5)|0;let t=Math.imul(a^(a>>>15),1|a);t=(t+Math.imul(t^(t>>>7),61|t))^t;return((t^(t>>>14))>>>0)/4294967296}}
+const $=id=>document.getElementById(id);
+const C0={x:W/2,y:H/2};
+const STONE={hi:'#98a06e',mid:'#6c7551',lo:'#434b33',dk:'#272c1d',dirt:'#4f4a30',dust:'138,136,98'};
+const GREEN='#93c24f';
+function mix(a,b,k){const f=h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)],x=f(a),y=f(b);return 'rgb('+x.map((v,i)=>Math.round(v+(y[i]-v)*k)).join(',')+')'}
+
+/* ---------- Parameter ---------- */
+const DEF={form:'natur',side:'unten',n:3,spread:76,height:1.3,width:.8,variety:.9,moss:.8,thorns:1,runes:.6,crackT:.5,rise:.32,gap:.14,hold:1,overshoot:.15,shake:1,dust:1,debris:1,cracks:1,glow:.25,ending:'zerbersten',endT:.6,counter:true,seed:7};
+const PRE={
+ 'Natur':{},
+ 'Ranken':{form:'ranken',rise:.5,overshoot:.05},
+ 'Monolithe':{form:'monolith',n:3,spread:84,rise:.45,gap:.2,width:1},
+ 'Dornenwald':{form:'natur',thorns:1.8,runes:.3,variety:1},
+ 'Heftig':{rise:.2,shake:1.8,debris:1.8,dust:1.5,crackT:.35,overshoot:.25}
+};
+let P={...DEF};
+try{const s=localStorage.getItem('ew');if(s){const o=JSON.parse(s);for(const k in DEF)if(typeof o[k]===typeof DEF[k])P[k]=o[k]}}catch(e){}
+function save(){try{localStorage.setItem('ew',JSON.stringify(P))}catch(e){}}
+
+/* ---------- Zeitplan ---------- */
+function tl(p){
+  const t0=.25,lastRise=t0+(p.n-1)*p.gap+p.crackT+p.rise,endAt=lastRise+p.hold;
+  return{t0,lastRise,endAt,dur:endAt+p.endT+.5};
+}
+const baseY=p=>p.side==='unten'?C0.y+36:C0.y-36;
+const slotX=(p,i)=>C0.x+(i-(p.n-1)/2)*p.spread;
+
+/* ---------- Zeichnen ---------- */
+function floor(ctx){
+  const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#101013');g.addColorStop(.5,'#1d1b19');g.addColorStop(1,'#0e0e11');
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  const fg=ctx.createRadialGradient(C0.x,C0.y,0,C0.x,C0.y,330);fg.addColorStop(0,'rgba(92,76,54,.55)');fg.addColorStop(1,'rgba(92,76,54,0)');ctx.save();ctx.translate(0,C0.y);ctx.scale(1,.42);ctx.translate(0,-C0.y);ctx.fillStyle=fg;ctx.beginPath();ctx.arc(C0.x,C0.y,330,0,7);ctx.fill();ctx.restore();
+  ctx.strokeStyle='rgba(255,255,255,.05)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(0,C0.y);ctx.lineTo(W,C0.y);ctx.stroke();
+}
+function cracks(ctx,x,y,prog,seed,p,alpha){   // Risse im Boden: dunkel, nach außen feiner, ohne Kontur
+  if(prog<=0)return;const sr=rng(seed),R=(46+sr()*18)*p.cracks*(.7+.3*Math.min(1.4,p.width)),g=eo(prog);
+  ctx.save();ctx.translate(x,y+3);ctx.scale(1,.5);ctx.lineCap='round';
+  if(p.glow>0){const gg=ctx.createRadialGradient(0,0,0,0,0,R*.9);gg.addColorStop(0,'rgba(147,194,79,'+(.4*p.glow*prog*alpha)+')');gg.addColorStop(1,'rgba(147,194,79,0)');ctx.fillStyle=gg;ctx.beginPath();ctx.arc(0,0,R*.9,0,7);ctx.fill()}
+  ctx.strokeStyle='rgba(30,23,15,'+(.92*alpha)+')';
+  for(let k=0;k<8;k++){const a=k/8*Math.PI*2+(sr()-.5)*.6,len=R*(.55+sr()*.6)*g;let px=0,py=0;
+    for(let q=1;q<=5;q++){const aa=a+(sr()-.5)*.6,nx=px+Math.cos(aa)*len/5,ny=py+Math.sin(aa)*len/5;ctx.lineWidth=3.4*(1-(q-1)/5)+.35;ctx.beginPath();ctx.moveTo(px,py);ctx.lineTo(nx,ny);ctx.stroke();
+      if(q===3&&sr()>.45){const ba=aa+(sr()>.5?1:-1)*.7;ctx.lineWidth=1.1;ctx.beginPath();ctx.moveTo(nx,ny);ctx.lineTo(nx+Math.cos(ba)*len*.3,ny+Math.sin(ba)*len*.3);ctx.stroke()}px=nx;py=ny}}
+  ctx.restore();
+}
+function poly(ctx,pts,fill,seam){ctx.beginPath();pts.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]));ctx.closePath();ctx.fillStyle=fill;ctx.fill();if(seam){ctx.strokeStyle='rgba(20,16,10,.35)';ctx.lineWidth=1;ctx.stroke()}}
+let MOSS=.8;
+function facetGrad(ctx,x0,y0,x1,y1,a,b){const g=ctx.createLinearGradient(x0,y0,x1,y1);g.addColorStop(0,mix(a,'#5f8a2c',MOSS*.45));g.addColorStop(1,b);return g}   // unten Moos, oben Fels
+function spike(ctx,x,y,w,hh,seed){   // Felsspitze mit Facetten und Bruchlinien
+  const rn=rng(seed),tipx=x+(rn()-.5)*w*.45,tipy=y-hh,m=x+(rn()-.5)*w*.2;
+  poly(ctx,[[x-w/2,y],[tipx,tipy],[m,y+3]],facetGrad(ctx,x-w/2,y,tipx,tipy,STONE.mid,STONE.hi),true);
+  poly(ctx,[[m,y+3],[tipx,tipy],[x+w/2,y]],facetGrad(ctx,m,y,x+w/2,tipy,STONE.lo,STONE.dk),true);
+  ctx.strokeStyle='rgba(20,16,10,.45)';ctx.lineWidth=1.1;
+  for(let k=1;k<=3;k++){const f=k/4.2,ly=y-hh*f,lw=w*(1-f)*.5;ctx.beginPath();ctx.moveTo(lerp(x-w/2,tipx,f),ly);ctx.lineTo(lerp(m,tipx,f)+lw*.2,ly+(rn()-.5)*5);ctx.lineTo(lerp(x+w/2,tipx,f),ly+(rn()-.5)*4);ctx.stroke()}
+  ctx.strokeStyle='rgba(235,225,200,.35)';ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(x-w/2+2,y-2);ctx.lineTo(tipx,tipy);ctx.stroke();
+}
+function cluster(ctx,x,y,p,hh,seed){spike(ctx,x-p.width*20,y,p.width*17,hh*.55,seed+1);spike(ctx,x+p.width*21,y,p.width*19,hh*.68,seed+2);spike(ctx,x,y,p.width*30,hh,seed)}
+function boulder(ctx,x,y,p,hh,seed){   // Felsbrocken aus Facetten
+  const rn=rng(seed),r=Math.max(22,hh*.36),cx=x,cy=y-r*.8,n=9,pts=[];
+  for(let k=0;k<n;k++){const a=k/n*Math.PI*2+rn()*.3,rr=r*(.78+rn()*.4);pts.push([cx+Math.cos(a)*rr*p.width*1.05,cy+Math.sin(a)*rr*.95])}
+  for(let k=0;k<n;k++){const a=pts[k],b=pts[(k+1)%n],mid=(k/n*Math.PI*2),lit=.5+.5*Math.cos(mid-3.6);
+    const c=Math.round(66+lit*92),mo=MOSS*(.25+.5*(1-lit)*rn());poly(ctx,[[cx+(rn()-.5)*r*.3,cy-r*.2],a,b],mix('#'+[c,Math.round(c*.94),Math.round(c*.74)].map(v=>v.toString(16).padStart(2,'0')).join(''),'#6fa334',mo),true)}
+  ctx.strokeStyle='rgba(20,16,10,.4)';ctx.lineWidth=1.1;ctx.beginPath();for(let k=0;k<3;k++){const a=rn()*6.28;ctx.moveTo(cx+Math.cos(a)*r*.2,cy+Math.sin(a)*r*.2);ctx.lineTo(cx+Math.cos(a+.4)*r*.8,cy+Math.sin(a+.4)*r*.8)}ctx.stroke();
+}
+function thorn(ctx,x,y,ang,len,w){   // Dorn: dunkle Spitze mit hellem Ende
+  const px=Math.cos(ang+Math.PI/2)*w,py=Math.sin(ang+Math.PI/2)*w;
+  ctx.beginPath();ctx.moveTo(x+px,y+py);ctx.lineTo(x+Math.cos(ang)*len,y+Math.sin(ang)*len);ctx.lineTo(x-px,y-py);ctx.closePath();ctx.fillStyle='#2b2118';ctx.fill();
+  ctx.strokeStyle='rgba(190,160,110,.7)';ctx.lineWidth=.9;ctx.beginPath();ctx.moveTo(x+Math.cos(ang)*len*.55,y+Math.sin(ang)*len*.55);ctx.lineTo(x+Math.cos(ang)*len,y+Math.sin(ang)*len);ctx.stroke();
+}
+function monolith(ctx,x,y,p,hh,seed,g){   // Monolith: hoher Stein mit Moos, Runen und einer Dornenranke
+  const rn=rng(seed),w=42*Math.max(.7,p.width*1.25),sd=9,top=y-hh;
+  const front=[[x-w*.5,y],[x-w*.44,top+12],[x-w*.2,top],[x+w*.36,top+7],[x+w*.5,y]];
+  poly(ctx,front,facetGrad(ctx,x-w*.5,y,x+w*.2,top,STONE.mid,STONE.hi),true);
+  poly(ctx,[[x+w*.5,y],[x+w*.36,top+7],[x+w*.36+sd,top+2],[x+w*.5+sd,y-5]],facetGrad(ctx,x+w*.4,y,x+w*.5+sd,top,STONE.lo,STONE.dk),true);
+  poly(ctx,[[x-w*.2,top],[x+w*.36,top+7],[x+w*.36+sd,top+2],[x-w*.2+sd,top-5]],STONE.hi,true);
+  ctx.strokeStyle='rgba(20,16,10,.5)';ctx.lineWidth=1.2;for(let k=0;k<3;k++){const yy=y-hh*(.25+k*.27)+(rn()-.5)*8;ctx.beginPath();ctx.moveTo(x-w*.45,yy);ctx.lineTo(x-w*.1+rn()*w*.3,yy+(rn()-.5)*10);ctx.lineTo(x+w*.48,yy+(rn()-.5)*8);ctx.stroke()}
+  // Moos: unten kräftig, nach oben in Flecken
+  ctx.fillStyle='rgba(111,163,52,'+(.6*MOSS)+')';ctx.beginPath();ctx.moveTo(x-w*.5,y);for(let k=0;k<=6;k++){ctx.lineTo(x-w*.5+k/6*w,y-hh*(.16+rn()*.2))}ctx.lineTo(x+w*.5,y);ctx.closePath();ctx.fill();
+  for(let k=0;k<5;k++){ctx.fillStyle='rgba(140,190,70,'+(.5*MOSS)+')';ctx.beginPath();ctx.ellipse(x+(rn()-.5)*w*.8,y-hh*(.3+rn()*.55),3+rn()*6,2+rn()*3,rn()*3,0,7);ctx.fill()}
+  // Runen: schwach leuchtend
+  if(p.runes>0){ctx.save();ctx.strokeStyle='rgba(168,226,90,'+(.85*p.runes)+')';ctx.shadowColor='#93c24f';ctx.shadowBlur=8;ctx.lineWidth=1.8;ctx.lineCap='round';
+    for(let k=0;k<3;k++){const gx=x-w*.15+(rn()-.5)*w*.2,gy=y-hh*(.4+k*.18);ctx.beginPath();ctx.moveTo(gx-5,gy-6);ctx.lineTo(gx+rn()*6-3,gy);ctx.lineTo(gx-4,gy+7);ctx.moveTo(gx,gy-1);ctx.lineTo(gx+7,gy-4+rn()*6);ctx.stroke()}ctx.restore()}
+  vine(ctx,x,y,w,hh,seed,g,p);
+}
+function vine(ctx,x,y,w,hh,seed,g,p){   // Dornenranke, die den Monolithen umschlingt
+  const rn=rng(seed+5),ph=rn()*6,u1=Math.min(1,g),pts=[];
+  for(let k=0;k<=24;k++){const u=k/24*u1;pts.push([x+Math.sin(u*12+ph)*w*.62,y-u*hh*.92+Math.cos(u*12+ph)*3])}
+  ctx.lineCap='round';
+  for(let k=0;k<pts.length-1;k++){const a=pts[k],b=pts[k+1],wd=4.2*(1-k/pts.length*.6);
+    ctx.strokeStyle='#3b2e1f';ctx.lineWidth=wd;ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();
+    ctx.strokeStyle='rgba(120,170,60,'+(.7*MOSS)+')';ctx.lineWidth=wd*.45;ctx.beginPath();ctx.moveTo(a[0],a[1]-.5);ctx.lineTo(b[0],b[1]-.5);ctx.stroke();
+    if(k%2===1&&p.thorns>0){const ang=Math.atan2(b[1]-a[1],b[0]-a[0])+(k%4===1?-1:1)*(Math.PI/2-.45);thorn(ctx,a[0],a[1],ang,(5+rn()*5)*p.thorns,1.8)}}
+  [.35,.6,.82].forEach((s,j)=>{const q=pts[Math.min(pts.length-1,Math.round(s*24))];if(s>u1)return;ctx.save();ctx.translate(q[0],q[1]);ctx.rotate((j%2?-1:1)*.9);ctx.beginPath();ctx.ellipse(6,0,6.5,2.6,0,0,7);ctx.fillStyle=j%2?'#9bcb54':'#76a63a';ctx.fill();ctx.restore()});
+}
+function roots(ctx,x,y,p,hh,seed,g){   // Wurzelranken brechen aus dem Boden, mit Moos und Blättern
+  const rn=rng(seed),N=4+Math.round(rn()*2);
+  for(let k=0;k<N;k++){
+    const ox=(k-(N-1)/2)*p.width*10+(rn()-.5)*6,h=hh*(.5+rn()*.6),sway=(rn()-.5)*46,curl=(rn()>.5?1:-1)*(10+rn()*20),leaf=[.55,.85];
+    const pt=s=>{const u=s*Math.min(1,g);return[x+ox+Math.sin(u*Math.PI*1.4)*curl+sway*u*.5,y-u*h*Math.min(1.15,.4+g*.7)]};
+    ctx.lineCap='round';
+    for(let s=0;s<.999;s+=.07){const a=pt(s),b=pt(s+.07),w=(10*(1-s)+2)*p.width;
+      ctx.strokeStyle='#3b2e1f';ctx.lineWidth=w;ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();
+      ctx.strokeStyle='#62502f';ctx.lineWidth=w*.35;ctx.beginPath();ctx.moveTo(a[0]-w*.18,a[1]);ctx.lineTo(b[0]-w*.18,b[1]);ctx.stroke();
+      if(((s*14)|0)%3===0&&MOSS>0){ctx.strokeStyle='rgba(120,170,60,'+(.75*MOSS)+')';ctx.lineWidth=w*.8;ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke()}}
+    if(p.thorns>0)for(let s=.14;s<.96;s+=.085){if(s>Math.min(1,g))break;const a=pt(s-.02),b=pt(s+.02),ang=Math.atan2(b[1]-a[1],b[0]-a[0]),q=pt(s),dir=((s*12)|0)%2?1:-1;thorn(ctx,q[0],q[1],ang+dir*(Math.PI/2-.5),(4+rn()*7)*p.thorns*(1-s*.35),1.6)}
+    leaf.forEach((s,j)=>{if(s>Math.min(1,g))return;const q=pt(s);[-1,1].forEach(d=>{ctx.save();ctx.translate(q[0],q[1]);ctx.rotate(d*(.9+rn()*.4)-1.2);ctx.beginPath();ctx.ellipse(6,0,6.5,2.6,0,0,7);ctx.fillStyle=j%2?'#9bcb54':'#76a63a';ctx.fill();ctx.restore()})});
+  }
+}
+function grass(ctx,x,y,w,e,a,seed){if(e<=0)return;const rn=rng(seed);ctx.save();ctx.globalAlpha=a;for(let k=0;k<12;k++){const bx=x+(rn()-.5)*w*1.7,len=(6+rn()*13)*Math.min(1,e*1.4),lean=(bx-x)/w*.5+(rn()-.5)*.3;ctx.beginPath();ctx.moveTo(bx-1.6,y+2);ctx.lineTo(bx+Math.sin(lean)*len,y+2-Math.cos(lean)*len);ctx.lineTo(bx+1.6,y+2);ctx.closePath();ctx.fillStyle=k%3?'#7fb040':'#a6d460';ctx.fill()}ctx.restore()}
+function leafBit(ctx,x,y,r,rot,a,k){ctx.save();ctx.translate(x,y);ctx.rotate(rot);ctx.globalAlpha=a;ctx.beginPath();ctx.ellipse(0,0,r*1.7,r*.7,0,0,7);ctx.fillStyle=k%2?'#8fc04a':'#6c9a35';ctx.fill();ctx.restore()}
+const NATUR=['ranken','monolith','ranken','ranken','monolith'];
+function formOf(p,i){return p.form==='natur'?NATUR[(i+(p.seed|0))%NATUR.length]:p.form}
+function dust(ctx,x,y,age,seed,p,scale){
+  if(age<=0||p.dust<=0)return;const rn=rng(seed),life=1.1,u=age/life;if(u>=1)return;
+  for(let k=0;k<7;k++){const a=Math.PI+rn()*Math.PI,v=40+rn()*70,r0=7+rn()*8,e=eo(clamp(u*1.2));
+    const px=x+Math.cos(a)*v*e*1.1*scale,py=y-4+Math.sin(a)*v*e*.35-e*14,rr=(r0+e*24)*scale;
+    const g=ctx.createRadialGradient(px,py,0,px,py,rr);g.addColorStop(0,'rgba('+STONE.dust+','+(.38*(1-u)*Math.min(1.3,p.dust))+')');g.addColorStop(1,'rgba('+STONE.dust+',0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(px,py,rr,0,7);ctx.fill()}
+}
+function chunk(ctx,x,y,r,rot,a,seed){const rn=rng(seed);ctx.save();ctx.translate(x,y);ctx.rotate(rot);ctx.globalAlpha=a;ctx.beginPath();for(let k=0;k<5;k++){const t=k/5*6.28,rr=r*(.6+rn()*.6);const px=Math.cos(t)*rr,py=Math.sin(t)*rr;k?ctx.lineTo(px,py):ctx.moveTo(px,py)}ctx.closePath();ctx.fillStyle=rn()>.5?STONE.lo:STONE.mid;ctx.fill();ctx.restore()}
+function debris(ctx,x,y,age,seed,p,power){   // Brocken fliegen hoch und fallen zurück
+  if(age<=0||p.debris<=0)return;const rn=rng(seed),N=Math.round(10*p.debris*power);
+  for(let k=0;k<N;k++){const a=-Math.PI/2+(rn()-.5)*2.1,v=(130+rn()*190)*power,life=.9+rn()*.5,ag=age-rn()*.05;if(ag<=0||ag>=life)continue;
+    const px=x+Math.cos(a)*v*ag,py=y+Math.sin(a)*v*ag+.5*560*ag*ag;if(py>y+6)continue;
+    if(rn()<.38*p.moss+.12)leafBit(ctx,px,py,1.7+rn()*2.4,ag*(rn()*14-7),1-Math.pow(ag/life,3),k);else chunk(ctx,px,py,1.8+rn()*3.6,ag*(rn()*14-7),1-Math.pow(ag/life,3),seed+k)}
+}
+function mound(ctx,x,y,w,e,a){   // aufgeworfene Erde am Fuß
+  if(e<=0)return;ctx.save();ctx.globalAlpha=a;const rw=w*.9*Math.min(1,e*1.3);
+  const g=ctx.createRadialGradient(x,y,0,x,y,rw);g.addColorStop(0,'rgba(84,68,48,.95)');g.addColorStop(1,'rgba(84,68,48,0)');ctx.fillStyle=g;ctx.beginPath();ctx.ellipse(x,y+2,rw,rw*.32,0,0,7);ctx.fill();ctx.restore();
+}
+function counter(ctx,p,t){   // Gegenseite nur andeuten
+  if(!p.counter)return;const y=p.side==='unten'?C0.y-36:C0.y+36;
+  for(let i=0;i<p.n;i++){const x=slotX(p,i),g=ctx.createRadialGradient(x,y,0,x,y,22);g.addColorStop(0,'rgba(255,150,70,.5)');g.addColorStop(1,'rgba(255,150,70,0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,22,0,7);ctx.fill()}
+}
+function draw(ctx,t,p){
+  const T=tl(p);MOSS=p.moss;floor(ctx);counter(ctx,p,t);
+  const by=baseY(p);let amp=0;
+  for(let i=0;i<p.n;i++){const s0=T.t0+i*p.gap+p.crackT;const a=t-s0;if(a>0&&a<.5)amp+=p.shake*5*Math.exp(-a*9)}
+  ctx.save();ctx.translate(Math.sin(t*95)*amp,Math.cos(t*80)*amp*.7);
+  for(let i=0;i<p.n;i++){
+    const x=slotX(p,i),seed=p.seed*31+i*17,form=formOf(p,i),ts=T.t0+i*p.gap,tr=ts+p.crackT,ta=T.endAt+i*p.gap*.4;
+    const endP=seg(t,ta,ta+p.endT),crackFade=1-seg(t,T.endAt,T.endAt+p.endT);
+    cracks(ctx,x,by,seg(t,ts,tr),seed,p,crackFade);
+    const r=seg(t,tr,tr+p.rise),e=r<1?eo(r)*(1+p.overshoot*Math.sin(r*Math.PI)):1;
+    const rv=rng(seed+99),vh=1+(rv()-.5)*.9*p.variety,vw=1+(rv()-.5)*.7*p.variety,lean=(rv()-.5)*.4*p.variety,pp={...p,width:p.width*vw};
+    const hh=(form==='monolith'?128:112)*p.height*vh;
+    if(t>=tr){
+      const vis=p.ending==='versinken'?1-eio(endP):1,alpha=p.ending==='zerbersten'?clamp(1-endP*3):1;
+      if(alpha>0&&vis>0){
+        ctx.save();ctx.beginPath();ctx.rect(0,0,W,by+2);ctx.clip();ctx.globalAlpha=alpha;
+        const lift=form==='ranken'?0:hh*(1-e*vis),yy=by+lift;
+        ctx.translate(x,by);ctx.rotate(form==='ranken'?0:lean*.5);ctx.translate(-x,-by);
+        if(form==='monolith')monolith(ctx,x,yy,pp,hh,seed,clamp(e*vis,0,1));else roots(ctx,x,by,pp,hh,seed,e*vis);
+        ctx.restore();
+      }
+      mound(ctx,x,by,p.width*38,e,p.ending==='versinken'?1-endP*.6:1-endP*.3);grass(ctx,x,by,p.width*34,e,p.ending==='versinken'?1-endP:1-endP*.5,seed+21);
+      dust(ctx,x,by,t-tr,seed+3,p,1);debris(ctx,x,by,t-tr,seed+5,p,1);
+      if(endP>0){const ag=(t-ta);if(p.ending==='zerbersten'){debris(ctx,x,by-hh*.45,ag,seed+9,p,1.3);dust(ctx,x,by,ag,seed+11,p,1.2)}else dust(ctx,x,by,ag,seed+11,p,1)}
+    }
+  }
+  ctx.restore();
+}
+
+/* ---------- Oberfläche (Regler, Zeitleiste, Export) ---------- */
+const FX={name:'erde',ctrls:[
+ {t:'h',l:'Form'},
+ {t:'seg',k:'form',l:'Form der Erde',o:[['natur','Ranken + Monolithe'],['ranken','Ranken'],['monolith','Monolithe']]},
+ {t:'seg',k:'side',l:'Seite in der Vorschau',o:[['unten','Unten (ich)'],['oben','Oben (Gegner)']]},
+ {t:'rng',k:'n',l:'Anzahl',min:1,max:7,step:1,hint:'Eine Formation je Angriffs- oder Verteidigungspunkt.'},
+ {t:'rng',k:'spread',l:'Abstand',min:30,max:100,step:2},
+ {t:'rng',k:'height',l:'Höhe',min:.5,max:1.8,step:.05},
+ {t:'rng',k:'width',l:'Breite',min:.6,max:1.6,step:.05},
+ {t:'rng',k:'variety',l:'Vielfalt',min:0,max:1,step:.05,hint:'Wie unterschiedlich Höhe, Breite und Neigung der Formationen ausfallen.'},
+ {t:'rng',k:'thorns',l:'Dornen',min:0,max:2.5,step:.1,hint:'Dornen an Ranken und an der Ranke um den Monolithen.'},
+ {t:'rng',k:'runes',l:'Runen auf dem Monolithen',min:0,max:1,step:.05},
+ {t:'rng',k:'moss',l:'Moos und Grün',min:0,max:1,step:.05,hint:'Grün der Magierichtung Erde: Moos auf dem Fels, Gras, Blätter und grünes Leuchten.'},
+ {t:'h',l:'Ablauf'},
+ {t:'rng',k:'crackT',l:'Risse vor dem Ausbruch (s)',min:.1,max:1.2,step:.05},
+ {t:'rng',k:'rise',l:'Dauer des Ausbruchs (s)',min:.12,max:1,step:.02},
+ {t:'rng',k:'gap',l:'Versatz zwischen den Formationen (s)',min:0,max:.4,step:.02},
+ {t:'rng',k:'hold',l:'Stand vor dem Ende (s)',min:.2,max:2,step:.05},
+ {t:'h',l:'Wirkung'},
+ {t:'rng',k:'overshoot',l:'Überschwingen',min:0,max:.4,step:.02,hint:'Wie weit die Erde über die Endhöhe hinausschießt.'},
+ {t:'rng',k:'shake',l:'Erschütterung',min:0,max:2.5,step:.1},
+ {t:'rng',k:'dust',l:'Staub',min:0,max:2.5,step:.1},
+ {t:'rng',k:'debris',l:'Brocken und Schutt',min:0,max:2.5,step:.1},
+ {t:'rng',k:'cracks',l:'Länge der Risse',min:0,max:2,step:.1},
+ {t:'rng',k:'glow',l:'Leuchten in den Rissen',min:0,max:1,step:.05,hint:'Grünes Leuchten in den Rissen.'},
+ {t:'h',l:'Ende'},
+ {t:'seg',k:'ending',l:'Ende der Formation',o:[['zerbersten','Zerbersten'],['versinken','Versinken']]},
+ {t:'rng',k:'endT',l:'Dauer des Endes (s)',min:.2,max:1.2,step:.05},
+ {t:'chk',k:'counter',l:'Gegenseite andeuten (nur Vorschau)'}
+],phases:p=>{const T=tl(p),d=T.dur;return[[0,'Risse'],[(T.t0+p.crackT)/d,'Ausbruch'],[(T.t0+p.crackT+p.rise)/d,'Stand'],[T.endAt/d,'Ende']]}};
+const cv=$('cv'),ctx=cv.getContext('2d'),panel=$('panel');
+const reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;
+let t=0,playing=!reduce,last=0;const hold=.6;
+const dur=()=>tl(P).dur;
+const fmt=(v,c)=>c.step<1?(+v).toFixed(2):String(v);
+function buildPanel(){
+  panel.innerHTML='';
+  const ph=document.createElement('h2');ph.textContent='Vorlagen';panel.appendChild(ph);
+  const pre=document.createElement('div');pre.className='presets';
+  Object.keys(PRE).forEach(n=>{const b=document.createElement('button');b.className='chip';b.type='button';b.textContent=n;b.onclick=()=>{P={...DEF,...PRE[n],seed:P.seed};save();buildPanel();refresh(true)};pre.appendChild(b)});
+  panel.appendChild(pre);
+  FX.ctrls.forEach(c=>{
+    if(c.t==='h'){const h=document.createElement('h2');h.textContent=c.l;panel.appendChild(h);return}
+    const w=document.createElement('div');w.className='ctl';
+    if(c.t==='rng'){
+      const id='c-'+c.k;w.innerHTML='<div class="row"><label for="'+id+'">'+c.l+'</label><output></output></div><input type="range" id="'+id+'" min="'+c.min+'" max="'+c.max+'" step="'+c.step+'">'+(c.hint?'<small>'+c.hint+'</small>':'');
+      const inp=w.querySelector('input'),out=w.querySelector('output');inp.value=P[c.k];out.textContent=fmt(P[c.k],c);
+      inp.oninput=()=>{P[c.k]=+inp.value;out.textContent=fmt(P[c.k],c);save();refresh(false)};
+    }else if(c.t==='seg'){
+      w.innerHTML='<div class="row"><span>'+c.l+'</span></div><div class="seg" role="group" aria-label="'+c.l+'"></div>'+(c.hint?'<small>'+c.hint+'</small>':'');
+      const box=w.querySelector('.seg');
+      c.o.forEach(o=>{const b=document.createElement('button');b.type='button';b.textContent=o[1];b.setAttribute('aria-pressed',String(P[c.k]===o[0]));
+        b.onclick=()=>{P[c.k]=o[0];save();[...box.children].forEach(x=>x.setAttribute('aria-pressed','false'));b.setAttribute('aria-pressed','true');refresh(true)};box.appendChild(b)});
+    }else if(c.t==='chk'){
+      const id='c-'+c.k;w.innerHTML='<label class="opt" for="'+id+'"><input type="checkbox" id="'+id+'"> '+c.l+'</label>';
+      const inp=w.querySelector('input');inp.checked=!!P[c.k];inp.onchange=()=>{P[c.k]=inp.checked;save();refresh(true)};
+    }
+    panel.appendChild(w);
+  });
+  const tools=document.createElement('div');tools.className='tools';
+  const rb=document.createElement('button');rb.className='btn';rb.type='button';rb.textContent='Neuer Zufall';rb.onclick=()=>{P.seed=Math.floor(Math.random()*9999)+1;save();refresh(true)};
+  tools.appendChild(rb);panel.appendChild(tools);buildPhases();
+}
+function buildPhases(){
+  const box=$('phases');box.innerHTML='';
+  FX.phases(P).forEach(ph=>{const b=document.createElement('button');b.type='button';b.className='chip';b.textContent=ph[1];b.onclick=()=>{playing=false;t=ph[0]*dur()+.001;sync()};box.appendChild(b)});
+}
+function phaseNow(){const u=t/dur(),list=FX.phases(P);let name=list[0][1];for(const ph of list)if(u>=ph[0])name=ph[1];return name}
+function exportJson(){return JSON.stringify({effekt:FX.name,werte:P},null,2)}
+function sync(){
+  const d=dur();$('scrub').value=Math.round(clamp(t/d)*1000);$('time').textContent=Math.min(t,d).toFixed(2)+' / '+d.toFixed(2)+' s';
+  const nm=phaseNow();$('hud').textContent=nm;[...$('phases').children].forEach(c=>c.setAttribute('aria-current',String(c.textContent===nm)));
+  $('play').textContent=playing?'Pause':'Abspielen';$('json').value=exportJson();drawNow();
+}
+function resize(){const r=cv.getBoundingClientRect(),d=Math.min(window.devicePixelRatio||1,2);cv.width=Math.round(r.width*d);cv.height=Math.round(r.height*d)}
+function drawNow(){ctx.setTransform(cv.width/W,0,0,cv.width/W,0,0);ctx.clearRect(0,0,W,H);draw(ctx,Math.min(t,dur()),P)}
+function refresh(restart){if(restart){t=0;if(!reduce)playing=true}t=Math.min(t,dur());buildPhases();sync()}
+function frame(ts){const dt=Math.min(.1,(ts-last)/1000||0);last=ts;
+  if(playing){t+=dt*parseFloat($('speed').value);const d=dur();if(t>=d+hold){if($('loop').checked)t=0;else{t=d;playing=false}}sync()}
+  requestAnimationFrame(frame)}
+$('play').onclick=()=>{if(!playing&&t>=dur())t=0;playing=!playing;sync()};
+$('restart').onclick=()=>{t=0;playing=true;sync()};
+$('scrub').oninput=e=>{playing=false;t=e.target.value/1000*dur();sync()};
+function msg(s,c){const m=$('msg');m.textContent=s;m.className='msg '+(c||'')}
+$('copy').onclick=async()=>{const ta=$('json');try{await navigator.clipboard.writeText(ta.value);msg('Werte kopiert.','ok')}catch(e){ta.focus();ta.select();msg('Kopieren nicht möglich. Der Text ist markiert, bitte mit Strg+C kopieren.','err')}};
+$('apply').onclick=()=>{try{const o=JSON.parse($('json').value);if(o.effekt!==FX.name||!o.werte)throw new Error('Feld „effekt“ oder „werte“ fehlt oder passt nicht.');
+  const n={...DEF};for(const k in DEF)if(k in o.werte){if(typeof o.werte[k]!==typeof DEF[k])throw new Error('Wert „'+k+'“ hat den falschen Typ.');n[k]=o.werte[k]}
+  P=n;save();buildPanel();refresh(true);msg('Werte übernommen.','ok')}catch(e){msg('Übernehmen fehlgeschlagen: '+e.message,'err')}};
+$('reset').onclick=()=>{P={...DEF};save();buildPanel();refresh(true);msg('Auf Standardwerte zurückgesetzt.','ok')};
+new ResizeObserver(()=>{resize();drawNow()}).observe(cv);
+resize();buildPanel();if(reduce)t=dur()*.5;sync();requestAnimationFrame(frame);
+})();
+</script>
