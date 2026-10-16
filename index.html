@@ -432,10 +432,12 @@ function toggleLock(d, slot) {
 function newStats() {
   return { gold: 3, hp: 3, maxHp: 3, mana: 4, maxMana: 4, limit: 1, mag: { F: 1, E: 1, W: 1 }, pending: 0, freeDraws: 0, marks: 0 };
 }
-function regen(stats) {
-  stats.hp = Math.min(stats.maxHp, Math.max(0, stats.hp) + 1);
-  stats.mana = Math.min(stats.maxMana, stats.mana + 1);
+function regen(stats, n) {   // n = Gewinn an HP und Mana (Regel regenByStage: je Abschnitt 1/2/3)
+  n = n || 1;
+  stats.hp = Math.min(stats.maxHp, Math.max(0, stats.hp) + n);
+  stats.mana = Math.min(stats.maxMana, stats.mana + n);
 }
+function regenGain(state) { const r = state.rules.regenByStage; return r ? (r[Math.min(r.length, Math.max(1, state.stage)) - 1] || 1) : 1; }
 // Kosten (in Upgrade-Punkten) für jeden Schritt des Ausspiellimits: limitCost (Standard 2). Ohne limitCost gilt die ältere Staffelung (erster Schritt limitFirstStepCost, danach 1).
 function limitStepCost(state, s) { return state.rules.limitCost > 0 ? state.rules.limitCost : (s.limit <= 1 ? state.rules.limitFirstStepCost : 1); }
 function manaStepCost() { return 1; }
@@ -895,7 +897,7 @@ function endCombat(state, end) {
   if (state.rules.fightReset) resetPlayers(state, c.mode);
   else if (state.rules.freshHands) { dealFresh(state, A.deck, A.slots); if (c.mode === 'showdown') dealFresh(state, B.deck, B.slots); }   // jeder Kampf wird mit frisch gemischtem Deck und voller Hand verlassen
   state.turn = c.def;
-  regen(state.players[c.def].stats);
+  regen(state.players[c.def].stats, regenGain(state));
   state.worldTurns = 0;
   if (c.mode === 'monster') {
     if (allMonstersDead(state)) {   // auch wenn das letzte Monster ohne Beute fiel (beide Seiten gleichzeitig auf 0 HP)
@@ -1215,7 +1217,7 @@ function endTurn(state, pid, kind) {
     return;
   }
   const nx = other(pid);
-  regen(state.players[nx].stats);
+  regen(state.players[nx].stats, regenGain(state));
   state.turn = nx; state.worldTurns++;
   if (state.worldTurns % 2 === 0) regenMonsters(state);   // Monster erholen sich am Ende jeder Runde (nach den Zügen beider Spieler)
   curses(state).turnStart(state, nx, state.players[nx].stats, false, state.players[nx].name);
@@ -1293,7 +1295,7 @@ function applyWorld(state, a) {
     case 'recover': {
       if (!state.camp) return fail('Erholen gibt es nur in der Erholungsphase.');
       if (!campAllowed(state, pid, 'recover')) return fail('Erholen schon genutzt.');
-      regen(s); log(state, p.name + ' erholt sich (+1 HP, +1 Mana).', pid);
+      const rg = regenGain(state); regen(s, rg); log(state, p.name + ' erholt sich (+' + rg + ' HP, +' + rg + ' Mana).', pid);
       endTurn(state, pid, 'recover'); return { ok: true };
     }
     case 'pass': {
@@ -1312,7 +1314,7 @@ function applyWorld(state, a) {
 // lifeflowMode 'any': S Marker beliebig vom Brett (eigene/gegnerische Fluch- und Spiegelmarker), je entferntem Marker 1 HP ('removed', Variante 'flat' = S HP).
 // lifeflowMode: 'classic' (S HP heilen und S eigene Fluchmarker herunternehmen) oder 'choice' (S HP heilen und S Marker wegnehmen: eigene Fluchmarker oder die Spiegelmarker des Gegners).
 // firstPlayerGold: zusätzliches Startgold für den Beginnenden (Ausgleich zum Vorteil des zweiten Spielers).
-const DEFAULT_RULES = { magicCost: [0, 1, 3], limitCost: 2, curses: 'deathcards', ultiMode: 'death', limitFirstStepCost: 2, secondPlayerPending: 0, campActions: 0, showdownAttacker: 'behind', firstPlayerGold: 0, controlMode: 'mirror', comboMode: 'ordered', rmMode: 'discard', defenseCombos: true, mirrorDecay: 0, mirrorTrigger: 'any', mirrorFree: false, mirrorMult: 1, mirrorStep: 1, mirrorChoice: false, mirrorMana: 0, mirrorHeal: 0, hpPerPoint: 2, lifeflowMode: 'any', lifeflowDrawAll: true, lifeflowHealMode: 'flat', lifeflowHeal: 1, lifeflowMana: false, monsterVariants: true, monstersPerStage: 3, fightReset: true, fightCarry: true, stagePoints: [0, 1, 2, 3], stageGold: [0, 1, 2, 3], startGold: 0, secondPlayerGold: 0, loserStarts: true, loserUp: 1, loserUp2: 2, winSp: 4, freshHands: false, showdownRestore: false, lootShare: 0, lootPot: false, lifeflowDraw: 1, comboCardCost: 1, recoverByStage: [1, 2, 3] };   // comboCardCost: jede gespielte Karte (auch Kombokarten) kostet 1 Mana, nur Verteidigung in der überlegenen Farbe ist gratis; recoverByStage: Mana-Gewinn von „Erholen“ im Kampf je Abschnitt
+const DEFAULT_RULES = { magicCost: [0, 1, 3], limitCost: 2, curses: 'deathcards', ultiMode: 'death', limitFirstStepCost: 2, secondPlayerPending: 0, campActions: 0, showdownAttacker: 'behind', firstPlayerGold: 0, controlMode: 'mirror', comboMode: 'ordered', rmMode: 'discard', defenseCombos: true, mirrorDecay: 0, mirrorTrigger: 'any', mirrorFree: false, mirrorMult: 1, mirrorStep: 1, mirrorChoice: false, mirrorMana: 0, mirrorHeal: 0, hpPerPoint: 2, lifeflowMode: 'any', lifeflowDrawAll: true, lifeflowHealMode: 'flat', lifeflowHeal: 1, lifeflowMana: false, monsterVariants: true, monstersPerStage: 3, fightReset: true, fightCarry: true, stagePoints: [0, 1, 2, 3], stageGold: [0, 1, 2, 3], startGold: 0, secondPlayerGold: 0, loserStarts: true, loserUp: 1, loserUp2: 2, winSp: 4, freshHands: false, showdownRestore: false, lootShare: 0, lootPot: false, lifeflowDraw: 1, comboCardCost: 1, recoverByStage: [1, 2, 3], regenByStage: [1, 2, 3] };   // comboCardCost: jede gespielte Karte (auch Kombokarten) kostet 1 Mana, nur Verteidigung in der überlegenen Farbe ist gratis; recoverByStage: Mana-Gewinn von „Erholen“ im Kampf je Abschnitt
 
 function newPlayer(state, name, ai) {
   const p = { name, ai: !!ai, stats: newStats(), temple: { points: 0, level: 0 }, sp: 0, slots: MIN_SLOTS };
@@ -1377,7 +1379,7 @@ function handCounts(d) { const c = {}; d.hand.forEach(x => { if (x) c[x.id] = (c
 return { ELEMENTS, SUPERIOR, NAMES, START_DECK, MAX_MAGIC, MAX_SLOTS, MIN_SLOTS, MAX_LIMIT, MAX_MARKS, DEFAULT_RULES, CURSE_SYSTEMS, MONSTER,
   makeRng, parseCard, selection, newGame, apply, record, prim, actor, other, regen, handCounts,
   vendorOffers, vendorPlans, previewTemple, pointsForGold, nextLevelCost, limitStepCost, manaStepCost, magicCost,
-  evalAttack, evalDefense, recoverGain, comboLevels, levelsFor, campAllowed, combatTick,
+  evalAttack, evalDefense, recoverGain, regenGain, comboLevels, levelsFor, campAllowed, combatTick,
   mirrorOf, mirrorCap, defaultMirrorEl, monsterAlive, allMonstersDead, magicProgress, spawnMonsters, spawnForGame, curses };
 }));</script>
 <script>/* Magus – einfacher Computergegner. Wählt nur Aktionen, die auch ein Mensch hätte. */
@@ -2195,7 +2197,7 @@ function campPanel() {
   const left = i => c.remaining[i];
   let h = '<h3>Erholungsphase</h3><div class="note" style="font-size:17px;margin:4px 0 10px">Alle Monster sind besiegt. Jeder Spieler hat zwei Aktionen: Händler, Erholen oder Passen, jede höchstens einmal. Tempel, Magie und Upgrade-Punkte sind Bonusaktionen. Danach beginnt der Showdown mit neu gemischter, voller Hand.</div>';
   h += '<div class="statrow"><b style="min-width:120px">Du</b>' + left(ME) + ' Aktion' + (left(ME) === 1 ? '' : 'en') + ' übrig</div><div class="statrow"><b style="min-width:120px">' + esc(G.players[OPP].name) + '</b>' + left(OPP) + ' Aktion' + (left(OPP) === 1 ? '' : 'en') + ' übrig</div>';
-  h += '<div class="btnrow" style="margin-top:18px"><button class="btn primary" data-act="recover" ' + (my && M.campAllowed(G, ME, 'recover') ? '' : 'disabled') + '>Erholen (+1 HP, +1 Mana)</button><button class="btn" data-act="pass" ' + (my ? '' : 'disabled') + '>Passen</button></div>';
+  h += '<div class="btnrow" style="margin-top:18px"><button class="btn primary" data-act="recover" ' + (my && M.campAllowed(G, ME, 'recover') ? '' : 'disabled') + '>Erholen (+' + M.regenGain(G) + ' HP, +' + M.regenGain(G) + ' Mana)</button><button class="btn" data-act="pass" ' + (my ? '' : 'disabled') + '>Passen</button></div>';
   return '<div class="panel" style="' + box(LAYOUT.camp) + '">' + h + '</div>';
 }
 /* ---------- Kampf ---------- */
