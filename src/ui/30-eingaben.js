@@ -17,9 +17,9 @@ function onAct(d) {
       break;
     case 'combat': act({ type: 'combat', elem: d.e }); break;
     case 'vendor': { const o = M.vendorOffers(G, ME)[+d.i]; if (o) act({ type: 'vendor', result: o.result, cost: o.cost }); break; }
-    case 'sacdn': sacN = Math.max(1, sacN - 1); render(); break;
+    case 'sacdn': sacN = Math.max(0, sacN - 1); render(); break;
     case 'sacup': sacN = Math.min(4, sacN + 1); render(); break;
-    case 'temple': act({ type: 'temple', amount: +d.n }); break;
+    case 'temple': sacN = 0; act({ type: 'temple', amount: +d.n }); break;
     case 'spend': act({ type: 'spend', what: d.w }); break;
     case 'magic': act({ type: 'magic', elem: d.e }); break;
     case 'fd': act({ type: 'fd', slots: [...fdSel] }); fdSel.clear(); break;

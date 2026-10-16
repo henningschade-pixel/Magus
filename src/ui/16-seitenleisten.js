@@ -42,9 +42,9 @@ function statsBlock(name, s, p, size, up, full) {
     let sac = '', sacBtn = '';
     if (up && s.gold >= 1) {
       const can = my;
-      const n = Math.max(1, Math.min(sacN, s.gold, 4)), pv = M.previewTemple(p, n);
-      sacBtn = '<button class="btn small sacbtn" data-act="temple" data-n="' + n + '" ' + (can ? '' : 'disabled') + ' title="Tempel: Punkte ' + p.temple.points + ', Stufe ' + p.temple.level + ', nächste Stufe kostet ' + M.nextLevelCost(p.temple.level) + '">Opfern</button>';
-      const stp = '<div class="stepper"><button class="arr" data-act="sacdn" ' + (n > 1 ? '' : 'disabled') + '>◀</button><b title="+' + pv.points + ' Punkte → ' + (pv.gained ? '+' + pv.gained + ' Upgrade' : 'kein Upgrade') + '">' + n + '</b><button class="arr" data-act="sacup" ' + (n < Math.min(s.gold, 4) ? '' : 'disabled') + '>▶</button></div>';
+      const n = Math.max(0, Math.min(sacN, s.gold, 4)), pv = M.previewTemple(p, n);
+      sacBtn = '<button class="btn small sacbtn" data-act="temple" data-n="' + n + '" ' + (can && n > 0 ? '' : 'disabled') + ' title="Tempel: Punkte ' + p.temple.points + ', Stufe ' + p.temple.level + ', nächste Stufe kostet ' + M.nextLevelCost(p.temple.level) + '">Opfern</button>';
+      const stp = '<div class="stepper"><button class="arr" data-act="sacdn" ' + (n > 0 ? '' : 'disabled') + '>◀</button><b title="+' + pv.points + ' Punkte → ' + (pv.gained ? '+' + pv.gained + ' Upgrade' : 'kein Upgrade') + '">' + n + '</b><button class="arr" data-act="sacup" ' + (n < Math.min(s.gold, 4) ? '' : 'disabled') + '>▶</button></div>';
       sac = '<div class="sacbox">' + stp + sacBtn + '</div>';
     }
     const ph = '<span class="up ph"></span>';
