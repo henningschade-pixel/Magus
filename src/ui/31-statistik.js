@@ -3,22 +3,25 @@ const ST_SERIES = [
   { k: 'gold', name: 'Gold (insgesamt)', col: '#e0b84a' },
   { k: 'up', name: 'Upgrades (insgesamt)', col: '#c47fe0' },
   { k: 'lvl', name: 'Tempelstufe', col: '#e8e3d0' },
-  { k: 'F', name: 'Magie Feuer', col: '#ff7a3d' },
-  { k: 'E', name: 'Magie Erde', col: '#93c24f' },
-  { k: 'W', name: 'Magie Wasser', col: '#52a6f5' },
+  { k: 'F', name: 'Magie Feuer', col: '#ff7a3d', chip: 'mF' },
+  { k: 'E', name: 'Magie Erde', col: '#93c24f', chip: 'mE' },
+  { k: 'W', name: 'Magie Wasser', col: '#52a6f5', chip: 'mW' },
   { k: 'slots', name: 'Handkarten', col: '#e58aa0' },
   { k: 'limit', name: 'Ausspiellimit', col: '#5fd0c4' },
-  { k: 'aF', name: 'Ø Karte Feuer', col: '#ffb48a' },
-  { k: 'aE', name: 'Ø Karte Erde', col: '#c6e48f' },
-  { k: 'aW', name: 'Ø Karte Wasser', col: '#9fd0ff' },
+  { k: 'aF', name: 'Ø Karte Feuer', col: '#ffb48a', chip: 'mF', thin: true },
+  { k: 'aE', name: 'Ø Karte Erde', col: '#c6e48f', chip: 'mE', thin: true },
+  { k: 'aW', name: 'Ø Karte Wasser', col: '#9fd0ff', chip: 'mW', thin: true },
 ];
+ST_SERIES.forEach(s => { s.chip = s.chip || s.k; });
+// Filterknöpfe: Magie und Ø Kartenstufe einer Farbe teilen sich einen Knopf (Magie dick, Ø Karte dünn und heller)
+const ST_CHIPS = [['gold', 'Gold (insgesamt)', '#e0b84a'], ['up', 'Upgrades (insgesamt)', '#c47fe0'], ['lvl', 'Tempelstufe', '#e8e3d0'], ['mF', 'Feuer: Magie + Ø Karte', '#ff7a3d'], ['mE', 'Erde: Magie + Ø Karte', '#93c24f'], ['mW', 'Wasser: Magie + Ø Karte', '#52a6f5'], ['slots', 'Handkarten', '#e58aa0'], ['limit', 'Ausspiellimit', '#5fd0c4']];
 const stOn = new Set(['gold', 'up', 'lvl']), stWho = { me: true, opp: true };
 const stView = { auto: true, x0: 0, x1: 1, y0: 0, y1: 4 };   // sichtbarer Ausschnitt in Daten-Einheiten; auto = Ursprung links unten, Achsen dehnen sich mit dem Spiel
 const ST = { W: 1000, T: 52, B: 40, L: 44, R: 16, PH: 330 };
 function niceStep(span, n) { const raw = span / n, p = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / p; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * p; }
 function statsLimits() {   // Gesamtumfang der Daten: x 0..letzter Messpunkt, y 0..höchster sichtbarer Wert
   const H = G.hist || [], vals = [];
-  ST_SERIES.forEach(s => { if (stOn.has(s.k)) H.forEach(h => { if (stWho.me) vals.push(h.p[ME][s.k]); if (stWho.opp) vals.push(h.p[OPP][s.k]); }); });
+  ST_SERIES.forEach(s => { if (stOn.has(s.chip)) H.forEach(h => { if (stWho.me) vals.push(h.p[ME][s.k]); if (stWho.opp) vals.push(h.p[OPP][s.k]); }); });
   return { xmax: Math.max(1, H.length - 1), ymax: Math.max(4, Math.ceil(Math.max(0, ...vals) / 2) * 2) };
 }
 function statsFit(a, b, lo, hi, minSpan) { const span = Math.max(minSpan, Math.min(b - a, hi - lo)); a = Math.max(lo, Math.min(a, hi - span)); return [a, a + span]; }
@@ -41,11 +44,11 @@ function statsSvg() {
     else svg += '<g><title>' + M.NAMES[e.elem] + 'monster Stufe ' + e.stage + ': ' + res + '</title><circle cx="' + x + '" cy="' + (T - 12) + '" r="11" fill="' + ({ F: '#ff7a3d', E: '#93c24f', W: '#52a6f5' }[e.elem] || '#888') + '" stroke="#0a080e" stroke-width="2"/><text x="' + x + '" y="' + (T - 7) + '" text-anchor="middle" fill="#0a080e" font-size="15" font-weight="700">' + (e.winner === null ? '–' : mine ? '✓' : '✗') + '</text></g>';
   });
   ST_SERIES.forEach(s => {
-    if (!stOn.has(s.k)) return;
+    if (!stOn.has(s.chip)) return;
     [['me', ME, ''], ['opp', OPP, '7 5']].forEach(([key, seat, dash]) => {
       if (!stWho[key]) return;
       const pts = H.map((h, i) => xs(i).toFixed(1) + ',' + ys(h.p[seat][s.k]).toFixed(1));
-      if (pts.length > 1) svg += '<polyline points="' + pts.join(' ') + '" fill="none" stroke="' + s.col + '" stroke-width="3" stroke-linejoin="round"' + (dash ? ' stroke-dasharray="' + dash + '" opacity=".75"' : '') + '/>';
+      if (pts.length > 1) svg += '<polyline points="' + pts.join(' ') + '" fill="none" stroke="' + s.col + '" stroke-width="' + (s.thin ? 1.8 : 3.4) + '" stroke-linejoin="round"' + (dash ? ' stroke-dasharray="' + dash + '" opacity=".75"' : '') + '/>';
       else if (pts.length === 1) { const q = pts[0].split(','); svg += '<circle cx="' + q[0] + '" cy="' + q[1] + '" r="4" fill="' + s.col + '"/>'; }
       if (inView <= 60) H.forEach((h, i) => { if (i < x0 - 1 || i > x1 + 1) return; svg += '<circle cx="' + xs(i).toFixed(1) + '" cy="' + ys(h.p[seat][s.k]).toFixed(1) + '" r="3" fill="' + s.col + '"><title>' + s.name + ' (' + (key === 'me' ? 'du' : esc(G.players[OPP].name)) + ') nach Zug ' + i + ': ' + h.p[seat][s.k] + '</title></circle>'; });
     });
@@ -56,8 +59,8 @@ function statsView() {
   const chip = (on, act, k, label, col) => '<button class="stchip' + (on ? ' on' : '') + '" data-act="' + act + '" data-k="' + k + '"' + (col ? ' style="--c:' + col + '"' : '') + '>' + (col ? '<i></i>' : '') + label + '</button>';
   return '<div class="box stats"><div class="sthead"><h1>Statistik</h1><div><button class="btn" data-act="stfit" title="Achsen wieder automatisch anpassen (Doppelklick ins Diagramm)">Ansicht zurücksetzen</button> <button class="btn" data-act="stclose">Schließen</button></div></div>' +
     '<div class="stchips">' + chip(stWho.me, 'stwho', 'me', 'Du (durchgezogen)') + chip(stWho.opp, 'stwho', 'opp', esc(G.players[OPP].name) + ' (gestrichelt)') + '</div>' +
-    '<div class="stchips">' + ST_SERIES.map(s => chip(stOn.has(s.k), 'stser', s.k, s.name, s.col)).join('') + '</div><div id="stplot">' + statsSvg() + '</div>' +
-    '<div class="note stkey"><span style="color:#e0b84a">★</span> Showdown · <b>●</b> Monsterkampf in der Farbe des Monsters (✓ du gewinnst, ✗ Gegner gewinnt, – ohne Sieger) · Mausrad: zoomen (über den Achsen nur diese Achse) · ziehen: Ausschnitt verschieben</div></div>';
+    '<div class="stchips">' + ST_CHIPS.map(c => chip(stOn.has(c[0]), 'stser', c[0], c[1], c[2])).join('') + '</div><div id="stplot">' + statsSvg() + '</div>' +
+    '<div class="note stkey"><span style="color:#e0b84a">★</span> Showdown · <b>●</b> Monsterkampf in der Farbe des Monsters (✓ du gewinnst, ✗ Gegner gewinnt, – ohne Sieger) · dicke Linie: Magiestufe, dünne: Ø Kartenstufe · Mausrad: zoomen (über den Achsen nur diese Achse) · ziehen: Ausschnitt verschieben</div></div>';
 }
 function statsRedraw() { const el = document.getElementById('stplot'); if (el) el.innerHTML = statsSvg(); }
 function statsFitView() { stView.auto = true; statsRedraw(); }
