@@ -39,7 +39,7 @@ test('Statistikseite öffnet, zeigt den Verlauf und lässt sich filtern und schl
     await p.goto(url); await p.waitForTimeout(500);
     await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
     assert.equal(await p.locator('#log .logdl').count(), 1);
-    await p.click('#statbtn');
+    await p.click('#homebtn'); await p.click('text=Statistik');
     await p.waitForSelector('.box.stats svg');
     assert.ok(await p.locator('.box.stats polyline, .box.stats circle').count() > 0);
     await p.click('.stchip:has-text("Magie (Feuer")');
@@ -49,6 +49,7 @@ test('Statistikseite öffnet, zeigt den Verlauf und lässt sich filtern und schl
     assert.notEqual(await p.locator('#stsvg').innerHTML(), before);
     await p.dblclick('#stsvg'); assert.equal(await p.locator('#stsvg').innerHTML(), before);   // Doppelklick: zurück zur automatischen Ansicht
     await p.click('text=Schließen');
+    await p.click('text=Fortsetzen');
     assert.equal(await p.evaluate(() => document.getElementById('overlay').style.display), 'none');
     assert.deepEqual(errs, []);
   } finally { await b.close(); }

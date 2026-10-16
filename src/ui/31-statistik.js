@@ -90,8 +90,10 @@ overlay.addEventListener('pointermove', e => {
 const stDragEnd = () => { stDrag = null; };
 overlay.addEventListener('pointerup', stDragEnd); overlay.addEventListener('pointercancel', stDragEnd);
 overlay.addEventListener('dblclick', e => { const sv = document.getElementById('stsvg'); if (sv && sv.contains(e.target)) statsFitView(); });
-function statsOpen() {
-  if (!G || !started || overlay.style.display === 'flex') return;
+let stFromMenu = false;
+function statsOpen(fromMenu) {
+  if (!G || !started || (overlay.style.display === 'flex' && !fromMenu)) return;
+  stFromMenu = !!fromMenu;
   clearTimeout(aiTimer);   // das Spiel pausiert, solange die Statistik offen ist
   stView.auto = true; overlay.style.display = 'flex'; overlay.innerHTML = statsView();
 }
@@ -100,7 +102,3 @@ function statsToggle(act, k) {
   else if (stOn.has(k)) { if (stOn.size > 1) stOn.delete(k); } else stOn.add(k);
   overlay.innerHTML = statsView();
 }
-const statBtn = document.createElement('button');
-statBtn.id = 'statbtn'; statBtn.title = 'Statistik: Verlauf über die Züge'; statBtn.textContent = '📈';
-statBtn.addEventListener('click', e => { e.stopPropagation(); statsOpen(); });
-stage.appendChild(statBtn);

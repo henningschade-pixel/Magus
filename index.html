@@ -265,8 +265,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .overlay h1{font-family:'Alegreya SC',serif;font-size:56px;margin:0 0 4px;color:var(--gold);letter-spacing:.06em}
 .overlay p{font-size:20px;line-height:1.35;margin:8px 0}
 .overlay ul{flex:1 1 auto;min-height:0;overflow-y:auto;text-align:left;font-size:18px;color:var(--mute);line-height:1.35;padding-left:22px;margin:10px 0 18px}
-#homebtn{position:absolute;left:56px;top:12px;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:rgba(10,8,14,.7);font-size:22px;line-height:1;cursor:var(--cp);z-index:250;padding:0;color:var(--bone)}#homebtn:hover{border-color:var(--gold)}
-#sndbtn{position:absolute;left:12px;top:12px;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:rgba(10,8,14,.7);font-size:18px;cursor:var(--cp);z-index:250;padding:0}#sndbtn:hover{border-color:var(--gold)}
+#homebtn{position:absolute;left:12px;top:12px;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:rgba(10,8,14,.7);font-size:22px;line-height:1;cursor:var(--cp);z-index:250;padding:0;color:var(--bone)}#homebtn:hover{border-color:var(--gold)}
 @media (prefers-reduced-motion:reduce){.card,.card .inner{transition-duration:.01s}}
 
 .mpbox{flex:none;margin-top:14px;padding-top:12px;border-top:1px solid var(--line);font-size:17px}
@@ -291,7 +290,6 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .overlay .box.start{align-items:center;padding:34px 44px 30px}
 .overlay .box.start .logo{width:170px;height:170px;object-fit:contain;margin:6px 0 12px;mix-blend-mode:lighten;-webkit-mask-image:radial-gradient(circle,#000 58%,transparent 72%);mask-image:radial-gradient(circle,#000 58%,transparent 72%)}
 .overlay .box.start .mpbox{align-self:stretch}
-#statbtn{position:absolute;left:100px;top:12px;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:rgba(10,8,14,.7);font-size:18px;line-height:1;cursor:var(--cp);z-index:250;padding:0;color:var(--bone)}#statbtn:hover{border-color:var(--gold)}
 #log.logpanel h3{display:flex;align-items:center}
 .logdl{order:2;margin-left:auto;width:26px;height:26px;border-radius:50%;border:1px solid var(--line);background:rgba(10,8,14,.55);color:var(--mute);font-size:14px;line-height:1;cursor:var(--cp);padding:0;opacity:.7}.logdl:hover{opacity:1;border-color:var(--gold);color:var(--gold)}
 .overlay .box.stats{width:1060px;max-width:96vw;max-height:760px;padding:18px 22px;overflow-y:auto}
@@ -3122,7 +3120,9 @@ function onAct(d) {
   switch (d.act) {
     case 'newgame': newGame(); break;
     case 'home': homeMenu(); break;
-    case 'stclose': overlay.style.display = 'none'; overlay.innerHTML = ''; pump(); break;
+    case 'stopen': statsOpen(true); break;
+    case 'sndtoggle': Snd.toggle(); Snd.play('ui_click', 0, .8); setTimeout(homeMenuDraw, 350); homeMenuDraw(); break;
+    case 'stclose': if (stFromMenu) { stFromMenu = false; homeMenuDraw(); } else { overlay.style.display = 'none'; overlay.innerHTML = ''; pump(); } break;
     case 'stfit': statsFitView(); break;
     case 'stwho': case 'stser': statsToggle(d.act, d.k); break;
     case 'resume': overlay.style.display = 'none'; overlay.innerHTML = ''; pump(); break;
@@ -3228,26 +3228,25 @@ function homeMenu() {
   if (overlay.style.display === 'flex') return;
   clearTimeout(aiTimer);   // das Spiel pausiert, solange das Menü offen ist
   overlay.style.display = 'flex';
+  homeMenuDraw();
+}
+function homeMenuDraw() {
+  const si = Snd.info();
   overlay.innerHTML = '<div class="box start" style="width:420px"><h1 style="font-size:44px">Menü</h1>' + (MP ? '<div id="mproom" style="font-size:19px;color:var(--mute);margin-top:-4px"></div>' : '') + '<div style="display:flex;flex-direction:column;gap:10px;align-self:stretch;margin-top:10px">' +
     '<button class="btn primary" style="font-size:21px;padding:10px" data-act="resume">Fortsetzen</button>' +
+    '<button class="btn" style="font-size:21px;padding:10px" data-act="stopen" title="Verlauf über die Züge">📈 Statistik</button>' +
+    '<button class="btn" style="font-size:21px;padding:10px" data-act="sndtoggle" title="Ton an oder aus">' + (si.on ? '🔊 Ton: an' : '🔇 Ton: aus') + (si.on && si.state !== 'nicht gestartet' ? '<small style="display:block;font-size:14px;color:var(--mute)">' + si.loaded + '/' + si.total + ' Sounds geladen · Audio ' + si.state + '</small>' : '') + '</button>' +
     (MP ? '' : '<button class="btn" style="font-size:21px;padding:10px" data-act="restart" title="Beginnt eine neue Partie gegen den Computer">Neu starten</button>') +
     '<button class="btn" style="font-size:21px;padding:10px" data-act="leave">' + (MP ? 'Partie verlassen' : 'Spiel verlassen') + '</button></div></div>';
   mpChip();
 }
 // Klickton für Menü- und Bedienknöpfe (Aktionen mit eigenem Ton ausgenommen)
-const CLICK_ACTS = new Set(['sacdn', 'sacup', 'deckview', 'home', 'resume', 'restart', 'leave', 'newgame', 'stclose', 'stfit', 'stwho', 'stser', 'dismiss']);
-stage.addEventListener('pointerdown', e => { const b = e.target.closest('button'); if (b && (b.id === 'homebtn' || b.id === 'statbtn' || b.classList.contains('logdl') || CLICK_ACTS.has(b.dataset.act))) Snd.play('ui_click'); }, true);
+const CLICK_ACTS = new Set(['sacdn', 'sacup', 'deckview', 'home', 'resume', 'restart', 'leave', 'newgame', 'stclose', 'stopen', 'sndtoggle', 'stfit', 'stwho', 'stser', 'dismiss']);
+stage.addEventListener('pointerdown', e => { const b = e.target.closest('button'); if (b && (b.id === 'homebtn' || b.classList.contains('logdl') || CLICK_ACTS.has(b.dataset.act))) Snd.play('ui_click'); }, true);
 const homeBtn = document.createElement('button');
 homeBtn.id = 'homebtn'; homeBtn.title = 'Menü: fortsetzen, neu starten, verlassen'; homeBtn.textContent = '⌂';
 homeBtn.addEventListener('click', e => { e.stopPropagation(); if (G && started) homeMenu(); });
 stage.appendChild(homeBtn);
-const sndBtn = document.createElement('button');
-sndBtn.id = 'sndbtn'; sndBtn.title = 'Ton an/aus'; sndBtn.textContent = Snd.on ? '🔊' : '🔇';
-sndBtn.addEventListener('click', e => {
-  e.stopPropagation(); const on = Snd.toggle(); sndBtn.textContent = on ? '🔊' : '🔇';
-  if (on) { Snd.play('ui_click', 0, .8); setTimeout(() => { const i = Snd.info(); toast('Ton an · ' + i.loaded + '/' + i.total + ' Sounds geladen · Audio ' + i.state); }, 400); } else toast('Ton aus');   // Rückmeldung zum Zustand, hilft bei der Fehlersuche
-});
-stage.appendChild(sndBtn);
 /* ---------- Statistik: Verlaufskurven über die Züge (Messpunkte kommen aus G.hist der Engine) ---------- */
 const ST_SERIES = [
   { k: 'gold', name: 'Gold (insgesamt)', col: '#e0b84a' },
@@ -3340,8 +3339,10 @@ overlay.addEventListener('pointermove', e => {
 const stDragEnd = () => { stDrag = null; };
 overlay.addEventListener('pointerup', stDragEnd); overlay.addEventListener('pointercancel', stDragEnd);
 overlay.addEventListener('dblclick', e => { const sv = document.getElementById('stsvg'); if (sv && sv.contains(e.target)) statsFitView(); });
-function statsOpen() {
-  if (!G || !started || overlay.style.display === 'flex') return;
+let stFromMenu = false;
+function statsOpen(fromMenu) {
+  if (!G || !started || (overlay.style.display === 'flex' && !fromMenu)) return;
+  stFromMenu = !!fromMenu;
   clearTimeout(aiTimer);   // das Spiel pausiert, solange die Statistik offen ist
   stView.auto = true; overlay.style.display = 'flex'; overlay.innerHTML = statsView();
 }
@@ -3350,10 +3351,6 @@ function statsToggle(act, k) {
   else if (stOn.has(k)) { if (stOn.size > 1) stOn.delete(k); } else stOn.add(k);
   overlay.innerHTML = statsView();
 }
-const statBtn = document.createElement('button');
-statBtn.id = 'statbtn'; statBtn.title = 'Statistik: Verlauf über die Züge'; statBtn.textContent = '📈';
-statBtn.addEventListener('click', e => { e.stopPropagation(); statsOpen(); });
-stage.appendChild(statBtn);
 /* ---------- Spiellog-Export (jederzeit, auch am Spielende) ---------- */
 function buildExport() {
   if (!G) return null;

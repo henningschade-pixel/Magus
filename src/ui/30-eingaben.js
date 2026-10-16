@@ -3,7 +3,9 @@ function onAct(d) {
   switch (d.act) {
     case 'newgame': newGame(); break;
     case 'home': homeMenu(); break;
-    case 'stclose': overlay.style.display = 'none'; overlay.innerHTML = ''; pump(); break;
+    case 'stopen': statsOpen(true); break;
+    case 'sndtoggle': Snd.toggle(); Snd.play('ui_click', 0, .8); setTimeout(homeMenuDraw, 350); homeMenuDraw(); break;
+    case 'stclose': if (stFromMenu) { stFromMenu = false; homeMenuDraw(); } else { overlay.style.display = 'none'; overlay.innerHTML = ''; pump(); } break;
     case 'stfit': statsFitView(); break;
     case 'stwho': case 'stser': statsToggle(d.act, d.k); break;
     case 'resume': overlay.style.display = 'none'; overlay.innerHTML = ''; pump(); break;
@@ -109,23 +111,22 @@ function homeMenu() {
   if (overlay.style.display === 'flex') return;
   clearTimeout(aiTimer);   // das Spiel pausiert, solange das Menü offen ist
   overlay.style.display = 'flex';
+  homeMenuDraw();
+}
+function homeMenuDraw() {
+  const si = Snd.info();
   overlay.innerHTML = '<div class="box start" style="width:420px"><h1 style="font-size:44px">Menü</h1>' + (MP ? '<div id="mproom" style="font-size:19px;color:var(--mute);margin-top:-4px"></div>' : '') + '<div style="display:flex;flex-direction:column;gap:10px;align-self:stretch;margin-top:10px">' +
     '<button class="btn primary" style="font-size:21px;padding:10px" data-act="resume">Fortsetzen</button>' +
+    '<button class="btn" style="font-size:21px;padding:10px" data-act="stopen" title="Verlauf über die Züge">📈 Statistik</button>' +
+    '<button class="btn" style="font-size:21px;padding:10px" data-act="sndtoggle" title="Ton an oder aus">' + (si.on ? '🔊 Ton: an' : '🔇 Ton: aus') + (si.on && si.state !== 'nicht gestartet' ? '<small style="display:block;font-size:14px;color:var(--mute)">' + si.loaded + '/' + si.total + ' Sounds geladen · Audio ' + si.state + '</small>' : '') + '</button>' +
     (MP ? '' : '<button class="btn" style="font-size:21px;padding:10px" data-act="restart" title="Beginnt eine neue Partie gegen den Computer">Neu starten</button>') +
     '<button class="btn" style="font-size:21px;padding:10px" data-act="leave">' + (MP ? 'Partie verlassen' : 'Spiel verlassen') + '</button></div></div>';
   mpChip();
 }
 // Klickton für Menü- und Bedienknöpfe (Aktionen mit eigenem Ton ausgenommen)
-const CLICK_ACTS = new Set(['sacdn', 'sacup', 'deckview', 'home', 'resume', 'restart', 'leave', 'newgame', 'stclose', 'stfit', 'stwho', 'stser', 'dismiss']);
-stage.addEventListener('pointerdown', e => { const b = e.target.closest('button'); if (b && (b.id === 'homebtn' || b.id === 'statbtn' || b.classList.contains('logdl') || CLICK_ACTS.has(b.dataset.act))) Snd.play('ui_click'); }, true);
+const CLICK_ACTS = new Set(['sacdn', 'sacup', 'deckview', 'home', 'resume', 'restart', 'leave', 'newgame', 'stclose', 'stopen', 'sndtoggle', 'stfit', 'stwho', 'stser', 'dismiss']);
+stage.addEventListener('pointerdown', e => { const b = e.target.closest('button'); if (b && (b.id === 'homebtn' || b.classList.contains('logdl') || CLICK_ACTS.has(b.dataset.act))) Snd.play('ui_click'); }, true);
 const homeBtn = document.createElement('button');
 homeBtn.id = 'homebtn'; homeBtn.title = 'Menü: fortsetzen, neu starten, verlassen'; homeBtn.textContent = '⌂';
 homeBtn.addEventListener('click', e => { e.stopPropagation(); if (G && started) homeMenu(); });
 stage.appendChild(homeBtn);
-const sndBtn = document.createElement('button');
-sndBtn.id = 'sndbtn'; sndBtn.title = 'Ton an/aus'; sndBtn.textContent = Snd.on ? '🔊' : '🔇';
-sndBtn.addEventListener('click', e => {
-  e.stopPropagation(); const on = Snd.toggle(); sndBtn.textContent = on ? '🔊' : '🔇';
-  if (on) { Snd.play('ui_click', 0, .8); setTimeout(() => { const i = Snd.info(); toast('Ton an · ' + i.loaded + '/' + i.total + ' Sounds geladen · Audio ' + i.state); }, 400); } else toast('Ton aus');   // Rückmeldung zum Zustand, hilft bei der Fehlersuche
-});
-stage.appendChild(sndBtn);
