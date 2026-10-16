@@ -1844,42 +1844,68 @@ function markCol(s, curseTip, who) {
   if (G.rules.curses === 'deathcards') return '<span class="mkcol"><span class="mk" title="Todesmarker: ' + (s.death || 0) + ' HP Verlust am Ende jeder eigenen Angriffsphase bis Kampfende. Nur Lifeflow kann Marker entfernen.">' + (who ? markIcons(s.death || 0, who + 'd', L) : marks(s.death || 0)) + '</span></span>';
   return '<span class="mkcol"><span class="mk" title="' + curseTip + '">' + (who ? markIcons(s.marks || 0, who + 'c', L) : marks(s.marks || 0)) + '</span>' + deathBadge(s) + '</span>';
 }
-/* ---------- Zugwechsel: Die Lichtlinie wandert durch die Mitte auf die andere Seite und nimmt den Schein mit (Werte der Zugwechsel-Werkstatt) ---------- */
+/* ---------- Zugwechsel (Werte der Zugwechsel-Werkstatt): Der Rand teilt sich in der Mitte, zwei Lichtköpfe laufen links und rechts zur anderen Seite; danach "Du bist am Zug" ---------- */
 let turnSide = null, turnAnim = null;
-const TURN = { dur: 1.1, pause: .15, width: 3, glow: 22, tail: .35, comet: .8, inner: 60 };
-function turnClasses() { stage.classList.toggle('turn-me', turnSide === 'me' && !turnAnim); stage.classList.toggle('turn-opp', turnSide === 'opp' && !turnAnim); }
+const TURN = { dur: 1.1, pause: .15, width: 4, glow: 26, head: 1, tail: .35, comet: .8, inner: 70, pulse: .35, bText: 'Du bist am Zug', bTextOpp: 'Gegner ist am Zug', bDur: 1.6, bSize: 44, bY: 46, bDelay: .05 };
+function turnClasses() { const live = !turnAnim || turnAnim.done; stage.classList.toggle('turn-me', turnSide === 'me' && live); stage.classList.toggle('turn-opp', turnSide === 'opp' && live); }
 function turnSync() {
   const want = G && !G.over ? (myTurn() ? 'me' : 'opp') : null;
-  if (!turnAnim && want !== turnSide) {
+  if ((!turnAnim || turnAnim.done) && want !== turnSide) {
     const calm = FAST || !turnSide || !want || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
     if (calm) turnSide = want; else startTurn(turnSide, want);
   }
   turnClasses();
 }
 function startTurn(from, to) {
+  if (turnAnim && turnAnim.cv) turnAnim.cv.remove();
   const cv = document.createElement('canvas'); cv.id = 'turncv'; cv.width = 1280; cv.height = 800; stage.appendChild(cv);
-  turnAnim = { from, to, t0: performance.now(), cv };
-  const c = cv.getContext('2d'), loop = ts => {
-    if (!turnAnim || turnAnim.cv !== cv) return;
-    const t = (ts - turnAnim.t0) / 1000;
-    if (t >= TURN.pause + TURN.dur) { cv.style.transition = 'opacity .35s'; cv.style.opacity = 0; setTimeout(() => cv.remove(), 400); turnSide = turnAnim.to; turnAnim = null; render(); return; }   // Randleuchten übernimmt, die Linie blendet aus
-    drawTurn(c, turnAnim.to === 'opp', t); requestAnimationFrame(loop);
+  const me = { from, to, t0: performance.now(), cv, done: false }; turnAnim = me;
+  const c = cv.getContext('2d'), tMove = TURN.pause + TURN.dur, tEnd = tMove + TURN.bDelay + TURN.bDur + .35;
+  const loop = ts => {
+    if (turnAnim !== me) return;
+    const t = (ts - me.t0) / 1000;
+    if (!me.done && t >= tMove) { me.done = true; turnSide = to; render(); }   // Randleuchten übernimmt, die Linien sind angekommen
+    if (t >= tEnd) { cv.remove(); turnAnim = null; render(); return; }
+    drawTurn(c, to === 'opp', t, me.done); requestAnimationFrame(loop);
   };
   requestAnimationFrame(loop);
 }
-function drawTurn(c, up, t) {
-  const W = 1280, H = 800, GOLD = '210,173,79', m = TURN.width / 2, cl = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
-  const u = cl((t - TURN.pause) / TURN.dur), e = u < .5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2;
-  const y0 = up ? H - m : m, y1 = up ? m : H - m, y = y0 + (y1 - y0) * e, dir = up ? 1 : -1, sw = Math.sin(Math.PI * u);
+function drawTurn(c, up, t, done) {
+  const W = 1280, H = 800, GOLD = '210,173,79', T = TURN, cl = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x)), lerp = (a, b, k) => a + (b - a) * k;
+  const m = T.width / 2 + 1, L1 = W / 2 - m, L2 = H - 2 * m, Pn = L1 + L2 + L1;
+  const ease = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+  const ptAt = (d, side) => { let x, y; if (d <= L1) { x = W / 2 - d; y = H - m; } else if (d <= L1 + L2) { x = m; y = H - m - (d - L1); } else { x = m + (d - L1 - L2); y = m; } return [side > 0 ? W - x : x, y]; };
   c.clearRect(0, 0, W, H);
-  const line = (yy, a) => { c.save(); c.globalAlpha = cl(a); c.shadowColor = 'rgba(' + GOLD + ',.95)'; c.shadowBlur = TURN.glow; c.strokeStyle = 'rgba(' + GOLD + ',.95)'; c.lineWidth = TURN.width; c.lineCap = 'round'; c.beginPath(); c.moveTo(0, yy); c.lineTo(W, yy); c.stroke(); c.restore(); };
-  // Schein: am Start nach innen (über dem unteren Rand), am Ziel nach innen (unter dem oberen Rand), dazwischen beidseitig, er wandert mit der Linie
-  const inn = TURN.inner, k = up ? 1 - e : e, gA = inn * k + inn * .5 * sw, gB = inn * (1 - k) + inn * .5 * sw;   // gA: Schein oberhalb, gB: unterhalb der Linie
-  const glow = (from, to2, a) => { if (Math.abs(to2 - from) < 1) return; const g = c.createLinearGradient(0, from, 0, to2); g.addColorStop(0, 'rgba(' + GOLD + ',' + a + ')'); g.addColorStop(1, 'rgba(' + GOLD + ',0)'); c.fillStyle = g; c.fillRect(0, Math.min(from, to2), W, Math.abs(to2 - from)); };
-  glow(y, y - gA, .4); glow(y, y + gB, .4);
-  const trail = Math.round(2 + 7 * TURN.comet), gap = 14 + 40 * TURN.tail;
-  for (let i = trail; i >= 1; i--) { const yy = y + dir * i * gap * sw, f = 1 - i / (trail + 1); if (yy > m && yy < H - m) line(yy, .4 * f * f * TURN.comet); }
-  line(y, 1);
+  const u = cl((t - T.pause) / T.dur), breath = 1 - T.pulse * .3 * (.5 + .5 * Math.sin(t * 3.6));
+  const edge = (yy, a) => {   // Randlinie mit Innenglühen
+    if (a <= 0) return; const upE = yy < H / 2; c.save(); c.globalAlpha = cl(a);
+    if (T.inner > 0) { const g = c.createLinearGradient(0, upE ? 0 : H, 0, upE ? T.inner : H - T.inner); g.addColorStop(0, 'rgba(' + GOLD + ',.4)'); g.addColorStop(1, 'rgba(' + GOLD + ',0)'); c.fillStyle = g; c.fillRect(0, upE ? 0 : H - T.inner, W, T.inner); }
+    c.shadowColor = 'rgba(' + GOLD + ',.95)'; c.shadowBlur = T.glow; c.strokeStyle = 'rgba(' + GOLD + ',.95)'; c.lineWidth = T.width; c.lineCap = 'round'; c.beginPath(); c.moveTo(0, yy); c.lineTo(W, yy); c.stroke(); c.restore();
+  };
+  const yFrom = up ? H - m : m;
+  if (!done && u <= 0) edge(yFrom, breath);
+  else if (!done && u < 1) {
+    const tau = T.tail * .8, hp = ease(cl(u / (1 - tau))), tp = ease(cl((u - tau) / (1 - tau))), shade = T.comet * Math.sin(Math.PI * u);
+    const mapD = d => up ? d : Pn - d;
+    const tail = lerp(0, L1 + L2, tp), head = lerp(L1, Pn, hp);
+    for (const sd of [-1, 1]) {
+      const a = mapD(tail), b = mapD(head), n = Math.max(2, Math.ceil(Math.abs(b - a) / 14));
+      c.save(); c.lineCap = 'round'; c.shadowColor = 'rgba(' + GOLD + ',.95)'; c.shadowBlur = T.glow; c.lineWidth = T.width;
+      let prev = ptAt(a, sd);
+      for (let k = 1; k <= n; k++) { const p = ptAt(lerp(a, b, k / n), sd), f = k / n; c.strokeStyle = 'rgba(' + GOLD + ',' + cl(lerp(1, .12 + .88 * Math.pow(f, 1.6), shade)) + ')'; c.beginPath(); c.moveTo(prev[0], prev[1]); c.lineTo(p[0], p[1]); c.stroke(); prev = p; }
+      c.restore();
+      const hd = ptAt(b, sd), r = 24 + T.glow, ha = Math.sin(Math.PI * u), g = c.createRadialGradient(hd[0], hd[1], 0, hd[0], hd[1], r);
+      g.addColorStop(0, 'rgba(255,236,170,' + cl(.9 * ha * T.head) + ')'); g.addColorStop(1, 'rgba(' + GOLD + ',0)'); c.save(); c.fillStyle = g; c.beginPath(); c.arc(hd[0], hd[1], r, 0, 7); c.fill(); c.restore();
+    }
+  }
+  // Einblendung nach der Wanderung: Pille mit dem Namen des aktiven Spielers
+  const el = t - (T.pause + T.dur + T.bDelay); if (el < 0) return;
+  const fade = .28, a = Math.min(cl(el / fade), cl((T.bDur - el) / fade)); if (a <= 0) return;
+  const txt = (up ? T.bTextOpp : T.bText).toUpperCase(), fs = T.bSize, y = H * T.bY / 100;
+  c.save(); c.globalAlpha = a; c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = '700 ' + fs + 'px Cinzel, Georgia, serif'; c.letterSpacing = Math.round(fs * .12) + 'px';
+  const w = c.measureText(txt).width + fs * 1.6, h = fs * 1.9, lift = (1 - a) * 14;
+  c.fillStyle = 'rgba(14,10,22,.92)'; c.strokeStyle = 'rgba(' + GOLD + ',.9)'; c.lineWidth = 2; c.beginPath(); c.roundRect(W / 2 - w / 2, y - h / 2 + lift, w, h, h / 2); c.fill(); c.stroke();
+  c.fillStyle = up ? '#cfc7b4' : '#f2d27a'; c.fillText(txt, W / 2, y + lift); c.restore();
 }
 function myTurn() { return !G.over && M.actor(G) === ME; }
 /* ---------- Sound ---------- */
