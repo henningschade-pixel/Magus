@@ -239,6 +239,7 @@ ALL.forEach(s => { if (!START[s.name]) START[s.name] = RP(.8, [O('sine', 440, 44
 
 /* ---------------------------------------------------------------- Zustand */
 const KEY = 'magus_ton_werkstatt_v1';
+let ADOPT = {}, DB = null;   // Übernahmen für das Spiel (Datenbank des Artifacts: Sammlung „uebernahme“, ein Dokument je Ton)
 const S = { sel: 'curse', alts: {}, orig: {}, altBuf: null, mod: {}, level: true, busy: false, msg: '', msgCls: '', playing: null };
 try { const o = JSON.parse(localStorage.getItem(KEY) || 'null'); if (o && o.alts) { S.alts = o.alts; S.sel = o.sel || S.sel; } } catch (e) {}
 function save() { try { localStorage.setItem(KEY, JSON.stringify({ alts: S.alts, sel: S.sel })); } catch (e) {} }
@@ -287,7 +288,7 @@ function markPlaying() {
 function renderList() {
   $('list').innerHTML = GROUPS.map(g => '<section class="grp"><h3>' + esc(g[0]) + '</h3>' + g[1].map(s => {
     const n = s[0], o = S.orig[n], st = o ? stats(o) : null;
-    return '<div class="row' + (S.sel === n ? ' sel' : '') + '" data-row="' + n + '"><button class="pbtn" data-pl="row-' + n + '" data-playrow="' + n + '" aria-label="' + n + ' abspielen">▶</button><div><div class="nm">' + n + '</div><div class="us">' + esc(s[1]) + '</div></div><div class="meta">' + (st ? '<b>' + st.dur.toFixed(1) + ' s</b><br>' + st.mean.toFixed(0) + ' dB' : '') + (S.alts[n] && S.alts[n].list.length > 1 ? '<br>' + (S.alts[n].list.length - 1) + ' Alt.' : '') + '</div></div>';
+    return '<div class="row' + (S.sel === n ? ' sel' : '') + '" data-row="' + n + '"><button class="pbtn" data-pl="row-' + n + '" data-playrow="' + n + '" aria-label="' + n + ' abspielen">▶</button><div><div class="nm">' + n + '</div><div class="us">' + esc(s[1]) + '</div></div><div class="meta">' + (st ? '<b>' + st.dur.toFixed(1) + ' s</b><br>' + st.mean.toFixed(0) + ' dB' : '') + (S.alts[n] && S.alts[n].list.length > 1 ? '<br>' + (S.alts[n].list.length - 1) + ' Alt.' : '') + (ADOPT[n] ? '<br><b>' + (ADOPT[n].status === 'eingebaut' ? '✓ im Spiel' : '⏳ vorgemerkt') + '</b>' : '') + '</div></div>';
   }).join('') + '</section>').join('');
   markPlaying();
 }
@@ -299,6 +300,14 @@ const SLIDERS = [
   ['reverb', 'Hall', -.3, .5, .02, 0, v => (v > 0 ? '+' : '') + Math.round(v * 100) + ' %'],
   ['noise', 'Rauschanteil', 0, 2.5, .05, 1, v => '×' + v.toFixed(2)],
 ];
+function adoptCard(name, v) {
+  const a = ADOPT[name], same = a && a.label === v.label && a.recipe === JSON.stringify(v.recipe) && a.mod === JSON.stringify(v.mod || {});
+  let st = '';
+  if (!DB) st = '<p class="note">Das Übernehmen geht nur in claude.ai. Nutze „Rezept für Claude kopieren“ weiter unten.</p>';
+  else if (a) st = '<p class="note">' + (a.status === 'eingebaut' ? '✓ Im Spiel ist eingebaut: „' + esc(a.label) + '“.' : '⏳ Vorgemerkt: „' + esc(a.label) + '“. Sag Claude im Chat „Übernahmen einbauen“, dann kommt der Ton ins Spiel.') + (same ? '' : ' (Das ist nicht die Version, die du gerade vor dir hast.)') + '</p>';
+  else st = '<p class="note">Noch nichts vorgemerkt. Der Ton aus dem Spiel bleibt, bis du eine Alternative übernimmst.</p>';
+  return '<div class="card"><h2>Fürs Spiel übernehmen</h2><div class="bar" style="margin-top:0"><button class="btn primary" data-act="adopt"' + (DB ? '' : ' disabled') + '>„' + esc(v.label) + '“ übernehmen</button>' + (a && a.status !== 'eingebaut' ? '<button class="btn" data-act="unadopt">Vormerkung zurücknehmen</button>' : '') + '</div>' + st + '</div>';
+}
 async function renderBench() {
   const name = S.sel, info = ALL.find(a => a.name === name), v = curVer(name), vs = versOf(name);
   const m = Object.assign({}, v.mod || {}); S.mod = m;
@@ -308,6 +317,7 @@ async function renderBench() {
     '<div class="wv"><canvas id="wc-alt"></canvas><canvas id="pc-alt" style="position:absolute;left:0;top:0"></canvas><span class="lb">Alternative: ' + esc(v.label) + '</span><span class="st" id="st-alt"></span></div></div>' +
     '<div class="bar"><button class="btn" data-pl="orig" data-act="p-orig">Original</button><button class="btn primary" data-pl="alt" data-act="p-alt">Alternative</button><button class="btn" data-act="p-ab">Original → Alternative</button>' +
     '<label class="chk"><input type="checkbox" id="lvl"' + (S.level ? ' checked' : '') + '> gleich laut vergleichen (−20 dB)</label></div></div>' +
+    adoptCard(name, v) +
     '<div class="card"><h2>Alternative einstellen</h2><div class="sliders">' + SLIDERS.map(s => { const val = m[s[0]] !== undefined ? m[s[0]] : s[5]; return '<div class="sl"><label for="sl-' + s[0] + '">' + s[1] + '<output id="o-' + s[0] + '">' + s[6](val) + '</output></label><input type="range" id="sl-' + s[0] + '" data-sl="' + s[0] + '" min="' + s[2] + '" max="' + s[3] + '" step="' + s[4] + '" value="' + val + '"></div>'; }).join('') + '</div>' +
     '<div class="bar"><button class="btn" data-act="dice">🎲 Würfeln</button><button class="btn" data-act="reset-mod">Regler zurück</button><button class="btn" data-act="keep">Als neue Version sichern</button></div></div>' +
     '<div class="card"><h2>Von Claude entwickeln lassen</h2><textarea id="wish" placeholder="Wunsch, z. B. „viel wuchtiger, tiefer, mit langem Nachhall“ oder „heller, glasiger, kürzer“" aria-label="Wunsch an Claude">' + esc(v.note || '') + '</textarea>' +
@@ -392,6 +402,8 @@ document.addEventListener('click', async ev => {
   if (a === 'p-orig') { if (S.playing === 'orig') return stopPlay(); const b = await getOrig(S.sel); playBuf(b, 'orig'); }
   else if (a === 'p-alt') { if (S.playing === 'alt') return stopPlay(); if (S.altBuf) playBuf(S.altBuf, 'alt'); }
   else if (a === 'p-ab') { const b = await getOrig(S.sel); playBuf(b, 'orig', () => { setTimeout(() => { if (S.altBuf && !cur) playBuf(S.altBuf, 'alt'); }, 350); }); }
+  else if (a === 'adopt') { if (!DB) return; const v = curVer(S.sel); try { await DB.collection('uebernahme').doc(S.sel).set({ name: S.sel, label: v.label, by: v.by, recipe: JSON.stringify(v.recipe), mod: JSON.stringify(v.mod || {}), note: v.note || '', level: S.level, status: 'wartet', at: new Date().toISOString() }); setMsg('Vorgemerkt. Sag Claude im Chat „Übernahmen einbauen“.', 'ok'); } catch (e) { setMsg('Vormerken ging nicht (' + (e.code || e.message) + ').', 'bad'); } }
+  else if (a === 'unadopt') { if (!DB) return; try { await DB.collection('uebernahme').doc(S.sel).delete(); setMsg('Vormerkung zurückgenommen.', 'ok'); } catch (e) { setMsg('Zurücknehmen ging nicht (' + (e.code || e.message) + ').', 'bad'); } }
   else if (a === 'dice') dice();
   else if (a === 'reset-mod') { curVer(S.sel).mod = {}; save(); renderBench(); }
   else if (a === 'keep') { const v = curVer(S.sel); const vs = versOf(S.sel); newVer('Version ' + vs.list.length, 'Du', JSON.parse(JSON.stringify(v.recipe)), Object.assign({}, v.mod), v.note); renderBench(); }
@@ -411,6 +423,11 @@ window.TonEngine = { renderRecipe, START, stats };   /* für tools/ton-rendern.j
 
 /* Start: Liste zeigen, Längen und Pegel aller Originale im Hintergrund nachladen */
 renderList(); renderBench();
+(async () => {   // Übernahmen live mitlesen (nur in claude.ai)
+  try { DB = await claude.use('db'); } catch (e) {}
+  if (!DB) { renderBench(); return; }
+  DB.collection('uebernahme').onSnapshot(sn => { ADOPT = {}; sn.docs.forEach(d => { const x = d.data(); if (x) ADOPT[d.id] = x; }); renderList(); const c = document.querySelector('#bench .card:nth-child(2)'); if (c) { const t = document.createElement('div'); t.innerHTML = adoptCard(S.sel, curVer(S.sel)); c.replaceWith(t.firstChild); } }, () => {});
+})();
 (async () => { for (const s of ALL) { try { await getOrig(s.name); } catch (e) {} } renderList(); })();
 </script>
 </body>
