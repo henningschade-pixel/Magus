@@ -21,7 +21,7 @@ function startCombat(state, attPid, el) {
     logFrom: state.logN,
     mode: 'monster', elem: el, att: attPid, def: other(attPid),
     sides: { a: playerSide(state, attPid, 'a'), b: { key: 'b', kind: 'monster', ctrl: other(attPid), name: m.name, stats: m.stats, deck: mdeck, monster: m } },
-    turn: 'a', action: 'attack', color: null, pending: 0, ult: [], turns: 0,
+    turn: 'a', action: 'attack', color: null, pending: 0, turns: 0,
   };
   state.phase = 'combat';
   log(state, A.name + ' greift ' + m.name + ' an. ' + state.players[other(attPid)].name + ' führt das Monster.', attPid);
@@ -43,7 +43,7 @@ function startShowdown(state) {
     logFrom: state.logN,
     mode: 'showdown', elem: null, att, def: other(att),
     sides: { a: playerSide(state, att, 'a'), b: playerSide(state, other(att), 'b') },
-    turn: 'a', action: 'attack', color: null, pending: 0, ult: [], turns: 0,
+    turn: 'a', action: 'attack', color: null, pending: 0, turns: 0,
   };
   state.phase = 'combat';
   log(state, 'Showdown ' + (state.showdown + 1) + ': ' + state.players[att].name + ' greift zuerst an (liegt zurück oder Zufall).', att);
@@ -138,7 +138,7 @@ function finishStep(state) {
   return null;
 }
 // Angriffszug endet ohne Schaden: die Gegenseite greift an (Verteidigung entfällt).
-// Spiegelmarker (Regel controlMode 'mirror'): Control legt S Marker vor den Angreifer; wer das nächste Mal angreift (oder passt), verliert einen.
+// Spiegelmarker: Der Spiegel (Wasser+Feuer bzw. Wasser+Erde) legt Marker vor den Verteidiger; sie werfen Angriffsschaden zurück.
 const MAX_MIRROR = 3;
 // Spiegelmarker sind an ein Element (Magierichtung) gebunden: stats.mirrorEl = {F,E,W}, stats.mirror = Summe.
 function mirrorOf(stats, el) { return (stats.mirrorEl && stats.mirrorEl[el]) || 0; }
@@ -154,8 +154,6 @@ function mirrorAdd(stats, el, n) {
 }
 function mirrorTake(stats, el, n) { if (stats.mirrorEl) { stats.mirrorEl[el] = Math.max(0, stats.mirrorEl[el] - n); mirrorSync(stats); } }
 function mirrorTakeAny(stats, n) { for (const el of ELEMENTS) { while (n > 0 && mirrorOf(stats, el) > 0) { mirrorTake(stats, el, 1); n--; } } }
-// Standardfarbe neuer Spiegelmarker: das stärkste Element des Gegners (sonst die Wahl des Spielers per ‚mel‘).
-function defaultMirrorEl(opp) { let b = ELEMENTS[0]; for (const e of ELEMENTS) if (opp.stats.mag[e] > opp.stats.mag[b]) b = e; return b; }
 // Läuterung: gewählte Marker (sm/om/sd/od/ot), höchstens S; ohne Wahl automatisch eigene Todesmarker, dann Spiegel des Gegners.
 function lifeflowPicks(state, side, opp, lvl) {
   if (Array.isArray(state.combat.lfp)) return state.combat.lfp.slice(0, lvl);
@@ -164,10 +162,6 @@ function lifeflowPicks(state, side, opp, lvl) {
   while (out.length < lvl && om > 0) { out.push('om'); om--; }
   return out;
 }
-// Rückwurf-Obergrenze: so viel, wie die gewählten Karten in der Farbe des Angriffs mit dem Magielevel blocken könnten.
-function mirrorCap(stats, sel, color) { let b = 0; sel.forEach(x => { if (!x.curse && x.el === color) b += Math.min(x.tier, stats.mag[color]); }); return b; }
-function mirrorOn(state) { return state.rules.controlMode === 'mirror'; }
-function decayMirror(state, side) { if (mirrorOn(state) && state.rules.mirrorDecay > 0 && side.stats.mirror > 0) { mirrorTakeAny(side.stats, state.rules.mirrorDecay); } }
 // Todes-Fluch: Am Ende der eigenen Angriffsphase (nach Angriff und Verteidigung der Gegenseite) verliert die Seite so viele HP, wie sie Todesmarker trägt.
 // Ist der Kampf schon entschieden (eine Seite auf 0 HP), wirkt er nicht mehr.
 function deathTick(state, side) {
@@ -176,31 +170,28 @@ function deathTick(state, side) {
   side.stats.hp = Math.max(0, side.stats.hp - side.stats.death);
   log(state, 'Todes-Fluch: ' + side.name + ' verliert ' + side.stats.death + ' HP am Ende der Angriffsphase.', side.ctrl);
 }
-function passAttackTurn(state, noDecay) {
+function passAttackTurn(state) {
   const c = state.combat;
   deathTick(state, c.sides[c.turn]);
-  if (!noDecay) decayMirror(state, c.sides[c.turn]);
-  c.turn = c.turn === 'a' ? 'b' : 'a'; c.action = 'attack'; c.color = null; c.pending = 0; c.ult = []; c.lf = 'self';
+  c.turn = c.turn === 'a' ? 'b' : 'a'; c.action = 'attack'; c.color = null; c.pending = 0;
 }
 
-// Wirkung der Kombos (Angriff und, in der Variante defenseCombos, nach der Verteidigung): plan = [[Schlüssel, Stufe], ...]
+// Wirkung der Kombos (Angriff und nach der Verteidigung): plan = [[Schlüssel, Stufe], ...]
 function applyComboPlan(state, side, opp, plan, ev, texts, fxs) {
-  const c = state.combat, ordered = state.rules.comboMode === 'ordered';
+  const c = state.combat;
   for (const [k, lvl] of plan) {
-    if (k === 'fw' && mirrorOn(state)) { const mel = ordered && ev.ord && ev.ord.el ? ev.ord.el : (c.mel && c.melTurn === c.turns && c.mel) || defaultMirrorEl(opp); mirrorAdd(side.stats, mel, lvl); if (state.rules.mirrorFree) side.stats.mirrorFree = true; texts.push('Spiegel ' + lvl + ' (' + NAMES[mel] + ', ' + (side.stats.mirror || 0) + ' Marker)'); }
-    else if (k === 'fw') { side.stats.freeDraws += lvl; texts.push('Control ' + lvl + ': ' + lvl + ' Gratis-Nachziehen'); }
+    if (k === 'fw') { const mel = ev.ord.el; mirrorAdd(side.stats, mel, lvl); texts.push('Spiegel ' + lvl + ' (' + NAMES[mel] + ', ' + (side.stats.mirror || 0) + ' Marker)'); }
     if (k === 'fe') { texts.push('Aggro ' + lvl + ': ' + inflictCurses(state, opp, lvl)); fxs.push({ kind: 'aggro', who: side.ctrl, to: opp.ctrl, n: lvl }); }
-    if (k === 'rm' && state.rules.rmMode !== 'drain') {   // Zerrüttung: Der Gegner muss S Handkarten seiner Wahl abwerfen
+    if (k === 'rm') {   // Zerrüttung: Der Gegner muss S Handkarten seiner Wahl abwerfen
       const n = Math.min(lvl, opp.deck.hand.filter(Boolean).length);
       if (n > 0) { c.forced = { pid: opp.ctrl, n }; fxs.push({ kind: 'ruin', who: side.ctrl, to: opp.ctrl, n }); }
       texts.push('Zerrüttung ' + lvl + ': ' + opp.name + ' muss ' + n + ' Handkarte' + (n === 1 ? '' : 'n') + ' seiner Wahl abwerfen');
     }
-    else if (k === 'rm') { const take = Math.min(lvl, Math.max(0, opp.stats.mana)); opp.stats.mana -= take; texts.push('Entzug ' + lvl + ': ' + opp.name + ' verliert ' + take + ' Mana'); if (take > 0) fxs.push({ kind: 'drain', who: side.ctrl, to: opp.ctrl, n: take }); }
     else if (k === 'gh') {
-      const before = side.stats.hp; side.stats.hp = Math.min(side.stats.maxHp, before + lvl * (state.rules.lifeflowHeal || 1));
+      const before = side.stats.hp; side.stats.hp = Math.min(side.stats.maxHp, before + lvl);
       texts.push('Heilung ' + lvl + ': +' + (side.stats.hp - before) + ' HP'); fxs.push({ kind: 'lifeflow', who: side.ctrl, to: opp.ctrl, got: {}, removed: 0, heal: side.stats.hp - before, draws: 0 });
     }
-    else if (k === 'ew' && (ordered || state.rules.lifeflowMode === 'any')) {   // S Marker beliebig vom Brett nehmen, je entferntem Marker 1 HP heilen (geordnet: ohne Heilung)
+    else if (k === 'ew') {   // Läuterung: S Marker beliebig vom Brett nehmen, je entferntem Marker 1 Gratis-Nachziehen
       const before = side.stats.hp, picks = lifeflowPicks(state, side, opp, lvl), names = { sd: 'eigene Todesmarker', od: 'Todesmarker des Gegners', sm: 'eigene Spiegelmarker', om: 'Spiegelmarker des Gegners', ot: 'Nachziehtoken des Gegners' };
       const got = {}; let removed = 0;
       for (const pk of picks) {
@@ -210,24 +201,10 @@ function applyComboPlan(state, side, opp, plan, ev, texts, fxs) {
         if (key === 'mirror') { if (mel && mirrorOf(tgt.stats, mel) > 0) mirrorTake(tgt.stats, mel, 1); else mirrorTakeAny(tgt.stats, 1); } else { tgt.stats[key]--; if (key === 'death' && tgt.stats.death <= 0) delete tgt.stats.death; }
         removed++; got[kk] = (got[kk] || 0) + 1;
       }
-      const od = state.rules.lifeflowDrawAll ? removed - (got.ot || 0) : (got.om || 0), dr = od * (state.rules.lifeflowDraw || 0);   // Gratis-Nachziehen je entferntem Marker (lifeflowDrawAll) oder nur je gegnerischem
+      const dr = removed - (got.ot || 0);   // Gratis-Nachziehen je entferntem Marker (zerstörte Nachziehtokens des Gegners zählen nicht)
       if (dr) side.stats.freeDraws += dr;
-      const heal = ordered ? 0 : state.rules.lifeflowHealMode === 'flat' ? lvl : removed;
-      side.stats.hp = Math.min(side.stats.maxHp, side.stats.hp + heal * (state.rules.lifeflowHeal || 1));
-      texts.push((ordered ? 'Läuterung ' + lvl : 'Lifeflow ' + lvl + ': +' + (side.stats.hp - before) + ' HP') + (ordered && !removed ? ': nichts zu entfernen' : '') + (removed ? ', ' + Object.keys(got).map(kk => got[kk] + ' ' + names[kk]).join(', ') + ' weg' : '') + (dr ? ', ' + dr + ' Gratis-Nachziehen' : ''));
+      texts.push('Läuterung ' + lvl + (!removed ? ': nichts zu entfernen' : '') + (removed ? ', ' + Object.keys(got).map(kk => got[kk] + ' ' + names[kk]).join(', ') + ' weg' : '') + (dr ? ', ' + dr + ' Gratis-Nachziehen' : ''));
       fxs.push({ kind: 'lifeflow', who: side.ctrl, to: opp.ctrl, got, removed, heal: side.stats.hp - before, draws: dr });
-    } else if (k === 'ew' && state.rules.lifeflowMode === 'plain') {   // einfach: S HP und S Gratis-Nachziehen, kein Marker wird entfernt
-      const before = side.stats.hp; side.stats.hp = Math.min(side.stats.maxHp, side.stats.hp + lvl * (state.rules.lifeflowHeal || 1));
-      const dr = lvl * (state.rules.lifeflowDraw || 0); side.stats.freeDraws += dr;
-      texts.push('Lifeflow ' + lvl + ': +' + (side.stats.hp - before) + ' HP' + (dr ? ', ' + dr + ' Gratis-Nachziehen' : ''));
-    } else if (k === 'ew') {
-      const before = side.stats.hp; side.stats.hp = Math.min(side.stats.maxHp, side.stats.hp + lvl * (state.rules.lifeflowHeal || 1));
-      if (state.rules.lifeflowMana) side.stats.mana = Math.min(side.stats.maxMana, side.stats.mana + lvl);   // Variante: zusätzlich S Mana
-      if (state.rules.lifeflowMode === 'choice' && c.lf === 'opp') {   // Wahl: S Marker beim Gegner wegnehmen (seine Spiegelmarker) statt eigener Fluchmarker
-        const had = opp.stats.mirror || 0, take = Math.min(had, lvl);
-        mirrorTakeAny(opp.stats, take);
-        texts.push('Lifeflow ' + lvl + ': +' + (side.stats.hp - before) + ' HP, Gegner verliert ' + take + ' Spiegelmarker');
-      } else texts.push('Lifeflow ' + lvl + ': +' + (side.stats.hp - before) + ' HP' + cs.relieve(state, side, lvl));
     }
   }
 }
@@ -237,27 +214,19 @@ function execAttack(state) {
   const ev = evalAttack(side.stats, sel);
   if (!ev.valid) return fail(ev.reason);
   if (!ev.affordable) return fail('Zu wenig Mana (' + ev.cost + ' nötig).');
-  let plan = [];
-  const ordered = state.rules.comboMode === 'ordered', lvs = levelsFor(state.rules, ev);
-  const death = ev.levels.ulti > 0 && state.rules.ultiMode === 'death';
-  if (death) plan = [];
-  else if (ev.levels.ulti > 0) {
-    const ch = c.ult.filter(k => ['fw', 'fe', 'ew'].includes(k));
-    if (ch.length !== 2) return fail('Ultimate: wähle genau zwei Kombos.');
-    plan = ch.map(k => [k, ev.levels.ulti]);
-  } else for (const k of ordered ? ['fw', 'fe', 'ew', 'rm', 'gh'] : ['fw', 'fe', 'ew']) if (lvs[k] > 0) plan.push([k, lvs[k]]);
+  const lvs = levelsFor(ev), death = ev.levels.ulti > 0, plan = [];
+  if (!death) for (const k of ['fw', 'fe', 'ew', 'rm', 'gh']) if (lvs[k] > 0) plan.push([k, lvs[k]]);
   side.stats.mana -= ev.cost;
   consumeSelection(d, sel);
-  decayMirror(state, side);
   const texts = [], fxs = [];
   applyComboPlan(state, side, opp, plan, ev, texts, fxs);
   if (death) { opp.stats.death = Math.max(opp.stats.death || 0, ev.levels.ulti); texts.push('Ultimate ' + ev.levels.ulti + ': Todes-Fluch für ' + opp.name + ' (' + opp.stats.death + ' HP am Ende jeder seiner Angriffsphasen bis Kampfende)'); }
-  c.ult = []; c.lf = 'self'; c.lfp = null; c.mel = null;
+  c.lfp = null;
   const dmg = ev.prim ? ev.damage : 0;
   if (dmg > 0) fxs.push({ kind: 'attack', who: side.ctrl, to: opp.ctrl, elem: ev.prim, n: dmg });
   log(state, side.name + ' greift an' + (ev.prim ? ' (' + NAMES[ev.prim] + ', Schaden ' + dmg + ')' : ' (nur Flüche)') + (texts.length ? ' – ' + texts.join(', ') : '') + '.', side.ctrl, fxs.length ? fxs : undefined);
   if (dmg > 0) { c.color = ev.prim; c.pending = dmg; c.turn = c.turn === 'a' ? 'b' : 'a'; c.action = 'defense'; }
-  else passAttackTurn(state, true);
+  else passAttackTurn(state);
   const res = finishStep(state);
   return { ok: true, combatEnd: res };
 }
@@ -268,7 +237,7 @@ function execDefense(state, passOnly) {
   let block = 0, cost = 0, sel = [], defEv = null;
   if (!passOnly) {
     sel = selection(d);
-    const ev = evalDefense(side.stats, sel, c.color, c.mr, state.rules);
+    const ev = evalDefense(side.stats, sel, c.color);
     if (!ev.valid) return fail(ev.reason);
     if (ev.affordable === false) return fail('Zu wenig Mana (' + ev.cost + ' nötig).');
     block = ev.block || 0; cost = ev.cost || 0; defEv = ev;
@@ -283,32 +252,30 @@ function execDefense(state, passOnly) {
   const defFx = { kind: 'defense', who: side.ctrl, to: attacker.ctrl, attElem: c.color, defElem: defEl, pending: c.pending, block };
   log(state, side.name + (passOnly ? ' erholt sich (+' + gain + ' Mana)' : ' verteidigt' + (block ? ' (Block ' + block + ')' : ' ohne Block')) + ' und verliert ' + leftover + ' HP' + '.', side.ctrl, defFx);
   // Spiegel (Standard): Gegen jeden Angriff in der Farbe des Spiegels wirkt automatisch ein Marker, sobald eine reguläre Verteidigung (mindestens eine Elementkarte) ausgeführt wird, egal in welcher Farbe; ohne Verteidigung (Erholen) wirkt er nicht. Die Verteidigung kostet wie ohne Spiegel. Der Marker wird verbraucht und wirft 1 unblockbaren Schaden zurück.
-  if (mirrorOn(state) && !passOnly && sel.some(x => !x.curse) && mirrorOf(side.stats, c.color) > 0 && (state.rules.mirrorTrigger === 'any' ? true : sel.some(x => !x.curse && x.el === c.color)) && !(state.rules.mirrorChoice && c.mr === 0)) {
-    const att = c.sides[c.turn === 'a' ? 'b' : 'a'], step = state.rules.mirrorStep || 0, rel = Math.min(state.rules.mirrorChoice ? mirrorCap(side.stats, sel, c.color) : c.pending, state.rules.mirrorChoice ? Math.min(mirrorOf(side.stats, c.color), c.pending, c.mr == null ? 1 : c.mr) : (step > 0 ? Math.min(step, mirrorOf(side.stats, c.color)) : mirrorOf(side.stats, c.color))), r = rel * (state.rules.mirrorMult || 1);
+  if (!passOnly && sel.some(x => !x.curse) && mirrorOf(side.stats, c.color) > 0) {
+    const att = c.sides[c.turn === 'a' ? 'b' : 'a'], rel = Math.min(1, mirrorOf(side.stats, c.color)), r = rel;
     if (rel > 0) {
     const mBefore = mirrorOf(side.stats, c.color);
     mirrorTake(side.stats, c.color, rel);
     att.stats.hp = Math.max(0, att.stats.hp - r);
-    if (state.rules.mirrorHeal) side.stats.hp = Math.min(side.stats.maxHp, side.stats.hp + rel * state.rules.mirrorHeal);
-    if (state.rules.mirrorMana) side.stats.mana = Math.min(side.stats.maxMana, side.stats.mana + rel * state.rules.mirrorMana);
     const inline = leftover > 0;   // Es geht Schaden durch: Der Spiegel wird im Kampfeffekt gezeigt (Funken treffen ihn), nicht als eigene Animation
     if (inline) defFx.mirror = { markers: mBefore, broken: rel, r };
     log(state, 'Spiegel: ' + side.name + ' wirft ' + r + ' Schaden auf ' + att.name + ' zurück.', side.ctrl, { kind: 'mirror', elem: c.color, markers: mBefore, broken: rel, att: att.ctrl, r, inline });
     }
   }
-  if (defEv && defEv.levels && defEv.levels.ulti > 0 && state.rules.defenseCombos && state.rules.comboMode === 'ordered' && state.rules.ultiMode === 'death' && side.stats.hp > 0) {   // Ultimate in der Verteidigung: Todes-Fluch für den Angreifer
+  if (defEv && defEv.levels && defEv.levels.ulti > 0 && side.stats.hp > 0) {   // Ultimate in der Verteidigung: Todes-Fluch für den Angreifer
     attacker.stats.death = Math.max(attacker.stats.death || 0, defEv.levels.ulti);
     log(state, side.name + ' wirkt eine Ultimate: Ultimate ' + defEv.levels.ulti + ': Todes-Fluch für ' + attacker.name + ' (' + attacker.stats.death + ' HP am Ende jeder seiner Angriffsphasen bis Kampfende).', side.ctrl, { kind: 'aggro', who: side.ctrl, to: attacker.ctrl, n: defEv.levels.ulti, late: true });
   }
-  if (defEv && defEv.ord && state.rules.defenseCombos && state.rules.comboMode === 'ordered' && side.stats.hp > 0) {   // Kombo der Verteidigung: erst nach der Verteidigung (und dem Spiegelrückwurf)
-    const lvs = levelsFor(state.rules, defEv), plan = [], texts = [], fxs = [];
+  if (defEv && defEv.ord && side.stats.hp > 0) {   // Kombo der Verteidigung: erst nach der Verteidigung (und dem Spiegelrückwurf)
+    const lvs = levelsFor(defEv), plan = [], texts = [], fxs = [];
     for (const k of ['fw', 'fe', 'ew', 'rm', 'gh']) if (lvs[k] > 0) plan.push([k, lvs[k]]);
     applyComboPlan(state, side, attacker, plan, defEv, texts, fxs);
     fxs.forEach(f => { f.late = true; });
     if (texts.length) log(state, side.name + ' wirkt einen Kombo: ' + texts.join(', ') + '.', side.ctrl, fxs.length ? fxs : undefined);
   }
   const attSide = c.sides[c.turn === 'a' ? 'b' : 'a'];   // wer gerade angegriffen hat: seine Angriffsphase endet mit dieser Verteidigung
-  c.action = 'attack'; c.color = null; c.pending = 0; c.ult = []; c.mr = null;
+  c.action = 'attack'; c.color = null; c.pending = 0;
   deathTick(state, attSide);
   const res = finishStep(state);
   return { ok: true, combatEnd: res };
@@ -333,20 +300,8 @@ function applyCombat(state, a) {
   if (a.type === 'lock') { const e = toggleLock(mine.deck, a.slot); return e ? fail(e) : { ok: true }; }
   if (side.ctrl !== pid) return fail('Die Gegenseite ist am Zug.');
   switch (a.type) {
-    case 'mark': { const e = toggleMark(side.deck, a.slot, side.stats.limit); if (!e) c.ult = c.ult.slice(); return e ? fail(e) : { ok: true }; }
-    case 'ult': {
-      const ev = evalAttack(side.stats, selection(side.deck));
-      if (state.rules.ultiMode === 'death') return fail('Die Ultimate ist der Todes-Fluch; es gibt nichts zu wählen.');
-      if (c.action !== 'attack' || !ev.valid || ev.levels.ulti <= 0) return fail('Keine Ultimate möglich.');
-      if (!['fw', 'fe', 'ew'].includes(a.key)) return fail('Unbekannter Kombo.');
-      const at = c.ult.indexOf(a.key);
-      if (at >= 0) c.ult.splice(at, 1); else { if (c.ult.length >= 2) return fail('Es sind höchstens zwei Kombos wählbar.'); c.ult.push(a.key); }
-      return { ok: true };
-    }
-    case 'lfp': { if (c.action !== 'attack') return fail('Nur im Angriffszug.'); if (state.rules.lifeflowMode !== 'any' && state.rules.comboMode !== 'ordered') return fail('Keine Wahl in dieser Regelvariante.'); const ok = ['sm', 'om', 'sd', 'od', 'ot']; c.lfp = a.pick === null ? null : (Array.isArray(a.pick) ? a.pick : []).filter(x => typeof x === 'string' && ok.includes(x.split(':')[0]) && (x.indexOf(':') < 0 || ELEMENTS.includes(x.split(':')[1]))).slice(0, 3); return { ok: true }; }
-    case 'mel': { if (c.action !== 'attack') return fail('Nur im Angriffszug.'); if (!mirrorOn(state)) return fail('Kein Spiegel in dieser Regelvariante.'); if (!ELEMENTS.includes(a.el)) return fail('Unbekanntes Element.'); c.mel = a.el; c.melTurn = c.turns; return { ok: true }; }
-    case 'lf': { if (c.action !== 'attack') return fail('Nur im Angriffszug.'); if (state.rules.lifeflowMode !== 'choice') return fail('Keine Wahl in dieser Regelvariante.'); c.lf = a.target === 'opp' ? 'opp' : 'self'; return { ok: true }; }
-    case 'mr': { if (c.action !== 'defense') return fail('Nur in der Verteidigung.'); if (!state.rules.mirrorChoice) return fail('Keine Wahl in dieser Regelvariante.'); const have = Math.min(mirrorOf(side.stats, c.color), c.pending); c.mr = Math.max(0, Math.min(have, Math.floor(+a.n) || 0)); return { ok: true }; }
+    case 'mark': { const e = toggleMark(side.deck, a.slot, side.stats.limit); return e ? fail(e) : { ok: true }; }
+    case 'lfp': { if (c.action !== 'attack') return fail('Nur im Angriffszug.'); const ok = ['sm', 'om', 'sd', 'od', 'ot']; c.lfp = a.pick === null ? null : (Array.isArray(a.pick) ? a.pick : []).filter(x => typeof x === 'string' && ok.includes(x.split(':')[0]) && (x.indexOf(':') < 0 || ELEMENTS.includes(x.split(':')[1]))).slice(0, 3); return { ok: true }; }
     case 'attack': if (c.action !== 'attack') return fail('Jetzt wird verteidigt.'); return execAttack(state);
     case 'defend': if (c.action !== 'defense') return fail('Jetzt wird angegriffen.'); return execDefense(state, false);
     case 'pass':

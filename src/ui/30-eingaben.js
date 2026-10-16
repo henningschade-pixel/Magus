@@ -29,9 +29,6 @@ function onAct(d) {
     case 'defend': act({ type: 'defend' }); break;
     case 'pass': act({ type: 'pass' }); break;
     case 'recover': act({ type: 'recover' }); break;
-    case 'ult': act({ type: 'ult', key: d.k }); break;
-    case 'mr': act({ type: 'mr', n: +d.n }); break;
-    case 'mel': act({ type: 'mel', el: d.e }); break;
     case 'lfm': {
       const L = lfCtx(); if (!L) break;
       const k = d.k, e = d.e || '', key = e ? k + ':' + e : k, have = lfHave(L.cx, k, e), n = L.picks.filter(x => x === key).length;
@@ -42,7 +39,6 @@ function onAct(d) {
       act({ type: 'lfp', pick: others.concat(Array(m).fill(key)) }); break;
     }
     case 'lfauto': act({ type: 'lfp', pick: null }); break;
-    case 'lf': act({ type: 'lf', target: d.t }); break;
   }
 }
 stage.addEventListener('click', e => {
@@ -62,7 +58,6 @@ stage.addEventListener('click', e => {
     act({ type: 'mark', slot: +c.dataset.slot });
   }
 });
-stage.addEventListener('change', e => { const t = e.target; if (t.dataset && t.dataset.act === 'ult') act({ type: 'ult', key: t.dataset.k }); });
 /* Vorschau beim Überfahren eines Plus-Knopfes: neue Werte in Grün, neue Magiestufe grün eingekreist */
 let pvUndo = null;
 function pvClear() { if (pvUndo) { pvUndo(); pvUndo = null; } }

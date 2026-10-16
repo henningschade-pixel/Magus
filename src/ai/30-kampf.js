@@ -30,29 +30,19 @@ function bestAttack(side, opp, hand, Q, state0) {
       const hurt = stats.maxHp - stats.hp, oMir = opp.stats.mirror || 0;
       const w = { fw: Q.wFW, fe: Q.wFE, ew: oMir > 0 ? 1.2 + oMir * Math.max(0.3, Q.lfOppW || 0) : 0.1, rm: opp.stats.mana > 0 ? 0.8 : 0 };   // Läuterung lohnt, wenn der Gegner Spiegelmarker trägt
       if (ev.ord && ev.ord.el && pickMirrorEl(side, opp) !== ev.ord.el) w.fw *= 0.5;
-      const lvs = M.levelsFor(state0.rules, ev);
+      const lvs = M.levelsFor(ev);
       let combo = 0;
       if (ev.levels.ulti > 0) combo = ev.levels.ulti * Q.wDeath * (opp.stats.death >= ev.levels.ulti ? 0.1 : 1) * (Q.smart ? Math.max(0.4, Math.min(1.4, opp.stats.hp / 4)) : 1);
-      else combo = lvs.fw * w.fw + lvs.fe * w.fe + lvs.ew * w.ew + Math.min(lvs.rm, opp.stats.mana) * w.rm + Math.min(lvs.gh * (state0.rules.lifeflowHeal || 1), hurt) * Q.wEW + (lvs.gh > 0 && hurt === 0 ? 0.1 : 0);
+      else combo = lvs.fw * w.fw + lvs.fe * w.fe + lvs.ew * w.ew + Math.min(lvs.rm, opp.stats.mana) * w.rm + Math.min(lvs.gh * 1, hurt) * Q.wEW + (lvs.gh > 0 && hurt === 0 ? 0.1 : 0);
       const dmg = ev.prim ? ev.damage : 0;
       let value = dmg * Q.aDmg + combo - ev.cost * Q.aCost + ev.curses * Q.aCurse;
       if (dmg >= opp.stats.hp && dmg > 0) value += 100;
       if (dmg > 0 && ev.prim && M.mirrorOf(opp.stats, ev.prim) > 0) value -= M.mirrorOf(opp.stats, ev.prim) * Q.mirAvoid;   // Spiegel des Gegners: ein Angriff kann zurückgeworfen werden
       if (ord.length > 1 && dmg === 0 && combo === 0 && ev.curses === 0) value -= 5;
-      if (!best || value > best.value) best = { value, ord, ev, ult: [], dmg };
+      if (!best || value > best.value) best = { value, ord, ev, dmg };
     }
   }
   return best;
-}
-// Wie viele Spiegelmarker bei der Verteidigung ablegen? So viele, wie Schaden/Heilung/Rückwurf nützen; der Rest bleibt für später.
-function mirrorPick(state, side, c, sel) {
-  const s = side.stats, opp = c.sides[c.turn === 'a' ? 'b' : 'a'], mult = state.rules.mirrorMult || 1, heal = state.rules.mirrorHeal || 0;
-  const ev = M.evalDefense(s, sel, c.color), left = Math.max(0, c.pending - (ev.block || 0)), hpAfter = s.hp - left;
-  const cap = Math.min(M.mirrorOf(s, c.color), c.pending, M.mirrorCap(s, sel, c.color));
-  for (let n = 1; n <= cap; n++) if (n * mult >= opp.stats.hp) return n;   // tödlich für den Angreifer
-  const missing = Math.max(0, s.maxHp - hpAfter);
-  const useful = heal > 0 ? Math.ceil(missing / heal) : 0;
-  return Math.max(0, Math.min(cap, Math.max(left > 0 ? 1 : 0, Math.min(useful, 2)) + (opp.stats.hp <= 3 ? 1 : 0)));
 }
 // Beim Nachziehen im Kampf: Karten sperren, die zusammen mit einer neuen Karte den besten Angriff (auch Kombo) versprechen.
 function keepLocks(state, side, opp, hand, Q) {
@@ -86,7 +76,7 @@ function combatPlan(state, pid) {
     const lowMana = Q.rW * gain * Math.max(0, Q.rRef - s.mana);   // wenig Mana: nur noch starke Angriffe, sonst lieber erholen
     if (best && best.value > Q.aThr + lowMana - Q.stallDec * Math.max(0, Math.floor(((c.turns || 0) - Q.stallFrom) / 2))) {   // lange ohne Angriff: Schwelle sinkt, damit die KI nicht endlos nachzieht
       const acts = best.ord.map(h => A({ type: 'mark', slot: h.slot }));
-      const lvB = M.levelsFor(state.rules, best.ev);
+      const lvB = M.levelsFor(best.ev);
       if (best.ev.levels.ulti <= 0 && lvB.ew > 0) {   // Läuterung: eigene Todesmarker, dann Spiegel des Gegners, zuletzt dessen Nachziehtokens
         const lvl = lvB.ew, pick = [];
         for (let i = 0; pick.length < lvl && i < (s.death || 0); i++) pick.push('sd');
@@ -114,37 +104,29 @@ function combatPlan(state, pid) {
   }
   // Verteidigung
   const color = c.color, pend = c.pending, lethal = pend >= s.hp;
-  const dcom = !!(state.rules.defenseCombos && state.rules.comboMode === 'ordered');   // Variante: zweite Farbe als Kombokarte in der Verteidigung
   const cand = hand.filter(h => !h.curse);
   let best = { score: pend * (lethal ? Q.dLeth : Q.dPend) - Q.dRec * Math.min(M.recoverGain ? M.recoverGain(state) : 1, s.maxMana - s.mana), ord: [] };   // Verzicht auf Verteidigung bringt Mana
   const variants = [];
   for (const sub0 of subsets(cand, Math.max(1, s.limit))) {
-    if (!dcom) { variants.push(sub0); continue; }
     const firsts = [...new Set(sub0.filter(h => !h.curse).map(h => h.el))];
     if (firsts.length <= 1) variants.push(sub0); else firsts.forEach(f => variants.push(sub0.filter(h => h.el === f).concat(sub0.filter(h => h.el !== f))));   // die erste Karte bestimmt die Verteidigungsfarbe
   }
   for (const sub of variants) {
-    const ev = M.evalDefense(s, sub, color, undefined, state.rules);
+    const ev = M.evalDefense(s, sub, color);
     if (!ev.valid || ev.affordable === false) continue;
     const left = Math.max(0, pend - (ev.block || 0));
     const nCurse = sub.filter(h => h.curse).length;
     let score = left * (lethal ? Q.dLeth : Q.dPend) + (ev.cost || 0) * Q.dCost + (sub.length - nCurse) * Q.dKeep - nCurse * 0.6;
-    if (state.rules.controlMode === 'mirror' && M.mirrorOf(s, color) > 0 && left < s.hp && (state.rules.mirrorTrigger === 'any' || sub.some(h => !h.curse && h.el === color))) {   // Spiegel: Verteidigung wirft Marker zurück
-      const opp = c.sides[c.turn === 'a' ? 'b' : 'a'], st = state.rules.mirrorStep || 0, rel = Math.min(M.mirrorOf(s, color), st > 0 ? st : 9);
-      score -= rel * Q.mirW + (rel * (state.rules.mirrorMult || 1) >= opp.stats.hp ? 60 : 0);
+    if (M.mirrorOf(s, color) > 0 && left < s.hp) {   // Spiegel: Verteidigung wirft Marker zurück
+      const opp = c.sides[c.turn === 'a' ? 'b' : 'a'], rel = Math.min(M.mirrorOf(s, color), 1);
+      score -= rel * Q.mirW + (rel >= opp.stats.hp ? 60 : 0);
     }
-    if (dcom && ev.ord) { const o = c.sides[c.turn === 'a' ? 'b' : 'a']; score -= ordComboWorth(side, o, Q, state.rules, M.levelsFor(state.rules, ev), ev); }
-    if (dcom && Q.dU > 0 && ev.levels && ev.levels.ulti > 0 && state.rules.ultiMode === 'death') { const o = c.sides[c.turn === 'a' ? 'b' : 'a']; score -= Q.dU * ev.levels.ulti * Q.wDeath * (o.stats.death >= ev.levels.ulti ? 0.1 : 1) * Math.max(0.4, Math.min(1.4, o.stats.hp / 4)); }   // Ultimate in der Verteidigung: Todes-Fluch für den Angreifer
+    if (ev.ord) { const o = c.sides[c.turn === 'a' ? 'b' : 'a']; score -= ordComboWorth(side, o, Q, state.rules, M.levelsFor(ev), ev); }
+    if (Q.dU > 0 && ev.levels && ev.levels.ulti > 0) { const o = c.sides[c.turn === 'a' ? 'b' : 'a']; score -= Q.dU * ev.levels.ulti * Q.wDeath * (o.stats.death >= ev.levels.ulti ? 0.1 : 1) * Math.max(0.4, Math.min(1.4, o.stats.hp / 4)); }   // Ultimate in der Verteidigung: Todes-Fluch für den Angreifer
     if (score < best.score) best = { score, ord: sub };
   }
   if (!best.ord.length) return [A({ type: 'pass' })];
   const acts = best.ord.map(h => A({ type: 'mark', slot: h.slot }));
-  if (state.rules.mirrorChoice && M.mirrorOf(s, color) > 0) {
-    let n = mirrorPick(state, side, c, best.ord);
-    const cap = Math.min(M.mirrorOf(s, color), c.pending, M.mirrorCap(s, best.ord, color));
-    if (n === 0 && cap > 0 && (M.evalDefense(s, best.ord, color, 0).cost || 0) > 0) n = 1;   // ohne eingesetzten Spiegel kostet die Verteidigung Mana
-    acts.push(A({ type: 'mr', n }));
-  }
   acts.push(A({ type: 'defend' }));
   return acts;
 }

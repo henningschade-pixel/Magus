@@ -5,9 +5,9 @@ test('Kartenkosten: jede gespielte Karte kostet 1 Mana, überlegene Verteidigung
   const s = M.newGame({ seed: 5, ai: [false, false], first: 0 }), st = STATS();
   assert.equal(M.evalAttack(st, cards(['F3', 'E2'])).cost, 2);        // Primärkarte + Kombokarte
   assert.equal(M.evalAttack(st, cards(['F1', 'F1', 'E1'])).cost, 3);
-  assert.equal(M.evalDefense(st, cards(['W2']), 'F', undefined, s.rules).cost, 0);          // Wasser ist gegen Feuer überlegen
-  assert.equal(M.evalDefense(st, cards(['W2', 'F1']), 'F', undefined, s.rules).cost, 1);    // Kombokarte kostet 1
-  assert.equal(M.evalDefense(st, cards(['F2']), 'F', undefined, s.rules).cost, 1);          // Verteidigung in der Angriffsfarbe
+  assert.equal(M.evalDefense(st, cards(['W2']), 'F').cost, 0);          // Wasser ist gegen Feuer überlegen
+  assert.equal(M.evalDefense(st, cards(['W2', 'F1']), 'F').cost, 1);    // Kombokarte kostet 1
+  assert.equal(M.evalDefense(st, cards(['F2']), 'F').cost, 1);          // Verteidigung in der Angriffsfarbe
 });
 
 test('Erholen und Regeneration wachsen mit dem Abschnitt (1/2/3)', () => {

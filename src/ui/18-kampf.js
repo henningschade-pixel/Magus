@@ -22,7 +22,7 @@ function lfCtx() {
   if (!G || G.phase !== 'combat' || !myTurn()) return null;
   const cx = ctx(), c = cx.c; if (c.action !== 'attack') return null;
   const ev = M.evalAttack(cx.myStats, M.selection(cx.mine.deck));
-  const lw = ev.valid ? M.levelsFor(G.rules, ev).ew : 0;
+  const lw = ev.valid ? M.levelsFor(ev).ew : 0;
   if (!ev.valid || !(lw > 0) || ev.levels.ulti > 0) return null;
   return { cx, c, lvl: lw, picks: lfExpand(lfPicks(cx, lw), cx) };
 }
@@ -72,12 +72,12 @@ function combatCenter(cx) {
         if (ev.valid) manaPv = ev.cost;
         prev = '';
         canExec = ev.valid && ev.affordable;
-        const lvC = ev.valid ? M.levelsFor(G.rules, ev) : ev.levels;
+        const lvC = ev.valid ? M.levelsFor(ev) : ev.levels;
         if (ev.valid && lvC.ew > 0 && !(ev.levels.ulti > 0)) prev += lfSummary(cx, lvC.ew);
         if (!ev.affordable) prev += '<div class="bad">Zu wenig Mana.</div>';
       }
     } else {
-      const ev = M.evalDefense(cx.myStats, sel, c.color, c.mr, G.rules);
+      const ev = M.evalDefense(cx.myStats, sel, c.color);
       if (!sel.length) prev = '';
       else if (!ev.valid) prev = '<span class="bad">' + esc(ev.reason) + '</span>';
       else { if (ev.cost > 0) manaPv = ev.cost; prev = ''; canExec = ev.affordable; if (ev.ord) { const r = ORD_ROWS.find(x => x[0] === ev.ord.key); prev += '<div class="note"><b>' + r[1] + '</b> Stufe ' + ev.ord.lvl + ' nach der Verteidigung: ' + ordText(r[0], ev.ord.lvl) + '</div>'; } if (!ev.affordable) prev += '<div class="bad">Zu wenig Mana.</div>'; }
