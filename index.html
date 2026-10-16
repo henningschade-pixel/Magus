@@ -240,6 +240,20 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .combatcenter>.btnrow{flex:none;padding-top:4px}.btnrow{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
 .banner{position:absolute;z-index:120;text-align:center;background:rgba(14,10,22,.93);border:1px solid var(--gold);border-radius:14px;padding:16px 20px;font-size:21px;line-height:1.3;cursor:var(--cp)}
 .banner small{display:block;color:var(--mute);font-size:15px;margin-top:6px}
+.endov{position:absolute;left:0;top:0;width:1280px;height:800px;z-index:400;background:rgba(5,4,10,.74);display:flex;align-items:center;justify-content:center;cursor:var(--cp);animation:endfade .5s ease-out}
+@keyframes endfade{from{background:rgba(5,4,10,0)}to{background:rgba(5,4,10,.74)}}
+#endov{position:absolute;left:0;top:0;width:1280px;height:800px;z-index:400}
+.endbox{text-align:center;min-width:460px;max-width:640px;padding:34px 48px;border-radius:18px;background:rgba(18,14,26,.96);border:2px solid var(--gold);box-shadow:0 0 60px rgba(0,0,0,.8);animation:endpop .45s cubic-bezier(.2,1.3,.4,1)}
+@keyframes endpop{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
+.endbox .et{font-family:'Alegreya SC',serif;font-size:56px;letter-spacing:2px;color:var(--gold);line-height:1.1}
+.endbox.win .et{color:#9be36b;text-shadow:0 0 28px rgba(120,220,80,.5)}
+.endbox.lose .et{color:#ff7a6b;text-shadow:0 0 28px rgba(255,90,70,.45)}
+.endbox.draw .et,.endbox.intro .et{color:#e9d79a}
+.endbox .es{font-size:24px;margin-top:10px;color:#e7e0d2}
+.endbox .el{font-size:28px;margin-top:14px;color:var(--gold)}
+.endbox .er{font-size:17px;margin-top:18px;color:var(--mute);line-height:1.45;text-align:left}
+.endbox small{display:block;margin-top:22px;font-size:15px;color:var(--mute)}
+
 
 .cref{padding:2px 7px;border:1px solid #44444c;border-radius:8px;margin-bottom:3px;font-size:14px;background:rgba(255,255,255,.02)}.cref.on{border-color:var(--good);background:rgba(127,208,138,.12)}.cref small{display:block;color:var(--mute);font-size:12.5px;line-height:1.15;margin-top:0}.cref .note{font-size:13px}
 /* Hinweise, Start-/Endbildschirm, Ton */
@@ -846,6 +860,7 @@ function evaluateEnd(state) {
 }
 function endCombat(state, end) {
   const c = state.combat, res = { mode: c.mode, reason: end.reason, winner: end.winner, monsterDefeated: false };
+  if (state.keepSnap) res.snap = JSON.parse(JSON.stringify(c));   // Oberfläche: Endstand des Kampfes (vor Zurücksetzen und Rückkehr in die Weltphase)
   state.players.forEach(p => { p.stats.freeDraws = 0; p.deck.marks = []; delete p.stats.mirror; delete p.stats.mirrorEl; delete p.stats.mirrorFree; delete p.stats.death; if (curses(state).weakDouble) p.stats.marks = 0; });
   if (curses(state).curseCards) state.players.forEach(p => stripCurseCards(state, p.deck));
   delete c.sides.b.stats.death; if (curses(state).weakDouble && c.sides.b.monster) c.sides.b.monster.stats.marks = 0;
@@ -1735,7 +1750,7 @@ const $ = id => document.getElementById(id);
 const stage = $('stage'), layerPh = $('ph'), layerCards = $('cards'), panels = $('panels'), logEl = $('log'), toastEl = $('toast'), overlay = $('overlay');
 const CURSES = (/[?&]fluch=(\w+)/.exec(location.search) || [])[1];   // z. B. ?fluch=cards (Fluchkarten-System, siehe docs/fluchkarten.md)
 let fxUntil = 0, lateN = 0;   // Zeitpunkt, bis zu dem eine Kampfanimation läuft (die Siegmeldung wartet darauf)
-let sacN = 1, G = null, hold = 0, aiTimer = null, banner = null, seenCombat = null, toastTimer = null, started = false;
+let sacN = 1, G = null, hold = 0, aiTimer = null, endView = null, modal = null, introSeen = -1, preStats = null, seenCombat = null, toastTimer = null, started = false;
 
 /* ---------- Layout: alle Maße der 1280×800-Bühne an einer Stelle ---------- */
 const CW = 128, CH = 194;                                   // Kartengröße
@@ -3058,13 +3073,25 @@ function applyCursor() {
 function setCursor(k) { if (k === curKey) return; curKey = k; applyCursor(); }
 document.addEventListener('pointerdown', () => { curDown = true; applyCursor(); }, true);
 document.addEventListener('pointerup', () => { curDown = false; applyCursor(); }, true);
-function render() {
+function render() {   // läuft der Ergebnis-Bildschirm, wird der Endstand des Kampfes gezeigt (die Engine ist schon in der Weltphase)
+  if (!G) return;
+  if (!endView) renderInner();
+  else {
+    const sp = G.phase, sc = G.combat;
+    G.phase = 'combat'; G.combat = endView.cur;
+    try { renderInner(); } finally { G.phase = sp; G.combat = sc; }
+  }
+  let ov = document.getElementById('endov');
+  const html = overlayHTML();
+  if (html && !ov) { ov = document.createElement('div'); ov.id = 'endov'; stage.appendChild(ov); }
+  if (ov) { if (html) { if (ov.dataset.k !== html) { ov.innerHTML = html; ov.dataset.k = html; } ov.style.display = 'block'; } else { ov.style.display = 'none'; ov.dataset.k = ''; } }
+}
+function renderInner() {
   if (!G) return;
   const cx = ctx();
   let h = sidePanels(cx);
   if (cx.combat) h += combatCenter(cx) + comboRef(cx);
   else h += vendorPanel() + (G.camp ? campPanel() : monsterCards());
-  if (banner && banner.shown && banner.until > Date.now()) h += '<div class="banner" data-act="dismiss" style="' + box(LAYOUT.banner) + '">' + banner.lines.map(esc).join('<br>') + '<small>Klicken zum Schließen</small></div>';
   panels.innerHTML = h;
   const lg0 = logEl.querySelector('.logl'), lgKeep = lg0 && lg0.scrollHeight - lg0.scrollTop - lg0.clientHeight > 24 ? lg0.scrollTop : null;   // nicht am Ende: Leseposition merken
   if (cx.combat) {   // links: nur der Kampflog (Einträge seit Kampfbeginn)
@@ -3091,17 +3118,13 @@ function render() {
   { const mine = panels.querySelector('.sbody[data-lead]');   // Knopfspalte weich ein- und ausfahren
     if (mine) { const now = mine.classList.contains('hasup'); if (leadPrev !== null && leadPrev !== now) { mine.classList.toggle('hasup', leadPrev); void mine.offsetWidth; mine.classList.toggle('hasup', now); } leadPrev = now; } }
   showFx();
-  if (banner && !banner.shown) {   // Siegmeldung: erst wenn alle Kampfanimationen (auch wartende) fertig sind und der Schaden verrechnet ist
-    const now = Date.now();
-    if (!FAST && (FlowFx.busy() || lateN > 0 || now < fxUntil + 250)) { if (!banner.tm) { banner.tm = setTimeout(() => { if (banner) banner.tm = 0; render(); }, 260); } }
-    else { banner.shown = true; banner.from = now; banner.until = now + (FAST ? 0 : 3600); hold = now + (FAST ? 0 : 2600); if (!FAST) setTimeout(render, 3700); setTimeout(render, 0); }
-  }
   stage.classList.toggle('turn-me', !G.over && myTurn());
   stage.classList.toggle('turn-opp', !G.over && !myTurn());
   setCursor(cx.combat && cx.mine.kind === 'monster' ? 'monster' : 'human');
   renderCards();
   pvSticky();
-  if (G.over) showEnd();
+  if (G.over && !endView && !modal) showEnd();
+  endTick();
 }
 function showStart() {
   setCursor('human');
@@ -3124,21 +3147,61 @@ function newGame() {
   clearTimeout(aiTimer);
   els.forEach(r => r.el.remove()); els.clear();
   G = M.newGame({ seed: (/[?&]seed=(\d+)/.exec(location.search) || [0, (Math.random() * 2 ** 31) | 0])[1] | 0, names: ['Du', 'Computer'], ai: [false, true], rules: CURSES ? { curses: CURSES } : {} });
-  M.record(G);
-  seenCombat = null; banner = null; hold = 0; started = true;
+  M.record(G); G.keepSnap = true;
+  seenCombat = null; endView = null; modal = null; introSeen = -1; hold = 0; started = true;
   overlay.style.display = 'none'; overlay.innerHTML = '';
   pump();
 }
+function snapStats(c) { return { a: JSON.parse(JSON.stringify(c.sides.a.stats)), b: JSON.parse(JSON.stringify(c.sides.b.stats)) }; }
+const _apply = M.apply;
+M.apply = function (st, a) { if (st === G && st.phase === 'combat' && st.combat) preStats = snapStats(st.combat); return _apply.call(M, st, a); };   // Werte vor der letzten Aktion merken
 function checkCombatEnd(prevLog) {
   if (G.lastCombat && G.lastCombat !== seenCombat) {
     seenCombat = G.lastCombat;
-    const lines = G.log.filter(e => e.n > prevLog).slice(-3).map(e => e.txt);
-    hold = Date.now() + (FAST ? 0 : 9000);   // bis die Meldung gezeigt wurde, wartet der Computer
-    banner = { lines, shown: false, from: 0, until: 0, tm: 0 };   // erscheint erst nach den Kampfanimationen (siehe render)
+    const res = G.lastCombat, lines = G.log.filter(e => e.n > prevLog).map(e => e.txt);
+    hold = Date.now() + (FAST ? 0 : 60000);   // bis zum Klick wartet der Computer
+    if (FAST || !res.snap) { hold = 0; return; }
+    const cur = JSON.parse(JSON.stringify(res.snap)), sn = res.snap;
+    if (preStats) { cur.sides.a.stats = JSON.parse(JSON.stringify(preStats.a)); cur.sides.b.stats = JSON.parse(JSON.stringify(preStats.b)); }   // bis die Animation durch ist, gelten noch die Werte vor der letzten Aktion
+    endView = Object.assign({ stage: 'anim', cur, snap: sn, res }, endTexts(res, sn, lines));
   }
 }
+// Texte des Ergebnis-Bildschirms (aus Sicht von ME)
+function endTexts(res, sn, lines) {
+  const rest = lines.filter(t => /^(Alle drei Monster|Zwei Monster|Erholungsphase|Abschnitt|Jeder Spieler erhält|.* erhält als Trostpreis|.* verlor den Showdown|Spielende|Gleichstand|Die Beute|.* erhält die Beute)/.test(t)), me = G.players[ME], opp = G.players[OPP];
+  if (res.mode === 'monster') {
+    const m = sn.sides.b.monster, mine = sn.att === ME;
+    if (res.winner === 'a') return mine ? { cls: 'win', title: 'Sieg', sub: m.name + ' besiegt', loot: res.loot > 0 ? 'Beute: ' + res.loot + ' Gold' : 'Keine Beute', rest } : { cls: 'draw', title: m.name + ' besiegt', sub: G.players[sn.att].name + ' erhält ' + (res.loot || 0) + ' Gold', rest };
+    if (res.winner === 'b') return mine ? { cls: 'lose', title: 'Niederlage', sub: m.name + ' gewinnt den Kampf', loot: 'Keine Beute', rest } : { cls: 'draw', title: m.name + ' siegt', sub: 'Keine Beute', rest };
+    return { cls: 'draw', title: 'Unentschieden', sub: 'Kein Sieger, keine Beute', rest };
+  }
+  const wc = res.winner ? sn.sides[res.winner].ctrl : null, sp = me.sp + ' : ' + opp.sp + ' Siegpunkte';
+  if (wc === null) return { cls: 'draw', title: 'Showdown unentschieden', sub: 'Kein Sieger: je 1 Siegpunkt', loot: sp, rest };
+  return wc === ME ? { cls: 'win', title: 'Showdown gewonnen', sub: '+2 Siegpunkte', loot: sp, rest } : { cls: 'lose', title: 'Showdown verloren', sub: G.players[wc].name + ' erhält 2 Siegpunkte', loot: sp, rest };
+}
+// Ablauf nach dem letzten Zug: Animation zu Ende -> Werte anpassen -> abdunkeln und Ergebnis zeigen -> Klick -> Weltphase
+function endTick() {
+  if (!endView || endView.stage !== 'anim') return;
+  const now = Date.now();
+  if (FlowFx.busy() || lateN > 0 || now < fxUntil + 250) { if (!endView.tm) endView.tm = setTimeout(() => { if (endView) endView.tm = 0; render(); }, 260); return; }
+  endView.cur = JSON.parse(JSON.stringify(endView.snap)); endView.stage = 'values';   // Endwerte zeigen (HP- und Manaleisten laufen auf den neuen Stand)
+  setTimeout(() => render(), 0);
+  setTimeout(() => { if (endView && endView.stage === 'values') { endView.stage = 'result'; render(); } }, 1100);
+}
+function overlayHTML() {
+  if (endView && endView.stage === 'result') return '<div class="endov" data-act="dismiss" style="position:absolute;inset:0"><div class="endbox ' + endView.cls + '"><div class="et">' + esc(endView.title) + '</div><div class="es">' + esc(endView.sub) + '</div>' + (endView.loot ? '<div class="el">' + esc(endView.loot) + '</div>' : '') + (endView.rest.length ? '<div class="er">' + endView.rest.map(esc).join('<br>') + '</div>' : '') + '<small>Klicken, um fortzufahren</small></div></div>';
+  if (modal) return '<div class="endov" data-act="dismiss" style="position:absolute;inset:0"><div class="endbox intro"><div class="et">' + esc(modal.title) + '</div><div class="es">' + esc(modal.sub) + '</div>' + (modal.lines.length ? '<div class="er">' + modal.lines.map(esc).join('<br>') + '</div>' : '') + '<small>Klicken, um zu beginnen</small></div></div>';
+  return '';
+}
+// Showdown beginnt: vorher klar sagen, was jetzt passiert
+function checkShowdownIntro() {
+  if (FAST || !G || G.over || endView || modal || G.phase !== 'combat' || G.combat.mode !== 'showdown' || introSeen === G.showdown) return;
+  introSeen = G.showdown;
+  const first = G.log.slice().reverse().find(e => /^Showdown \d/.test(e.txt));
+  modal = { title: 'Showdown ' + (G.showdown + 1) + ' von 3', sub: 'Alle Monster sind besiegt: Duell Spieler gegen Spieler', lines: [first ? first.txt : '', 'Wer gewinnt, erhält 2 Siegpunkte, bei Gleichstand je 1. Es gewinnt, wer zuerst 4 Siegpunkte hat oder nach drei Showdowns vorn liegt.'].filter(Boolean) };
+}
 function act(a) {
-  if (!G || G.over) return;
+  if (!G || G.over || endView || modal) return;
   const full = Object.assign({ pid: ME }, a), prev = G.logN, r = M.apply(G, full);
   if (!r.ok) { toast(r.error); return; }
   if (MP) mpPush(full);
@@ -3146,6 +3209,8 @@ function act(a) {
 }
 function pump() {
   clearTimeout(aiTimer);
+  checkShowdownIntro();
+  if (endView || modal) { render(); return; }   // Ergebnis- und Ankündigungsbildschirm: Spiel pausiert bis zum Klick
   if (G && !G.over && G.phase === 'combat') { const pl = G.logN; if (M.combatTick(G)) { checkCombatEnd(pl); } else if (G.logN > pl && !cardCurses()) toast(G.rules.curses === 'weak' || G.rules.curses === 'deathcards' ? 'Todes-Fluch: HP-Verlust.' : 'Ein Fluchmarker wird gegen 1 HP getauscht.'); }
   render();
   if (!G || G.over) return;
@@ -3269,8 +3334,8 @@ function mpStart(seed, first, rules) {
   ME = MP.seat; OPP = 1 - ME;
   clearTimeout(aiTimer); els.forEach(r => r.el.remove()); els.clear();
   G = M.newGame({ seed, first, names: ME === 0 ? ['Du', 'Mitspieler'] : ['Mitspieler', 'Du'], ai: [false, false], rules });
-  M.record(G);
-  seenCombat = null; banner = null; hold = 0; started = true;
+  M.record(G); G.keepSnap = true;
+  seenCombat = null; endView = null; modal = null; introSeen = -1; hold = 0; started = true;
   overlay.style.display = 'none'; overlay.innerHTML = '';
   mpChip(); pump();
 }
@@ -3335,7 +3400,7 @@ async function mpRestore() {   // nach Neuladen der Seite: laufende Partie wiede
   if (!(await mpOpen(sv.code, sv.host))) return;
   MP.seat = sv.seat; mpStart(sv.seed, sv.first, sv.rules);
   sv.log.forEach(a => { const prev = G.logN, r = M.apply(G, a); if (r.ok) { MP.log.push(a); checkCombatEnd(prev); if (G.phase === 'combat') M.combatTick(G); } });
-  banner = null; hold = 0;
+  endView = null; modal = null; introSeen = G.phase === 'combat' && G.combat.mode === 'showdown' ? G.showdown : -1; hold = 0;
   mpSave(); pump();
   mpEmit('need', { from: MP.log.length }); if (!MP.host) mpEmit('hello', { v: BUILD });
 }
@@ -3352,7 +3417,10 @@ function onAct(d) {
     case 'mpexit': mpLeave(); showStart(); break;
     case 'deckview': deckView = !deckView; render(); break;
     case 'deckclose': deckView = false; render(); break;
-    case 'dismiss': banner = null; hold = 0; render(); break;
+    case 'dismiss':
+      if (endView && endView.stage === 'result') { endView = null; hold = 0; pump(); }
+      else if (modal) { modal = null; hold = 0; pump(); }
+      break;
     case 'combat': act({ type: 'combat', elem: d.e }); break;
     case 'vendor': { const o = M.vendorOffers(G, ME)[+d.i]; if (o) act({ type: 'vendor', result: o.result, cost: o.cost }); break; }
     case 'sacdn': sacN = Math.max(1, sacN - 1); render(); break;
