@@ -143,7 +143,7 @@ Prompt: *“A very short subtle UI click on a stone tablet with a tiny wooden ti
 
 ## Priorität (wenn nicht alles auf einmal)
 1. `atk_fire`, `atk_earth`, `atk_water`, `block`, `hit`, `ultimate`
-2. `win`, `lose`, `draw`, `monster_defeated`, `showdown_start`
+2. `win`, `lose`, `draw`, `showdown_start`
 3. `heal`, `purify`, `aggro`, `ruin`, `mirror_cast`, `mirror_reflect`, `recover`
 4. Weltphase und Rest (`coin_sacrifice`, `temple_level`, `spend_upgrade`, `turn_change`, `stage_start`, `game_win`, `game_lose`, `ui_click`)
 
@@ -152,7 +152,7 @@ Wenn du die mp3-Dateien in `assets/audio/` ablegst (oder mir schickst), binde ic
 ---
 
 ## Stand der Einbindung
-- **Eingebunden (21 neue):** `atk_fire`, `atk_earth`, `atk_water`, `hit`, `block`, `mirror_reflect`, `mirror_cast`, `recover`, `aggro`, `ruin`, `purify`, `heal`, `ultimate`, `monster_defeated`, `win`, `lose`, `draw`, `showdown_start`, `stage_start`, `turn_change`, `game_win` und `game_lose` (Spielende).
+- **Eingebunden (21 neue):** `atk_fire`, `atk_earth`, `atk_water`, `hit`, `block`, `mirror_reflect`, `mirror_cast`, `recover`, `aggro`, `ruin`, `purify`, `heal`, `ultimate`, `win`, `lose`, `draw`, `showdown_start`, `stage_start`, `turn_change`, `game_win` und `game_lose` (Spielende).
 - **Weltphase eingebunden:** `coin_sacrifice` und `temple_level` (beim Opfern, wenn ein Upgrade-Punkt entsteht), `spend_upgrade`, `ui_click` (Menü-, Statistik-, Pfeil- und Schließen-Knöpfe). Gespielt werden sie bei eigenen Aktionen.
 - **Noch offen:** nichts.
 - Die fünf alten Sounds (`flip`, `play`, `shuffle`, `break`, `curse`) sind durch die neu erzeugten, aufbereiteten Versionen ersetzt (die alten stehen in der Git-Historie, Commit vor dem Austausch).
@@ -169,6 +169,8 @@ Hinweis: Frühere Fassung der Aufbereitung hatte einen Fehler (Sounds waren fast
 Hinweis: `magic_buy` wurde entfernt (ersetzt durch `magic_lv2` und `magic_lv3`). Im Repo gelöschte Altlasten (Migrationsskripte, Spiellog der alten Regeln, Regelwerk v6) stehen weiter in der Git-Historie.
 - `spend_upgrade` („upgrade.wav“, 0,3 s) und `coin_sacrifice` („coins.wav“, 0,8 s): eigene Dateien des Spielers. `spend_upgrade` spielt einmal je angewendetem Upgrade, `coin_sacrifice` beim Opfern von Gold. Das Aufbereitungsskript nimmt jetzt auch wav, ogg, m4a und flac.
 - `card_lv2`, `card_lv3` („uprising2.wav“, „uprising3.wav“, je 1 s): spielen, wenn der Händler eine Karte auf Stufe 2 bzw. 3 aufwertet. Sie ersetzen `vendor_upgrade`, das entfernt wurde. Das kostenlose Tauschen gegen eine Stufe-1-Karte bleibt ohne eigenen Ton.
-- `win` („win.mp3“, 4,3 s) und `lose` („loss.wav“, 2,8 s): eigene Dateien des Spielers für Sieg und Niederlage in Monsterkämpfen und Showdowns (Ergebnis-Bildschirm). Nach einem besiegten Monster beginnt `win` 1,1 s nach `monster_defeated`.
+- `win` („win.mp3“, 4,3 s) und `lose` („loss.wav“, 2,8 s): eigene Dateien des Spielers für Sieg und Niederlage in Monsterkämpfen und Showdowns (Ergebnis-Bildschirm). 
 - `shuffle` („card-shuffling“ von someonecool15, freesound.org ID 423767, 2,1 s): wieder die frühere Version des Spielers; ersetzt die generierte. Lizenz auf der Seite prüfen.
 - `shield_hit` („explosion-outdoors-medium“ von evanboyerman, freesound.org ID 753843; Lizenz prüfen): Aufprall von Geschossen auf dem Schild/Spiegel (Spiel und Schild-Werkstatt); auf 1,9 s gekürzt. `break` (Splitter) spielt, wenn Stufen des Spiegels zerbrechen.
+
+Änderung: `monster_defeated` entfernt (kein Ton, wenn ein Monster stirbt; Sieg und Niederlage bleiben). Tempelstufe und Upgrade haben die Sounds getauscht: `temple_level` ist jetzt „upgrade.wav“ (Tempelstufe steigt), `spend_upgrade` die frühere Tempelstufen-Fanfare (Upgrade-Punkt wird angewendet).

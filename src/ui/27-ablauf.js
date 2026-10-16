@@ -24,12 +24,8 @@ function checkCombatEnd(prevLog) {
     endView = Object.assign({ stage: 'anim', cur, snap: sn, res }, endTexts(res, sn, lines));
   }
 }
-// Ton zum Ergebnis-Bildschirm: Monster besiegt (nur wenn du es warst) dann Sieg, Niederlage oder Unentschieden
-function resultSound(ev) {
-  const win = ev.cls === 'win';
-  if (ev.res && ev.res.monsterDefeated && win) { Snd.play('monster_defeated'); Snd.play('win', 1.1); }
-  else Snd.play(ev.cls === 'win' ? 'win' : ev.cls === 'lose' ? 'lose' : 'draw');
-}
+// Ton zum Ergebnis-Bildschirm: Sieg, Niederlage oder Unentschieden
+function resultSound(ev) { Snd.play(ev.cls === 'win' ? 'win' : ev.cls === 'lose' ? 'lose' : 'draw'); }
 // Texte des Ergebnis-Bildschirms (aus Sicht von ME)
 function endTexts(res, sn, lines) {
   const rest = lines.filter(t => /^(Alle drei Monster|Zwei Monster|Erholungsphase|Abschnitt|Jeder Spieler erhält|.* erhält als Trostpreis|.* verlor den Showdown|Spielende|Gleichstand|Die Beute|.* erhält die Beute)/.test(t)), me = G.players[ME], opp = G.players[OPP];
