@@ -240,6 +240,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .combatcenter>.btnrow{flex:none;padding-top:4px}.btnrow{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
 .banner{position:absolute;z-index:120;text-align:center;background:rgba(14,10,22,.93);border:1px solid var(--gold);border-radius:14px;padding:16px 20px;font-size:21px;line-height:1.3;cursor:var(--cp)}
 .banner small{display:block;color:var(--mute);font-size:15px;margin-top:6px}
+#turncv{position:absolute;left:0;top:0;width:1280px;height:800px;z-index:285;pointer-events:none}
 .endov{position:absolute;left:0;top:0;width:1280px;height:800px;z-index:400;background:rgba(5,4,10,.74);display:flex;align-items:center;justify-content:center;cursor:var(--cp);animation:endfade .5s ease-out}
 @keyframes endfade{from{background:rgba(5,4,10,0)}to{background:rgba(5,4,10,.74)}}
 #endov{position:absolute;left:0;top:0;width:1280px;height:800px;z-index:400}
@@ -1843,6 +1844,43 @@ function markCol(s, curseTip, who) {
   if (G.rules.curses === 'deathcards') return '<span class="mkcol"><span class="mk" title="Todesmarker: ' + (s.death || 0) + ' HP Verlust am Ende jeder eigenen Angriffsphase bis Kampfende. Nur Lifeflow kann Marker entfernen.">' + (who ? markIcons(s.death || 0, who + 'd', L) : marks(s.death || 0)) + '</span></span>';
   return '<span class="mkcol"><span class="mk" title="' + curseTip + '">' + (who ? markIcons(s.marks || 0, who + 'c', L) : marks(s.marks || 0)) + '</span>' + deathBadge(s) + '</span>';
 }
+/* ---------- Zugwechsel: Die Lichtlinie wandert durch die Mitte auf die andere Seite und nimmt den Schein mit (Werte der Zugwechsel-Werkstatt) ---------- */
+let turnSide = null, turnAnim = null;
+const TURN = { dur: 1.1, pause: .15, width: 3, glow: 22, tail: .35, comet: .8, inner: 60 };
+function turnClasses() { stage.classList.toggle('turn-me', turnSide === 'me' && !turnAnim); stage.classList.toggle('turn-opp', turnSide === 'opp' && !turnAnim); }
+function turnSync() {
+  const want = G && !G.over ? (myTurn() ? 'me' : 'opp') : null;
+  if (!turnAnim && want !== turnSide) {
+    const calm = FAST || !turnSide || !want || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+    if (calm) turnSide = want; else startTurn(turnSide, want);
+  }
+  turnClasses();
+}
+function startTurn(from, to) {
+  const cv = document.createElement('canvas'); cv.id = 'turncv'; cv.width = 1280; cv.height = 800; stage.appendChild(cv);
+  turnAnim = { from, to, t0: performance.now(), cv };
+  const c = cv.getContext('2d'), loop = ts => {
+    if (!turnAnim || turnAnim.cv !== cv) return;
+    const t = (ts - turnAnim.t0) / 1000;
+    if (t >= TURN.pause + TURN.dur) { cv.style.transition = 'opacity .35s'; cv.style.opacity = 0; setTimeout(() => cv.remove(), 400); turnSide = turnAnim.to; turnAnim = null; render(); return; }   // Randleuchten übernimmt, die Linie blendet aus
+    drawTurn(c, turnAnim.to === 'opp', t); requestAnimationFrame(loop);
+  };
+  requestAnimationFrame(loop);
+}
+function drawTurn(c, up, t) {
+  const W = 1280, H = 800, GOLD = '210,173,79', m = TURN.width / 2, cl = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+  const u = cl((t - TURN.pause) / TURN.dur), e = u < .5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2;
+  const y0 = up ? H - m : m, y1 = up ? m : H - m, y = y0 + (y1 - y0) * e, dir = up ? 1 : -1, sw = Math.sin(Math.PI * u);
+  c.clearRect(0, 0, W, H);
+  const line = (yy, a) => { c.save(); c.globalAlpha = cl(a); c.shadowColor = 'rgba(' + GOLD + ',.95)'; c.shadowBlur = TURN.glow; c.strokeStyle = 'rgba(' + GOLD + ',.95)'; c.lineWidth = TURN.width; c.lineCap = 'round'; c.beginPath(); c.moveTo(0, yy); c.lineTo(W, yy); c.stroke(); c.restore(); };
+  // Schein: am Start nach innen (über dem unteren Rand), am Ziel nach innen (unter dem oberen Rand), dazwischen beidseitig, er wandert mit der Linie
+  const inn = TURN.inner, k = up ? 1 - e : e, gA = inn * k + inn * .5 * sw, gB = inn * (1 - k) + inn * .5 * sw;   // gA: Schein oberhalb, gB: unterhalb der Linie
+  const glow = (from, to2, a) => { if (Math.abs(to2 - from) < 1) return; const g = c.createLinearGradient(0, from, 0, to2); g.addColorStop(0, 'rgba(' + GOLD + ',' + a + ')'); g.addColorStop(1, 'rgba(' + GOLD + ',0)'); c.fillStyle = g; c.fillRect(0, Math.min(from, to2), W, Math.abs(to2 - from)); };
+  glow(y, y - gA, .4); glow(y, y + gB, .4);
+  const trail = Math.round(2 + 7 * TURN.comet), gap = 14 + 40 * TURN.tail;
+  for (let i = trail; i >= 1; i--) { const yy = y + dir * i * gap * sw, f = 1 - i / (trail + 1); if (yy > m && yy < H - m) line(yy, .4 * f * f * TURN.comet); }
+  line(y, 1);
+}
 function myTurn() { return !G.over && M.actor(G) === ME; }
 /* ---------- Sound ---------- */
 const Snd = (() => {
@@ -3118,8 +3156,7 @@ function renderInner() {
   { const mine = panels.querySelector('.sbody[data-lead]');   // Knopfspalte weich ein- und ausfahren
     if (mine) { const now = mine.classList.contains('hasup'); if (leadPrev !== null && leadPrev !== now) { mine.classList.toggle('hasup', leadPrev); void mine.offsetWidth; mine.classList.toggle('hasup', now); } leadPrev = now; } }
   showFx();
-  stage.classList.toggle('turn-me', !G.over && myTurn());
-  stage.classList.toggle('turn-opp', !G.over && !myTurn());
+  turnSync();
   setCursor(cx.combat && cx.mine.kind === 'monster' ? 'monster' : 'human');
   renderCards();
   pvSticky();
