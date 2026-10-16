@@ -300,8 +300,8 @@ function sceneCenter(ctx, t) {
   } else if (im) {
     ctx.save(); ctx.translate(pos.x, pos.y); if (flip) ctx.scale(1, -1); ctx.shadowColor = col; ctx.shadowBlur = P.glow * (.5 + m) * (1 + (hit ? P.flash : 0)); ctx.drawImage(im, -w / 2, -h / 2, w, h); ctx.shadowBlur = 0;
     if (hit) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .55 * P.flash; ctx.drawImage(im, -w / 2, -h / 2, w, h); }
-    if (brk) {   // Risse im Schild bleiben, bis es wieder zurückfliegt
-      ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = .9 * clamp((t - EV.tBreak) / .12); const cr = rng(11); ctx.strokeStyle = '#fff'; ctx.shadowColor = col; ctx.shadowBlur = 6; ctx.lineWidth = Math.max(1, h / 120); ctx.lineJoin = 'round';
+    if (brk) {   // Risse nur in der großen Darstellung (blenden beim Rückflug aus), in der kleinen nicht
+      ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = .9 * clamp((t - EV.tBreak) / .12) * seg(m, .55, .95); const cr = rng(11); ctx.strokeStyle = '#fff'; ctx.shadowColor = col; ctx.shadowBlur = 6; ctx.lineWidth = Math.max(1, h / 120); ctx.lineJoin = 'round';
       for (let q = 0; q < P.cracks; q++) { let a = q / P.cracks * Math.PI * 2 + (cr() - .5) * .9, x = (cr() - .5) * w * .12, y = -h * .28 + (cr() - .5) * h * .08; const len = h * (.18 + cr() * .3); ctx.beginPath(); ctx.moveTo(x, y); for (let s2 = 1; s2 <= 6; s2++) { a += (cr() - .5) * .6; x += Math.cos(a) * len / 6; y += Math.sin(a) * len / 6; ctx.lineTo(x, y); } ctx.stroke(); }
     }
     ctx.restore();
