@@ -145,7 +145,7 @@ Prompt: *“A very short subtle UI click on a stone tablet with a tiny wooden ti
 1. `atk_fire`, `atk_earth`, `atk_water`, `block`, `hit`, `ultimate`
 2. `win`, `lose`, `draw`, `monster_defeated`, `showdown_start`
 3. `heal`, `purify`, `aggro`, `ruin`, `mirror_cast`, `mirror_reflect`, `recover`
-4. Weltphase und Rest (`coin_sacrifice`, `temple_level`, `spend_upgrade`, `magic_buy`, `vendor_upgrade`, `turn_change`, `stage_start`, `game_win`, `game_lose`, `ui_click`)
+4. Weltphase und Rest (`coin_sacrifice`, `temple_level`, `spend_upgrade`, `vendor_upgrade`, `turn_change`, `stage_start`, `game_win`, `game_lose`, `ui_click`)
 
 Wenn du die mp3-Dateien in `assets/audio/` ablegst (oder mir schickst), binde ich sie ein und stimme die Zeitpunkte auf die Animationen ab.
 
@@ -153,7 +153,7 @@ Wenn du die mp3-Dateien in `assets/audio/` ablegst (oder mir schickst), binde ic
 
 ## Stand der Einbindung
 - **Eingebunden (21 neue):** `atk_fire`, `atk_earth`, `atk_water`, `hit`, `block`, `mirror_reflect`, `mirror_cast`, `recover`, `aggro`, `ruin`, `purify`, `heal`, `ultimate`, `monster_defeated`, `win`, `lose`, `draw`, `showdown_start`, `stage_start`, `turn_change`, `game_win` und `game_lose` (Spielende).
-- **Weltphase eingebunden:** `coin_sacrifice` und `temple_level` (beim Opfern, wenn ein Upgrade-Punkt entsteht), `spend_upgrade`, `magic_buy`, `vendor_upgrade`, `ui_click` (Menü-, Statistik-, Pfeil- und Schließen-Knöpfe). Gespielt werden sie bei eigenen Aktionen.
+- **Weltphase eingebunden:** `coin_sacrifice` und `temple_level` (beim Opfern, wenn ein Upgrade-Punkt entsteht), `spend_upgrade`, `vendor_upgrade`, `ui_click` (Menü-, Statistik-, Pfeil- und Schließen-Knöpfe). Gespielt werden sie bei eigenen Aktionen.
 - **Noch offen:** nichts.
 - Die fünf alten Sounds (`flip`, `play`, `shuffle`, `break`, `curse`) sind durch die neu erzeugten, aufbereiteten Versionen ersetzt (die alten stehen in der Git-Historie, Commit vor dem Austausch).
 - Neue Roh-Dateien aufbereiten (mono, Stille vorn weg, Lautstärke angleichen): `tools/sounds-aufbereiten.sh <Quellordner> <Zielordner>`. Der Dateiname muss mit dem Sound-Namen beginnen, der Rest hinter `_(` wird ignoriert.
@@ -165,3 +165,5 @@ Hinweis: Frühere Fassung der Aufbereitung hatte einen Fehler (Sounds waren fast
 - `ultimate`: „Ultimate Cinematic Dark Braam Whoosh 8“ von sdanezis (Dateiname deutet auf Pixabay, ID 607326; Pixabay-Lizenz, keine Namensnennung nötig). Aufbereitet: mono, Pegel gesenkt, 0,2 s ausgeblendet. Länge 3 Sekunden.
 - `block`: eigene Version des Spielers (hochgeladen).
 - `magic_lv2`, `magic_lv3`: „Level Up 02“ und „Level Up 03“ von mokasza (Dateinamen deuten auf freesound.org, IDs 810753 und 810755; bitte Lizenz auf der Seite prüfen, bei CC-BY Namensnennung ergänzen). Sie spielen, wenn eine Magierichtung auf Stufe 2 bzw. 3 steigt und ersetzen dort `magic_buy`.
+
+Hinweis: `magic_buy` wurde entfernt (ersetzt durch `magic_lv2` und `magic_lv3`). Im Repo gelöschte Altlasten (Migrationsskripte, Spiellog der alten Regeln, Regelwerk v6) stehen weiter in der Git-Historie.

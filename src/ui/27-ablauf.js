@@ -69,7 +69,7 @@ function worldSound(type, gainedUp, magNow, magBefore) {
   if (FAST) return;
   if (type === 'temple') { Snd.play('coin_sacrifice'); if (gainedUp) Snd.play('temple_level', .45); }
   else if (type === 'spend') Snd.play('spend_upgrade');
-  else if (type === 'magic') Snd.play(magNow === 2 ? 'magic_lv2' : magNow === 3 ? 'magic_lv3' : 'magic_buy');   // Magie auf Stufe 2 bzw. 3
+  else if (type === 'magic') { if (magNow === 2) Snd.play('magic_lv2'); else if (magNow === 3) Snd.play('magic_lv3'); }   // Magie auf Stufe 2 bzw. 3 (höher geht es nicht)
   else if (type === 'vendor') Snd.play('vendor_upgrade');
 }
 function act(a) {
