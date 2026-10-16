@@ -6,7 +6,7 @@ function newGame() {
   els.forEach(r => r.el.remove()); els.clear();
   G = M.newGame({ seed: (/[?&]seed=(\d+)/.exec(location.search) || [0, (Math.random() * 2 ** 31) | 0])[1] | 0, names: ['Du', 'Computer'], ai: [false, true] });
   M.record(G); G.keepSnap = true;
-  seenCombat = null; endView = null; modal = null; introSeen = -1; hold = 0; started = true;
+  seenCombat = null; upSeen = null; endView = null; modal = null; introSeen = -1; hold = 0; started = true;
   overlay.style.display = 'none'; overlay.innerHTML = '';
   pump();
 }
@@ -72,6 +72,7 @@ function act(a) {
   if (!G || G.over || endView || modal) return;
   const full = Object.assign({ pid: ME }, a), prev = G.logN, up0 = G.players[ME].stats.upGot, r = M.apply(G, full);
   if (!r.ok) { toast(r.error); return; }
+  if (a.type === 'temple') upSeen = G.players[ME].stats.upGot;   // Upgrade-Punkte aus dem Tempel haben ihren eigenen Ton (Tempelstufe)
   worldSound(a.type, G.players[ME].stats.upGot > up0, a.type === 'magic' ? G.players[ME].stats.mag[a.elem] : 0, a.type === 'vendor' ? +String(a.result).slice(1) : 0);
   if (MP) mpPush(full);
   checkCombatEnd(prev); pump();

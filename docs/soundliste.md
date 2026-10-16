@@ -174,3 +174,4 @@ Hinweis: `magic_buy` wurde entfernt (ersetzt durch `magic_lv2` und `magic_lv3`).
 - `shield_hit` („explosion-outdoors-medium“ von evanboyerman, freesound.org ID 753843; Lizenz prüfen): Aufprall von Geschossen auf dem Schild/Spiegel (Spiel und Schild-Werkstatt); auf 1,9 s gekürzt. `break` (Splitter) spielt, wenn Stufen des Spiegels zerbrechen.
 
 Änderung: `monster_defeated` entfernt (kein Ton, wenn ein Monster stirbt; Sieg und Niederlage bleiben). Tempelstufe und Upgrade haben die Sounds getauscht: `temple_level` ist jetzt „upgrade.wav“ (Tempelstufe steigt), `spend_upgrade` die frühere Tempelstufen-Fanfare (Upgrade-Punkt wird angewendet).
+- `upgrade_gain` („level-up-01“ von rhodesmas, freesound.org ID 320655; Lizenz prüfen): spielt, wenn du Upgrade-Punkte erhältst, die nicht aus dem Tempel kommen (Abschnittsbonus, Trostpreis). Tempel-Punkte spielen `temple_level`.
