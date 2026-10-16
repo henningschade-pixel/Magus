@@ -1846,9 +1846,9 @@ function markCol(s, curseTip, who) {
   if (G.rules.curses === 'deathcards') return '<span class="mkcol"><span class="mk" title="Todesmarker: ' + (s.death || 0) + ' HP Verlust am Ende jeder eigenen Angriffsphase bis Kampfende. Nur Lifeflow kann Marker entfernen.">' + (who ? markIcons(s.death || 0, who + 'd', L) : marks(s.death || 0)) + '</span></span>';
   return '<span class="mkcol"><span class="mk" title="' + curseTip + '">' + (who ? markIcons(s.marks || 0, who + 'c', L) : marks(s.marks || 0)) + '</span>' + deathBadge(s) + '</span>';
 }
-/* ---------- Zugwechsel (Werte der Zugwechsel-Werkstatt): Der Rand teilt sich in der Mitte, zwei Lichtköpfe laufen links und rechts zur anderen Seite; danach "Du bist am Zug" ---------- */
+/* ---------- Zugwechsel (Werte der Zugwechsel-Werkstatt): Der Rand teilt sich in der Mitte, zwei Linien laufen links und rechts zur anderen Seite ---------- */
 let turnSide = null, turnAnim = null;
-const TURN = { dur: 1.1, pause: .15, width: 4, glow: 26, head: 1, tail: .35, comet: .8, inner: 70, pulse: .35, bText: 'Du bist am Zug', bTextOpp: 'Gegner ist am Zug', bDur: 1.6, bSize: 44, bY: 46, bDelay: .05 };
+const TURN = { dur: 1.1, pause: .15, width: 4, glow: 26, head: 1, tail: .35, comet: .8, inner: 70, pulse: .35 };
 function turnClasses() { const live = !turnAnim || turnAnim.done; stage.classList.toggle('turn-me', turnSide === 'me' && live); stage.classList.toggle('turn-opp', turnSide === 'opp' && live); }
 function turnSync() {
   const want = G && !G.over ? (myTurn() ? 'me' : 'opp') : null;
@@ -1862,7 +1862,7 @@ function startTurn(from, to) {
   if (turnAnim && turnAnim.cv) turnAnim.cv.remove();
   const cv = document.createElement('canvas'); cv.id = 'turncv'; cv.width = 1280; cv.height = 800; stage.appendChild(cv);
   const me = { from, to, t0: performance.now(), cv, done: false }; turnAnim = me;
-  const c = cv.getContext('2d'), tMove = TURN.pause + TURN.dur, tEnd = tMove + TURN.bDelay + TURN.bDur + .35;
+  const c = cv.getContext('2d'), tMove = TURN.pause + TURN.dur, tEnd = tMove + .1;
   const loop = ts => {
     if (turnAnim !== me) return;
     const t = (ts - me.t0) / 1000;
@@ -1898,14 +1898,6 @@ function drawTurn(c, up, t, done) {
       c.restore();
     }
   }
-  // Einblendung nach der Wanderung: Pille mit dem Namen des aktiven Spielers
-  const el = t - (T.pause + T.dur + T.bDelay); if (el < 0) return;
-  const fade = .28, a = Math.min(cl(el / fade), cl((T.bDur - el) / fade)); if (a <= 0) return;
-  const txt = (up ? T.bTextOpp : T.bText).toUpperCase(), fs = T.bSize, y = H * T.bY / 100;
-  c.save(); c.globalAlpha = a; c.textAlign = 'center'; c.textBaseline = 'middle'; c.font = '700 ' + fs + 'px Cinzel, Georgia, serif'; c.letterSpacing = Math.round(fs * .12) + 'px';
-  const w = c.measureText(txt).width + fs * 1.6, h = fs * 1.9, lift = (1 - a) * 14;
-  c.fillStyle = 'rgba(14,10,22,.92)'; c.strokeStyle = 'rgba(' + GOLD + ',.9)'; c.lineWidth = 2; c.beginPath(); c.roundRect(W / 2 - w / 2, y - h / 2 + lift, w, h, h / 2); c.fill(); c.stroke();
-  c.fillStyle = up ? '#cfc7b4' : '#f2d27a'; c.fillText(txt, W / 2, y + lift); c.restore();
 }
 function myTurn() { return !G.over && M.actor(G) === ME; }
 /* ---------- Sound ---------- */

@@ -114,7 +114,7 @@ Beginnt sofort nach dem dritten Monster eines Abschnitts. Vorher erscheint ein A
 
 ## Zugwechsel (Oberfläche)
 
-Ein goldener Rand zeigt, wer am Zug ist (unten du, oben Gegner). Am Zugende teilt er sich in der Mitte, zwei Lichtköpfe laufen links und rechts zur anderen Seite; danach blendet für 1,6 Sekunden eine Pille „Du bist am Zug“ bzw. „Gegner ist am Zug“ ein. Einstellung aus der Zugwechsel-Werkstatt (`werkstatt/zugwechsel-werkstatt.html`). Entfällt bei reduzierter Bewegung und im Schnellmodus.
+Ein goldener Rand zeigt, wer am Zug ist (unten du, oben Gegner). Am Zugende teilt er sich in der Mitte, zwei Lichtköpfe laufen links und rechts zur anderen Seite; eine Einblendung „Du bist am Zug“ gibt es nicht (entfernt am 16.10.). Einstellung aus der Zugwechsel-Werkstatt (`werkstatt/zugwechsel-werkstatt.html`). Entfällt bei reduzierter Bewegung und im Schnellmodus.
 
 ## Änderungen seit v6
 
