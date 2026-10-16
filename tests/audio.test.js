@@ -2,7 +2,7 @@ const test = require('node:test'), assert = require('node:assert/strict');
 const fs = require('fs'), path = require('path'), { spawnSync } = require('child_process');
 const dir = path.join(__dirname, '..', 'assets', 'audio');
 const src = fs.readFileSync(path.join(__dirname, '..', 'src', 'assets-img2.js'), 'utf8');
-const names = [...src.matchAll(/"([a-z_]+)": "assets\/audio\/([a-z_]+)\.mp3"/g)].map(m => m[1]);
+const names = [...src.matchAll(/"([a-z0-9_]+)": "assets\/audio\/([a-z0-9_]+)\.mp3"/g)].map(m => m[1]);
 
 test('Alle Sounds der Liste liegen als Datei vor und jede Datei ist eingebunden', () => {
   assert.ok(names.length >= 30, 'SND-Liste gefunden');
