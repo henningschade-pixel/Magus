@@ -124,5 +124,8 @@ homeBtn.addEventListener('click', e => { e.stopPropagation(); if (G && started) 
 stage.appendChild(homeBtn);
 const sndBtn = document.createElement('button');
 sndBtn.id = 'sndbtn'; sndBtn.title = 'Ton an/aus'; sndBtn.textContent = Snd.on ? '🔊' : '🔇';
-sndBtn.addEventListener('click', e => { e.stopPropagation(); sndBtn.textContent = Snd.toggle() ? '🔊' : '🔇'; });
+sndBtn.addEventListener('click', e => {
+  e.stopPropagation(); const on = Snd.toggle(); sndBtn.textContent = on ? '🔊' : '🔇';
+  if (on) { Snd.play('ui_click', 0, .8); setTimeout(() => { const i = Snd.info(); toast('Ton an · ' + i.loaded + '/' + i.total + ' Sounds geladen · Audio ' + i.state); }, 400); } else toast('Ton aus');   // Rückmeldung zum Zustand, hilft bei der Fehlersuche
+});
 stage.appendChild(sndBtn);
