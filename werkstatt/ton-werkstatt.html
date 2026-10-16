@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ton-Werkstatt</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700&family=Cinzel:wght@500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: links die Tonliste nach Gruppen, rechts die Werkbank (Original gegen Alternative, Regler, Wunsch an Claude). Dunkle Optik wie im Spiel. */
+:root{
+  --ink:#141416; --panel:#232327; --panel2:#2e2e33; --line:#4d4d55; --gold:#d2ad4f; --bone:#efe6d2; --mute:#aaaab2; --water:#52a6f5; --fire:#ff8a4c; --good:#7fd08a; --bad:#ff6b6b; --wave:#52a6f5; --wave2:#d2ad4f;
+  --f-display:"Cinzel",Georgia,serif; --f-body:"Alegreya Sans","Segoe UI",system-ui,sans-serif; --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--ink);color:var(--bone);font:16px/1.45 var(--f-body);margin:0;padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1240px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+h1{font:700 26px/1.1 var(--f-display);letter-spacing:.06em;margin:0;color:var(--gold)}
+h2{font:700 13px/1.2 var(--f-display);letter-spacing:.12em;text-transform:uppercase;color:var(--gold);margin:0 0 8px}
+header p{margin:6px 0 0;color:var(--mute);max-width:75ch}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--water);outline-offset:2px}
+.grid{display:grid;grid-template-columns:minmax(0,420px) minmax(0,1fr);gap:18px;align-items:start}
+@media(max-width:960px){.grid{grid-template-columns:minmax(0,1fr)}}
+.list{display:flex;flex-direction:column;gap:14px;min-width:0}
+.grp{border:1px solid var(--line);border-radius:8px;background:var(--panel);overflow:hidden}
+.grp h3{font:500 11px var(--f-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--mute);margin:0;padding:8px 12px;border-bottom:1px solid var(--line)}
+.row{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:10px;align-items:center;padding:7px 12px;border-bottom:1px solid #2c2c31;cursor:pointer}
+.row:last-child{border-bottom:0}
+.row:hover{background:var(--panel2)}
+.row.sel{background:#34301f;box-shadow:inset 3px 0 0 var(--gold)}
+.row .nm{font:500 13px var(--f-mono);color:var(--bone);overflow-wrap:anywhere}
+.row .us{font-size:13px;color:var(--mute);line-height:1.25}
+.row .meta{font:400 11px var(--f-mono);color:var(--mute);text-align:right;white-space:nowrap}
+.row .meta b{color:var(--gold);font-weight:500}
+.pbtn{width:32px;height:32px;border-radius:50%;border:1px solid var(--line);background:var(--panel2);color:var(--bone);cursor:pointer;display:grid;place-items:center;padding:0;font-size:12px}
+.pbtn:hover{border-color:var(--gold);color:var(--gold)}
+.pbtn.on{background:var(--gold);color:#201a08;border-color:var(--gold)}
+.bench{position:sticky;top:12px;display:flex;flex-direction:column;gap:14px;min-width:0}
+@media(max-width:960px){.bench{position:static}}
+.card{border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:14px;min-width:0}
+.title{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px}
+.title .big{font:700 22px var(--f-mono);color:var(--bone)}
+.title .tag{font:500 11px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--mute)}
+.use{margin:4px 0 0;color:var(--mute)}
+.wv{position:relative;border:1px solid var(--line);border-radius:6px;background:#0c0c0e;overflow:hidden}
+.wv canvas{display:block;width:100%;height:84px}
+.wv .lb{position:absolute;left:8px;top:5px;font:500 10px var(--f-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--mute);pointer-events:none}
+.wv .st{position:absolute;right:8px;top:5px;font:400 10px var(--f-mono);color:var(--mute);pointer-events:none}
+.waves{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+.bar{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;align-items:center}
+.btn{font:500 14px var(--f-body);background:var(--panel2);color:var(--bone);border:1px solid var(--line);border-radius:6px;padding:7px 14px;cursor:pointer}
+.btn:hover{border-color:var(--gold)}
+.btn.primary{background:var(--gold);color:#201a08;border-color:var(--gold);font-weight:700}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn[disabled]{opacity:.5;cursor:default}
+.btn.sm{padding:4px 10px;font-size:13px}
+.sliders{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 18px}
+@media(max-width:560px){.sliders{grid-template-columns:minmax(0,1fr)}}
+.sl label{display:flex;justify-content:space-between;font-size:13px;color:var(--mute)}
+.sl label output{font-family:var(--f-mono);color:var(--bone)}
+input[type=range]{width:100%;accent-color:var(--gold)}
+textarea{width:100%;background:#0c0c0e;color:var(--bone);border:1px solid var(--line);border-radius:6px;padding:8px 10px;font:15px/1.4 var(--f-body);resize:vertical;min-height:70px}
+textarea.code{font:12px/1.4 var(--f-mono);min-height:160px}
+.vers{display:flex;flex-direction:column;gap:4px;margin-top:8px}
+.ver{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;padding:5px 8px;border:1px solid transparent;border-radius:6px;font-size:14px}
+.ver.cur{border-color:var(--gold);background:#2b2818}
+.ver .vn{overflow-wrap:anywhere;cursor:pointer}
+.ver .vn small{color:var(--mute);font-family:var(--f-mono);font-size:11px;margin-left:6px}
+.note{font-size:13px;color:var(--mute);margin:8px 0 0}
+.msg{font-size:14px;margin-top:8px;color:var(--mute);white-space:pre-wrap}
+.msg.bad{color:var(--bad)} .msg.ok{color:var(--good)}
+.chk{display:flex;gap:8px;align-items:center;font-size:14px;color:var(--mute)}
+details summary{cursor:pointer;color:var(--mute);font-size:14px}
+.pill:empty{display:none}.pill{display:inline-block;font:500 10px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;border:1px solid var(--line);border-radius:999px;padding:1px 8px;color:var(--mute)}
+@media(prefers-reduced-motion:no-preference){.pbtn,.btn,.row{transition:background .12s,border-color .12s}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Ton-Werkstatt</h1>
+    <p>Alle 36 Töne aus Magus zum Anhören, jeder mit dem Moment, in dem er spielt. Zu jedem Ton gibt es eine Synth-Alternative: Du stellst sie mit den Reglern ein, würfelst eine Variante oder lässt Claude eine entwickeln. Original und Alternative lassen sich direkt gegeneinander abspielen.</p>
+  </header>
+  <div class="grid">
+    <div class="list" id="list"></div>
+    <div class="bench" id="bench"></div>
+  </div>
+</div>
+
+<script>
+window.SND_DATA = null;   /* wird beim Bauen (tools/build-werkstatt.js) mit den Sounds als data:-URIs gefüllt; sonst laden wir ../assets/audio/<name>.mp3 */
+
+/* ---------------------------------------------------------------- Tonliste: Name, Gruppe, Einsatz im Spiel */
+const GROUPS = [
+  ['Karten und Tisch', [
+    ['flip', 'Karte wird gezogen oder umgedreht'], ['play', 'Karte wird ausgespielt oder abgelegt'], ['shuffle', 'Deck wird gemischt'],
+    ['turn_change', 'Der Zug wechselt'], ['ui_click', 'Menüknopf, Statistik, Pfeile, Schließen']]],
+  ['Angriff und Treffer', [
+    ['atk_fire', 'Feuer-Angriff fliegt zum Ziel'], ['atk_earth', 'Erd-Angriff fliegt zum Ziel'], ['atk_water', 'Wasser-Angriff fliegt zum Ziel'],
+    ['hit', 'Ungeblockter Schaden trifft die HP-Leiste'], ['block', 'Angriff wird geblockt (deine eigene Datei)']]],
+  ['Kombos und Flüche', [
+    ['aggro', 'Aggro-Kombo: Fluchkarten werden verteilt'], ['ruin', 'Zerrüttung: Gegner muss Karten abwerfen'], ['purify', 'Läuterung entfernt Marker'],
+    ['heal', 'Heilung füllt HP'], ['curse', 'Todes-Fluch zehrt HP'], ['ultimate', 'Ultimate (alle drei Farben): Todes-Fluch, Pentagramm, 4 s'], ['recover', 'Erholung nach dem Kampf']]],
+  ['Spiegel und Schild', [
+    ['mirror_cast', 'Spiegel wird gewirkt, eine Stufe kommt hinzu'], ['mirror_reflect', 'Spiegel wirft Schaden zurück'],
+    ['shield_hit', 'Geschoss schlägt auf dem Schild in der Mitte ein'], ['break', 'Schild zerbricht, Stufen oder Marker gehen verloren']]],
+  ['Kampfende und Spielverlauf', [
+    ['win', 'Kampf oder Showdown gewonnen'], ['lose', 'Kampf oder Showdown verloren'], ['draw', 'Unentschieden'],
+    ['showdown_start', 'Showdown wird angekündigt'], ['stage_start', 'Neuer Abschnitt beginnt'], ['game_win', 'Spiel gewonnen'], ['game_lose', 'Spiel verloren']]],
+  ['Tempel und Händler', [
+    ['coin_sacrifice', 'Gold wird im Tempel geopfert'], ['temple_level', 'Tempelstufe steigt'], ['spend_upgrade', 'Ein Upgrade wird angewendet'],
+    ['upgrade_gain', 'Neue Upgrade-Punkte erscheinen'], ['magic_lv2', 'Magierichtung erreicht Stufe 2'], ['magic_lv3', 'Magierichtung erreicht Stufe 3'],
+    ['card_lv2', 'Händler wertet eine Karte auf Stufe 2 auf'], ['card_lv3', 'Händler wertet eine Karte auf Stufe 3 auf']]],
+];
+const ALL = []; GROUPS.forEach(g => g[1].forEach(s => ALL.push({ name: s[0], use: s[1], group: g[0] })));
+
+/* ---------------------------------------------------------------- Synth-Engine: ein Rezept (JSON) wird mit Web Audio offline gerendert
+   Rezept: { dur, seed, rev:[Sekunden, Anteil 0..1], drive (0..8), lp (Hz, 0 = aus), layers:[ ... ] }
+   Schicht Oszillator: { t:'o', w:'sine|triangle|sawtooth|square', f:[von,bis] Hz, at, a, d, g, uni:1..5, det:Cent, vib:[Hz, Tiefe 0..0.05], dr:0..8 }
+   Schicht Rauschen:   { t:'n', ft:'bp|lp|hp', f:[von,bis] Hz, q, at, a, d, g, dr }
+   Hüllkurve: ab Zeit at steigt der Pegel in a Sekunden linear auf g, danach klingt er in etwa d Sekunden aus. Die Frequenz läuft in a+d Sekunden von f[0] nach f[1]. */
+const SR = 44100;
+const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+function mulberry(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+function shapeCurve(k) { const n = 2048, c = new Float32Array(n); for (let i = 0; i < n; i++) { const x = i / (n - 1) * 2 - 1; c[i] = Math.tanh(x * k) / Math.tanh(k); } return c; }
+function irBuffer(oc, sec, rnd) {
+  const n = Math.max(1, Math.floor(SR * sec)), b = oc.createBuffer(1, n, SR), d = b.getChannelData(0); let lp = 0;
+  for (let i = 0; i < n; i++) { const v = (rnd() * 2 - 1) * Math.exp(-3.2 * i / SR * (2.4 / Math.max(.3, sec))); lp += .35 * (v - lp); d[i] = lp; }
+  return b;
+}
+function applyMod(rec, m) {   // Regler wirken auf eine Kopie des Rezepts
+  const r = JSON.parse(JSON.stringify(rec)); m = m || {};
+  const pf = Math.pow(2, (m.pitch || 0) / 12), st = m.stretch || 1;
+  r.dur = clamp((r.dur || 1) * st, .1, 8);
+  (r.layers || []).forEach(L => {
+    if (Array.isArray(L.f)) L.f = L.f.map(v => clamp(v * pf, 20, 18000));
+    L.at = (L.at || 0) * st; L.a = (L.a || .005) * st; L.d = (L.d || .3) * st;
+    if (L.t === 'n' && m.noise !== undefined) L.g = (L.g === undefined ? 1 : L.g) * m.noise;
+  });
+  r.rev = [(r.rev && r.rev[0] || .6), clamp((r.rev && r.rev[1] || 0) + (m.reverb || 0), 0, .9)];
+  r.drive = clamp((r.drive || 0) + (m.drive || 0), 0, 10);
+  if (m.bright) r.lp = clamp(m.bright, 300, 20000);
+  return r;
+}
+async function renderRecipe(rec, mod, level) {
+  const r = applyMod(rec, mod), dur = clamp(r.dur || 1, .1, 8);
+  const oc = new OfflineAudioContext(1, Math.ceil(SR * dur), SR), rnd = mulberry(r.seed || 1);
+  const nb = oc.createBuffer(1, SR * 2, SR), nd = nb.getChannelData(0); for (let i = 0; i < nd.length; i++) nd[i] = rnd() * 2 - 1;
+  const bus = oc.createGain(); bus.gain.value = 1;
+  (r.layers || []).slice(0, 10).forEach(L => {
+    const at = clamp(L.at || 0, 0, dur - .01), a = clamp(L.a === undefined ? .005 : L.a, .001, 8), d = clamp(L.d === undefined ? .3 : L.d, .02, 8), g = L.g === undefined ? 1 : L.g;
+    const end = Math.min(dur, at + a + d * 1.5), f0 = clamp(L.f && L.f[0] || 440, 20, 18000), f1 = clamp(L.f && L.f[1] || f0, 20, 18000), sweepEnd = at + a + d;
+    const env = oc.createGain(); env.gain.setValueAtTime(0, at); env.gain.linearRampToValueAtTime(g, at + a); env.gain.setTargetAtTime(0, at + a, d / 3.5);
+    let out = env;
+    if (L.dr) { const ws = oc.createWaveShaper(); ws.curve = shapeCurve(clamp(L.dr, .1, 10)); env.connect(ws); out = ws; }
+    if (L.t === 'n') {
+      const src = oc.createBufferSource(); src.buffer = nb; src.loop = true;
+      const bq = oc.createBiquadFilter(); bq.type = L.ft === 'lp' ? 'lowpass' : L.ft === 'hp' ? 'highpass' : 'bandpass'; bq.Q.value = clamp(L.q || 1, .1, 30);
+      bq.frequency.setValueAtTime(f0, at); bq.frequency.exponentialRampToValueAtTime(f1, Math.max(at + .01, sweepEnd));
+      src.connect(bq); bq.connect(env); out.connect(bus); src.start(at, rnd() * 1.5); src.stop(end);
+    } else {
+      const uni = clamp(Math.round(L.uni || 1), 1, 5), vg = oc.createGain(); vg.gain.value = 1 / Math.sqrt(uni);
+      for (let u = 0; u < uni; u++) {
+        const o = oc.createOscillator(); o.type = ['sine', 'triangle', 'sawtooth', 'square'].includes(L.w) ? L.w : 'sine';
+        o.detune.value = uni === 1 ? 0 : ((u / (uni - 1)) * 2 - 1) * (L.det === undefined ? 10 : L.det);
+        o.frequency.setValueAtTime(f0, at); o.frequency.exponentialRampToValueAtTime(f1, Math.max(at + .01, sweepEnd));
+        if (L.vib && L.vib[0]) { const lfo = oc.createOscillator(), lg = oc.createGain(); lfo.frequency.value = L.vib[0]; lg.gain.value = (L.vib[1] || .01) * (f0 + f1) / 2; lfo.connect(lg); lg.connect(o.frequency); lfo.start(at); lfo.stop(end); }
+        o.connect(vg); o.start(at); o.stop(end);
+      }
+      vg.connect(env); out.connect(bus);
+    }
+  });
+  let node = bus;
+  if (r.drive) { const ws = oc.createWaveShaper(); ws.curve = shapeCurve(r.drive); node.connect(ws); node = ws; }
+  if (r.lp) { const lp = oc.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = r.lp; lp.Q.value = .7; node.connect(lp); node = lp; }
+  const master = oc.createGain(); master.gain.value = 1;
+  const mix = r.rev[1];
+  if (mix > 0) { const dry = oc.createGain(), wet = oc.createGain(), cv = oc.createConvolver(); dry.gain.value = 1 - mix * .6; wet.gain.value = mix * 1.6; cv.buffer = irBuffer(oc, clamp(r.rev[0], .2, 4), rnd); node.connect(dry); node.connect(cv); cv.connect(wet); dry.connect(master); wet.connect(master); }
+  else node.connect(master);
+  master.connect(oc.destination);
+  const buf = await oc.startRendering();
+  return finish(buf, level);
+}
+function stats(buf) {
+  const d = buf.getChannelData(0); let pk = 0, s = 0; for (let i = 0; i < d.length; i++) { const v = Math.abs(d[i]); if (v > pk) pk = v; s += d[i] * d[i]; }
+  const rms = Math.sqrt(s / d.length); return { peak: 20 * Math.log10(pk + 1e-9), mean: 20 * Math.log10(rms + 1e-9), dur: buf.duration };
+}
+function finish(buf, level) {   // kurz ausblenden; wie im Aufbereitungsskript: mittlerer Pegel -20 dB, Spitze höchstens -1 dB
+  const d = buf.getChannelData(0), fade = Math.floor(SR * .03); for (let i = 0; i < fade && i < d.length; i++) d[d.length - 1 - i] *= i / fade;
+  const s = stats(buf); let gdb = level ? Math.min(-20 - s.mean, -1 - s.peak) : -1 - s.peak, g = Math.pow(10, gdb / 20);
+  for (let i = 0; i < d.length; i++) d[i] *= g;
+  return buf;
+}
+
+/* ---------------------------------------------------------------- Startrezepte (Synth-Entwürfe je Ton) */
+const N = (ft, f0, f1, q, at, a, d, g, dr) => ({ t: 'n', ft, f: [f0, f1], q, at, a, d, g, dr });
+const O = (w, f0, f1, at, a, d, g, x) => Object.assign({ t: 'o', w, f: [f0, f1], at, a, d, g }, x || {});
+const RP = (dur, layers, rev, drive, lp, seed) => ({ dur, seed: seed || 3, rev: rev || [.5, .12], drive: drive || 0, lp: lp || 0, layers });
+const START = {
+  flip: RP(.35, [N('bp', 3500, 1800, 1.2, 0, .004, .12, .9), N('hp', 5000, 5000, .7, .03, .003, .06, .4), O('sine', 1200, 900, .02, .003, .1, .12)], [.3, .08]),
+  play: RP(.3, [O('sine', 160, 70, 0, .003, .14, 1), N('lp', 900, 300, .8, 0, .002, .07, .7), O('sine', 1800, 1800, .01, .002, .15, .1)], [.35, .1]),
+  shuffle: RP(1.6, [N('bp', 4000, 4500, .8, 0, .02, 1.2, .5), N('hp', 6000, 6000, .6, .05, .02, 1.1, .35), N('bp', 2500, 2500, 1, .3, .02, 1, .25)], [.5, .1], 0, 0, 5),
+  turn_change: RP(.7, [O('triangle', 440, 440, 0, .01, .5, .5), O('triangle', 660, 660, .12, .01, .5, .45), O('sine', 880, 880, .24, .01, .5, .25)], [.8, .22]),
+  ui_click: RP(.12, [O('sine', 1800, 900, 0, .001, .05, .7), N('hp', 4000, 4000, .7, 0, .001, .02, .4)], [.2, .04]),
+  atk_fire: RP(1.3, [N('bp', 400, 3000, 1.2, 0, .5, .55, .9), N('bp', 3000, 1500, .7, .1, .3, .6, .5), O('sine', 110, 50, .75, .005, .45, 1), N('lp', 1500, 300, .7, .72, .005, .3, .9)], [.7, .15], 1.2),
+  atk_earth: RP(1.3, [N('lp', 300, 900, .8, 0, .45, .6, 1, 1), O('sine', 70, 40, .6, .005, .6, 1.2), N('bp', 1200, 400, 1.5, .62, .003, .3, .6), N('hp', 3000, 3000, .8, .75, .003, .5, .15)], [.6, .15], 1.5),
+  atk_water: RP(1.3, [N('bp', 800, 3500, .9, 0, .55, .45, .8), N('lp', 2500, 900, .7, .55, .02, .55, .6), O('sine', 600, 220, .55, .004, .35, .5), N('hp', 5000, 5000, .6, .6, .01, .4, .25)], [.8, .22]),
+  hit: RP(.4, [O('sine', 140, 55, 0, .002, .22, 1.1), N('lp', 2000, 400, .8, 0, .001, .12, .8, 2), N('bp', 2500, 1200, 1.4, 0, .001, .08, .3)], [.3, .08], .8),
+  block: RP(.5, [O('sine', 1200, 900, 0, .001, .3, .5), O('square', 300, 200, 0, .001, .1, .3), N('bp', 3500, 3500, 3, 0, .001, .09, .8), O('sine', 2400, 2200, 0, .001, .35, .25)], [.4, .15]),
+  aggro: RP(1.3, [O('sawtooth', 120, 70, 0, .1, .9, .6, { uni: 3, det: 18 }), N('bp', 600, 2500, 2, 0, .3, .7, .5), O('sine', 60, 40, .05, .01, .8, .9)], [.8, .22], 1.8, 3000),
+  ruin: RP(1.1, [N('bp', 2500, 300, 1.6, 0, .02, .9, .8, 2), O('sawtooth', 300, 60, 0, .01, .9, .5, { uni: 3, det: 25 }), N('hp', 5000, 5000, .6, 0, .005, .25, .3)], [.6, .15], 1.6),
+  purify: RP(1.2, [O('sine', 880, 1760, 0, .3, .8, .5, { vib: [5, .004] }), O('sine', 1320, 2640, .05, .3, .8, .35), O('triangle', 660, 1320, .1, .25, .8, .3), N('hp', 6000, 8000, .6, .1, .3, .7, .2)], [1.2, .3]),
+  heal: RP(1.3, [O('sine', 523, 523, 0, .04, .8, .5), O('sine', 659, 659, .12, .04, .8, .45), O('sine', 784, 784, .24, .04, .9, .45), O('sine', 1046, 1046, .36, .04, .9, .3, { vib: [5.5, .004] })], [1.2, .3]),
+  curse: RP(1.7, [O('sawtooth', 150, 40, 0, .03, .7, .8, { uni: 4, det: 14 }), O('sine', 100, 30, 0, .01, .5, 1.2), O('sine', 440, 130, 0, .03, .7, .4, { vib: [31, .02] }), N('hp', 1800, 6500, .8, 0, .2, .7, .4)], [1.6, .3], 3, 4500, 7),
+  ultimate: RP(5.2, [O('sawtooth', 55, 90, 0, 3.4, .5, .6, { uni: 4, det: 14 }), N('bp', 300, 5000, .9, 0, 3.4, .35, .6), O('sine', 110, 110, .6, 2.8, 1.2, .35, { uni: 3, det: 8, vib: [5.3, .006] }), O('sine', 160, 160, .6, 2.8, 1.2, .3, { vib: [5.3, .006] }), O('sine', 130, 38, 3.4, .004, 1.1, 1.6), N('lp', 4500, 500, .7, 3.4, .002, .45, 1.4), N('lp', 220, 120, .7, 3.4, .01, 1.8, 3)], [2.6, .3], 1.6),
+  recover: RP(1, [O('sine', 330, 495, 0, .3, .6, .5, { vib: [4.5, .005] }), O('triangle', 495, 742, .1, .3, .6, .35), N('bp', 1500, 3000, .7, 0, .5, .5, .12)], [1, .28]),
+  mirror_cast: RP(1.1, [O('sine', 1400, 2800, 0, .2, .7, .5), O('triangle', 2100, 4200, .03, .2, .7, .3), N('hp', 6000, 9000, .7, 0, .3, .6, .25), O('sine', 700, 700, .25, .004, .8, .3)], [1, .3]),
+  mirror_reflect: RP(.8, [O('sine', 2400, 600, 0, .002, .35, .6), N('bp', 4000, 1200, 2, 0, .001, .25, .7), O('triangle', 1800, 3600, .12, .004, .4, .35)], [.7, .22]),
+  shield_hit: RP(.7, [O('sine', 120, 45, 0, .002, .4, 1.2), N('bp', 3000, 800, 1.2, 0, .001, .22, .9, 2), O('sine', 1500, 1400, 0, .001, .45, .3), N('hp', 6000, 6000, .7, 0, .001, .12, .4)], [.6, .2], 1),
+  break: RP(1.6, [N('hp', 4000, 8000, .8, 0, .001, .5, 1), O('sine', 3000, 2400, 0, .001, .5, .3), N('bp', 6500, 5000, 3, .05, .001, .9, .5), O('sine', 90, 40, 0, .002, .3, .9), N('bp', 7000, 4000, 4, .2, .001, .9, .3)], [.9, .25]),
+  win: RP(1.6, [O('triangle', 392, 392, 0, .01, .5, .5), O('triangle', 494, 494, .18, .01, .5, .5), O('triangle', 587, 587, .36, .01, .5, .5), O('triangle', 784, 784, .56, .01, 1, .65, { uni: 2, det: 8 }), O('sine', 196, 196, 0, .02, 1.4, .4)], [1.2, .28]),
+  lose: RP(1.6, [O('triangle', 330, 330, 0, .02, .5, .5), O('triangle', 262, 262, .3, .02, .5, .5), O('triangle', 196, 196, .6, .02, 1, .6, { uni: 2, det: 10 }), O('sine', 98, 90, .6, .04, 1, .5)], [1.4, .3], 0, 2500),
+  draw: RP(1.2, [O('triangle', 330, 330, 0, .02, .8, .5), O('triangle', 330, 330, .3, .02, .8, .4, { det: 14 }), O('sine', 165, 165, 0, .03, 1, .35)], [1, .25]),
+  showdown_start: RP(2, [O('sawtooth', 70, 70, 0, .02, 1.6, .7, { uni: 3, det: 12 }), O('sine', 55, 35, 0, .01, 1.4, 1.3), N('lp', 400, 150, .7, 0, .03, 1.6, 1.2), O('square', 220, 220, .02, .01, .4, .2)], [1.6, .3], 1.4, 3500),
+  stage_start: RP(1.4, [O('triangle', 262, 262, 0, .02, .6, .5), O('triangle', 392, 392, .15, .02, .6, .5), O('triangle', 523, 523, .3, .02, .9, .55, { uni: 2, det: 8 }), O('sine', 131, 131, 0, .03, 1.1, .35)], [1.4, .3]),
+  game_win: RP(3.2, [O('triangle', 262, 262, 0, .02, .6, .5), O('triangle', 330, 330, .25, .02, .6, .5), O('triangle', 392, 392, .5, .02, .6, .5), O('triangle', 523, 523, .75, .02, 1.8, .65, { uni: 3, det: 9 }), O('sine', 131, 131, 0, .03, 2.6, .5), N('hp', 6000, 9000, .6, .75, .02, 1.4, .1)], [2, .35]),
+  game_lose: RP(3, [O('triangle', 262, 262, 0, .02, .8, .5), O('triangle', 208, 208, .5, .02, .8, .5), O('triangle', 156, 156, 1, .02, 1.8, .6, { uni: 3, det: 12 }), O('sine', 78, 70, 1, .05, 1.8, .6)], [2.2, .35], .6, 2200),
+  coin_sacrifice: RP(.9, [O('sine', 2637, 2637, 0, .001, .35, .4), O('sine', 3520, 3520, .06, .001, .4, .4), O('sine', 3136, 3136, .13, .001, .45, .35), N('bp', 8000, 8000, 3, 0, .001, .08, .4), N('bp', 6000, 6000, 3, .1, .001, .08, .3)], [.5, .15]),
+  temple_level: RP(1.2, [O('triangle', 392, 392, 0, .01, .35, .5), O('triangle', 523, 523, .12, .01, .35, .5), O('triangle', 659, 659, .24, .01, .8, .55, { uni: 2, det: 8 }), O('sine', 1318, 1318, .24, .01, .9, .2)], [1, .3]),
+  spend_upgrade: RP(.35, [O('sine', 880, 1320, 0, .005, .2, .5), O('triangle', 1760, 1760, .06, .003, .2, .3), N('hp', 6000, 6000, .7, 0, .003, .05, .25)], [.4, .12]),
+  upgrade_gain: RP(1, [O('sine', 660, 1320, 0, .35, .5, .5), O('sine', 990, 1980, .05, .35, .5, .3), O('triangle', 1320, 1320, .4, .005, .5, .35), N('hp', 6000, 9000, .6, .3, .2, .5, .15)], [.9, .28]),
+  magic_lv2: RP(1.2, [O('triangle', 440, 440, 0, .01, .35, .5), O('triangle', 554, 554, .15, .01, .4, .5), O('triangle', 659, 659, .3, .01, .9, .6, { uni: 2, det: 8 }), O('sine', 1318, 1318, .3, .01, 1, .2)], [1, .3]),
+  magic_lv3: RP(1.6, [O('triangle', 440, 440, 0, .01, .3, .5), O('triangle', 554, 554, .12, .01, .3, .5), O('triangle', 659, 659, .24, .01, .3, .5), O('triangle', 880, 880, .36, .01, 1.2, .65, { uni: 3, det: 9 }), O('sine', 1760, 1760, .36, .01, 1.2, .25), N('hp', 6000, 9000, .6, .36, .02, .9, .15)], [1.3, .32]),
+  card_lv2: RP(.9, [O('sine', 523, 784, 0, .25, .5, .5), O('triangle', 784, 1175, .05, .25, .5, .35), O('sine', 1568, 1568, .3, .005, .5, .3)], [.8, .25]),
+  card_lv3: RP(1.2, [O('sine', 523, 1046, 0, .35, .6, .5), O('triangle', 784, 1568, .05, .35, .6, .4), O('sine', 1568, 1568, .35, .005, .7, .4, { uni: 2, det: 7 }), N('hp', 6000, 9000, .6, .3, .1, .6, .18)], [1, .3]),
+};
+ALL.forEach(s => { if (!START[s.name]) START[s.name] = RP(.8, [O('sine', 440, 440, 0, .01, .5, .6)]); });
+
+/* ---------------------------------------------------------------- Zustand */
+const KEY = 'magus_ton_werkstatt_v1';
+const S = { sel: 'curse', alts: {}, orig: {}, altBuf: null, mod: {}, level: true, busy: false, msg: '', msgCls: '', playing: null };
+try { const o = JSON.parse(localStorage.getItem(KEY) || 'null'); if (o && o.alts) { S.alts = o.alts; S.sel = o.sel || S.sel; } } catch (e) {}
+function save() { try { localStorage.setItem(KEY, JSON.stringify({ alts: S.alts, sel: S.sel })); } catch (e) {} }
+function versOf(name) { if (!S.alts[name]) S.alts[name] = { cur: 0, list: [{ id: 1, label: 'Synth-Entwurf', by: 'Start', recipe: START[name], mod: {}, note: '' }] }; return S.alts[name]; }
+const curVer = name => { const v = versOf(name); return v.list[clamp(v.cur, 0, v.list.length - 1)]; };
+
+/* ---------------------------------------------------------------- Audio-Wiedergabe */
+let AC = null, cur = null, raf = 0;
+function ac() { if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === 'suspended') AC.resume(); return AC; }
+function stopPlay() { if (cur) { try { cur.src.onended = null; cur.src.stop(); } catch (e) {} cur = null; } S.playing = null; cancelAnimationFrame(raf); drawPlayheads(); markPlaying(); }
+function playBuf(buf, tag, onEnd) {
+  stopPlay(); const a = ac(), src = a.createBufferSource(); src.buffer = buf; src.connect(a.destination);
+  cur = { src, t0: a.currentTime, dur: buf.duration, tag }; S.playing = tag; src.onended = () => { if (cur && cur.src === src) { cur = null; S.playing = null; drawPlayheads(); markPlaying(); } if (onEnd) onEnd(); }; src.start();
+  const tick = () => { drawPlayheads(); if (cur) raf = requestAnimationFrame(tick); }; tick(); markPlaying();
+}
+async function getOrig(name) {
+  if (S.orig[name]) return S.orig[name];
+  let ab;
+  if (window.SND_DATA && window.SND_DATA[name]) { const u = window.SND_DATA[name], b = atob(u.slice(u.indexOf(',') + 1)), x = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) x[i] = b.charCodeAt(i); ab = x.buffer; }
+  else { const r = await fetch('../assets/audio/' + name + '.mp3'); ab = await r.arrayBuffer(); }
+  const buf = await ac().decodeAudioData(ab); S.orig[name] = buf; return buf;
+}
+
+/* ---------------------------------------------------------------- Darstellung */
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const db1 = v => (v <= -90 ? '–' : v.toFixed(1)) + ' dB';
+function drawWave(cv, buf, tag) {
+  const w = cv.clientWidth, h = cv.clientHeight, dpr = window.devicePixelRatio || 1; if (!w) return;
+  cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); const c = cv.getContext('2d'); c.setTransform(dpr, 0, 0, dpr, 0, 0); c.clearRect(0, 0, w, h);
+  c.strokeStyle = '#2c2c31'; c.beginPath(); c.moveTo(0, h / 2); c.lineTo(w, h / 2); c.stroke();
+  if (!buf) { c.fillStyle = '#aaaab2'; c.font = '13px "Alegreya Sans",sans-serif'; c.fillText('wird geladen …', 12, h / 2 + 4); return; }
+  const d = buf.getChannelData(0), n = d.length, TOT = Math.max(buf.duration, S.maxDur || 0), pxs = Math.floor(w * buf.duration / TOT);
+  c.fillStyle = tag === 'orig' ? getComputedStyle(document.documentElement).getPropertyValue('--wave') : getComputedStyle(document.documentElement).getPropertyValue('--wave2');
+  for (let x = 0; x < pxs; x++) { const a = Math.floor(x / pxs * n), b = Math.max(a + 1, Math.floor((x + 1) / pxs * n)); let mn = 0, mx = 0; for (let i = a; i < b; i++) { const v = d[i]; if (v < mn) mn = v; if (v > mx) mx = v; } c.fillRect(x, h / 2 - mx * (h / 2 - 4), 1, Math.max(1, (mx - mn) * (h / 2 - 4))); }
+}
+function drawPlayheads() {
+  ['orig', 'alt'].forEach(tag => {
+    const cv = $('pc-' + tag); if (!cv) return; const c = cv.getContext('2d'), w = cv.clientWidth, h = cv.clientHeight; c.setTransform((window.devicePixelRatio || 1), 0, 0, (window.devicePixelRatio || 1), 0, 0); c.clearRect(0, 0, w, h);
+    if (cur && cur.tag === tag) { const t = ac().currentTime - cur.t0, x = t / Math.max(S.maxDur || cur.dur, cur.dur) * w; c.fillStyle = '#efe6d2'; c.fillRect(x, 0, 1.5, h); }
+  });
+}
+function markPlaying() {
+  document.querySelectorAll('[data-pl]').forEach(b => { const on = S.playing === b.dataset.pl; b.classList.toggle('on', on); if (b.classList.contains('pbtn')) b.textContent = on ? '■' : '▶'; else b.textContent = (on ? '■ ' : '▶ ') + b.textContent.replace(/^[▶■] /, ''); });
+}
+function renderList() {
+  $('list').innerHTML = GROUPS.map(g => '<section class="grp"><h3>' + esc(g[0]) + '</h3>' + g[1].map(s => {
+    const n = s[0], o = S.orig[n], st = o ? stats(o) : null;
+    return '<div class="row' + (S.sel === n ? ' sel' : '') + '" data-row="' + n + '"><button class="pbtn" data-pl="row-' + n + '" data-playrow="' + n + '" aria-label="' + n + ' abspielen">▶</button><div><div class="nm">' + n + '</div><div class="us">' + esc(s[1]) + '</div></div><div class="meta">' + (st ? '<b>' + st.dur.toFixed(1) + ' s</b><br>' + st.mean.toFixed(0) + ' dB' : '') + (S.alts[n] && S.alts[n].list.length > 1 ? '<br>' + (S.alts[n].list.length - 1) + ' Alt.' : '') + '</div></div>';
+  }).join('') + '</section>').join('');
+  markPlaying();
+}
+const SLIDERS = [
+  ['pitch', 'Tonhöhe', -12, 12, 1, 0, v => (v > 0 ? '+' : '') + v + ' Halbtöne'],
+  ['stretch', 'Dauer', .4, 2.2, .05, 1, v => '×' + v.toFixed(2)],
+  ['bright', 'Helligkeit', 500, 16000, 100, 16000, v => v >= 16000 ? 'offen' : Math.round(v) + ' Hz'],
+  ['drive', 'Sättigung (wuchtiger)', 0, 6, .1, 0, v => v.toFixed(1)],
+  ['reverb', 'Hall', -.3, .5, .02, 0, v => (v > 0 ? '+' : '') + Math.round(v * 100) + ' %'],
+  ['noise', 'Rauschanteil', 0, 2.5, .05, 1, v => '×' + v.toFixed(2)],
+];
+async function renderBench() {
+  const name = S.sel, info = ALL.find(a => a.name === name), v = curVer(name), vs = versOf(name);
+  const m = Object.assign({}, v.mod || {}); S.mod = m;
+  $('bench').innerHTML =
+    '<div class="card"><div class="title"><span class="big">' + name + '</span><span class="tag">' + esc(info.group) + '</span></div><p class="use">' + esc(info.use) + '</p>' +
+    '<div class="waves"><div class="wv"><canvas id="wc-orig"></canvas><canvas id="pc-orig" style="position:absolute;left:0;top:0"></canvas><span class="lb">Original</span><span class="st" id="st-orig"></span></div>' +
+    '<div class="wv"><canvas id="wc-alt"></canvas><canvas id="pc-alt" style="position:absolute;left:0;top:0"></canvas><span class="lb">Alternative: ' + esc(v.label) + '</span><span class="st" id="st-alt"></span></div></div>' +
+    '<div class="bar"><button class="btn" data-pl="orig" data-act="p-orig">Original</button><button class="btn primary" data-pl="alt" data-act="p-alt">Alternative</button><button class="btn" data-act="p-ab">Original → Alternative</button>' +
+    '<label class="chk"><input type="checkbox" id="lvl"' + (S.level ? ' checked' : '') + '> gleich laut vergleichen (−20 dB)</label></div></div>' +
+    '<div class="card"><h2>Alternative einstellen</h2><div class="sliders">' + SLIDERS.map(s => { const val = m[s[0]] !== undefined ? m[s[0]] : s[5]; return '<div class="sl"><label for="sl-' + s[0] + '">' + s[1] + '<output id="o-' + s[0] + '">' + s[6](val) + '</output></label><input type="range" id="sl-' + s[0] + '" data-sl="' + s[0] + '" min="' + s[2] + '" max="' + s[3] + '" step="' + s[4] + '" value="' + val + '"></div>'; }).join('') + '</div>' +
+    '<div class="bar"><button class="btn" data-act="dice">🎲 Würfeln</button><button class="btn" data-act="reset-mod">Regler zurück</button><button class="btn" data-act="keep">Als neue Version sichern</button></div></div>' +
+    '<div class="card"><h2>Von Claude entwickeln lassen</h2><textarea id="wish" placeholder="Wunsch, z. B. „viel wuchtiger, tiefer, mit langem Nachhall“ oder „heller, glasiger, kürzer“" aria-label="Wunsch an Claude">' + esc(v.note || '') + '</textarea>' +
+    '<div class="bar"><button class="btn primary" data-act="ask" id="askb">Alternative von Claude</button><span class="pill" id="askst"></span></div>' +
+    '<div class="msg ' + S.msgCls + '" id="msg">' + esc(S.msg) + '</div><p class="note">Claude hört nicht mit. Er bekommt die Lautstärkekurve des Originals und deine Beschreibung und baut daraus ein Synth-Rezept, das hier sofort klingt. Dein Urteil danach (zu dumpf, zu lang, nicht mächtig genug) schreibst du in den Wunsch und fragst erneut.</p></div>' +
+    '<div class="card"><h2>Versionen</h2><div class="vers">' + vs.list.map((x, i) => '<div class="ver' + (i === vs.cur ? ' cur' : '') + '"><span class="vn" data-ver="' + i + '">' + esc(x.label) + '<small>' + esc(x.by) + '</small></span><span>' + (vs.list.length > 1 && i > 0 ? '<button class="btn sm" data-del="' + i + '">Löschen</button>' : '') + '</span></div>').join('') + '</div>' +
+    '<div class="bar"><button class="btn" data-act="copy">Rezept für Claude kopieren</button><button class="btn" data-act="savejson" id="savejson">Rezept speichern (.json)</button></div>' +
+    '<details style="margin-top:10px"><summary>Rezept ansehen und bearbeiten</summary><textarea class="code" id="json" spellcheck="false">' + esc(JSON.stringify(v.recipe)) + '</textarea><div class="bar"><button class="btn" data-act="applyjson">Rezept übernehmen</button></div></details>' +
+    '<p class="note">Zum Einbauen ins Spiel: „Rezept für Claude kopieren“ und im Chat einfügen. Claude rendert es zu einer mp3, bereitet sie auf und setzt sie ein.</p></div>';
+  const ob = await getOrig(name).catch(() => null);
+  if (S.sel !== name) return;
+  await renderAlt();
+  S.maxDur = Math.max(ob ? ob.duration : 0, S.altBuf ? S.altBuf.duration : 0);
+  drawWave($('wc-orig'), ob, 'orig'); drawWave($('wc-alt'), S.altBuf, 'alt');
+  if (ob) { const s = stats(ob); $('st-orig').textContent = s.dur.toFixed(2) + ' s · Ø ' + db1(s.mean) + ' · Spitze ' + db1(s.peak); }
+  renderList();
+}
+async function renderAlt() {
+  const v = curVer(S.sel);
+  try { S.altBuf = await renderRecipe(v.recipe, v.mod, S.level); } catch (e) { S.altBuf = null; }
+  const el = $('st-alt'); if (el && S.altBuf) { const s = stats(S.altBuf); el.textContent = s.dur.toFixed(2) + ' s · Ø ' + db1(s.mean) + ' · Spitze ' + db1(s.peak); }
+  if ($('wc-alt')) { S.maxDur = Math.max(S.orig[S.sel] ? S.orig[S.sel].duration : 0, S.altBuf ? S.altBuf.duration : 0); drawWave($('wc-orig'), S.orig[S.sel] || null, 'orig'); drawWave($('wc-alt'), S.altBuf, 'alt'); }
+}
+let rt = 0;
+function slider(id, val) {
+  const s = SLIDERS.find(x => x[0] === id); S.mod[id] = val; $('o-' + id).textContent = s[6](val);
+  const v = curVer(S.sel); v.mod = Object.assign({}, S.mod); save();
+  clearTimeout(rt); rt = setTimeout(renderAlt, 90);
+}
+function setMsg(t, cls) { S.msg = t; S.msgCls = cls || ''; const e = $('msg'); if (e) { e.textContent = t; e.className = 'msg ' + (cls || ''); } }
+function newVer(label, by, recipe, mod, note) {
+  const vs = versOf(S.sel); vs.list.push({ id: Date.now(), label, by, recipe, mod: mod || {}, note: note || '' }); vs.cur = vs.list.length - 1; save();
+}
+function dice() {
+  const v = curVer(S.sel), r = JSON.parse(JSON.stringify(v.recipe)), rnd = Math.random, pf = Math.pow(2, (rnd() * 8 - 4) / 12);
+  r.seed = Math.floor(rnd() * 99999) + 1; r.dur = +(r.dur * (.8 + rnd() * .5)).toFixed(2);
+  (r.layers || []).forEach(L => { L.f = L.f.map(x => Math.round(x * pf * (.9 + rnd() * .2))); L.g = +((L.g === undefined ? 1 : L.g) * (.7 + rnd() * .6)).toFixed(2); L.d = +((L.d || .3) * (.7 + rnd() * .7)).toFixed(2); if (L.t === 'o' && rnd() < .3) L.w = ['sine', 'triangle', 'sawtooth', 'square'][Math.floor(rnd() * 4)]; });
+  r.rev = [+(.4 + rnd() * 1.8).toFixed(1), +(rnd() * .4).toFixed(2)]; r.drive = +(rnd() * 2.5).toFixed(1);
+  newVer('Würfel ' + (versOf(S.sel).list.length), 'Zufall', r, {}, ''); renderBench();
+}
+function schemaText() {
+  return 'Rezept-Format (JSON, ein Objekt): { "dur": Sekunden (0.1 bis 8), "seed": Ganzzahl, "rev": [Hall-Länge in s, Hall-Anteil 0..0.9], "drive": Sättigung 0..8, "lp": Tiefpass in Hz (0 = aus), "layers": [ Schichten, höchstens 10 ] }.\n' +
+    'Oszillator-Schicht: { "t":"o", "w":"sine"|"triangle"|"sawtooth"|"square", "f":[Startfrequenz Hz, Endfrequenz Hz], "at":Startzeit s, "a":Anstiegszeit s (linear), "d":Ausklingzeit s (exponentiell, ca. d Sekunden bis stumm), "g":Pegel 0..2, "uni":Stimmenzahl 1..5, "det":Verstimmung in Cent, "vib":[Hz, Tiefe 0..0.05], "dr":Sättigung der Schicht 0..8 }.\n' +
+    'Rausch-Schicht: { "t":"n", "ft":"bp"|"lp"|"hp", "f":[Filter Start Hz, Filter Ende Hz], "q":Güte 0.1..30, "at","a","d","g","dr" wie oben }.\n' +
+    'Die Frequenz läuft während at bis at+a+d exponentiell von f[0] nach f[1]. Alle Schichten werden addiert, dann Sättigung, Tiefpass und Hall. Danach wird auf −20 dB mittleren Pegel normalisiert.';
+}
+async function ask() {
+  const name = S.sel, info = ALL.find(a => a.name === name), v = curVer(name), wish = $('wish').value.trim(), ob = await getOrig(name).catch(() => null);
+  let sample = null; try { sample = await claude.use('sample'); } catch (e) {}
+  if (!sample) { setMsg('Die Anfrage an Claude geht nur in claude.ai. Kopiere stattdessen das Rezept mit dem Wunsch und füge es im Chat ein.', 'bad'); return; }
+  const env = []; if (ob) { const d = ob.getChannelData(0), n = 24, w = Math.floor(d.length / n); for (let i = 0; i < n; i++) { let s = 0; for (let j = i * w; j < (i + 1) * w; j++) s += d[j] * d[j]; env.push(Math.round(20 * Math.log10(Math.sqrt(s / w) + 1e-6))); } }
+  const o = ob ? stats(ob) : null;
+  const prompt = 'Du bist Sounddesigner für das Kartenspiel Magus (Fantasy-Duell mit Feuer, Erde, Wasser; dunkel, mystisch). Entwirf eine Synth-Alternative für einen Spielton.\n\n' +
+    'Ton: ' + name + '\nEinsatz: ' + info.use + '\nOriginal: ' + (o ? o.dur.toFixed(2) + ' s, mittlerer Pegel ' + o.mean.toFixed(1) + ' dB, Spitze ' + o.peak.toFixed(1) + ' dB. Lautstärkekurve in 24 gleichen Abschnitten (dB): ' + env.join(', ') : 'unbekannt') + '\n' +
+    'Aktuelles Rezept der Alternative: ' + JSON.stringify(v.recipe) + (v.mod && Object.keys(v.mod).length ? '\nRegler darauf: ' + JSON.stringify(v.mod) : '') + '\n' +
+    'Wunsch des Spielers: ' + (wish || '(keiner, mach einen eigenen, überzeugenden Vorschlag, der wuchtiger und hochwertiger klingt als das aktuelle Rezept)') + '\n\n' + schemaText() +
+    '\n\nRegeln: Plane die Zeitachse bewusst (wann baut sich etwas auf, wann ist der Einschlag). Der Ton soll sofort einsetzen, nicht erst nach Stille. Nutze mehrere Schichten (Sub-Bass für Wucht, Rauschen für Textur, helle Anteile für Glanz). Antworte nur mit einem JSON-Objekt der Form {"name": "kurzer Name der Variante (2 bis 4 Wörter)", "idee": "ein Satz, was du anders gemacht hast", "recipe": { ... }}.';
+  const b = $('askb'); b.disabled = true; setMsg('Claude entwickelt eine Alternative … das dauert etwa 20 bis 60 Sekunden.', ''); $('askst').textContent = 'denkt nach';
+  try {
+    const out = await sample.json(prompt, { modelTier: 'complex', cache: false });
+    const rc = out && out.recipe; if (!rc || !Array.isArray(rc.layers) || !rc.layers.length) throw { code: 'format', message: 'Die Antwort enthielt kein brauchbares Rezept.' };
+    rc.dur = clamp(+rc.dur || 1, .1, 8);
+    newVer((out.name || 'Claude-Vorschlag').slice(0, 40), 'Claude', rc, {}, wish);
+    S.msg = 'Neue Version „' + (out.name || 'Claude-Vorschlag') + '“. ' + (out.idee || ''); S.msgCls = 'ok';
+    await renderBench(); const e = $('askst'); if (e) e.textContent = '';
+    if (S.altBuf) playBuf(S.altBuf, 'alt');
+  } catch (e) {
+    const map = { not_granted: 'Du hast die Anfrage an Claude nicht erlaubt.', rate_limited: 'Zu viele Anfragen, bitte kurz warten.', format: e.message, invalid_json: 'Die Antwort war kein gültiges JSON. Bitte noch einmal versuchen.' };
+    setMsg(map[e.code] || ('Es ging nicht: ' + (e.message || e.code || e)), 'bad'); b.disabled = false; $('askst').textContent = '';
+  }
+}
+async function copyText(t) { try { await navigator.clipboard.writeText(t); return true; } catch (e) { const ta = $('json'); if (ta) { ta.closest('details').open = true; ta.value = t; ta.select(); } return false; } }
+
+/* ---------------------------------------------------------------- Ereignisse */
+document.addEventListener('click', async ev => {
+  const t = ev.target.closest('button,.row,[data-ver]'); if (!t) return;
+  if (t.dataset.playrow) { ev.stopPropagation(); const n = t.dataset.playrow; if (S.playing === 'row-' + n) { stopPlay(); return; } try { const b = await getOrig(n); playBuf(b, 'row-' + n); if (!document.querySelector('[data-row="' + n + '"] .meta').textContent) renderList(); } catch (e) {} return; }
+  if (t.dataset.ver !== undefined) { const vs = versOf(S.sel); vs.cur = +t.dataset.ver; save(); S.msg = ''; renderBench(); return; }
+  if (t.dataset.del) { const vs = versOf(S.sel), i = +t.dataset.del; vs.list.splice(i, 1); vs.cur = Math.min(vs.cur, vs.list.length - 1); save(); renderBench(); return; }
+  if (t.dataset.row) { S.sel = t.dataset.row; S.msg = ''; save(); stopPlay(); document.querySelectorAll('.row').forEach(r => r.classList.toggle('sel', r.dataset.row === S.sel)); renderBench(); if (window.matchMedia('(max-width:960px)').matches) $('bench').scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+  const a = t.dataset.act; if (!a) return;
+  if (a === 'p-orig') { if (S.playing === 'orig') return stopPlay(); const b = await getOrig(S.sel); playBuf(b, 'orig'); }
+  else if (a === 'p-alt') { if (S.playing === 'alt') return stopPlay(); if (S.altBuf) playBuf(S.altBuf, 'alt'); }
+  else if (a === 'p-ab') { const b = await getOrig(S.sel); playBuf(b, 'orig', () => { setTimeout(() => { if (S.altBuf && !cur) playBuf(S.altBuf, 'alt'); }, 350); }); }
+  else if (a === 'dice') dice();
+  else if (a === 'reset-mod') { curVer(S.sel).mod = {}; save(); renderBench(); }
+  else if (a === 'keep') { const v = curVer(S.sel); const vs = versOf(S.sel); newVer('Version ' + vs.list.length, 'Du', JSON.parse(JSON.stringify(v.recipe)), Object.assign({}, v.mod), v.note); renderBench(); }
+  else if (a === 'ask') ask();
+  else if (a === 'copy') { const v = curVer(S.sel), info = ALL.find(x => x.name === S.sel), wish = ($('wish') || {}).value || ''; const txt = 'Ton-Werkstatt – Alternative für „' + S.sel + '“ (' + info.use + ') einbauen.\nVersion: ' + v.label + '\nRegler: ' + JSON.stringify(v.mod || {}) + (wish ? '\nWunsch: ' + wish : '') + '\nRezept:\n' + JSON.stringify(v.recipe); const ok = await copyText(txt); setMsg(ok ? 'Kopiert. Füge es jetzt im Chat mit Claude ein.' : 'Kopieren wurde blockiert. Der Text steht im Rezeptfeld unten, markiert zum Kopieren.', ok ? 'ok' : 'bad'); }
+  else if (a === 'savejson') { const v = curVer(S.sel); let dl = null; try { dl = await claude.use('downloads'); } catch (e) {} if (!dl) { setMsg('Speichern geht nur in claude.ai. Nutze „Rezept für Claude kopieren“.', 'bad'); return; } try { await dl.save({ filename: 'ton-' + S.sel + '.json', data: JSON.stringify({ ton: S.sel, version: v.label, regler: v.mod, rezept: v.recipe }, null, 1) }); setMsg('Gespeichert.', 'ok'); } catch (e) { if (e.code !== 'declined') setMsg('Speichern nicht möglich (' + (e.code || e.message) + ').', 'bad'); } }
+  else if (a === 'applyjson') { try { const r = JSON.parse($('json').value); if (!r || !Array.isArray(r.layers)) throw 0; newVer('Eigenes Rezept', 'Du', r, {}, ''); renderBench(); } catch (e) { setMsg('Das Rezept ist kein gültiges JSON mit „layers“.', 'bad'); } }
+});
+document.addEventListener('input', ev => {
+  const t = ev.target;
+  if (t.dataset && t.dataset.sl) slider(t.dataset.sl, +t.value);
+  else if (t.id === 'lvl') { S.level = t.checked; renderAlt(); }
+  else if (t.id === 'wish') { curVer(S.sel).note = t.value; save(); }
+});
+window.addEventListener('resize', () => { drawWave($('wc-orig'), S.orig[S.sel] || null, 'orig'); drawWave($('wc-alt'), S.altBuf, 'alt'); });
+window.TonEngine = { renderRecipe, START, stats };   /* für tools/ton-rendern.js */
+
+/* Start: Liste zeigen, Längen und Pegel aller Originale im Hintergrund nachladen */
+renderList(); renderBench();
+(async () => { for (const s of ALL) { try { await getOrig(s.name); } catch (e) {} } renderList(); })();
+</script>
+</body>
+</html>
