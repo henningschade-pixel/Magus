@@ -218,7 +218,7 @@ function showFx() {
     const go = f => { if (!FAST) fxSound(f); if (f.kind === 'lifeflow') FlowFx.lifeflow(f); else if (f.kind === 'aggro') FlowFx.aggro(f); else if (f.kind === 'drain') FlowFx.drain(f); else if (f.kind === 'ruin') FlowFx.ruin(f); else if (f.kind === 'attack') FlowFx.attack(f); else if (f.kind === 'defense') FlowFx.defense(f); };
     [].concat(e.fx || []).forEach(f => { if (f.late) { lateN++; setTimeout(() => { lateN--; go(f); }, Math.round(1000 * FlowFx.wait()) + 150); } else go(f); });   // Kombo der Verteidigung erst nach der Kampfanimation
     const m = /^(Spiegel|Todes-Fluch): /.exec(e.txt); if (!m) continue;
-    if (m[1] === 'Todes-Fluch') Snd.play('curse', 0, 0.7);   // Fluch-Sound, wenn der Todes-Fluch Schaden macht
+    if (m[1] === 'Todes-Fluch') Snd.play('curse', 0, 0.95);   // Fluch-Sound, wenn der Todes-Fluch Schaden macht
     const mirror = m[1] === 'Spiegel', victimMe = mirror ? e.pid !== ME : e.pid === ME;
     const d = document.createElement('div'); d.className = 'fxnote ' + (mirror ? 'mirror' : 'death');
     d.style.top = (victimMe ? 546 - k * 54 : 172 + k * 54) + 'px';

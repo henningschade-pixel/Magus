@@ -162,7 +162,7 @@ Wenn du die mp3-Dateien in `assets/audio/` ablegst (oder mir schickst), binde ic
 Hinweis: Frühere Fassung der Aufbereitung hatte einen Fehler (Sounds waren fast stumm). Behoben; `tests/audio.test.js` prüft jetzt, dass jede Sounddatei hörbar ist.
 
 ## Quellen (nicht KI-generiert)
-- `ultimate`: „Ultimate Cinematic Dark Braam Whoosh 8“ von sdanezis (Dateiname deutet auf Pixabay, ID 607326; Pixabay-Lizenz, keine Namensnennung nötig). Aufbereitet: mono, Pegel gesenkt, 0,2 s ausgeblendet. Länge 3 Sekunden.
+- `ultimate` und `curse`: selbst synthetisiert mit `python3 tools/sounds-synth.py <Zielordner>` (keine Fremdquelle, keine Lizenzfragen). Ultimate 5,2 s: steigender Drone, Rauschwirbel und chorartiger Klang, Einschlag bei 3,4 s passend zur Pentagramm-Animation, mittlerer Pegel etwa −12 dB (lauter als die übrigen). Curse 1,7 s: fallendes dunkles Grollen mit Sub-Schlag. Die frühere Fassung (sdanezis, Pixabay) steht in der Git-Historie.
 - `block`: eigene Version des Spielers (hochgeladen).
 - `magic_lv2`, `magic_lv3`: „Level Up 02“ und „Level Up 03“ von mokasza (Dateinamen deuten auf freesound.org, IDs 810753 und 810755; bitte Lizenz auf der Seite prüfen, bei CC-BY Namensnennung ergänzen). Sie spielen, wenn eine Magierichtung auf Stufe 2 bzw. 3 steigt und ersetzen dort `magic_buy`.
 
