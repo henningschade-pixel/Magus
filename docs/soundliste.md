@@ -160,3 +160,7 @@ Wenn du die mp3-Dateien in `assets/audio/` ablegst (oder mir schickst), binde ic
 - Alle neuen Dateien sind nur etwa 1 Sekunde lang (der Generator lieferte jeweils 1,03 s), auch `ultimate`, das als 3 bis 4 Sekunden geplant war.
 
 Hinweis: Frühere Fassung der Aufbereitung hatte einen Fehler (Sounds waren fast stumm). Behoben; `tests/audio.test.js` prüft jetzt, dass jede Sounddatei hörbar ist.
+
+## Quellen (nicht KI-generiert)
+- `ultimate`: „Ultimate Cinematic Dark Braam Whoosh 8“ von sdanezis (Dateiname deutet auf Pixabay, ID 607326; Pixabay-Lizenz, keine Namensnennung nötig). Aufbereitet: mono, Pegel gesenkt, 0,2 s ausgeblendet. Länge 3 Sekunden.
+- `block`: eigene Version des Spielers (hochgeladen).
