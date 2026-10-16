@@ -3202,18 +3202,18 @@ const ST_SERIES = [
   { k: 'gold', name: 'Gold (insgesamt)', col: '#e0b84a' },
   { k: 'up', name: 'Upgrades (insgesamt)', col: '#c47fe0' },
   { k: 'lvl', name: 'Tempelstufe', col: '#e8e3d0' },
-  { k: 'F', name: 'Magie Feuer', col: '#ff7a3d', chip: 'mF' },
-  { k: 'E', name: 'Magie Erde', col: '#93c24f', chip: 'mE' },
-  { k: 'W', name: 'Magie Wasser', col: '#52a6f5', chip: 'mW' },
+  { k: 'F', name: 'Magie Feuer', col: '#ff7a3d', chip: 'mag' },
+  { k: 'E', name: 'Magie Erde', col: '#93c24f', chip: 'mag' },
+  { k: 'W', name: 'Magie Wasser', col: '#52a6f5', chip: 'mag' },
   { k: 'slots', name: 'Handkarten', col: '#e58aa0' },
   { k: 'limit', name: 'Ausspiellimit', col: '#5fd0c4' },
-  { k: 'aF', name: 'Ø Karte Feuer', col: '#ffb48a', chip: 'mF', thin: true },
-  { k: 'aE', name: 'Ø Karte Erde', col: '#c6e48f', chip: 'mE', thin: true },
-  { k: 'aW', name: 'Ø Karte Wasser', col: '#9fd0ff', chip: 'mW', thin: true },
+  { k: 'aF', name: 'Ø Karte Feuer', col: '#ffb48a', chip: 'avg', thin: true },
+  { k: 'aE', name: 'Ø Karte Erde', col: '#c6e48f', chip: 'avg', thin: true },
+  { k: 'aW', name: 'Ø Karte Wasser', col: '#9fd0ff', chip: 'avg', thin: true },
 ];
 ST_SERIES.forEach(s => { s.chip = s.chip || s.k; });
-// Filterknöpfe: Magie und Ø Kartenstufe einer Farbe teilen sich einen Knopf (Magie dick, Ø Karte dünn und heller)
-const ST_CHIPS = [['gold', 'Gold (insgesamt)', '#e0b84a'], ['up', 'Upgrades (insgesamt)', '#c47fe0'], ['lvl', 'Tempelstufe', '#e8e3d0'], ['mF', 'Feuer: Magie + Ø Karte', '#ff7a3d'], ['mE', 'Erde: Magie + Ø Karte', '#93c24f'], ['mW', 'Wasser: Magie + Ø Karte', '#52a6f5'], ['slots', 'Handkarten', '#e58aa0'], ['limit', 'Ausspiellimit', '#5fd0c4']];
+// Filterknöpfe: die drei Magierichtungen bzw. die drei Kartendurchschnitte teilen sich je einen Knopf, jede Farbe bleibt eine eigene Linie
+const ST_CHIPS = [['gold', 'Gold (insgesamt)', '#e0b84a'], ['up', 'Upgrades (insgesamt)', '#c47fe0'], ['lvl', 'Tempelstufe', '#e8e3d0'], ['mag', 'Magie (Feuer, Erde, Wasser)', '#ff7a3d'], ['avg', 'Ø Karten (Feuer, Erde, Wasser)', '#ffb48a'], ['slots', 'Handkarten', '#e58aa0'], ['limit', 'Ausspiellimit', '#5fd0c4']];
 const stOn = new Set(['gold', 'up', 'lvl']), stWho = { me: true, opp: true };
 const stView = { auto: true, x0: 0, x1: 1, y0: 0, y1: 4 };   // sichtbarer Ausschnitt in Daten-Einheiten; auto = Ursprung links unten, Achsen dehnen sich mit dem Spiel
 const ST = { W: 1000, T: 52, B: 40, L: 44, R: 16, PH: 330 };
@@ -3259,7 +3259,7 @@ function statsView() {
   return '<div class="box stats"><div class="sthead"><h1>Statistik</h1><div><button class="btn" data-act="stfit" title="Achsen wieder automatisch anpassen (Doppelklick ins Diagramm)">Ansicht zurücksetzen</button> <button class="btn" data-act="stclose">Schließen</button></div></div>' +
     '<div class="stchips">' + chip(stWho.me, 'stwho', 'me', 'Du (durchgezogen)') + chip(stWho.opp, 'stwho', 'opp', esc(G.players[OPP].name) + ' (gestrichelt)') + '</div>' +
     '<div class="stchips">' + ST_CHIPS.map(c => chip(stOn.has(c[0]), 'stser', c[0], c[1], c[2])).join('') + '</div><div id="stplot">' + statsSvg() + '</div>' +
-    '<div class="note stkey"><span style="color:#e0b84a">★</span> Showdown · <b>●</b> Monsterkampf in der Farbe des Monsters (✓ du gewinnst, ✗ Gegner gewinnt, – ohne Sieger) · dicke Linie: Magiestufe, dünne: Ø Kartenstufe · Mausrad: zoomen (über den Achsen nur diese Achse) · ziehen: Ausschnitt verschieben</div></div>';
+    '<div class="note stkey"><span style="color:#e0b84a">★</span> Showdown · <b>●</b> Monsterkampf in der Farbe des Monsters (✓ du gewinnst, ✗ Gegner gewinnt, – ohne Sieger) · dicke Linien: Magiestufe, dünne hellere: Ø Kartenstufe der Farbe · Mausrad: zoomen (über den Achsen nur diese Achse) · ziehen: Ausschnitt verschieben</div></div>';
 }
 function statsRedraw() { const el = document.getElementById('stplot'); if (el) el.innerHTML = statsSvg(); }
 function statsFitView() { stView.auto = true; statsRedraw(); }

@@ -42,8 +42,8 @@ test('Statistikseite öffnet, zeigt den Verlauf und lässt sich filtern und schl
     await p.click('#statbtn');
     await p.waitForSelector('.box.stats svg');
     assert.ok(await p.locator('.box.stats polyline, .box.stats circle').count() > 0);
-    await p.click('.stchip:has-text("Feuer: Magie")');
-    assert.ok(await p.locator('.stchip.on:has-text("Feuer: Magie")').count() === 1);
+    await p.click('.stchip:has-text("Magie (Feuer")');
+    assert.ok(await p.locator('.stchip.on:has-text("Magie (Feuer")').count() === 1);
     const bb = await p.locator('#stsvg').boundingBox(), before = await p.locator('#stsvg').innerHTML();
     await p.mouse.move(bb.x + 500, bb.y + 200); await p.mouse.wheel(0, -300);   // Zoomen ändert die Achsen
     assert.notEqual(await p.locator('#stsvg').innerHTML(), before);
