@@ -257,8 +257,9 @@ function sceneCenter(ctx, t) {
   if (flip) { ctx.translate(0, FLIP); ctx.scale(1, -1); }
   hands(ctx);
   const H = { x: 90, y: 690 }, Z = { x: 640, y: 400 }, hH = 60;
-  const u = eo(seg(t, 0, P.cFly)), v = eio(seg(t, EV.tOut, EV.tOut + P.cBack)), m = u * (1 - v);
-  ctx.fillStyle = 'rgba(0,0,0,' + (P.cDim * m) + ')'; ctx.fillRect(0, 0, 1280, 800);
+  const gone = k.after === 0;   // zerstörtes Schild bleibt in der Mitte und zerspringt, nur ein überstandenes fliegt zurück
+  const u = eo(seg(t, 0, P.cFly)), v = eio(seg(t, EV.tOut, EV.tOut + P.cBack)), m = gone ? u : u * (1 - v), md = u * (1 - v);
+  ctx.fillStyle = 'rgba(0,0,0,' + (P.cDim * md) + ')'; ctx.fillRect(0, 0, 1280, 800);
   const hit = EV.sparks.find(s => t >= s.ta && t < s.ta + .15), brk = EV.tBreak !== null && t > EV.tBreak;
   const amp = (brk ? P.shake * 9 * Math.exp(-(t - EV.tBreak) * 6) : 0) + (hit ? P.shake * 2 : 0);
   const pos = { x: lerp(H.x, Z.x, m) + Math.sin(t * 90) * amp * m, y: lerp(H.y, Z.y, m) + Math.cos(t * 70) * amp * .7 * m }, h = lerp(hH, P.cSize, m), w = h * 132 / 180;
@@ -266,6 +267,7 @@ function sceneCenter(ctx, t) {
   const ring = i => rings ? h * .5 + 16 * (h / P.cSize + .3) + (i + 1) * P.cRing * (.35 + .65 * m) : h * .5 + 8;
   const ra = (i, a) => ({ x: pos.x + ring(i) * Math.cos(a) * .86, y: pos.y + ring(i) * Math.sin(a) });
   const half = P.cArc * Math.PI / 360, a0 = -Math.PI / 2 - half, a1 = -Math.PI / 2 + half, ringA = seg(t, P.cFly * .5, P.cFly) * (1 - seg(t, EV.tOut, EV.tOut + P.cBack * .4));
+  const tShat = EV.tBreak !== null ? EV.tBreak + .12 + (n - 1) * .04 + .1 : 1e9, shattered = gone && t > tShat;
   for (let i = 0; i < n; i++) {   // Ringe: ein Ring je Stufe
     const lostArc = i >= n - k.lost, tb = lostArc && EV.tBreak !== null ? t - (EV.tBreak + .12) - (i - (n - k.lost)) * .04 : -1, broken = tb > 0;
     if (ringA <= 0 || !rings) continue;
@@ -288,7 +290,14 @@ function sceneCenter(ctx, t) {
     }
   }
   const im = SHIELD[C.elem];   // das Schild selbst (bei oben gespiegelter Szene wieder aufrecht)
-  if (im) {
+  if (im && shattered) {   // alle Stufen verloren: das Schild zerspringt in Stücke
+    const ts = t - tShat, rr = rng(21), GX = 4, GY = 5, iw = im.width, ih = im.height;
+    for (let gy = 0; gy < GY; gy++) for (let gx = 0; gx < GX; gx++) {
+      const cx = (gx + .5) / GX - .5, cy = (gy + .5) / GY - .5, r1 = rr(), r2 = rr(), al = 1 - Math.pow(clamp(ts / 1.3), 1.4); if (al <= 0) continue;
+      ctx.save(); ctx.globalAlpha = al; ctx.translate(pos.x + cx * w + cx * 160 * P.scatter * ts * (.6 + r1), pos.y + cy * h + cy * 120 * P.scatter * ts + 300 * P.gravity * ts * ts); ctx.rotate((r2 - .5) * ts * 5); if (flip) ctx.scale(1, -1); ctx.shadowColor = col; ctx.shadowBlur = P.glow * .4;
+      ctx.drawImage(im, gx * iw / GX, gy * ih / GY, iw / GX, ih / GY, -w / GX / 2, -h / GY / 2, w / GX, h / GY); ctx.restore();
+    }
+  } else if (im) {
     ctx.save(); ctx.translate(pos.x, pos.y); if (flip) ctx.scale(1, -1); ctx.shadowColor = col; ctx.shadowBlur = P.glow * (.5 + m) * (1 + (hit ? P.flash : 0)); ctx.drawImage(im, -w / 2, -h / 2, w, h); ctx.shadowBlur = 0;
     if (hit) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = .55 * P.flash; ctx.drawImage(im, -w / 2, -h / 2, w, h); }
     if (brk) {   // Risse im Schild bleiben, bis es wieder zurückfliegt
@@ -298,7 +307,7 @@ function sceneCenter(ctx, t) {
     ctx.restore();
   }
   const lit = brk && t > EV.tBreak + .12 ? k.after : n;   // Stufenanzeige unter dem Schild: die gebrochene Stufe erlischt
-  for (let i = 0; i < n; i++) { const on = i < lit; ctx.save(); ctx.translate(pos.x + (i - (n - 1) / 2) * lerp(18, 34, m), pos.y + h / 2 + lerp(14, 34, m)); ctx.rotate(Math.PI / 4); ctx.strokeStyle = on ? col : 'rgba(255,255,255,.25)'; ctx.lineWidth = 2; const sz = lerp(4, 8, m); if (on) { ctx.shadowColor = col; ctx.shadowBlur = 10; ctx.fillStyle = rgba(col, .6); ctx.fillRect(-sz, -sz, 2 * sz, 2 * sz); } ctx.strokeRect(-sz, -sz, 2 * sz, 2 * sz); ctx.restore(); }
+  for (let i = 0; i < n && !shattered; i++) { const on = i < lit; ctx.save(); ctx.translate(pos.x + (i - (n - 1) / 2) * lerp(18, 34, m), pos.y + h / 2 + lerp(14, 34, m)); ctx.rotate(Math.PI / 4); ctx.strokeStyle = on ? col : 'rgba(255,255,255,.25)'; ctx.lineWidth = 2; const sz = lerp(4, 8, m); if (on) { ctx.shadowColor = col; ctx.shadowBlur = 10; ctx.fillStyle = rgba(col, .6); ctx.fillRect(-sz, -sz, 2 * sz, 2 * sz); } ctx.strokeRect(-sz, -sz, 2 * sz, 2 * sz); ctx.restore(); }
   const from = { x: 640, y: 60 }, hpDef = { x: 1090, y: 700 }, hpAtt = { x: 1090, y: 90 };   // Geschosse, Aufprall, Durchschlag, Rückwurf
   EV.sparks.forEach(sp => {
     const tgt = ra(n - 1, sp.a);
