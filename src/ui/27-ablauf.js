@@ -27,7 +27,7 @@ function checkCombatEnd(prevLog) {
 // Ton zum Ergebnis-Bildschirm: Monster besiegt (nur wenn du es warst) dann Sieg, Niederlage oder Unentschieden
 function resultSound(ev) {
   const win = ev.cls === 'win';
-  if (ev.res && ev.res.monsterDefeated && win) { Snd.play('monster_defeated'); Snd.play('win', .9); }
+  if (ev.res && ev.res.monsterDefeated && win) { Snd.play('monster_defeated'); Snd.play('win', 1.1); }
   else Snd.play(ev.cls === 'win' ? 'win' : ev.cls === 'lose' ? 'lose' : 'draw');
 }
 // Texte des Ergebnis-Bildschirms (aus Sicht von ME)
