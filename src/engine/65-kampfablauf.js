@@ -245,10 +245,8 @@ function execDefense(state, passOnly) {
     if (r > 0 || lost > 0) {
       if (r > 0) att.stats.hp = Math.max(0, att.stats.hp - r);
       if (lost > 0) mirrorTake(side.stats, c.color, lost);
-      const inline = leftover > 0;   // Es geht Schaden durch: Der Spiegel wird im Kampfeffekt gezeigt (Funken treffen ihn), nicht als eigene Animation
-      if (inline) defFx.mirror = { markers: mLvl, broken: lost, r };
       const stufen = lost + ' Stufe' + (lost === 1 ? '' : 'n');
-      log(state, 'Spiegel: ' + side.name + (r > 0 ? ' wirft ' + r + ' Schaden auf ' + att.name + ' zurück' + (lost > 0 ? ' und verliert ' + stufen : '') : ' verliert ' + stufen) + '.', side.ctrl, { kind: 'mirror', elem: c.color, markers: mLvl, broken: lost, att: att.ctrl, r, inline });
+      log(state, 'Spiegel: ' + side.name + (r > 0 ? ' wirft ' + r + ' Schaden auf ' + att.name + ' zurück' + (lost > 0 ? ' und verliert ' + stufen : '') : ' verliert ' + stufen) + '.', side.ctrl, { kind: 'mirror', late: true, elem: c.color, markers: mLvl, broken: lost, who: side.ctrl, att: att.ctrl, r, d: c.pending, blk: block });
     }
   }
   if (defEv && defEv.levels && defEv.levels.ulti > 0 && side.stats.hp > 0) {   // Ultimate in der Verteidigung: Todes-Fluch für den Angreifer

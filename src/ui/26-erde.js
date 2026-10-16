@@ -119,40 +119,6 @@ function earthFormRaw(ctx, x, by, seed, i, t, tCrack, tRise, endAt, ending) {
     const loop = ts => { if (!ex || ex.cv !== cv) return; frame(ts); if (ex) ex.raf = requestAnimationFrame(loop); };
     ex.raf = requestAnimationFrame(loop);
   }
-  const mirPos = e => { const d = e.def; return { x: lerp(e.C0.x, d.hp.x, .35), y: lerp(slotY(e, false), d.hp.y, .55) }; };
-  // Spiegel des Verteidigers: Die durchgehenden Funken treffen ihn, die gebrochenen Ringe zerspringen, der Rest bleibt; zurückgeworfene Funken fliegen zum Angreifer
-  function drawMirrorFx(ctx, e, T, d, t) {
-    const m = d.mir, col = EL[e.p.atk], N = clamp(m.markers, 1, 3), nb = clamp(m.broken, 0, N), M = mirPos(e), rx = 38, ry = 50, tI = T.tH + .5;
-    const a = eo(seg(t, T.tH - .3, T.tH)) * (1 - seg(t, T.end - .5, T.end - .2)); if (a <= 0) return;
-    const pulse = .6 + .4 * Math.sin(t * 6), sr = rng(e.seeds[5] + 77);
-    ctx.save(); ctx.translate(M.x, M.y);
-    for (let l = 0; l < N; l++) {   // Ringe von innen nach außen; die äußersten nb zerspringen
-      const broken = l >= N - nb, f = (l + 1) / N, tt = Math.max(0, t - tI - (broken ? (N - 1 - l) * .03 : 0));
-      if (!broken || tt <= 0) {
-        ctx.save(); ctx.globalAlpha = a; ctx.shadowColor = col; ctx.shadowBlur = 10; ctx.fillStyle = 'rgba(200,222,255,' + (l === 0 ? .24 : .12) + ')'; ctx.strokeStyle = rgba(lighten(col, .35), (l === N - 1 ? 1 : .7) * pulse); ctx.lineWidth = l === N - 1 ? 2.6 : 1.4;
-        ctx.beginPath(); ctx.ellipse(0, 0, rx * f, ry * f, 0, 0, 7); ctx.fill(); ctx.stroke(); ctx.restore();
-      } else {
-        const S = 9; for (let j = 0; j < S; j++) {   // Scherben des gebrochenen Rings
-          const a0 = j / S * Math.PI * 2, a1 = (j + 1) / S * Math.PI * 2, r1 = sr(), r2 = sr(), r3 = sr(), f0 = l / N, cx = Math.cos((a0 + a1) / 2) * rx * (f0 + f) / 2, cy = Math.sin((a0 + a1) / 2) * ry * (f0 + f) / 2;
-          const ox = cx * 1.4 * tt * 2 + (r1 - .5) * 20 * tt, oy = cy * tt * 2 + 130 * tt * tt - 10 * tt, al = 1 - Math.pow(clamp(tt / 1.1), 1.5); if (al <= 0) continue;
-          ctx.save(); ctx.globalAlpha = al * a; ctx.translate(cx + ox, cy + oy); ctx.rotate((r3 - .5) * tt * 6); ctx.translate(-cx, -cy);
-          ctx.beginPath(); ctx.moveTo(Math.cos(a0) * rx * f0, Math.sin(a0) * ry * f0); ctx.lineTo(Math.cos(a0) * rx * f, Math.sin(a0) * ry * f); ctx.lineTo(Math.cos(a1) * rx * f, Math.sin(a1) * ry * f); ctx.lineTo(Math.cos(a1) * rx * f0, Math.sin(a1) * ry * f0); ctx.closePath();
-          ctx.fillStyle = 'rgba(' + (200 + r2 * 55 | 0) + ',225,255,.3)'; ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = 1; ctx.stroke(); ctx.restore();
-        }
-      }
-    }
-    const g = seg(t, tI, tI + .25);   // Einschlag-Blitz
-    if (g > 0 && g < 1) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const fl = ctx.createRadialGradient(0, 0, 0, 0, 0, 55); fl.addColorStop(0, 'rgba(255,255,255,' + (.8 * (1 - g)) + ')'); fl.addColorStop(1, rgba(col, 0)); ctx.fillStyle = fl; ctx.beginPath(); ctx.arc(0, 0, 55, 0, 7); ctx.fill(); ctx.restore(); }
-    ctx.restore();
-    const nr = Math.min(3, Math.max(0, Math.round(m.r)));   // Rückwurf zum Angreifer
-    for (let k = 0; k < nr; k++) {
-      const s0 = tI + .15 + k * .09, q = seg(t, s0, s0 + .6); if (q <= 0) continue;
-      const tgt = { x: d.ha.x - 40 + k * 40, y: d.ha.y };
-      if (q < 1) drawProjectile(ctx, e.p, e.p.atk, M, tgt, q, e.seeds[12 + k], t);
-      else { const h = seg(t, s0 + .6, s0 + 1.05); if (h < 1) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = rgba(lighten(col, .5), (1 - h) * .9); ctx.lineWidth = 3 * (1 - h) + .5; ctx.beginPath(); ctx.ellipse(tgt.x, tgt.y, 8 + h * 44, 4 + h * 18, 0, 0, 7); ctx.stroke(); ctx.restore(); } }
-    }
-    if (m.r > 0) { const t1 = tI + .15 + .6, q = seg(t, t1, t1 + .1) * (1 - seg(t, t1 + .35, t1 + .5)); if (q > 0) { ctx.save(); ctx.font = '700 20px Alegreya, serif'; ctx.textAlign = 'center'; ctx.fillStyle = rgba('#ff6b6b', q); ctx.fillText('−' + m.r, d.ha.x, d.ha.y - 14 - 10 * seg(t, t1, t1 + .5)); ctx.restore(); } }
-  }
   function frame(ts) {
     const e = ex, ctx = e.ctx, p = e.p, t = (ts - e.t0) / 1000, n = e.n, C0 = e.C0, d = e.def;
     const T = d ? d.T : { tA: 0, tD: 1e9, tC: 1e9, tK: 1e9, tH: 1e9, hf: .8, cl: .6, pairs: 0, left: 0, end: 1e9 };
@@ -179,8 +145,7 @@ function earthFormRaw(ctx, x, by, seed, i, t, tCrack, tRise, endAt, ending) {
       }
       if (!paired && t >= T.tH) {
         const hpt = { x: hp.x - 40 + (i % 3) * 40, y: hp.y };
-        if (d.mir) { const M = mirPos(e), f1 = seg(t, T.tH, T.tH + .5), f2 = seg(t, T.tH + .5, T.tH + .95); if (f2 >= 1) continue; if (f2 > 0) { drawProjectile(ctx, p, p.atk, M, hpt, f2, seeds[i], t); continue; } if (f1 > 0) { drawProjectile(ctx, p, p.atk, { x: sl.x, y: sl.y }, M, f1, seeds[i], t); continue; } }
-        else { const f = seg(t, T.tH, T.tH + T.hf); if (f >= 1) continue; if (f > 0) { drawProjectile(ctx, p, p.atk, { x: sl.x, y: sl.y }, hpt, f, seeds[i], t); continue; } }
+        { const f = seg(t, T.tH, T.tH + T.hf); if (f >= 1) continue; if (f > 0) { drawProjectile(ctx, p, p.atk, { x: sl.x, y: sl.y }, hpt, f, seeds[i], t); continue; } }
       }
       if (p.atk !== 'E') drawIdle(ctx, p, p.atk, sl.x, sl.y, seeds[i], t, 1);
     }
@@ -197,7 +162,6 @@ function earthFormRaw(ctx, x, by, seed, i, t, tCrack, tRise, endAt, ending) {
       const g = seg(t, T.tK, T.tK + T.cl); if (g <= 0 || g >= 1) continue;
       drawClash(ctx, p, clashStyle(p, p.atk, p.def), grid(i, T.pairs, true).x, grid(i, T.pairs, true).cy, g, p.atk, p.def, seeds[i] + 3);
     }
-    if (d && d.mir) drawMirrorFx(ctx, e, T, d, t);
     for (let i = 0; i < T.left; i++) {   // Rest trifft die HP
       const g = seg(t, T.tH + T.hf, T.tH + T.hf + .5); if (g <= 0 || g >= 1) continue; const hx = hp.x - 40 + ((T.pairs + i) % 3) * 40;
       ctx.save(); ctx.globalCompositeOperation = 'lighter';
@@ -222,12 +186,9 @@ function earthFormRaw(ctx, x, by, seed, i, t, tCrack, tRise, endAt, ending) {
     const e = ex, p = e.p, now = (performance.now() - e.t0) / 1000, tD = Math.max(now, e.tAe + p.hover), pairs = Math.min(e.n, bb);
     const tDe = bb ? tD + (bb - 1) * p.gap + p.flight : tD, tC = tDe + .12, tK = tC + (pairs ? .3 : 0), left = e.n - pairs, tH = tK + (pairs ? .45 : 0);
     p.def = fx.defElem || fx.attElem;
-    const mir = fx.mirror && left > 0 ? fx.mirror : null, hf = mir ? .95 : .8;
-    e.def = { H: handOf(fx.who), hp: hpOf(fx.who), ha: hpOf(fx.to), b: bb, mir, T: { tA: 0, tD, tC, tK, tH, hf, cl: .6, pairs, left, end: (left ? tH + hf + .7 + (mir ? .6 : 0) : tK + .6) + .3 + (p.atk === 'E' || p.def === 'E' ? .35 : 0) } };
+    const hf = .8;
+    e.def = { H: handOf(fx.who), hp: hpOf(fx.who), ha: hpOf(fx.to), b: bb, T: { tA: 0, tD, tC, tK, tH, hf, cl: .6, pairs, left, end: (left ? tH + hf + .7 : tK + .6) + .3 + (p.atk === 'E' || p.def === 'E' ? .35 : 0) } };
     fxUntil = Math.max(fxUntil, Date.now() + (e.def.T.end - now) * 1000);
-    if (mir && !off()) Snd.play('shield_hit', Math.max(0, tH + .5 - now));   // Aufprall der Geschosse auf dem Schild
-    if (mir && mir.broken > 0 && !off()) Snd.play('break', Math.max(0, tH + .62 - now), 0.7);   // Splitter, wenn das Schild zerbricht
-    if (mir && mir.r > 0 && !off()) Snd.play('mirror_reflect', Math.max(0, tH + .55 - now));
     if (pairs > 0) Snd.play('block', Math.max(0, tC - now));
     if (left > 0) Snd.play('hit', Math.max(0, tH + hf - now));   // Bruch-Sound beim Einschlag der Funken
   }
@@ -252,7 +213,7 @@ function showFx() {
   let k = 0;
   for (const e of G.log) {
     if (e.n <= fxLast) continue;
-    const go = f => { if (!FAST) fxSound(f); if (f.kind === 'mirror') { if (!f.inline) MirrorFx.play(f); } else if (f.kind === 'lifeflow') FlowFx.lifeflow(f); else if (f.kind === 'aggro') FlowFx.aggro(f); else if (f.kind === 'drain') FlowFx.drain(f); else if (f.kind === 'ruin') FlowFx.ruin(f); else if (f.kind === 'attack') FlowFx.attack(f); else if (f.kind === 'defense') FlowFx.defense(f); };
+    const go = f => { if (!FAST) fxSound(f); if (f.kind === 'mirror') MirrorFx.play(f); else if (f.kind === 'lifeflow') FlowFx.lifeflow(f); else if (f.kind === 'aggro') FlowFx.aggro(f); else if (f.kind === 'drain') FlowFx.drain(f); else if (f.kind === 'ruin') FlowFx.ruin(f); else if (f.kind === 'attack') FlowFx.attack(f); else if (f.kind === 'defense') FlowFx.defense(f); };
     [].concat(e.fx || []).forEach(f => { if (f.late) { lateN++; setTimeout(() => { lateN--; go(f); }, Math.round(1000 * FlowFx.wait()) + 150); } else go(f); });   // Kombo der Verteidigung erst nach der Kampfanimation
     const m = /^(Spiegel|Todes-Fluch): /.exec(e.txt); if (!m) continue;
     if (m[1] === 'Todes-Fluch') Snd.play('curse', 0, 0.7);   // Fluch-Sound, wenn der Todes-Fluch Schaden macht

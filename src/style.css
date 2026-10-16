@@ -288,3 +288,11 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .stchip{font-size:16px;padding:4px 12px;border-radius:999px;border:1px solid var(--line);background:rgba(10,8,14,.5);color:var(--mute);cursor:var(--cp);display:inline-flex;align-items:center;gap:7px}.stchip i{width:12px;height:12px;border-radius:50%;background:var(--c);opacity:.35}
 .stchip.on{color:var(--bone);border-color:var(--gold)}.stchip.on i{opacity:1}
 .stats .stkey{margin-top:8px;font-size:15px}
+
+/* Schild-Effekt: Das Schild neben der Hand verschwindet, solange sein Bild in der Mitte arbeitet */
+[data-shieldfx="sF"] .mirstack[data-who="s"] .msh.F{visibility:hidden}
+[data-shieldfx="sE"] .mirstack[data-who="s"] .msh.E{visibility:hidden}
+[data-shieldfx="sW"] .mirstack[data-who="s"] .msh.W{visibility:hidden}
+[data-shieldfx="oF"] .mirstack[data-who="o"] .msh.F{visibility:hidden}
+[data-shieldfx="oE"] .mirstack[data-who="o"] .msh.E{visibility:hidden}
+[data-shieldfx="oW"] .mirstack[data-who="o"] .msh.W{visibility:hidden}
