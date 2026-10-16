@@ -3078,6 +3078,7 @@ function onAct(d) {
     case 'newgame': newGame(); break;
     case 'home': homeMenu(); break;
     case 'stclose': overlay.style.display = 'none'; overlay.innerHTML = ''; pump(); break;
+    case 'stfit': statsFitView(); break;
     case 'stwho': case 'stser': statsToggle(d.act, d.k); break;
     case 'resume': overlay.style.display = 'none'; overlay.innerHTML = ''; pump(); break;
     case 'restart': if (!MP) newGame(); break;
@@ -3211,19 +3212,28 @@ const ST_SERIES = [
   { k: 'aW', name: 'Ø Karte Wasser', col: '#9fd0ff' },
 ];
 const stOn = new Set(['gold', 'up', 'lvl']), stWho = { me: true, opp: true };
-function statsView() {
-  const H = G.hist || [], N = H.length, W = 1000, T = 52, B = 40, L = 44, R = 16, PH = 330, ph = T + PH + B, pw = W - L - R;
-  const xs = i => L + (N < 2 ? pw / 2 : i / (N - 1) * pw);
-  const vals = [];
+const stView = { auto: true, x0: 0, x1: 1, y0: 0, y1: 4 };   // sichtbarer Ausschnitt in Daten-Einheiten; auto = Ursprung links unten, Achsen dehnen sich mit dem Spiel
+const ST = { W: 1000, T: 52, B: 40, L: 44, R: 16, PH: 330 };
+function niceStep(span, n) { const raw = span / n, p = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / p; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * p; }
+function statsLimits() {   // Gesamtumfang der Daten: x 0..letzter Messpunkt, y 0..höchster sichtbarer Wert
+  const H = G.hist || [], vals = [];
   ST_SERIES.forEach(s => { if (stOn.has(s.k)) H.forEach(h => { if (stWho.me) vals.push(h.p[ME][s.k]); if (stWho.opp) vals.push(h.p[OPP][s.k]); }); });
-  const top = Math.max(4, Math.ceil(Math.max(0, ...vals) / 2) * 2), ys = v => T + PH - v / top * PH;
-  let svg = '<svg viewBox="0 0 ' + W + ' ' + ph + '" width="' + W + '" height="' + ph + '" style="display:block;max-width:100%">';
-  for (let g = 0; g <= top; g += top <= 10 ? 1 : 2) svg += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + ys(g) + '" y2="' + ys(g) + '" stroke="rgba(255,255,255,.1)"/><text x="' + (L - 8) + '" y="' + (ys(g) + 5) + '" text-anchor="end" fill="#9a97a6" font-size="14">' + g + '</text>';
-  const step = Math.max(1, Math.ceil(N / 16));
-  for (let i = 0; i < N; i += step) svg += '<text x="' + xs(i) + '" y="' + (T + PH + 22) + '" text-anchor="middle" fill="#9a97a6" font-size="14">' + i + '</text>';
-  svg += '<text x="' + (L + pw / 2) + '" y="' + (ph - 4) + '" text-anchor="middle" fill="#9a97a6" font-size="14">Züge</text>';
+  return { xmax: Math.max(1, H.length - 1), ymax: Math.max(4, Math.ceil(Math.max(0, ...vals) / 2) * 2) };
+}
+function statsFit(a, b, lo, hi, minSpan) { const span = Math.max(minSpan, Math.min(b - a, hi - lo)); a = Math.max(lo, Math.min(a, hi - span)); return [a, a + span]; }
+function statsSvg() {
+  const H = G.hist || [], N = H.length, { W, T, B, L, R, PH } = ST, ph = T + PH + B, pw = W - L - R, lim = statsLimits();
+  if (stView.auto) { stView.x0 = 0; stView.x1 = lim.xmax; stView.y0 = 0; stView.y1 = lim.ymax; }
+  else { [stView.x0, stView.x1] = statsFit(stView.x0, stView.x1, 0, lim.xmax, 3); [stView.y0, stView.y1] = statsFit(stView.y0, stView.y1, 0, lim.ymax, 1); }
+  const { x0, x1, y0, y1 } = stView, xs = i => L + (i - x0) / (x1 - x0) * pw, ys = v => T + PH - (v - y0) / (y1 - y0) * PH;
+  let svg = '<svg id="stsvg" viewBox="0 0 ' + W + ' ' + ph + '" width="' + W + '" height="' + ph + '" style="display:block;max-width:100%;touch-action:none;user-select:none"><defs><clipPath id="stclip"><rect x="' + L + '" y="' + (T - 40) + '" width="' + pw + '" height="' + (PH + 40) + '"/></clipPath></defs>';
+  const ystep = niceStep(y1 - y0, 8), xstep = Math.max(1, niceStep(x1 - x0, 14));
+  for (let g = Math.ceil(y0 / ystep) * ystep; g <= y1 + 1e-9; g += ystep) { const v = Math.round(g * 100) / 100; svg += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + ys(v) + '" y2="' + ys(v) + '" stroke="rgba(255,255,255,' + (v === 0 ? .35 : .1) + ')"/><text x="' + (L - 8) + '" y="' + (ys(v) + 5) + '" text-anchor="end" fill="#9a97a6" font-size="14">' + v + '</text>'; }
+  for (let g = Math.ceil(x0 / xstep) * xstep; g <= x1 + 1e-9; g += xstep) svg += '<text x="' + xs(g) + '" y="' + (T + PH + 22) + '" text-anchor="middle" fill="#9a97a6" font-size="14">' + Math.round(g) + '</text>';
+  svg += '<text x="' + (L + pw / 2) + '" y="' + (ph - 4) + '" text-anchor="middle" fill="#9a97a6" font-size="14">Züge</text><g clip-path="url(#stclip)">';
+  const inView = H.filter((h, i) => i >= x0 - 1 && i <= x1 + 1).length;
   H.forEach((h, i) => {   // Kampfereignisse als Zeichen am oberen Rand, mit Hilfslinie
-    const e = h.ev; if (!e) return;
+    const e = h.ev; if (!e || i < x0 - 1 || i > x1 + 1) return;
     const x = xs(i), mine = e.winner === ME, res = e.winner === null ? 'ohne Sieger' : mine ? 'Sieg für dich' : 'Sieg für den Gegner';
     svg += '<line x1="' + x + '" x2="' + x + '" y1="' + (T - 8) + '" y2="' + (T + PH) + '" stroke="rgba(255,255,255,.14)" stroke-dasharray="3 4"/>';
     if (e.type === 'showdown') svg += '<g><title>Showdown ' + e.n + ': ' + res + '</title><text x="' + x + '" y="' + (T - 14) + '" text-anchor="middle" fill="#e0b84a" font-size="30">★</text><text x="' + x + '" y="' + (T + 4) + '" text-anchor="middle" fill="' + (e.winner === null ? '#9a97a6' : mine ? '#9be37a' : '#ff6b6b') + '" font-size="13">' + (e.winner === null ? '=' : mine ? 'Sieg' : 'Nied.') + '</text></g>';
@@ -3236,20 +3246,48 @@ function statsView() {
       const pts = H.map((h, i) => xs(i).toFixed(1) + ',' + ys(h.p[seat][s.k]).toFixed(1));
       if (pts.length > 1) svg += '<polyline points="' + pts.join(' ') + '" fill="none" stroke="' + s.col + '" stroke-width="3" stroke-linejoin="round"' + (dash ? ' stroke-dasharray="' + dash + '" opacity=".75"' : '') + '/>';
       else if (pts.length === 1) { const q = pts[0].split(','); svg += '<circle cx="' + q[0] + '" cy="' + q[1] + '" r="4" fill="' + s.col + '"/>'; }
-      H.forEach((h, i) => { svg += '<circle cx="' + xs(i).toFixed(1) + '" cy="' + ys(h.p[seat][s.k]).toFixed(1) + '" r="' + (N > 60 ? 0 : 3) + '" fill="' + s.col + '"><title>' + s.name + ' (' + (key === 'me' ? 'du' : esc(G.players[OPP].name)) + ') nach Zug ' + i + ': ' + h.p[seat][s.k] + '</title></circle>'; });
+      if (inView <= 60) H.forEach((h, i) => { if (i < x0 - 1 || i > x1 + 1) return; svg += '<circle cx="' + xs(i).toFixed(1) + '" cy="' + ys(h.p[seat][s.k]).toFixed(1) + '" r="3" fill="' + s.col + '"><title>' + s.name + ' (' + (key === 'me' ? 'du' : esc(G.players[OPP].name)) + ') nach Zug ' + i + ': ' + h.p[seat][s.k] + '</title></circle>'; });
     });
   });
-  svg += '</svg>';
-  const chip = (on, act, k, label, col) => '<button class="stchip' + (on ? ' on' : '') + '" data-act="' + act + '" data-k="' + k + '"' + (col ? ' style="--c:' + col + '"' : '') + '>' + (col ? '<i></i>' : '') + label + '</button>';
-  return '<div class="box stats"><div class="sthead"><h1>Statistik</h1><button class="btn" data-act="stclose">Schließen</button></div>' +
-    '<div class="stchips">' + chip(stWho.me, 'stwho', 'me', 'Du (durchgezogen)') + chip(stWho.opp, 'stwho', 'opp', esc(G.players[OPP].name) + ' (gestrichelt)') + '</div>' +
-    '<div class="stchips">' + ST_SERIES.map(s => chip(stOn.has(s.k), 'stser', s.k, s.name, s.col)).join('') + '</div>' + svg +
-    '<div class="note stkey"><span style="color:#e0b84a">★</span> Showdown · <b>●</b> Monsterkampf in der Farbe des Monsters (✓ du gewinnst, ✗ Gegner gewinnt, – ohne Sieger) · x-Achse: Messpunkte nach jedem Zug und jedem Kampf</div></div>';
+  return svg + '</g></svg>';
 }
+function statsView() {
+  const chip = (on, act, k, label, col) => '<button class="stchip' + (on ? ' on' : '') + '" data-act="' + act + '" data-k="' + k + '"' + (col ? ' style="--c:' + col + '"' : '') + '>' + (col ? '<i></i>' : '') + label + '</button>';
+  return '<div class="box stats"><div class="sthead"><h1>Statistik</h1><div><button class="btn" data-act="stfit" title="Achsen wieder automatisch anpassen (Doppelklick ins Diagramm)">Ansicht zurücksetzen</button> <button class="btn" data-act="stclose">Schließen</button></div></div>' +
+    '<div class="stchips">' + chip(stWho.me, 'stwho', 'me', 'Du (durchgezogen)') + chip(stWho.opp, 'stwho', 'opp', esc(G.players[OPP].name) + ' (gestrichelt)') + '</div>' +
+    '<div class="stchips">' + ST_SERIES.map(s => chip(stOn.has(s.k), 'stser', s.k, s.name, s.col)).join('') + '</div><div id="stplot">' + statsSvg() + '</div>' +
+    '<div class="note stkey"><span style="color:#e0b84a">★</span> Showdown · <b>●</b> Monsterkampf in der Farbe des Monsters (✓ du gewinnst, ✗ Gegner gewinnt, – ohne Sieger) · Mausrad: zoomen (über den Achsen nur diese Achse) · ziehen: Ausschnitt verschieben</div></div>';
+}
+function statsRedraw() { const el = document.getElementById('stplot'); if (el) el.innerHTML = statsSvg(); }
+function statsFitView() { stView.auto = true; statsRedraw(); }
+// Zoomen und Verschieben (Ereignisse am Overlay, nur solange die Statistik offen ist)
+function statsPos(e) { const r = document.getElementById('stsvg').getBoundingClientRect(), k = ST.W / r.width; return { x: (e.clientX - r.left) * k, y: (e.clientY - r.top) * k, k }; }
+overlay.addEventListener('wheel', e => {
+  const sv = document.getElementById('stsvg'); if (!sv || !sv.contains(e.target)) return;
+  e.preventDefault();
+  const q = statsPos(e), { L, R, T, PH, W } = ST, pw = W - L - R, f = e.deltaY < 0 ? 0.8 : 1.25, lim = statsLimits();
+  const onX = q.y > T + PH, onY = q.x < L;
+  if (stView.auto) stView.auto = false;
+  if (!onY) { const c = stView.x0 + (Math.min(Math.max(q.x, L), W - R) - L) / pw * (stView.x1 - stView.x0); stView.x0 = c - (c - stView.x0) * f; stView.x1 = c + (stView.x1 - c) * f; }
+  if (!onX) { const c = stView.y0 + (T + PH - Math.min(Math.max(q.y, T), T + PH)) / PH * (stView.y1 - stView.y0); stView.y0 = c - (c - stView.y0) * f; stView.y1 = c + (stView.y1 - c) * f; }
+  statsRedraw();
+}, { passive: false });
+let stDrag = null;
+overlay.addEventListener('pointerdown', e => { const sv = document.getElementById('stsvg'); if (!sv || !sv.contains(e.target) || e.button !== 0) return; const q = statsPos(e); stDrag = { x: e.clientX, y: e.clientY, k: q.k, v: Object.assign({}, stView) }; try { sv.setPointerCapture(e.pointerId); } catch (x) { /* egal */ } });
+overlay.addEventListener('pointermove', e => {
+  if (!stDrag) return;
+  const { L, R, PH, W } = ST, pw = W - L - R, dx = (e.clientX - stDrag.x) * stDrag.k, dy = (e.clientY - stDrag.y) * stDrag.k, v = stDrag.v;
+  if (Math.abs(dx) + Math.abs(dy) < 3 && stView.auto) return;
+  stView.auto = false; stView.x0 = v.x0 - dx / pw * (v.x1 - v.x0); stView.x1 = v.x1 - dx / pw * (v.x1 - v.x0); stView.y0 = v.y0 + dy / PH * (v.y1 - v.y0); stView.y1 = v.y1 + dy / PH * (v.y1 - v.y0);
+  statsRedraw();
+});
+const stDragEnd = () => { stDrag = null; };
+overlay.addEventListener('pointerup', stDragEnd); overlay.addEventListener('pointercancel', stDragEnd);
+overlay.addEventListener('dblclick', e => { const sv = document.getElementById('stsvg'); if (sv && sv.contains(e.target)) statsFitView(); });
 function statsOpen() {
   if (!G || !started || overlay.style.display === 'flex') return;
   clearTimeout(aiTimer);   // das Spiel pausiert, solange die Statistik offen ist
-  overlay.style.display = 'flex'; overlay.innerHTML = statsView();
+  stView.auto = true; overlay.style.display = 'flex'; overlay.innerHTML = statsView();
 }
 function statsToggle(act, k) {
   if (act === 'stwho') { stWho[k] = !stWho[k]; if (!stWho.me && !stWho.opp) stWho[k === 'me' ? 'opp' : 'me'] = true; }

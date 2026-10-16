@@ -4,6 +4,7 @@ function onAct(d) {
     case 'newgame': newGame(); break;
     case 'home': homeMenu(); break;
     case 'stclose': overlay.style.display = 'none'; overlay.innerHTML = ''; pump(); break;
+    case 'stfit': statsFitView(); break;
     case 'stwho': case 'stser': statsToggle(d.act, d.k); break;
     case 'resume': overlay.style.display = 'none'; overlay.innerHTML = ''; pump(); break;
     case 'restart': if (!MP) newGame(); break;
