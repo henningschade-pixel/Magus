@@ -167,3 +167,4 @@ Hinweis: Frühere Fassung der Aufbereitung hatte einen Fehler (Sounds waren fast
 - `magic_lv2`, `magic_lv3`: „Level Up 02“ und „Level Up 03“ von mokasza (Dateinamen deuten auf freesound.org, IDs 810753 und 810755; bitte Lizenz auf der Seite prüfen, bei CC-BY Namensnennung ergänzen). Sie spielen, wenn eine Magierichtung auf Stufe 2 bzw. 3 steigt und ersetzen dort `magic_buy`.
 
 Hinweis: `magic_buy` wurde entfernt (ersetzt durch `magic_lv2` und `magic_lv3`). Im Repo gelöschte Altlasten (Migrationsskripte, Spiellog der alten Regeln, Regelwerk v6) stehen weiter in der Git-Historie.
+- `spend_upgrade` („upgrade.wav“, 0,3 s) und `coin_sacrifice` („coins.wav“, 0,8 s): eigene Dateien des Spielers. `spend_upgrade` spielt einmal je angewendetem Upgrade, `coin_sacrifice` beim Opfern von Gold. Das Aufbereitungsskript nimmt jetzt auch wav, ogg, m4a und flac.

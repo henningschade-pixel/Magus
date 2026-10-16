@@ -3,7 +3,7 @@
 # Stille am Anfang abschneiden, Lautstärke angleichen (mittlerer Pegel -20 dB, Spitze höchstens -1 dB), mp3.
 # Aufruf: tools/sounds-aufbereiten.sh <Quellordner> <Zielordner>
 src="$1"; dst="$2"; mkdir -p "$dst"
-for f in "$src"/*#*.mp3; do
+for f in "$src"/*#*.{mp3,wav,ogg,m4a,flac}; do
   [ -e "$f" ] || continue
   b=$(basename "$f"); n="${b%%_(*}"
   tmp=$(mktemp --suffix=.wav)
