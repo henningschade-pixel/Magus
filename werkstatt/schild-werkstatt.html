@@ -89,7 +89,7 @@ textarea{width:100%;min-height:110px;background:#0e0e10;color:var(--bone);border
 /* ---------- Werte ---------- */
 const DEF = { stil:'rune', size:1, span:150, gap:36, width:7, fill:.10, glow:22, sheen:.6, pulse:.4, flash:.9, ticks:36,
   cracks:8, shards:10, shake:.5, scatter:1, gravity:1, tempo:1, spark:1,
-  cSize:240, cFly:.55, cHold:.5, cBack:.55, cRing:30, cArc:280, cDim:.45 };
+  cRings:'an', cSize:240, cFly:.55, cHold:.5, cBack:.55, cRing:30, cArc:280, cDim:.45 };
 const CASE = { lvl:3, elem:'F', dmg:4, block:3, side:'unten', variante:'zentrum' };
 const P = Object.assign({}, DEF), C = Object.assign({}, CASE);
 try { const s = JSON.parse(localStorage.getItem('sw') || 'null'); if (s) Object.assign(P, s.P || {}, {}), Object.assign(C, s.C || {}); } catch (e) {}
@@ -101,7 +101,7 @@ const SECTIONS = {
   'c-form': [['sel','stil','Stil',STILE],['rng','size','Größe',.6,1.4,.02,''],['rng','span','Öffnung des Bogens',90,200,2,' °'],['rng','gap','Abstand zwischen den Bögen',16,70,1,' px'],['rng','width','Dicke',2,16,.5,' px'],['rng','fill','Füllung zwischen den Bögen',0,.4,.01,''],['rng','ticks','Zeichen je Kranz (Runen)',8,80,2,'']],
   'c-licht': [['rng','glow','Leuchten',0,60,1,''],['rng','sheen','Glanzlauf',0,1.5,.05,''],['rng','pulse','Pulsieren',0,1,.05,''],['rng','flash','Aufprall-Blitz',0,1.5,.05,''],['rng','spark','Größe der Geschosse',.5,2,.05,'']],
   'c-bruch': [['rng','cracks','Risse',0,16,1,''],['rng','shards','Scherben je Bogen',4,24,1,''],['rng','shake','Beben',0,1.5,.05,''],['rng','scatter','Streuung der Scherben',.3,2.5,.05,''],['rng','gravity','Schwerkraft der Scherben',0,2.5,.05,'']],
-  'c-zentrum': [['rng','cSize','Höhe des Schildes in der Mitte',120,420,5,' px'],['rng','cFly','Flug in die Mitte',.2,1.2,.05,' s'],['rng','cHold','Verweilen nach dem letzten Treffer',0,1.5,.05,' s'],['rng','cBack','Rückflug',.2,1.2,.05,' s'],['rng','cRing','Abstand der Ringe',14,60,1,' px'],['rng','cArc','Öffnung der Ringe',120,360,5,' °'],['rng','cDim','Abdunkeln des Spielfelds',0,.8,.02,'']],
+  'c-zentrum': [['sel','cRings','Ringe (Bögen) um das Schild',[['an','anzeigen'],['aus','nicht zeigen']]],['rng','cSize','Höhe des Schildes in der Mitte',120,420,5,' px'],['rng','cFly','Flug in die Mitte',.2,1.2,.05,' s'],['rng','cHold','Verweilen nach dem letzten Treffer',0,1.5,.05,' s'],['rng','cBack','Rückflug',.2,1.2,.05,' s'],['rng','cRing','Abstand der Ringe',14,60,1,' px'],['rng','cArc','Öffnung der Ringe',120,360,5,' °'],['rng','cDim','Abdunkeln des Spielfelds',0,.8,.02,'']],
   'c-zeit': [['rng','tempo','Flugtempo der Geschosse',.5,2,.05,'']]
 };
 const $ = id => document.getElementById(id);
@@ -262,12 +262,13 @@ function sceneCenter(ctx, t) {
   const hit = EV.sparks.find(s => t >= s.ta && t < s.ta + .15), brk = EV.tBreak !== null && t > EV.tBreak;
   const amp = (brk ? P.shake * 9 * Math.exp(-(t - EV.tBreak) * 6) : 0) + (hit ? P.shake * 2 : 0);
   const pos = { x: lerp(H.x, Z.x, m) + Math.sin(t * 90) * amp * m, y: lerp(H.y, Z.y, m) + Math.cos(t * 70) * amp * .7 * m }, h = lerp(hH, P.cSize, m), w = h * 132 / 180;
-  const ring = i => h * .5 + 16 * (h / P.cSize + .3) + (i + 1) * P.cRing * (.35 + .65 * m);
+  const rings = P.cRings !== 'aus';   // ohne Ringe prallen Geschosse direkt am Schildrand auf
+  const ring = i => rings ? h * .5 + 16 * (h / P.cSize + .3) + (i + 1) * P.cRing * (.35 + .65 * m) : h * .5 + 8;
   const ra = (i, a) => ({ x: pos.x + ring(i) * Math.cos(a) * .86, y: pos.y + ring(i) * Math.sin(a) });
   const half = P.cArc * Math.PI / 360, a0 = -Math.PI / 2 - half, a1 = -Math.PI / 2 + half, ringA = seg(t, P.cFly * .5, P.cFly) * (1 - seg(t, EV.tOut, EV.tOut + P.cBack * .4));
   for (let i = 0; i < n; i++) {   // Ringe: ein Ring je Stufe
     const lostArc = i >= n - k.lost, tb = lostArc && EV.tBreak !== null ? t - (EV.tBreak + .12) - (i - (n - k.lost)) * .04 : -1, broken = tb > 0;
-    if (ringA <= 0) continue;
+    if (ringA <= 0 || !rings) continue;
     const flashA = hit && i === n - 1 ? P.flash : 0;
     if (!broken) {
       ctx.save(); ctx.globalAlpha = ringA; ctx.shadowColor = col; ctx.shadowBlur = P.glow * (1 + flashA); ctx.lineCap = 'round'; ctx.strokeStyle = rgba(lighten(col, .25 + flashA * .5), .6 + .35 * (i + 1) / n); ctx.lineWidth = P.width * (1 + flashA * .6);
