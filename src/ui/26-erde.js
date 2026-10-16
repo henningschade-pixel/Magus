@@ -225,7 +225,8 @@ function earthFormRaw(ctx, x, by, seed, i, t, tCrack, tRise, endAt, ending) {
     const mir = fx.mirror && left > 0 ? fx.mirror : null, hf = mir ? .95 : .8;
     e.def = { H: handOf(fx.who), hp: hpOf(fx.who), ha: hpOf(fx.to), b: bb, mir, T: { tA: 0, tD, tC, tK, tH, hf, cl: .6, pairs, left, end: (left ? tH + hf + .7 + (mir ? .6 : 0) : tK + .6) + .3 + (p.atk === 'E' || p.def === 'E' ? .35 : 0) } };
     fxUntil = Math.max(fxUntil, Date.now() + (e.def.T.end - now) * 1000);
-    if (mir && mir.broken > 0 && !off()) Snd.play('break', Math.max(0, tH + .5 - now), 0.7);
+    if (mir && !off()) Snd.play('shield_hit', Math.max(0, tH + .5 - now));   // Aufprall der Geschosse auf dem Schild
+    if (mir && mir.broken > 0 && !off()) Snd.play('break', Math.max(0, tH + .62 - now), 0.7);   // Splitter, wenn das Schild zerbricht
     if (mir && mir.r > 0 && !off()) Snd.play('mirror_reflect', Math.max(0, tH + .55 - now));
     if (pairs > 0) Snd.play('block', Math.max(0, tC - now));
     if (left > 0) Snd.play('hit', Math.max(0, tH + hf - now));   // Bruch-Sound beim Einschlag der Funken

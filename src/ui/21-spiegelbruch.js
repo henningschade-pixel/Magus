@@ -79,7 +79,8 @@ const MirrorFx = (() => {
   let cv = null, raf = 0;
   function play(fx) {
     const quiet = FAST || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
-    if (fx.broken > 0) Snd.play('break', quiet ? 0 : .42 * D.dur, 0.7);   // Bruch-Sound erst, wenn das Projektil den Spiegel trifft (Einschlag bei 42 % der Dauer)
+    Snd.play('shield_hit', quiet ? 0 : .42 * D.dur);   // Aufprall des Geschosses auf dem Schild
+    if (fx.broken > 0) Snd.play('break', quiet ? 0 : .54 * D.dur, 0.7);   // Splitter beim Zerbrechen (nach dem Einschlag)   // Bruch-Sound erst, wenn das Projektil den Spiegel trifft (Einschlag bei 42 % der Dauer)
     if (fx.r > 0) Snd.play('mirror_reflect', quiet ? 0 : .56 * D.dur);
     if (quiet) return;
     fxUntil = Math.max(fxUntil, Date.now() + D.dur * 1000);
