@@ -11,7 +11,7 @@ for f in "$src"/*#*.mp3; do
   st=$(ffmpeg -nostats -i "$tmp" -af volumedetect -f null - 2>&1)
   mean=$(echo "$st" | grep mean_volume | sed 's/.*: //;s/ dB//'); max=$(echo "$st" | grep max_volume | sed 's/.*: //;s/ dB//')
   gain=$(awk -v m="$mean" -v x="$max" 'BEGIN{g=-20-m; l=-1-x; if(g>l)g=l; printf "%.1f", g}')
-  ffmpeg -y -v error -i "$tmp" -af "volume=${gain}dB,afade=t=out:st=0:d=0.001" -c:a libmp3lame -q:a 5 "$dst/$n.mp3"
+  ffmpeg -y -v error -i "$tmp" -af "volume=${gain}dB" -c:a libmp3lame -q:a 5 "$dst/$n.mp3"
   echo "$n: Gain ${gain} dB -> $(stat -c %s "$dst/$n.mp3") Byte"
   rm -f "$tmp"
 done

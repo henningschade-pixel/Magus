@@ -320,7 +320,7 @@ function renderInner() {
   setCursor(cx.combat && cx.mine.kind === 'monster' ? 'monster' : 'human');
   renderCards();
   pvSticky();
-  if (G.over && !endView && !modal) { if (endSnd !== G) { endSnd = G; Snd.play(G.winner === ME ? 'game_win' : G.winner === null ? 'draw' : 'lose'); } showEnd(); }
+  if (G.over && !endView && !modal) { if (endSnd !== G) { endSnd = G; Snd.play(G.winner === ME ? 'game_win' : G.winner === null ? 'draw' : 'game_lose'); } showEnd(); }
   endTick();
 }
 function showStart() {
