@@ -15,7 +15,6 @@ function ctx() {
 const MAX_MARKS = 3;   // Anzahl der Totenkopf-Plätze neben dem Limit
 function marks(n, cls) { let t = ''; for (let i = 0; i < MAX_MARKS; i++) t += '<img class="mkimg' + (cls ? ' ' + cls : '') + (i < n ? '' : ' off') + '" src="' + IMG.curse + '">'; return t; }
 // Todes-Fluch (Ultimate): HP-Verlust am Ende jeder eigenen Angriffsphase, bis Kampfende.
-function deathBadge(s) { return s.death > 0 ? '<span class="mr" title="Todesmarker ×' + s.death + ': ' + s.death + ' HP Verlust am Ende jeder eigenen Angriffsphase bis Kampfende. Nur Lifeflow kann einzelne Marker entfernen.">' + '☠'.repeat(s.death) + '</span>' : ''; }
 // Spiegelmarker (Control): je Element ein Stein neben dem Handbrett, mit Zähler ab 2 Stück.
 function mirrorStack(s, x, y, who) {
   if (!(s.mirror > 0)) return '';

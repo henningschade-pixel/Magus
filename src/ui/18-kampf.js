@@ -51,8 +51,6 @@ let manaPv = 0;   // Manakosten der markierten Karten, als rote Vorschau am Mana
 function combatCenter(cx) {
   manaPv = 0;
   const c = cx.c, my = myTurn(), atk = c.action === 'attack';
-  const actorSide = c.sides[c.turn];
-  const icon = !my ? 'wait' : atk ? 'attack' : 'defense';
   let h = '<div class="combatcenter"><div class="sc" style="font-size:22px;color:var(--gold)">' + (c.mode === 'showdown' ? 'Showdown' : 'Kampf gegen ' + esc(c.sides.b.name)) + '</div>';
   if (c.forced) {   // Zerrüttung: Abwurf wählen (ich) bzw. warten (Gegner)
     const vs = c.sides.a.ctrl === c.forced.pid ? c.sides.a : c.sides.b, need = Math.min(c.forced.n, vs.deck.hand.filter(Boolean).length);

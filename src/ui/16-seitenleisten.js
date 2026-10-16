@@ -22,7 +22,6 @@ function statsBlock(name, s, p, size, up, full) {
   const plc = (show, afford, w, label, c) => !show ? '' : '<button class="up pt' + (c > 1 ? ' costly' : '') + (afford ? '' : ' off') + '" data-act="spend" data-w="' + w + '"' + (c > 1 ? ' data-c="' + c + '"' : '') + (afford ? '' : ' disabled') + ' title="' + label + ' (' + c + ' Upgrade-Punkt' + (c > 1 ? 'e' : '') + (afford ? '' : ', dir fehlen Punkte') + ')"></button>';
   const manaPl = mc > 1 ? plc(up && anyT && pend > 0, pend >= mc, 'mana', '+1 max. Mana', mc) : pl(up && anyT && pend > 0, 'mana', '+1 max. Mana (1 Upgrade-Punkt)');
   const limPl = lc > 1 ? plc(up && anyT && pend > 0 && s.limit < M.MAX_LIMIT, pend >= lc, 'limit', '+1 Ausspiellimit', lc) : pl(up && anyT && pend >= lc && s.limit < M.MAX_LIMIT, 'limit', '+1 Ausspiellimit (1 Upgrade-Punkt)');
-  const slotPl = pl(up && anyT && pend > 0 && p.slots < M.MAX_SLOTS, 'slot', '+1 Handplatz (1 Upgrade-Punkt)');
   const sbar = (v, mx, cls) => '<div class="bar sb ' + cls + '"><i style="width:' + Math.max(0, v) / mx * 100 + '%"></i></div>';
   const lead = b => compact ? '' : '<span class="lead">' + (b || '') + '</span>';   // Upgrade-Knöpfe stehen links neben dem Symbol; ohne Knöpfe schrumpft die Spalte auf 0 (Ausrichtung wie beim Gegner)
   const hasUp = !compact && !!(hpPl || manaPl || limPl);

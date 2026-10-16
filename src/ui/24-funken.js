@@ -10,22 +10,6 @@ function rock(ctx,x,y,r,rot,seed,col){
   ctx.closePath();ctx.fillStyle='#4c4a36';ctx.fill();ctx.strokeStyle=lighten(col,.2);ctx.lineWidth=1.5;ctx.stroke();
   ctx.fillStyle=rgba(col,.55);ctx.beginPath();ctx.arc(-r*.2,-r*.2,r*.35,0,7);ctx.fill();ctx.restore();
 }
-function drop(ctx,x,y,r,ang,col){
-  ctx.save();ctx.translate(x,y);ctx.rotate(ang);ctx.shadowColor=col;ctx.shadowBlur=14;
-  ctx.beginPath();ctx.moveTo(r*1.6,0);ctx.bezierCurveTo(r*.5,-r*1.1,-r*1.1,-r*.9,-r*1.1,0);ctx.bezierCurveTo(-r*1.1,r*.9,r*.5,r*1.1,r*1.6,0);ctx.closePath();
-  ctx.fillStyle=rgba(col,.85);ctx.fill();ctx.shadowBlur=0;ctx.fillStyle='rgba(255,255,255,.7)';ctx.beginPath();ctx.ellipse(r*.2,-r*.35,r*.35,r*.2,-.4,0,7);ctx.fill();ctx.restore();
-}
-// Wasser: ein Strudel, der einen fließenden Wasserstreifen hinter sich herzieht
-function vortex(ctx,x,y,r,t,col,seed){
-  ctx.save();ctx.translate(x,y);
-  const g=ctx.createRadialGradient(0,0,0,0,0,r*2.2);g.addColorStop(0,rgba('#0e3a78',.95));g.addColorStop(.55,rgba(col,.75));g.addColorStop(1,rgba(col,0));
-  ctx.fillStyle=g;ctx.beginPath();ctx.arc(0,0,r*2.2,0,7);ctx.fill();
-  ctx.lineCap='round';
-  for(let k=0;k<3;k++){const a0=t*7+seed+k*Math.PI*2/3;ctx.strokeStyle=rgba(lighten(col,.6),.9-k*.15);ctx.lineWidth=2.2;ctx.beginPath();
-    for(let u=0;u<=1;u+=.1){const a=a0+u*3.2,rr=r*(.25+u*.95);const px=Math.cos(a)*rr,py=Math.sin(a)*rr;u?ctx.lineTo(px,py):ctx.moveTo(px,py)}ctx.stroke()}
-  ctx.fillStyle='rgba(255,255,255,.85)';ctx.beginPath();ctx.arc(Math.cos(t*7+seed)*r*.9,Math.sin(t*7+seed)*r*.9,r*.16,0,7);ctx.fill();
-  ctx.restore();
-}
 function ribbon(ctx,pos,q,col,size,len,t,seed){
   const n=18,pts=[];for(let i=0;i<=n;i++){const s=clamp(q-len*(1-i/n));const a=pos(s),b=pos(Math.min(1,s+.01));const nx=-(b[1]-a[1]),ny=b[0]-a[0],m=Math.hypot(nx,ny)||1;
     const w=Math.sin(s*22-t*14+seed)*3.2*(i/n);pts.push([a[0]+nx/m*w,a[1]+ny/m*w,i/n])}

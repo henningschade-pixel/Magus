@@ -1,7 +1,6 @@
 /* ---------- Erde: Ranken und Monolithe brechen in der Mitte aus dem Boden (Werte der Erd-Werkstatt) ---------- */
 const EP = { form: 'monolith', height: 1.3, width: 1, variety: 1, moss: .8, thorns: 1, runes: .6, crackT: .5, rise: .22, overshoot: .15, shake: 1, dust: 2.2, debris: 1, cracks: 1.6, glow: .25, ending: 'zerbersten', endT: 1, seed: 7 };
 const STONE={hi:'#98a06e',mid:'#6c7551',lo:'#434b33',dk:'#272c1d',dirt:'#4f4a30',dust:'138,136,98'};
-const GREEN='#93c24f';
 function mix(a,b,k){const f=h=>[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)],x=f(a),y=f(b);return 'rgb('+x.map((v,i)=>Math.round(v+(y[i]-v)*k)).join(',')+')'}
 
 function eCracks(ctx,x,y,prog,seed,p,alpha){   // Risse im Boden: dunkel, nach außen feiner, ohne Kontur

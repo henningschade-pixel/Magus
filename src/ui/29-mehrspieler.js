@@ -2,7 +2,6 @@
    Beide Geräte rechnen dasselbe Spiel (gleicher Startwert) und tauschen nur Aktionen aus.
    Protokoll: hello (Gast tritt bei) → start (Startwert, Regeln) → need (ab Aktion n bitte) → acts; act = eine neue Aktion. */
 let MP = null, roomApi;
-const MP_TOPICS = ['hello', 'start', 'need', 'act', 'acts', 'sync'];
 const MP_KEY = 'magus-mp';
 // Kennung dieser Spielversion: beide Geräte müssen denselben Programmtext haben, sonst rechnen sie unterschiedlich.
 const BUILD = (() => { let h = 2166136261; const t = [...document.scripts].map(x => x.text).join(''); for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); })();
