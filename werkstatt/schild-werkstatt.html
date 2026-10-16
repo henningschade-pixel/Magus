@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Schild-Werkstatt</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700&family=Cinzel:wght@500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: links die Bühne in Echtgröße (Hand mit Schildbögen davor), rechts die Regler und der Export. Dunkle Optik wie im Spiel. */
+:root{
+  --ink:#141416; --panel:#232327; --panel2:#2e2e33; --line:#4d4d55; --gold:#d2ad4f; --bone:#efe6d2; --mute:#aaaab2; --water:#52a6f5; --good:#7fd08a; --bad:#ff6b6b;
+  --f-display:"Cinzel",Georgia,serif; --f-body:"Alegreya Sans","Segoe UI",system-ui,sans-serif; --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--ink);color:var(--bone);font:16px/1.45 var(--f-body);margin:0;padding-block:20px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+h1{font:700 26px/1.1 var(--f-display);letter-spacing:.06em;margin:0;color:var(--gold)}
+header p{margin:6px 0 0;color:var(--mute);max-width:70ch}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--water);outline-offset:2px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:18px;align-items:start}
+@media(max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+.left{display:flex;flex-direction:column;gap:12px;min-width:0}
+.stage{position:relative;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#0c0c0e;aspect-ratio:8/5}
+canvas{display:block;width:100%;height:100%}
+.hud{position:absolute;left:10px;top:8px;font:500 11px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--mute);background:rgba(12,12,14,.7);padding:3px 8px;border-radius:4px;pointer-events:none}
+.transport{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+.btn{font:500 14px var(--f-body);background:var(--panel2);color:var(--bone);border:1px solid var(--line);border-radius:6px;padding:7px 14px;cursor:pointer}
+.btn:hover{border-color:var(--gold)}
+.btn.primary{background:var(--gold);color:var(--ink);border-color:var(--gold);font-weight:700}
+.opt{display:flex;align-items:center;gap:6px;color:var(--mute);font-size:14px}
+select{background:var(--panel2);color:var(--bone);border:1px solid var(--line);border-radius:6px;padding:5px 8px;font:inherit;min-width:0}
+input[type=range]{width:100%;accent-color:var(--gold);margin:0}
+h2{font:700 13px var(--f-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--mute);margin:0 0 8px}
+.cases{display:flex;flex-wrap:wrap;gap:8px}
+.sum{font:400 13px/1.5 var(--f-mono);color:var(--bone);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.sum b{color:var(--gold)}
+.side{display:flex;flex-direction:column;gap:14px;min-width:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.row{display:grid;grid-template-columns:1fr;gap:2px}
+.row .top{display:flex;justify-content:space-between;gap:8px;font-size:14px;color:var(--bone)}
+.row .top output{font:400 12px var(--f-mono);color:var(--gold)}
+.note{font-size:13px;color:var(--mute);margin:0}
+textarea{width:100%;min-height:110px;background:#0e0e10;color:var(--bone);border:1px solid var(--line);border-radius:6px;font:400 12px/1.4 var(--f-mono);padding:8px;resize:vertical}
+.ok{color:var(--good);font-size:13px;min-height:18px}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Schild-Werkstatt</h1>
+  <p>Ein Spiegel erscheint als Schildbögen vor den Handkarten: ein Bogen je Stufe, in der Farbe der Magie. Er wirft Schaden zurück (höchstens so viel, wie geblockt wurde) und verliert für jeden ungeblockten Schaden eine Stufe: Der äußerste Bogen bricht. Links siehst du den Fall, rechts stellst du Form, Licht und Bruch ein. Am Ende den Export an Claude schicken.</p>
+</header>
+<div class="grid">
+  <div class="left">
+    <div class="stage"><canvas id="main" width="1280" height="800"></canvas><div class="hud" id="hud"></div></div>
+    <div class="transport">
+      <button class="btn primary" id="go" type="button">Abspielen</button>
+      <label class="opt"><input type="checkbox" id="auto" checked> automatisch wiederholen</label>
+      <label class="opt">Tempo <select id="speed"><option value="1">normal</option><option value="2">halb so schnell</option><option value="4">Zeitlupe</option></select></label>
+    </div>
+    <div>
+      <h2>Fälle</h2>
+      <div class="cases" id="cases"></div>
+    </div>
+    <div class="sum" id="sum"></div>
+  </div>
+  <div class="side">
+    <div class="card" id="c-fall"><h2>Fall</h2></div>
+    <div class="card" id="c-form"><h2>Form</h2></div>
+    <div class="card" id="c-licht"><h2>Licht</h2></div>
+    <div class="card" id="c-bruch"><h2>Bruch</h2></div>
+    <div class="card" id="c-zeit"><h2>Zeit</h2></div>
+    <div class="card">
+      <h2>Export</h2>
+      <p class="note">Schick den Text an Claude, zum Beispiel mit "Übernehmen:" davor. Die Fall-Werte (Stufe, Schaden, Block) gehören nicht zum Export.</p>
+      <textarea id="out" readonly></textarea>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn primary" id="copy" type="button">Kopieren</button><button class="btn" id="reset" type="button">Standardwerte</button><span class="ok" id="ok"></span></div>
+    </div>
+  </div>
+</div>
+</div>
+<script>
+/* ---------- Werte ---------- */
+const DEF = { stil:'rune', size:1, span:150, gap:36, width:7, fill:.10, glow:22, sheen:.6, pulse:.4, flash:.9, ticks:36,
+  cracks:8, shards:10, shake:.5, scatter:1, gravity:1, tempo:1, spark:1 };
+const CASE = { lvl:3, elem:'F', dmg:4, block:3, side:'unten' };
+const P = Object.assign({}, DEF), C = Object.assign({}, CASE);
+try { const s = JSON.parse(localStorage.getItem('sw') || 'null'); if (s) Object.assign(P, s.P || {}, {}), Object.assign(C, s.C || {}); } catch (e) {}
+const STILE = [['glatt','Glatt: leuchtende Bänder'],['rune','Runen: Bänder mit Zeichenkranz'],['kristall','Kristall: Facetten']];
+const EL = { F:'#ff7a3d', E:'#93c24f', W:'#52a6f5' }, NAME = { F:'Feuer', E:'Erde', W:'Wasser' };
+const SECTIONS = {
+  'c-fall': [['sel','lvl','Stufe des Spiegels (Bögen)',[[1,'1'],[2,'2'],[3,'3']],'C'],['sel','elem','Farbe',[['F','Feuer'],['E','Erde'],['W','Wasser']],'C'],
+    ['rng','dmg','Angriffsschaden',1,8,1,'','C'],['rng','block','Geblockt',0,8,1,'','C'],['sel','side','Schild auf der Seite',[['unten','unten (du)'],['oben','oben (Gegner)']],'C']],
+  'c-form': [['sel','stil','Stil',STILE],['rng','size','Größe',.6,1.4,.02,''],['rng','span','Öffnung des Bogens',90,200,2,' °'],['rng','gap','Abstand zwischen den Bögen',16,70,1,' px'],['rng','width','Dicke',2,16,.5,' px'],['rng','fill','Füllung zwischen den Bögen',0,.4,.01,''],['rng','ticks','Zeichen je Kranz (Runen)',8,80,2,'']],
+  'c-licht': [['rng','glow','Leuchten',0,60,1,''],['rng','sheen','Glanzlauf',0,1.5,.05,''],['rng','pulse','Pulsieren',0,1,.05,''],['rng','flash','Aufprall-Blitz',0,1.5,.05,''],['rng','spark','Größe der Geschosse',.5,2,.05,'']],
+  'c-bruch': [['rng','cracks','Risse',0,16,1,''],['rng','shards','Scherben je Bogen',4,24,1,''],['rng','shake','Beben',0,1.5,.05,''],['rng','scatter','Streuung der Scherben',.3,2.5,.05,''],['rng','gravity','Schwerkraft der Scherben',0,2.5,.05,'']],
+  'c-zeit': [['rng','tempo','Flugtempo der Geschosse',.5,2,.05,'']]
+};
+const $ = id => document.getElementById(id);
+function build() {
+  for (const [cid, items] of Object.entries(SECTIONS)) {
+    const card = $(cid);
+    for (const it of items) {
+      const T = it[it.length - 1] === 'C' ? C : P, d = document.createElement('div'); d.className = 'row';
+      if (it[0] === 'rng') {
+        d.innerHTML = '<div class="top"><label for="p_' + it[1] + '">' + it[2] + '</label><output></output></div><input type="range" id="p_' + it[1] + '" min="' + it[3] + '" max="' + it[4] + '" step="' + it[5] + '">';
+        const inp = d.querySelector('input'), out = d.querySelector('output'); inp.value = T[it[1]];
+        const show = () => { out.textContent = (+inp.value).toFixed(2).replace(/\.?0+$/, '') + it[6]; }; show();
+        inp.addEventListener('input', () => { T[it[1]] = +inp.value; show(); changed(T === C); });
+      } else {
+        d.innerHTML = '<div class="top"><label for="p_' + it[1] + '">' + it[2] + '</label></div><select id="p_' + it[1] + '">' + it[3].map(o => '<option value="' + o[0] + '">' + o[1] + '</option>').join('') + '</select>';
+        const s = d.querySelector('select'); s.value = T[it[1]]; s.addEventListener('change', () => { T[it[1]] = isNaN(+s.value) ? s.value : +s.value; changed(T === C); });
+      }
+      card.appendChild(d);
+    }
+  }
+  const cs = [['Abprallen: Block ≥ Schaden', { dmg: 3, block: 3 }], ['Durchbruch: kein Block', { dmg: 4, block: 0 }], ['Teilblock', { dmg: 5, block: 2 }], ['Stufe 1 hält knapp', { lvl: 1, dmg: 2, block: 2 }], ['Stufe 3, schwer getroffen', { lvl: 3, dmg: 6, block: 1 }]];
+  for (const [n, v] of cs) { const b = document.createElement('button'); b.className = 'btn'; b.type = 'button'; b.textContent = n; b.addEventListener('click', () => { Object.assign(C, v); syncFall(); changed(true); }); $('cases').appendChild(b); }
+}
+function syncFall() { for (const k of ['lvl', 'elem', 'dmg', 'block', 'side']) { const e = $('p_' + k); if (e) { e.value = C[k]; const o = e.parentElement.querySelector('output'); if (o) o.textContent = C[k]; } } }
+function calc() { const n = C.lvl, D = C.dmg, B = Math.min(C.block, D), L = D - B; return { n, D, blocked: B, left: L, r: Math.min(n, B), lost: Math.min(n, L), after: n - Math.min(n, L) }; }
+function changed(replay) {
+  try { localStorage.setItem('sw', JSON.stringify({ P, C })); } catch (e) {}
+  const out = {}; for (const k of Object.keys(DEF)) out[k] = P[k];
+  $('out').value = JSON.stringify({ effekt: 'schild', werte: out });
+  const k = calc();
+  $('sum').innerHTML = NAME[C.elem] + '-Spiegel <b>Stufe ' + k.n + '</b> gegen <b>' + k.D + '</b> Schaden, geblockt <b>' + k.blocked + '</b>.<br>Rückwurf: <b>' + k.r + '</b> (min Stufe ' + k.n + ', geblockt ' + k.blocked + ') · ungeblockt ' + k.left + ' → Spiegel verliert <b>' + k.lost + '</b> Stufe' + (k.lost === 1 ? '' : 'n') + ', danach <b>Stufe ' + k.after + '</b>.';
+  if (replay) restart();
+}
+/* ---------- Zeichnen ---------- */
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x)), lerp = (a, b, t) => a + (b - a) * t, seg = (u, a, b) => clamp((u - a) / (b - a));
+const eo = x => 1 - Math.pow(1 - x, 3), eio = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+function rng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+const rgba = (hex, a) => { const n = parseInt(hex.slice(1), 16); return 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + clamp(a) + ')'; };
+const lighten = (hex, k) => { const n = parseInt(hex.slice(1), 16), f = c => Math.round(c + (255 - c) * k); return 'rgb(' + f(n >> 16 & 255) + ',' + f(n >> 8 & 255) + ',' + f(n & 255) + ')'; };
+function orb(ctx, x, y, r, col) {
+  ctx.save(); ctx.globalCompositeOperation = 'lighter';
+  const g = ctx.createRadialGradient(x, y, 0, x, y, r * 3); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(.25, rgba(col, .85)); g.addColorStop(1, rgba(col, 0));
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r * 3, 0, 7); ctx.fill(); ctx.restore();
+}
+const CX = 459, FLIP = 800;   // Mitte der Hand; zum Spiegeln der Szene (Schild oben)
+function geom(i) { const s = P.size; return { cx: CX, cy: 790, rx: (300 + i * P.gap * 1.5) * s, ry: (140 + i * P.gap) * s }; }
+function ptOn(i, a) { const g = geom(i); return { x: g.cx + g.rx * Math.cos(a), y: g.cy + g.ry * Math.sin(a) }; }
+function hands(ctx) {   // Handkarten unten (groß) und oben (klein)
+  const card = (x, y, w, h, el, dim) => { ctx.save(); ctx.globalAlpha = dim; ctx.fillStyle = '#111114'; ctx.strokeStyle = '#d8d8dc'; ctx.lineWidth = 3; ctx.beginPath(); ctx.roundRect(x - w / 2, y, w, h, 10); ctx.fill(); ctx.stroke(); ctx.fillStyle = EL[el]; ctx.beginPath(); ctx.arc(x - w / 2 + 14, y + 14, 6, 0, 7); ctx.fill(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(x, y + h / 2, 0, x, y + h / 2, w * .5); g.addColorStop(0, rgba(EL[el], .45)); g.addColorStop(1, rgba(EL[el], 0)); ctx.fillStyle = g; ctx.fillRect(x - w / 2, y, w, h); ctx.restore(); };
+  ['F', 'E', 'W'].forEach((e, i) => { card(CX + (i - 1) * 140, 598, 128, 194, e, 1); card(CX + (i - 1) * 76, 12, 64, 97, e, .8); });
+  const hp = (x, y, col) => { ctx.save(); ctx.fillStyle = 'rgba(255,255,255,.1)'; ctx.fillRect(x - 70, y - 7, 140, 14); ctx.fillStyle = col; ctx.fillRect(x - 70, y - 7, 100, 14); ctx.restore(); };
+  hp(1090, 700, '#d65a5a'); hp(1090, 90, '#d65a5a');
+}
+function flipText(ctx, flip, txt, x, y, col, size) { ctx.save(); ctx.translate(x, y); if (flip) ctx.scale(1, -1); ctx.font = '700 ' + (size || 24) + 'px Cinzel, serif'; ctx.textAlign = 'center'; ctx.fillStyle = col; ctx.fillText(txt, 0, 0); ctx.restore(); }
+// Zeitplan eines Falls (Sekunden)
+function plan() {
+  const k = calc(), F = .55 / P.tempo, G = .14 / P.tempo, t0 = .3, ev = { k, F, G, sparks: [], refl: [], pierce: [] };
+  for (let i = 0; i < k.D; i++) { const tl = t0 + i * G, ta = tl + F, blockedSp = i < k.blocked; ev.sparks.push({ tl, ta, blocked: blockedSp, a: -Math.PI / 2 + (i - (k.D - 1) / 2) * .09 }); }
+  const lastBlk = k.blocked ? ev.sparks[k.blocked - 1].ta : null;
+  for (let j = 0; j < k.r; j++) ev.refl.push({ tl: lastBlk + .1 + j * .11 / P.tempo, ta: lastBlk + .1 + j * .11 / P.tempo + .6 / P.tempo });
+  ev.tBreak = k.left > 0 ? ev.sparks[k.blocked].ta : null;   // erster durchgehender Schaden trifft
+  ev.tEnd = Math.max(ev.sparks[ev.sparks.length - 1].ta + .9, ev.refl.length ? ev.refl[ev.refl.length - 1].ta + .6 : 0, ev.tBreak ? ev.tBreak + 1.8 : 0) + .6;
+  return ev;
+}
+let EV = plan();
+function scene(ctx, t, withHud) {
+  const flip = C.side === 'oben', col = EL[C.elem], k = EV.k, n = k.n, kk = P.shake;
+  ctx.save(); ctx.clearRect(0, 0, 1280, 800);
+  if (flip) { ctx.translate(0, FLIP); ctx.scale(1, -1); }
+  const hit = EV.sparks.find(s => t >= s.ta && t < s.ta + .15);
+  const amp = (EV.tBreak !== null && t > EV.tBreak ? kk * 9 * Math.exp(-(t - EV.tBreak) * 6) : 0) + (hit ? kk * 2 : 0);
+  ctx.translate(Math.sin(t * 90) * amp, Math.cos(t * 70) * amp * .7);
+  hands(ctx);
+  const half = P.span * Math.PI / 360, a0 = -Math.PI / 2 - half, a1 = -Math.PI / 2 + half;
+  const holdAll = n, pulse = 1 + P.pulse * .25 * Math.sin(t * 5);
+  // Füllung zwischen den Bögen
+  for (let i = 0; i < n; i++) {
+    const g = geom(i), outer = i === n - 1, lostArc = i >= n - k.lost, gone = lostArc && EV.tBreak !== null && t > EV.tBreak + .12;
+    if (gone) continue;
+    if (P.fill > 0) { ctx.save(); ctx.beginPath(); ctx.ellipse(g.cx, g.cy, g.rx, g.ry, 0, a0, a1); if (i > 0) { const h = geom(i - 1); ctx.ellipse(h.cx, h.cy, h.rx, h.ry, 0, a1, a0, true); } else ctx.lineTo(g.cx, g.cy); ctx.closePath(); const gr = ctx.createLinearGradient(0, g.cy - g.ry, 0, g.cy); gr.addColorStop(0, rgba(col, P.fill * 1.4)); gr.addColorStop(1, rgba(col, 0)); ctx.fillStyle = gr; ctx.fill(); ctx.restore(); }
+  }
+  // Bögen
+  for (let i = 0; i < n; i++) {
+    const g = geom(i), lostArc = i >= n - k.lost, broken = lostArc && EV.tBreak !== null && t > EV.tBreak + .12, tb = broken ? t - (EV.tBreak + .12) - (i - (n - k.lost)) * .04 : 0;
+    const flashA = hit && i === n - 1 ? P.flash : 0;
+    if (!broken) {
+      ctx.save(); ctx.shadowColor = col; ctx.shadowBlur = P.glow * (1 + flashA); ctx.lineCap = 'round';
+      ctx.strokeStyle = rgba(lighten(col, .25 + flashA * .5), (.55 + .4 * (i + 1) / n) * (1 + P.pulse * .3 * Math.sin(t * 5 + i)) );
+      ctx.lineWidth = P.width * (1 + flashA * .6);
+      ctx.beginPath(); ctx.ellipse(g.cx, g.cy, g.rx, g.ry, 0, a0, a1); ctx.stroke();
+      ctx.shadowBlur = 0; ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = Math.max(1, P.width * .22); ctx.beginPath(); ctx.ellipse(g.cx, g.cy, g.rx, g.ry, 0, a0, a1); ctx.stroke();
+      if (P.stil === 'rune') { const m = Math.round(P.ticks); for (let q = 0; q <= m; q++) { const a = lerp(a0, a1, q / m), p = ptOn(i, a), p2 = { x: g.cx + (g.rx - 14 - P.width) * Math.cos(a), y: g.cy + (g.ry - 14 - P.width) * Math.sin(a) }; ctx.strokeStyle = rgba(lighten(col, .5), (q % 3 === 0 ? .8 : .4)); ctx.lineWidth = q % 3 === 0 ? 2 : 1; ctx.beginPath(); ctx.moveTo(p.x, p.y + P.width * .5); ctx.lineTo(p2.x, p2.y); ctx.stroke(); } }
+      if (P.stil === 'kristall') { const m = 14; for (let q = 0; q < m; q++) { const qa = lerp(a0, a1, q / m), qb = lerp(a0, a1, (q + 1) / m), pa = ptOn(i, qa), pb = ptOn(i, qb), ra = { x: g.cx + (g.rx - 20 - P.width) * Math.cos((qa + qb) / 2), y: g.cy + (g.ry - 20 - P.width) * Math.sin((qa + qb) / 2) }; ctx.fillStyle = rgba(lighten(col, .4), q % 2 ? .18 : .07); ctx.strokeStyle = rgba(lighten(col, .6), .35); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(pa.x, pa.y); ctx.lineTo(pb.x, pb.y); ctx.lineTo(ra.x, ra.y); ctx.closePath(); ctx.fill(); ctx.stroke(); } }
+      // Glanzlauf
+      if (P.sheen > 0) { const ph = ((t * .35 + i * .21) % 1), a = lerp(a0, a1, ph), b = lerp(a0, a1, clamp(ph + .06)); ctx.strokeStyle = 'rgba(255,255,255,' + (.7 * P.sheen * Math.sin(ph * Math.PI)) + ')'; ctx.lineWidth = P.width * .9; ctx.beginPath(); ctx.ellipse(g.cx, g.cy, g.rx, g.ry, 0, a, b); ctx.stroke(); }
+      ctx.restore();
+    } else {   // zerbrochener Bogen: Scherben
+      const r = rng(5 + i * 31), S = Math.round(P.shards), th = P.width * 1.5;
+      for (let s = 0; s < S; s++) {
+        const aA = lerp(a0, a1, s / S), aB = lerp(a0, a1, (s + 1) / S), am = (aA + aB) / 2, p1 = ptOn(i, aA), p2 = ptOn(i, aB), mid = ptOn(i, am), r1 = r(), r2 = r(), r3 = r();
+        const dx = Math.cos(am) * (60 + r1 * 120) * P.scatter, dy = Math.sin(am) * (50 + r2 * 90) * P.scatter, ox = dx * tb, oy = dy * tb + 260 * P.gravity * tb * tb, rot = (r3 - .5) * tb * 6, al = 1 - Math.pow(clamp(tb / 1.2), 1.4);
+        if (al <= 0) continue;
+        ctx.save(); ctx.globalAlpha = al; ctx.translate(mid.x + ox, mid.y + oy); ctx.rotate(rot); ctx.translate(-mid.x, -mid.y);
+        ctx.shadowColor = col; ctx.shadowBlur = P.glow * .5; ctx.fillStyle = rgba(lighten(col, .3), .65); ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.moveTo(p1.x, p1.y - th / 2); ctx.lineTo(p2.x, p2.y - th / 2); ctx.lineTo(p2.x, p2.y + th / 2); ctx.lineTo(p1.x, p1.y + th / 2); ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
+      }
+    }
+  }
+  // Risse am äußersten Bogen
+  if (EV.tBreak !== null && t > EV.tBreak && t < EV.tBreak + .3 && P.cracks > 0) {
+    const imp = ptOn(n - 1, EV.sparks[k.blocked].a), cr = rng(77), u = seg(t, EV.tBreak, EV.tBreak + .12), f = 1 - seg(t, EV.tBreak + .12, EV.tBreak + .3);
+    ctx.save(); ctx.globalAlpha = f; ctx.strokeStyle = '#fff'; ctx.shadowColor = col; ctx.shadowBlur = 8; ctx.lineWidth = 1.5; ctx.lineJoin = 'round';
+    for (let q = 0; q < P.cracks; q++) { let a = q / P.cracks * Math.PI * 2 + (cr() - .5) * .9, x = imp.x, y = imp.y; const len = (50 + cr() * 110) * u; ctx.beginPath(); ctx.moveTo(x, y); for (let s = 1; s <= 6; s++) { a += (cr() - .5) * .6; x += Math.cos(a) * len / 6; y += Math.sin(a) * len / 6; ctx.lineTo(x, y); } ctx.stroke(); }
+    ctx.restore();
+  }
+  // Geschosse und Aufprall
+  const from = { x: CX, y: 60 }, hpDef = { x: 1090, y: 700 }, hpAtt = { x: 1090, y: 90 };
+  EV.sparks.forEach((s, i) => {
+    const tgt = ptOn(n - (s.blocked || !EV.tBreak ? 1 : 1), s.a);
+    if (t >= s.tl && t < s.ta) { const b = (t - s.tl) / (s.ta - s.tl); for (let q = 8; q >= 1; q--) { const bb = clamp(b - q * .02); ctx.save(); ctx.globalAlpha = (1 - q / 9) * .5; orb(ctx, lerp(from.x, tgt.x, bb), lerp(from.y, tgt.y, bb), (7 - q * .4) * P.spark, col); ctx.restore(); } orb(ctx, lerp(from.x, tgt.x, b), lerp(from.y, tgt.y, b), 9 * P.spark, col); }
+    if (t >= s.ta && t < s.ta + .4) {   // Aufprall: Ring und Blitz am Bogen
+      const g = seg(t, s.ta, s.ta + .4); ctx.save(); ctx.globalCompositeOperation = 'lighter'; const fl = ctx.createRadialGradient(tgt.x, tgt.y, 0, tgt.x, tgt.y, 70 * (1 - g) + 10); fl.addColorStop(0, 'rgba(255,255,255,' + (.9 * (1 - g) * P.flash) + ')'); fl.addColorStop(1, rgba(col, 0)); ctx.fillStyle = fl; ctx.beginPath(); ctx.arc(tgt.x, tgt.y, 80, 0, 7); ctx.fill();
+      ctx.strokeStyle = rgba(lighten(col, .5), (1 - g) * P.flash); ctx.lineWidth = 2.5 * (1 - g) + .5; ctx.beginPath(); ctx.ellipse(tgt.x, tgt.y, 8 + g * 46, 4 + g * 20, 0, 0, 7); ctx.stroke(); ctx.restore();
+    }
+    if (!s.blocked && t >= s.ta && t < s.ta + .5) {   // durchgehender Schaden fliegt weiter zu den HP
+      const b = eio((t - s.ta) / .5); orb(ctx, lerp(tgt.x, hpDef.x, b), lerp(tgt.y, hpDef.y, b), 8 * P.spark, col);
+      if (t > s.ta + .45) { }
+    }
+  });
+  // Rückwurf zum Angreifer
+  EV.refl.forEach((s, j) => {
+    const src = ptOn(n - 1, -Math.PI / 2 + (j - (EV.refl.length - 1) / 2) * .09);
+    if (t >= s.tl && t < s.ta) { const b = eio((t - s.tl) / (s.ta - s.tl)); for (let q = 8; q >= 1; q--) { const bb = clamp(b - q * .03); ctx.save(); ctx.globalAlpha = (1 - q / 9) * .55; orb(ctx, lerp(src.x, hpAtt.x, bb), lerp(src.y, hpAtt.y, bb), (8 - q * .4) * P.spark, col); ctx.restore(); } orb(ctx, lerp(src.x, hpAtt.x, b), lerp(src.y, hpAtt.y, b), 11 * P.spark, col); }
+    if (t >= s.ta && t < s.ta + .45) { const g = seg(t, s.ta, s.ta + .45); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = rgba(lighten(col, .5), 1 - g); ctx.lineWidth = 3 * (1 - g) + .5; ctx.beginPath(); ctx.ellipse(hpAtt.x, hpAtt.y, 14 + g * 40, 6 + g * 16, 0, 0, 7); ctx.stroke(); ctx.restore(); }
+  });
+  if (EV.refl.length) { const tt = EV.refl[EV.refl.length - 1].ta, q = seg(t, tt, tt + .1) * (1 - seg(t, tt + .6, tt + .9)); if (q > 0) flipText(ctx, flip, '−' + k.r, hpAtt.x, hpAtt.y - 20 - 10 * seg(t, tt, tt + .9), rgba('#ff6b6b', q)); }
+  if (k.left > 0) { const tt = EV.sparks[k.blocked].ta + .5, q = seg(t, tt, tt + .1) * (1 - seg(t, tt + .5, tt + .8)); if (q > 0) flipText(ctx, flip, '−' + k.left, hpDef.x, hpDef.y - 20, rgba('#ff6b6b', q)); }
+  // Stufenanzeige: Rauten unter dem Schild
+  const lit = EV.tBreak !== null && t > EV.tBreak + .12 ? k.after : n;
+  for (let i = 0; i < n; i++) { const on = i < lit; ctx.save(); ctx.translate(CX + (i - (n - 1) / 2) * 30, 585); ctx.rotate(Math.PI / 4); ctx.strokeStyle = on ? col : 'rgba(255,255,255,.25)'; ctx.lineWidth = 2; if (on) { ctx.shadowColor = col; ctx.shadowBlur = 10; ctx.fillStyle = rgba(col, .6); ctx.fillRect(-7, -7, 14, 14); } ctx.strokeRect(-7, -7, 14, 14); ctx.restore(); }
+  ctx.restore();
+}
+let clock = 0, last = performance.now(), speed = 1, T0 = 0;
+function restart() { EV = plan(); T0 = clock; }
+function frame() {
+  const ts = performance.now(); clock += Math.min(.1, (ts - last) / 1000) / speed; last = ts;
+  const t = clock - T0;
+  if ($('auto').checked && t > EV.tEnd) restart();
+  scene($('main').getContext('2d'), Math.min(t, EV.tEnd), true);
+  $('hud').textContent = NAME[C.elem] + ' · Stufe ' + EV.k.n + ' · ' + (C.side === 'oben' ? 'Schild oben' : 'Schild unten');
+  requestAnimationFrame(frame);
+}
+$('go').addEventListener('click', restart);
+$('speed').addEventListener('change', e => { speed = +e.target.value; });
+$('copy').addEventListener('click', async () => {
+  const ta = $('out'); try { await navigator.clipboard.writeText(ta.value); $('ok').textContent = 'Kopiert.'; } catch (e) { ta.select(); $('ok').textContent = 'Markiert: mit Strg+C kopieren.'; }
+  setTimeout(() => { $('ok').textContent = ''; }, 2500);
+});
+$('reset').addEventListener('click', () => { Object.assign(P, DEF); for (const k of Object.keys(DEF)) { const e = $('p_' + k); if (e) { e.value = P[k]; const o = e.parentElement.querySelector('output'); if (o) o.textContent = P[k]; } } changed(true); });
+build(); changed(false); restart();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
