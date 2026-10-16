@@ -1,0 +1,179 @@
+[
+ {
+  "file": "head.html"
+ },
+ {
+  "literal": "<style>\n"
+ },
+ {
+  "file": "style.css"
+ },
+ {
+  "literal": "\n</style>"
+ },
+ {
+  "file": "body.html"
+ },
+ {
+  "literal": "<script>"
+ },
+ {
+  "file": "assets-img.js"
+ },
+ {
+  "literal": "</script>"
+ },
+ {
+  "literal": "\n"
+ },
+ {
+  "literal": "<script>"
+ },
+ {
+  "file": "assets-img2.js"
+ },
+ {
+  "literal": "</script>"
+ },
+ {
+  "literal": "\n"
+ },
+ {
+  "literal": "<script>"
+ },
+ {
+  "file": "engine/00-rahmen.js"
+ },
+ {
+  "file": "engine/10-karten.js"
+ },
+ {
+  "file": "engine/20-werte.js"
+ },
+ {
+  "file": "engine/30-monster.js"
+ },
+ {
+  "file": "engine/40-flueche.js"
+ },
+ {
+  "file": "engine/50-haendler.js"
+ },
+ {
+  "file": "engine/60-kampfberechnung.js"
+ },
+ {
+  "file": "engine/65-kampfablauf.js"
+ },
+ {
+  "file": "engine/70-weltphase.js"
+ },
+ {
+  "file": "engine/80-start.js"
+ },
+ {
+  "literal": "</script>"
+ },
+ {
+  "literal": "\n"
+ },
+ {
+  "literal": "<script>"
+ },
+ {
+  "file": "ai/00-rahmen.js"
+ },
+ {
+  "file": "ai/10-stellschrauben.js"
+ },
+ {
+  "file": "ai/20-weltphase.js"
+ },
+ {
+  "file": "ai/30-kampf.js"
+ },
+ {
+  "literal": "</script>"
+ },
+ {
+  "literal": "\n"
+ },
+ {
+  "literal": "<script>"
+ },
+ {
+  "file": "ui/00-start.js"
+ },
+ {
+  "file": "ui/10-layout.js"
+ },
+ {
+  "file": "ui/11-skalierung.js"
+ },
+ {
+  "file": "ui/12-hilfen.js"
+ },
+ {
+  "file": "ui/13-zugwechsel.js"
+ },
+ {
+  "file": "ui/14-sound.js"
+ },
+ {
+  "file": "ui/15-karten.js"
+ },
+ {
+  "file": "ui/16-seitenleisten.js"
+ },
+ {
+  "file": "ui/17-weltphase.js"
+ },
+ {
+  "file": "ui/18-kampf.js"
+ },
+ {
+  "file": "ui/19-gesamtdarstellung.js"
+ },
+ {
+  "file": "ui/20-todesfluch.js"
+ },
+ {
+  "file": "ui/21-spiegelbruch.js"
+ },
+ {
+  "file": "ui/22-lifeflow-aggro.js"
+ },
+ {
+  "file": "ui/23-kampffunken.js"
+ },
+ {
+  "file": "ui/24-funken.js"
+ },
+ {
+  "file": "ui/25-aufloesung.js"
+ },
+ {
+  "file": "ui/26-erde.js"
+ },
+ {
+  "file": "ui/27-ablauf.js"
+ },
+ {
+  "file": "ui/28-peerjs.js"
+ },
+ {
+  "file": "ui/29-mehrspieler.js"
+ },
+ {
+  "file": "ui/30-eingaben.js"
+ },
+ {
+  "file": "ui/31-spiellog.js"
+ },
+ {
+  "literal": "</script>"
+ },
+ {
+  "literal": "\n</body>\n</html>\n\n</body></html>\n"
+ }
+]

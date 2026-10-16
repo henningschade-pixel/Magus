@@ -1,0 +1,401 @@
+/* ---------- Kampfablauf ---------- */
+function playerSide(state, pid, key) {
+  const p = state.players[pid];
+  return { key, kind: 'player', ctrl: pid, name: p.name, stats: p.stats, deck: p.deck };
+}
+// Vor und nach jedem Kampf: volle HP, volles Mana, frisch gemischtes Deck und volle Hand (Regel fightReset).
+// Regel fightCarry: In Monsterkämpfen bleiben HP und Mana erhalten (sie regenerieren in der Weltphase); nur die Hand wird frisch gemischt. Vor und nach einem Showdown sind HP und Mana voll.
+function resetPlayers(state, mode) {
+  const parts = state.rules.fightResetParts || (state.rules.fightCarry && mode === 'monster' ? 'd' : 'hmd');
+  state.players.forEach(p => { if (parts.includes('h')) p.stats.hp = p.stats.maxHp; if (parts.includes('m')) p.stats.mana = p.stats.maxMana; p.stats.freeDraws = 0; if (parts.includes('d')) dealFresh(state, p.deck, p.slots); });
+}
+function startCombat(state, attPid, el) {
+  const A = state.players[attPid];
+  if (state.rules.fightReset) resetPlayers(state, 'monster');
+  dealFresh(state, A.deck, A.slots);
+  const m = state.monsters[el];
+  const mdeck = newDeck(state, m.deckIds, Math.max(MIN_SLOTS, m.stats.limit + 2));
+  state.players.forEach(p => { p.stats.freeDraws = 0; });
+  m.stats.freeDraws = 0;
+  state.combat = {
+    logFrom: state.logN,
+    mode: 'monster', elem: el, att: attPid, def: other(attPid),
+    sides: { a: playerSide(state, attPid, 'a'), b: { key: 'b', kind: 'monster', ctrl: other(attPid), name: m.name, stats: m.stats, deck: mdeck, monster: m } },
+    turn: 'a', action: 'attack', color: null, pending: 0, ult: [], turns: 0,
+  };
+  state.phase = 'combat';
+  log(state, A.name + ' greift ' + m.name + ' an. ' + state.players[other(attPid)].name + ' führt das Monster.', attPid);
+}
+function pickShowdownAttacker(state) {
+  const mode = state.rules.showdownAttacker;   // 'behind' (Standard: der Zurückliegende beginnt), 'leader' (der Führende beginnt), 'random'
+  if (mode === 'random') return state.rng.random() < 0.5 ? 0 : 1;
+  const key = p => [p.sp, p.temple.points, magicProgress(p), p.stats.gold];
+  const k0 = key(state.players[0]), k1 = key(state.players[1]);
+  const lead = mode === 'leader';
+  for (let i = 0; i < k0.length; i++) { if (k0[i] > k1[i]) return lead ? 0 : 1; if (k1[i] > k0[i]) return lead ? 1 : 0; }
+  return state.rng.random() < 0.5 ? 0 : 1;
+}
+function startShowdown(state) {
+  const att = pickShowdownAttacker(state);
+  state.players.forEach(p => { dealFresh(state, p.deck, p.slots); p.stats.freeDraws = 0; if (state.rules.fightReset) { p.stats.hp = p.stats.maxHp; p.stats.mana = p.stats.maxMana; } if (state.rules.showdownRestore) { const n = state.rules.showdownRestore === true ? 99 : state.rules.showdownRestore; p.stats.hp = Math.min(p.stats.maxHp, p.stats.hp + n); p.stats.mana = Math.min(p.stats.maxMana, p.stats.mana + n); } });
+  state.camp = null;
+  state.combat = {
+    logFrom: state.logN,
+    mode: 'showdown', elem: null, att, def: other(att),
+    sides: { a: playerSide(state, att, 'a'), b: playerSide(state, other(att), 'b') },
+    turn: 'a', action: 'attack', color: null, pending: 0, ult: [], turns: 0,
+  };
+  state.phase = 'combat';
+  log(state, 'Showdown ' + (state.showdown + 1) + ': ' + state.players[att].name + ' greift zuerst an (liegt zurück oder Zufall).', att);
+}
+function evaluateEnd(state) {
+  const c = state.combat, a = c.sides.a.stats, b = c.sides.b.stats;
+  const ah = Math.max(0, a.hp), bh = Math.max(0, b.hp);
+  if (ah <= 0 || bh <= 0) {
+    let winner = null;
+    if (ah <= 0 && bh > 0) winner = 'b'; else if (bh <= 0 && ah > 0) winner = 'a';
+    return { reason: 'hp', winner, monsterDefeated: bh <= 0 };
+  }
+  // Erschöpfung erst prüfen, wenn keine Verteidigung mehr aussteht: Der letzte Angriff darf noch gewinnen.
+  if (a.mana <= 0 && b.mana <= 0 && c.action !== 'defense') {
+    // Erschöpfung: das Fluchsystem rechnet verbleibende Flüche schrittweise gegen die HP auf (siehe 30-curses.js)
+    const r = curses(state).settleExhaustion(state, c.sides.a, c.sides.b);
+    if (r) return { reason: 'hp', winner: r.winner, monsterDefeated: r.winner === 'a' && c.mode === 'monster' };
+    return { reason: 'exhaustion', winner: null, monsterDefeated: false };
+  }
+  if (c.turns >= MAX_COMBAT_TURNS) return { reason: 'exhaustion', winner: null, monsterDefeated: false, forced: true };
+  return null;
+}
+function endCombat(state, end) {
+  const c = state.combat, res = { mode: c.mode, reason: end.reason, winner: end.winner, monsterDefeated: false };
+  if (state.keepSnap) res.snap = JSON.parse(JSON.stringify(c));   // Oberfläche: Endstand des Kampfes (vor Zurücksetzen und Rückkehr in die Weltphase)
+  state.players.forEach(p => { p.stats.freeDraws = 0; p.deck.marks = []; delete p.stats.mirror; delete p.stats.mirrorEl; delete p.stats.mirrorFree; delete p.stats.death; if (curses(state).weakDouble) p.stats.marks = 0; });
+  if (curses(state).curseCards) state.players.forEach(p => stripCurseCards(state, p.deck));
+  delete c.sides.b.stats.death; if (curses(state).weakDouble && c.sides.b.monster) c.sides.b.monster.stats.marks = 0;
+  if (c.sides.b.monster) { delete c.sides.b.monster.stats.mirror; delete c.sides.b.monster.stats.mirrorEl; delete c.sides.b.monster.stats.mirrorFree; }
+  const A = state.players[c.att], B = state.players[c.def];
+  if (c.mode === 'monster') {
+    const m = c.sides.b.monster;
+    if (end.winner === 'a') {
+      const loot = Math.max(0, m.stats.gold); m.stats.gold = 0; A.stats.gold += loot;
+      log(state, A.name + ' besiegt ' + m.name + ' und erhält ' + loot + ' Gold.', c.att);
+      res.monsterDefeated = true; res.loot = loot;
+      if (state.rules.lootPot && allMonstersDead(state)) { const stake = state.rules.lootPot === 'all' ? A.stats.gold : loot; if (stake > 0) { A.stats.gold -= stake; state.pot = { owner: c.att, gold: stake }; log(state, (state.rules.lootPot === 'all' ? 'Das gesamte Gold von ' + A.name : 'Die Beute des letzten Monsters') + ' (' + stake + ' Gold) steht im Showdown auf dem Spiel.', c.att); } }   // wer das letzte Monster besiegt, kann die Beute erst nach dem Showdown einsetzen
+      if (state.rules.lootShare > 0) { const sh = Math.floor(loot * state.rules.lootShare); state.players[c.def].stats.gold += sh; A.stats.gold -= sh; if (sh) log(state, B.name + ' erhält als Monsterführer ' + sh + ' Gold aus der Beute.', c.def); }
+    } else if (end.winner === 'b') {   // Niederlage gegen das Monster: keine Beute, Monster und Spieler bleiben mit ihren Werten auf dem Brett
+      log(state, m.name + ' gewinnt den Kampf. Keine Beute.', c.def);
+    }
+    else log(state, end.reason === 'exhaustion' ? 'Beide Seiten sind erschöpft. Kein Sieger, keine Beute.' : 'Beide Seiten fallen. Kein Sieger, keine Beute.');
+  } else {
+    if (end.winner) { const w = end.winner === 'a' ? A : B; w.sp += 2; log(state, w.name + ' gewinnt den Showdown (+2 Siegpunkte).', end.winner === 'a' ? c.att : c.def);
+      const L = w === A ? B : A; const lu = state.showdown === 1 && state.rules.loserUp2 !== undefined ? state.rules.loserUp2 : state.rules.loserUp; if (lu > 0 && state.showdown < 2) { L.stats.pending += lu; log(state, L.name + ' erhält als Trostpreis ' + lu + ' Upgrade-Punkt' + (lu > 1 ? 'e' : '') + '.', w === A ? c.def : c.att); } }
+    else { A.sp += 1; B.sp += 1; log(state, 'Showdown ohne Sieger: je 1 Siegpunkt.'); }
+    if (state.pot) {   // Einsatz: der Sieger erhält die Beute, bei Remis wird geteilt (Rest an den Besitzer)
+      const pot = state.pot, ow = state.players[pot.owner], ot = state.players[other(pot.owner)];
+      const wp = end.winner ? (end.winner === 'a' ? c.att : c.def) : null;
+      if (wp === null) { const h = Math.floor(pot.gold / 2); ot.stats.gold += h; ow.stats.gold += pot.gold - h; log(state, 'Die Beute (' + pot.gold + ' Gold) wird geteilt.'); }
+      else { state.players[wp].stats.gold += pot.gold; log(state, state.players[wp].name + ' erhält die Beute (' + pot.gold + ' Gold).', wp); }
+      state.pot = null;
+    }
+  }
+  state.combat = null; state.phase = 'world'; state.lastCombat = res;
+  if (state.rules.fightReset) resetPlayers(state, c.mode);
+  else if (state.rules.freshHands) { dealFresh(state, A.deck, A.slots); if (c.mode === 'showdown') dealFresh(state, B.deck, B.slots); }   // jeder Kampf wird mit frisch gemischtem Deck und voller Hand verlassen
+  state.turn = c.def;
+  regen(state.players[c.def].stats, regenGain(state));
+  state.worldTurns = 0;
+  if (c.mode === 'monster') {
+    if (allMonstersDead(state)) {   // auch wenn das letzte Monster ohne Beute fiel (beide Seiten gleichzeitig auf 0 HP)
+      const n = state.rules.campActions;   // Aktionen je Spieler in der Erholungsphase (0 = ohne Erholungsphase)
+      log(state, (state.rules.monstersPerStage === 2 ? 'Zwei Monster sind besiegt, das dritte zieht sich zurück.' : 'Alle drei Monster sind besiegt.') + (n > 0 ? ' Erholungsphase: jeder Spieler hat ' + (n === 2 ? 'zwei' : n === 1 ? 'eine' : n === 3 ? 'drei' : n) + ' Aktion' + (n === 1 ? '' : 'en') + '.' : ''));
+      if (n > 0) state.camp = { remaining: [n, n], used: [{}, {}] }; else startShowdown(state);
+    }
+  } else {
+    state.showdown++;
+    const goal = state.rules.winSp > 0 && Math.max(state.players[0].sp, state.players[1].sp) >= state.rules.winSp;   // Siegbedingung: wer zuerst winSp Siegpunkte hat, gewinnt sofort
+    if (state.showdown >= 3 || goal) {
+      state.over = true; state.phase = 'over';
+      const s0 = state.players[0].sp, s1 = state.players[1].sp;
+      state.winner = s0 > s1 ? 0 : s1 > s0 ? 1 : null;
+      if (state.winner === null) { const g0 = state.players[0].stats.gold, g1 = state.players[1].stats.gold; if (g0 !== g1) { state.winner = g0 > g1 ? 0 : 1; state.goldWin = true; log(state, 'Gleichstand bei den Siegpunkten: Das Gold entscheidet (' + g0 + ' : ' + g1 + ').'); } }   // zweites Kriterium: das meiste Gold
+      log(state, state.winner === null ? 'Spielende: Gleichstand, kein Sieger.' : 'Spielende: ' + state.players[state.winner].name + (goal && state.showdown < 3 ? ' erreicht ' + state.rules.winSp + ' Siegpunkte und' : '') + ' gewinnt.');
+    } else {
+      state.stage = state.showdown + 1;
+      if (state.rules.loserStarts && end.winner) { state.turn = end.winner === 'a' ? c.def : c.att; log(state, state.players[state.turn].name + ' verlor den Showdown und beginnt die nächste Runde.'); }   // der Verlierer beginnt
+      const gp = (state.rules.stagePoints || [])[state.stage] || 0;
+      const gg = (state.rules.stageGold || [])[state.stage] || 0;
+      if (gp > 0 || gg > 0) { state.players.forEach(p => { p.stats.pending += gp; p.stats.gold += gg; }); log(state, 'Jeder Spieler erhält ' + [gp ? gp + ' kostenlose Upgrade-Punkte' : '', gg ? gg + ' Gold' : ''].filter(Boolean).join(' und ') + '.'); }
+      state.monsters = spawnForGame(state, state.stage);
+      log(state, 'Abschnitt ' + state.stage + ': Die Monster der Stufe ' + STAGE_NUMERAL[state.stage] + ' erscheinen.' + variantLog(state));
+    }
+  }
+  return res;
+}
+function finishStep(state) {
+  const c = state.combat; c.turns++; state.combatTurnsTotal++;
+  const end = evaluateEnd(state);
+  if (end) return endCombat(state, end);
+  return null;
+}
+// Angriffszug endet ohne Schaden: die Gegenseite greift an (Verteidigung entfällt).
+// Spiegelmarker (Regel controlMode 'mirror'): Control legt S Marker vor den Angreifer; wer das nächste Mal angreift (oder passt), verliert einen.
+const MAX_MIRROR = 3;
+// Spiegelmarker sind an ein Element (Magierichtung) gebunden: stats.mirrorEl = {F,E,W}, stats.mirror = Summe.
+function mirrorOf(stats, el) { return (stats.mirrorEl && stats.mirrorEl[el]) || 0; }
+function mirrorSync(stats) {
+  const m = stats.mirrorEl; const t = m ? (m.F || 0) + (m.E || 0) + (m.W || 0) : 0;
+  if (t > 0) stats.mirror = t; else { delete stats.mirror; delete stats.mirrorEl; delete stats.mirrorFree; }
+}
+// Ein Control der Stufe n bringt den Spiegel dieser Farbe auf n Marker (nicht obendrauf addiert); höchstens 3 Marker insgesamt über alle Farben.
+function mirrorAdd(stats, el, n) {
+  stats.mirrorEl = stats.mirrorEl || { F: 0, E: 0, W: 0 };
+  const cur = stats.mirrorEl[el] || 0, others = (stats.mirror || 0) - cur;
+  stats.mirrorEl[el] = Math.max(cur, Math.min(n, MAX_MIRROR - others)); mirrorSync(stats);
+}
+function mirrorTake(stats, el, n) { if (stats.mirrorEl) { stats.mirrorEl[el] = Math.max(0, stats.mirrorEl[el] - n); mirrorSync(stats); } }
+function mirrorTakeAny(stats, n) { for (const el of ELEMENTS) { while (n > 0 && mirrorOf(stats, el) > 0) { mirrorTake(stats, el, 1); n--; } } }
+// Standardfarbe neuer Spiegelmarker: das stärkste Element des Gegners (sonst die Wahl des Spielers per ‚mel‘).
+function defaultMirrorEl(opp) { let b = ELEMENTS[0]; for (const e of ELEMENTS) if (opp.stats.mag[e] > opp.stats.mag[b]) b = e; return b; }
+// Lifeflow 'any': gewählte Marker (sc/oc/sm/om), höchstens S; ohne Wahl automatisch eigene Flüche, dann Spiegel des Gegners.
+function lifeflowPicks(state, side, opp, lvl) {
+  if (Array.isArray(state.combat.lfp)) return state.combat.lfp.slice(0, lvl);
+  const out = []; let sc = side.stats.marks || 0, om = opp.stats.mirror || 0, sd = side.stats.death || 0;
+  while (out.length < lvl && sc > 0) { out.push('sc'); sc--; }
+  while (out.length < lvl && sd > 0) { out.push('sd'); sd--; }
+  while (out.length < lvl && om > 0) { out.push('om'); om--; }
+  return out;
+}
+// Rückwurf-Obergrenze: so viel, wie die gewählten Karten in der Farbe des Angriffs mit dem Magielevel blocken könnten.
+function mirrorCap(stats, sel, color) { let b = 0; sel.forEach(x => { if (!x.curse && x.el === color) b += Math.min(x.tier, stats.mag[color]); }); return b; }
+function mirrorOn(state) { return state.rules.controlMode === 'mirror'; }
+function decayMirror(state, side) { if (mirrorOn(state) && state.rules.mirrorDecay > 0 && side.stats.mirror > 0) { mirrorTakeAny(side.stats, state.rules.mirrorDecay); } }
+// Todes-Fluch: Am Ende der eigenen Angriffsphase (nach Angriff und Verteidigung der Gegenseite) verliert die Seite so viele HP, wie sie Todesmarker trägt.
+// Ist der Kampf schon entschieden (eine Seite auf 0 HP), wirkt er nicht mehr.
+function deathTick(state, side) {
+  const c = state.combat;
+  if (!(side.stats.death > 0) || c.sides.a.stats.hp <= 0 || c.sides.b.stats.hp <= 0) return;
+  side.stats.hp = Math.max(0, side.stats.hp - side.stats.death);
+  log(state, 'Todes-Fluch: ' + side.name + ' verliert ' + side.stats.death + ' HP am Ende der Angriffsphase.', side.ctrl);
+}
+function passAttackTurn(state, noDecay) {
+  const c = state.combat;
+  deathTick(state, c.sides[c.turn]);
+  if (!noDecay) { decayMirror(state, c.sides[c.turn]); const cs = curses(state); if (cs.endTurn) cs.endTurn(state, c.sides[c.turn]); }
+  c.turn = c.turn === 'a' ? 'b' : 'a'; c.action = 'attack'; c.color = null; c.pending = 0; c.ult = []; c.lf = 'self';
+}
+
+// Marker aus Kombos (Aggro/Schwäche) kommen erst am Ende des Zuges aufs Brett, also nach der Verteidigung des laufenden Angriffs.
+function flushDefer(state) {
+  const c = state.combat, d = c.defer; if (!d) return; c.defer = null;
+  const oth = c.sides[c.sides.a === d.to ? 'b' : 'a'];
+  log(state, curses(state).inflict(state, d.to, d.n) + '.', undefined, { kind: 'aggro', who: oth.ctrl, to: d.to.ctrl, n: d.n });
+}
+// Wirkung der Kombos (Angriff und, in der Variante defenseCombos, nach der Verteidigung): plan = [[Schlüssel, Stufe], ...]
+function applyComboPlan(state, side, opp, plan, ev, texts, fxs) {
+  const c = state.combat, cs = curses(state), ordered = state.rules.comboMode === 'ordered';
+  for (const [k, lvl] of plan) {
+    if (k === 'fw' && mirrorOn(state)) { const mel = ordered && ev.ord && ev.ord.el ? ev.ord.el : (c.mel && c.melTurn === c.turns && c.mel) || defaultMirrorEl(opp); mirrorAdd(side.stats, mel, lvl); if (state.rules.mirrorFree) side.stats.mirrorFree = true; texts.push('Spiegel ' + lvl + ' (' + NAMES[mel] + ', ' + (side.stats.mirror || 0) + ' Marker)'); }
+    else if (k === 'fw') { side.stats.freeDraws += lvl; texts.push('Control ' + lvl + ': ' + lvl + ' Gratis-Nachziehen'); }
+    if (k === 'fe' && cs.deferInflict) { const n = lvl + (cs.inflictBonus || 0); c.defer = { to: opp, n }; texts.push('Aggro ' + lvl + ': ' + n + ' Schwäche-Marker für ' + opp.name + ' (nach diesem Zug)'); }
+    else if (k === 'fe') { texts.push('Aggro ' + lvl + ': ' + cs.inflict(state, opp, lvl)); fxs.push({ kind: 'aggro', who: side.ctrl, to: opp.ctrl, n: lvl }); }
+    if (k === 'rm' && state.rules.rmMode !== 'drain') {   // Zerrüttung: Der Gegner muss S Handkarten seiner Wahl abwerfen
+      const n = Math.min(lvl, opp.deck.hand.filter(Boolean).length);
+      if (n > 0) { c.forced = { pid: opp.ctrl, n }; fxs.push({ kind: 'ruin', who: side.ctrl, to: opp.ctrl, n }); }
+      texts.push('Zerrüttung ' + lvl + ': ' + opp.name + ' muss ' + n + ' Handkarte' + (n === 1 ? '' : 'n') + ' seiner Wahl abwerfen');
+    }
+    else if (k === 'rm') { const take = Math.min(lvl, Math.max(0, opp.stats.mana)); opp.stats.mana -= take; texts.push('Entzug ' + lvl + ': ' + opp.name + ' verliert ' + take + ' Mana'); if (take > 0) fxs.push({ kind: 'drain', who: side.ctrl, to: opp.ctrl, n: take }); }
+    else if (k === 'gh') {
+      const before = side.stats.hp; side.stats.hp = Math.min(side.stats.maxHp, before + lvl * (state.rules.lifeflowHeal || 1));
+      texts.push('Heilung ' + lvl + ': +' + (side.stats.hp - before) + ' HP'); fxs.push({ kind: 'lifeflow', who: side.ctrl, to: opp.ctrl, got: {}, removed: 0, heal: side.stats.hp - before, draws: 0 });
+    }
+    else if (k === 'ew' && (ordered || state.rules.lifeflowMode === 'any')) {   // S Marker beliebig vom Brett nehmen, je entferntem Marker 1 HP heilen (geordnet: ohne Heilung)
+      const before = side.stats.hp, picks = lifeflowPicks(state, side, opp, lvl), names = { sd: 'eigene Todesmarker', od: 'Todesmarker des Gegners', sc: 'eigene Fluchmarker', oc: 'Fluchmarker des Gegners', sm: 'eigene Spiegelmarker', om: 'Spiegelmarker des Gegners', ot: 'Nachziehtoken des Gegners' };
+      const got = {}; let removed = 0;
+      for (const pk of picks) {
+        const [kk, mel] = pk.split(':');   // Spiegelmarker können mit Farbe gewählt werden, z. B. 'om:F'
+        const tgt = kk[0] === 's' ? side : opp, key = kk[1] === 'c' ? 'marks' : kk[1] === 'd' ? 'death' : kk[1] === 't' ? 'freeDraws' : 'mirror';
+        if ((tgt.stats[key] || 0) <= 0) continue;
+        if (key === 'mirror') { if (mel && mirrorOf(tgt.stats, mel) > 0) mirrorTake(tgt.stats, mel, 1); else mirrorTakeAny(tgt.stats, 1); } else { tgt.stats[key]--; if (key === 'death' && tgt.stats.death <= 0) delete tgt.stats.death; }
+        removed++; got[kk] = (got[kk] || 0) + 1;
+      }
+      const od = state.rules.lifeflowDrawAll ? removed - (got.ot || 0) : (got.oc || 0) + (got.om || 0), dr = od * (state.rules.lifeflowDraw || 0);   // Gratis-Nachziehen je entferntem Marker (lifeflowDrawAll) oder nur je gegnerischem
+      if (dr) side.stats.freeDraws += dr;
+      const heal = ordered ? 0 : state.rules.lifeflowHealMode === 'flat' ? lvl : removed;
+      side.stats.hp = Math.min(side.stats.maxHp, side.stats.hp + heal * (state.rules.lifeflowHeal || 1));
+      texts.push((ordered ? 'Läuterung ' + lvl : 'Lifeflow ' + lvl + ': +' + (side.stats.hp - before) + ' HP') + (ordered && !removed ? ': nichts zu entfernen' : '') + (removed ? ', ' + Object.keys(got).map(kk => got[kk] + ' ' + names[kk]).join(', ') + ' weg' : '') + (dr ? ', ' + dr + ' Gratis-Nachziehen' : ''));
+      fxs.push({ kind: 'lifeflow', who: side.ctrl, to: opp.ctrl, got, removed, heal: side.stats.hp - before, draws: dr });
+    } else if (k === 'ew' && state.rules.lifeflowMode === 'plain') {   // einfach: S HP und S Gratis-Nachziehen, kein Marker wird entfernt
+      const before = side.stats.hp; side.stats.hp = Math.min(side.stats.maxHp, side.stats.hp + lvl * (state.rules.lifeflowHeal || 1));
+      const dr = lvl * (state.rules.lifeflowDraw || 0); side.stats.freeDraws += dr;
+      texts.push('Lifeflow ' + lvl + ': +' + (side.stats.hp - before) + ' HP' + (dr ? ', ' + dr + ' Gratis-Nachziehen' : ''));
+    } else if (k === 'ew') {
+      const before = side.stats.hp; side.stats.hp = Math.min(side.stats.maxHp, side.stats.hp + lvl * (state.rules.lifeflowHeal || 1));
+      if (state.rules.lifeflowMana) side.stats.mana = Math.min(side.stats.maxMana, side.stats.mana + lvl);   // Variante: zusätzlich S Mana
+      if (state.rules.lifeflowMode === 'choice' && c.lf === 'opp') {   // Wahl: S Marker beim Gegner wegnehmen (seine Spiegelmarker) statt eigener Fluchmarker
+        const had = opp.stats.mirror || 0, take = Math.min(had, lvl);
+        mirrorTakeAny(opp.stats, take);
+        texts.push('Lifeflow ' + lvl + ': +' + (side.stats.hp - before) + ' HP, Gegner verliert ' + take + ' Spiegelmarker');
+      } else texts.push('Lifeflow ' + lvl + ': +' + (side.stats.hp - before) + ' HP' + cs.relieve(state, side, lvl));
+    }
+  }
+}
+function execAttack(state) {
+  const c = state.combat, side = c.sides[c.turn], opp = c.sides[c.turn === 'a' ? 'b' : 'a'];
+  const d = side.deck, sel = selection(d);
+  const ev = evalAttack(side.stats, sel);
+  if (!ev.valid) return fail(ev.reason);
+  if (!ev.affordable) return fail('Zu wenig Mana (' + ev.cost + ' nötig).');
+  let plan = [];
+  const ordered = state.rules.comboMode === 'ordered', lvs = levelsFor(state.rules, ev);
+  const death = ev.levels.ulti > 0 && state.rules.ultiMode === 'death';
+  if (death) plan = [];
+  else if (ev.levels.ulti > 0) {
+    const ch = c.ult.filter(k => ['fw', 'fe', 'ew'].includes(k));
+    if (ch.length !== 2) return fail('Ultimate: wähle genau zwei Kombos.');
+    plan = ch.map(k => [k, ev.levels.ulti]);
+  } else for (const k of ordered ? ['fw', 'fe', 'ew', 'rm', 'gh'] : ['fw', 'fe', 'ew']) if (lvs[k] > 0) plan.push([k, lvs[k]]);
+  side.stats.mana -= ev.cost;
+  consumeSelection(d, sel);
+  decayMirror(state, side);
+  const texts = [], cs = curses(state), fxs = [];
+  applyComboPlan(state, side, opp, plan, ev, texts, fxs);
+  if (death) { opp.stats.death = Math.max(opp.stats.death || 0, ev.levels.ulti); texts.push('Ultimate ' + ev.levels.ulti + ': Todes-Fluch für ' + opp.name + ' (' + opp.stats.death + ' HP am Ende jeder seiner Angriffsphasen bis Kampfende)'); }
+  if (cs.endTurn) cs.endTurn(state, side);
+  c.ult = []; c.lf = 'self'; c.lfp = null; c.mel = null;
+  const dmg = ev.prim ? ev.damage : 0;
+  if (dmg > 0) fxs.push({ kind: 'attack', who: side.ctrl, to: opp.ctrl, elem: ev.prim, n: dmg });
+  log(state, side.name + ' greift an' + (ev.prim ? ' (' + NAMES[ev.prim] + ', Schaden ' + dmg + ')' : ' (nur Flüche)') + (texts.length ? ' – ' + texts.join(', ') : '') + '.', side.ctrl, fxs.length ? fxs : undefined);
+  if (dmg > 0) { c.color = ev.prim; c.pending = dmg; c.turn = c.turn === 'a' ? 'b' : 'a'; c.action = 'defense'; }
+  else { flushDefer(state); passAttackTurn(state, true); }
+  const res = finishStep(state);
+  return { ok: true, combatEnd: res };
+}
+function recoverGain(state) { const r = state.rules.recoverByStage; return r ? (r[Math.min(r.length, Math.max(1, state.stage)) - 1] || 1) : 1; }
+function execDefense(state, passOnly) {
+  const c = state.combat, side = c.sides[c.turn];
+  const d = side.deck;
+  let block = 0, cost = 0, sel = [], defEv = null;
+  if (!passOnly) {
+    sel = selection(d);
+    const ev = evalDefense(side.stats, sel, c.color, c.mr, state.rules);
+    if (!ev.valid) return fail(ev.reason);
+    if (ev.affordable === false) return fail('Zu wenig Mana (' + ev.cost + ' nötig).');
+    block = ev.block || 0; cost = ev.cost || 0; defEv = ev;
+  }
+  side.stats.mana -= cost;
+  const gain = recoverGain(state);
+  if (passOnly) side.stats.mana = Math.min(side.stats.maxMana, side.stats.mana + gain);   // „Erholen“ in der Verteidigung: wie im Angriffszug
+  if (sel.length) consumeSelection(d, sel); else d.marks = [];
+  const leftover = Math.max(0, c.pending - block) * (curses(state).weakDouble && side.stats.marks > 0 ? 2 : 1);
+  side.stats.hp = Math.max(0, side.stats.hp - leftover);
+  const attacker = c.sides[c.turn === 'a' ? 'b' : 'a'], defEl = sel.length && sel[0].el && !sel[0].curse ? sel[0].el : c.color;
+  const defFx = { kind: 'defense', who: side.ctrl, to: attacker.ctrl, attElem: c.color, defElem: defEl, pending: c.pending, block };
+  log(state, side.name + (passOnly ? ' erholt sich (+' + gain + ' Mana)' : ' verteidigt' + (block ? ' (Block ' + block + ')' : ' ohne Block')) + ' und verliert ' + leftover + ' HP' + (curses(state).weakDouble && side.stats.marks > 0 && leftover ? ' (Schwäche: doppelter Schaden)' : '') + '.', side.ctrl, defFx);
+  // Spiegel (Standard): Gegen jeden Angriff in der Farbe des Spiegels wirkt automatisch ein Marker, sobald eine reguläre Verteidigung (mindestens eine Elementkarte) ausgeführt wird, egal in welcher Farbe; ohne Verteidigung (Erholen) wirkt er nicht. Die Verteidigung kostet wie ohne Spiegel. Der Marker wird verbraucht und wirft 1 unblockbaren Schaden zurück.
+  if (mirrorOn(state) && !passOnly && sel.some(x => !x.curse) && mirrorOf(side.stats, c.color) > 0 && (state.rules.mirrorTrigger === 'any' ? true : sel.some(x => !x.curse && x.el === c.color)) && !(state.rules.mirrorChoice && c.mr === 0)) {
+    const att = c.sides[c.turn === 'a' ? 'b' : 'a'], step = state.rules.mirrorStep || 0, rel = Math.min(state.rules.mirrorChoice ? mirrorCap(side.stats, sel, c.color) : c.pending, state.rules.mirrorChoice ? Math.min(mirrorOf(side.stats, c.color), c.pending, c.mr == null ? 1 : c.mr) : (step > 0 ? Math.min(step, mirrorOf(side.stats, c.color)) : mirrorOf(side.stats, c.color))), r = rel * (state.rules.mirrorMult || 1);
+    if (rel > 0) {
+    const mBefore = mirrorOf(side.stats, c.color);
+    mirrorTake(side.stats, c.color, rel);
+    att.stats.hp = Math.max(0, att.stats.hp - r);
+    if (state.rules.mirrorHeal) side.stats.hp = Math.min(side.stats.maxHp, side.stats.hp + rel * state.rules.mirrorHeal);
+    if (state.rules.mirrorMana) side.stats.mana = Math.min(side.stats.maxMana, side.stats.mana + rel * state.rules.mirrorMana);
+    const inline = leftover > 0;   // Es geht Schaden durch: Der Spiegel wird im Kampfeffekt gezeigt (Funken treffen ihn), nicht als eigene Animation
+    if (inline) defFx.mirror = { markers: mBefore, broken: rel, r };
+    log(state, 'Spiegel: ' + side.name + ' wirft ' + r + ' Schaden auf ' + att.name + ' zurück.', side.ctrl, { kind: 'mirror', elem: c.color, markers: mBefore, broken: rel, att: att.ctrl, r, inline });
+    }
+  }
+  if (defEv && defEv.levels && defEv.levels.ulti > 0 && state.rules.defenseCombos && state.rules.comboMode === 'ordered' && state.rules.ultiMode === 'death' && side.stats.hp > 0) {   // Ultimate in der Verteidigung: Todes-Fluch für den Angreifer
+    attacker.stats.death = Math.max(attacker.stats.death || 0, defEv.levels.ulti);
+    log(state, side.name + ' wirkt eine Ultimate: Ultimate ' + defEv.levels.ulti + ': Todes-Fluch für ' + attacker.name + ' (' + attacker.stats.death + ' HP am Ende jeder seiner Angriffsphasen bis Kampfende).', side.ctrl, { kind: 'aggro', who: side.ctrl, to: attacker.ctrl, n: defEv.levels.ulti, late: true });
+  }
+  if (defEv && defEv.ord && state.rules.defenseCombos && state.rules.comboMode === 'ordered' && side.stats.hp > 0) {   // Kombo der Verteidigung: erst nach der Verteidigung (und dem Spiegelrückwurf)
+    const lvs = levelsFor(state.rules, defEv), plan = [], texts = [], fxs = [];
+    for (const k of ['fw', 'fe', 'ew', 'rm', 'gh']) if (lvs[k] > 0) plan.push([k, lvs[k]]);
+    applyComboPlan(state, side, attacker, plan, defEv, texts, fxs);
+    fxs.forEach(f => { f.late = true; });
+    if (texts.length) log(state, side.name + ' wirkt einen Kombo: ' + texts.join(', ') + '.', side.ctrl, fxs.length ? fxs : undefined);
+  }
+  const attSide = c.sides[c.turn === 'a' ? 'b' : 'a'];   // wer gerade angegriffen hat: seine Angriffsphase endet mit dieser Verteidigung
+  c.action = 'attack'; c.color = null; c.pending = 0; c.ult = []; c.mr = null;
+  flushDefer(state);
+  deathTick(state, attSide);
+  const res = finishStep(state);
+  return { ok: true, combatEnd: res };
+}
+
+function applyCombat(state, a) {
+  const c = state.combat, pid = a.pid;
+  if (c.forced) {   // Zerrüttung: Der Betroffene wählt die Karten, die er abwerfen muss; vorher ist keine andere Aktion möglich
+    if (a.type !== 'fd') return fail(c.forced.pid === pid ? 'Zerrüttung: Wähle zuerst ' + c.forced.n + ' Handkarte' + (c.forced.n === 1 ? '' : 'n') + ' zum Abwerfen.' : 'Der Gegner wählt gerade seine Abwurfkarten.');
+    if (c.forced.pid !== pid) return fail('Der Gegner wählt gerade seine Abwurfkarten.');
+    const v = c.sides.a.ctrl === pid ? c.sides.a : c.sides.b, dd = v.deck, slots = [...new Set((Array.isArray(a.slots) ? a.slots : []).map(Number))].filter(i => Number.isInteger(i) && dd.hand[i]);
+    const need = Math.min(c.forced.n, dd.hand.filter(Boolean).length);
+    if (slots.length !== need) return fail('Wähle genau ' + need + ' Handkarte' + (need === 1 ? '' : 'n') + ' zum Abwerfen.');
+    slots.forEach(i => { const cd = dd.hand[i]; cd.locked = false; dd.discard.push(cd); dd.hand[i] = null; });
+    dd.marks = [];
+    c.forced = null;
+    log(state, v.name + ' wirft ' + slots.length + ' Handkarte' + (slots.length === 1 ? '' : 'n') + ' ab (Zerrüttung).', pid);
+    return { ok: true };
+  }
+  const side = c.sides[c.turn], opp = c.sides[c.turn === 'a' ? 'b' : 'a'];
+  const mine = c.sides.a.ctrl === pid ? c.sides.a : c.sides.b;     // (in Monsterkämpfen kontrolliert jeder genau eine Seite)
+  if (a.type === 'lock') { const e = toggleLock(mine.deck, a.slot); return e ? fail(e) : { ok: true }; }
+  if (side.ctrl !== pid) return fail('Die Gegenseite ist am Zug.');
+  switch (a.type) {
+    case 'mark': { const e = toggleMark(side.deck, a.slot, side.stats.limit, curses(state).curseCards); if (!e) c.ult = c.ult.slice(); return e ? fail(e) : { ok: true }; }
+    case 'ult': {
+      const ev = evalAttack(side.stats, selection(side.deck));
+      if (state.rules.ultiMode === 'death') return fail('Die Ultimate ist der Todes-Fluch; es gibt nichts zu wählen.');
+      if (c.action !== 'attack' || !ev.valid || ev.levels.ulti <= 0) return fail('Keine Ultimate möglich.');
+      if (!['fw', 'fe', 'ew'].includes(a.key)) return fail('Unbekannter Kombo.');
+      const at = c.ult.indexOf(a.key);
+      if (at >= 0) c.ult.splice(at, 1); else { if (c.ult.length >= 2) return fail('Es sind höchstens zwei Kombos wählbar.'); c.ult.push(a.key); }
+      return { ok: true };
+    }
+    case 'lfp': { if (c.action !== 'attack') return fail('Nur im Angriffszug.'); if (state.rules.lifeflowMode !== 'any' && state.rules.comboMode !== 'ordered') return fail('Keine Wahl in dieser Regelvariante.'); const ok = ['sc', 'oc', 'sm', 'om', 'sd', 'od', 'ot']; c.lfp = a.pick === null ? null : (Array.isArray(a.pick) ? a.pick : []).filter(x => typeof x === 'string' && ok.includes(x.split(':')[0]) && (x.indexOf(':') < 0 || ELEMENTS.includes(x.split(':')[1]))).slice(0, 3); return { ok: true }; }
+    case 'mel': { if (c.action !== 'attack') return fail('Nur im Angriffszug.'); if (!mirrorOn(state)) return fail('Kein Spiegel in dieser Regelvariante.'); if (!ELEMENTS.includes(a.el)) return fail('Unbekanntes Element.'); c.mel = a.el; c.melTurn = c.turns; return { ok: true }; }
+    case 'lf': { if (c.action !== 'attack') return fail('Nur im Angriffszug.'); if (state.rules.lifeflowMode !== 'choice') return fail('Keine Wahl in dieser Regelvariante.'); c.lf = a.target === 'opp' ? 'opp' : 'self'; return { ok: true }; }
+    case 'mr': { if (c.action !== 'defense') return fail('Nur in der Verteidigung.'); if (!state.rules.mirrorChoice) return fail('Keine Wahl in dieser Regelvariante.'); const have = Math.min(mirrorOf(side.stats, c.color), c.pending); c.mr = Math.max(0, Math.min(have, Math.floor(+a.n) || 0)); return { ok: true }; }
+    case 'attack': if (c.action !== 'attack') return fail('Jetzt wird verteidigt.'); return execAttack(state);
+    case 'defend': if (c.action !== 'defense') return fail('Jetzt wird angegriffen.'); return execDefense(state, false);
+    case 'pass':
+      if (c.action === 'defense') return execDefense(state, true);
+      side.deck.marks = []; log(state, side.name + ' passt.', side.ctrl);
+      passAttackTurn(state); return { ok: true, combatEnd: finishStep(state) };
+    case 'recover': {
+      if (c.action !== 'attack') return fail('Erholen geht nur im Angriffszug.');
+      const gain = recoverGain(state);
+      side.stats.mana = Math.min(side.stats.maxMana, side.stats.mana + gain);
+      side.deck.marks = [];
+      log(state, side.name + ' erholt sich: +' + gain + ' Mana.', side.ctrl);
+      passAttackTurn(state); return { ok: true, combatEnd: finishStep(state) };
+    }
+    case 'draw': {
+      if (c.action !== 'attack') return fail('Nachziehen geht nur im Angriffszug.');
+      if (!drawPhase(state, side.deck)) return fail('Alle Karten sind gesperrt, es gibt nichts zu tauschen.');
+      log(state, side.name + ' zieht Karten nach (ersetzt den Angriff).', side.ctrl);
+      passAttackTurn(state); return { ok: true, combatEnd: finishStep(state) };
+    }
+    case 'freeDraw': {
+      if (side.stats.freeDraws <= 0) return fail('Kein Gratis-Nachziehen übrig.');
+      if (!drawPhase(state, side.deck)) return fail('Alle Karten sind gesperrt, es gibt nichts zu tauschen.');
+      side.stats.freeDraws--; log(state, side.name + ' nutzt ein Gratis-Nachziehen.', side.ctrl);
+      return { ok: true };
+    }
+  }
+  return fail('Unbekannte Aktion.');
+}
+
+// Beginn eines Angriffszuges im Kampf: Fluchsystem (bei Markern: Tausch, einmal pro Zug). Liefert true, wenn der Kampf dadurch endete.
+function combatTick(state) {
+  const c = state.combat;
+  if (!c || c.action !== 'attack' || c.tickKey === c.turns) return false;
+  c.tickKey = c.turns;
+  const side = c.sides[c.turn];
+  if (curses(state).turnStart(state, side.ctrl, side.stats, true, side.name)) {
+    const end = evaluateEnd(state);
+    if (end) { endCombat(state, end); return true; }
+  }
+  return false;
+}

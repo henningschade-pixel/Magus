@@ -1,0 +1,13 @@
+{
+  "name": "magus",
+  "private": true,
+  "description": "Magus – Duellspiel aus Magie, Monstern und Showdowns (eine HTML-Datei, gebaut aus src/)",
+  "scripts": {
+    "build": "node tools/build.js",
+    "build:single": "node tools/build-single.js",
+    "check": "node tools/build.js --check",
+    "test": "node tools/build.js --check && node --test tests/*.test.js",
+    "golden": "node tests/make-golden.js",
+    "balance": "node tools/balance/report.js 400 '{}'"
+  }
+}

@@ -1,11 +1,9 @@
-// Extrahiert Regelkern und KI aus index.html (nach .gen/) und lädt sie, damit die Simulation immer den aktuellen Spielstand testet.
+// Lädt Regelkern und KI direkt aus index.html (ohne Zwischendateien, damit parallele Prozesse sich nicht in die Quere kommen).
 const fs = require('fs'), path = require('path');
-const gen = path.join(__dirname, '.gen');
 const html = fs.readFileSync(path.join(__dirname, '..', '..', 'index.html'), 'utf8');
 const scripts = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]);
 const eng = scripts.find(s => s.includes('Regelkern (Teil 1)')), ai = scripts.find(s => s.includes('einfacher Computergegner'));
 if (!eng || !ai) throw new Error('Regelkern oder KI in index.html nicht gefunden.');
-fs.mkdirSync(gen, { recursive: true });
-fs.writeFileSync(path.join(gen, 'engine.js'), eng);
-fs.writeFileSync(path.join(gen, 'ai.js'), ai);
-module.exports = { M: require('./.gen/engine.js'), AI: require('./.gen/ai.js') };
+function run(src, req) { const m = { exports: {} }; new Function('module', 'exports', 'require', src)(m, m.exports, req); return m.exports; }
+const M = run(eng, require), AI = run(ai, id => id === './engine.js' ? M : require(id));
+module.exports = { M, AI };
