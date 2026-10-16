@@ -310,7 +310,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
   <div id="toast"></div><div id="overlay" class="overlay" style="display:none"></div>
 </div></div>
 <script>const IMG={"shield_E": "assets/img/shield_E.webp", "shield_F": "assets/img/shield_F.webp", "F1": "assets/img/F1.webp", "F2": "assets/img/F2.webp", "F3": "assets/img/F3.webp", "E1": "assets/img/E1.webp", "E2": "assets/img/E2.webp", "E3": "assets/img/E3.webp", "W1": "assets/img/W1.webp", "W2": "assets/img/W2.webp", "W3": "assets/img/W3.webp", "C1": "assets/img/C1.webp", "C2": "assets/img/C2.webp", "C3": "assets/img/C3.webp", "back": "assets/img/back.webp", "lock": "assets/img/lock.webp", "m_f1": "assets/img/m_f1.webp", "m_f2": "assets/img/m_f2.webp", "m_f3": "assets/img/m_f3.webp", "d_f": "assets/img/d_f.webp", "m_e1": "assets/img/m_e1.webp", "m_e2": "assets/img/m_e2.webp", "m_e3": "assets/img/m_e3.webp", "d_e": "assets/img/d_e.webp", "m_w1": "assets/img/m_w1.webp", "m_w2": "assets/img/m_w2.webp", "m_w3": "assets/img/m_w3.webp", "d_w": "assets/img/d_w.webp", "board": "assets/img/board.webp", "gold": "assets/img/gold.webp", "hp": "assets/img/hp.webp", "mana": "assets/img/mana.webp", "limit": "assets/img/limit.webp", "attack": "assets/img/attack.webp", "defense": "assets/img/defense.webp", "wait": "assets/img/wait.webp", "gratis": "assets/img/gratis.webp", "upgrade": "assets/img/upgrade.webp", "arrow": "assets/img/arrow.webp"};</script>
-<script>IMG.board="assets/img/board.webp";IMG.curse="assets/img/curse.png";IMG.plus="assets/img/plus.png";IMG.plush="assets/img/plush.png";IMG.plusg="assets/img/plusg.png";IMG.plushg="assets/img/plushg.png";window.SND={"aggro": "assets/audio/aggro.mp3", "atk_earth": "assets/audio/atk_earth.mp3", "atk_fire": "assets/audio/atk_fire.mp3", "atk_water": "assets/audio/atk_water.mp3", "block": "assets/audio/block.mp3", "break": "assets/audio/break.mp3", "curse": "assets/audio/curse.mp3", "draw": "assets/audio/draw.mp3", "flip": "assets/audio/flip.mp3", "game_win": "assets/audio/game_win.mp3", "heal": "assets/audio/heal.mp3", "hit": "assets/audio/hit.mp3", "lose": "assets/audio/lose.mp3", "mirror_cast": "assets/audio/mirror_cast.mp3", "mirror_reflect": "assets/audio/mirror_reflect.mp3", "monster_defeated": "assets/audio/monster_defeated.mp3", "play": "assets/audio/play.mp3", "purify": "assets/audio/purify.mp3", "recover": "assets/audio/recover.mp3", "ruin": "assets/audio/ruin.mp3", "showdown_start": "assets/audio/showdown_start.mp3", "shuffle": "assets/audio/shuffle.mp3", "stage_start": "assets/audio/stage_start.mp3", "turn_change": "assets/audio/turn_change.mp3", "ultimate": "assets/audio/ultimate.mp3", "win": "assets/audio/win.mp3"};</script>
+<script>IMG.board="assets/img/board.webp";IMG.curse="assets/img/curse.png";IMG.plus="assets/img/plus.png";IMG.plush="assets/img/plush.png";IMG.plusg="assets/img/plusg.png";IMG.plushg="assets/img/plushg.png";window.SND={"aggro": "assets/audio/aggro.mp3", "atk_earth": "assets/audio/atk_earth.mp3", "atk_fire": "assets/audio/atk_fire.mp3", "atk_water": "assets/audio/atk_water.mp3", "block": "assets/audio/block.mp3", "break": "assets/audio/break.mp3", "coin_sacrifice": "assets/audio/coin_sacrifice.mp3", "curse": "assets/audio/curse.mp3", "draw": "assets/audio/draw.mp3", "flip": "assets/audio/flip.mp3", "game_win": "assets/audio/game_win.mp3", "heal": "assets/audio/heal.mp3", "hit": "assets/audio/hit.mp3", "lose": "assets/audio/lose.mp3", "magic_buy": "assets/audio/magic_buy.mp3", "mirror_cast": "assets/audio/mirror_cast.mp3", "mirror_reflect": "assets/audio/mirror_reflect.mp3", "monster_defeated": "assets/audio/monster_defeated.mp3", "play": "assets/audio/play.mp3", "purify": "assets/audio/purify.mp3", "recover": "assets/audio/recover.mp3", "ruin": "assets/audio/ruin.mp3", "showdown_start": "assets/audio/showdown_start.mp3", "shuffle": "assets/audio/shuffle.mp3", "spend_upgrade": "assets/audio/spend_upgrade.mp3", "stage_start": "assets/audio/stage_start.mp3", "temple_level": "assets/audio/temple_level.mp3", "turn_change": "assets/audio/turn_change.mp3", "ui_click": "assets/audio/ui_click.mp3", "ultimate": "assets/audio/ultimate.mp3", "vendor_upgrade": "assets/audio/vendor_upgrade.mp3", "win": "assets/audio/win.mp3"};</script>
 <script>(function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
   else root.Magus = factory();
@@ -1623,7 +1623,7 @@ const Snd = (() => {
     } catch (e) { ctx = null; }
   }
   // Grundlautstärke je Sound (Ultimate und Fanfaren laut, Karten leise); vol überschreibt
-  const VOL = { ultimate: .95, game_win: .8, win: .7, lose: .7, draw: .6, showdown_start: .75, monster_defeated: .7, stage_start: .6, atk_fire: .6, atk_earth: .6, atk_water: .6, hit: .6, block: .55, aggro: .6, ruin: .55, purify: .5, heal: .5, mirror_cast: .5, mirror_reflect: .55, recover: .4, turn_change: .35 };
+  const VOL = { ultimate: .95, game_win: .8, win: .7, lose: .7, draw: .6, showdown_start: .75, monster_defeated: .7, stage_start: .6, atk_fire: .6, atk_earth: .6, atk_water: .6, hit: .6, block: .55, aggro: .6, ruin: .55, purify: .5, heal: .5, mirror_cast: .5, mirror_reflect: .55, recover: .4, turn_change: .35, coin_sacrifice: .55, temple_level: .6, spend_upgrade: .45, magic_buy: .6, vendor_upgrade: .55, ui_click: .3 };
   function play(k, delay, vol) {
     if (!on || !ctx || !bufs[k]) return;
     if (ctx.state === 'suspended') ctx.resume();
@@ -2894,10 +2894,19 @@ function checkShowdownIntro() {
   const first = G.log.slice().reverse().find(e => /^Showdown \d/.test(e.txt));
   modal = { title: 'Showdown ' + (G.showdown + 1) + ' von 3', sub: 'Alle Monster sind besiegt: Duell Spieler gegen Spieler', lines: [first ? first.txt : '', 'Wer gewinnt, erhält 2 Siegpunkte, bei Gleichstand je 1. Es gewinnt, wer zuerst 4 Siegpunkte hat oder nach drei Showdowns vorn liegt.'].filter(Boolean) };
 }
+// Töne zu eigenen Weltphasen-Aktionen (Tempel, Upgrades, Magie, Händler)
+function worldSound(type, gainedUp) {
+  if (FAST) return;
+  if (type === 'temple') { Snd.play('coin_sacrifice'); if (gainedUp) Snd.play('temple_level', .45); }
+  else if (type === 'spend') Snd.play('spend_upgrade');
+  else if (type === 'magic') Snd.play('magic_buy');
+  else if (type === 'vendor') Snd.play('vendor_upgrade');
+}
 function act(a) {
   if (!G || G.over || endView || modal) return;
-  const full = Object.assign({ pid: ME }, a), prev = G.logN, r = M.apply(G, full);
+  const full = Object.assign({ pid: ME }, a), prev = G.logN, up0 = G.players[ME].stats.upGot, r = M.apply(G, full);
   if (!r.ok) { toast(r.error); return; }
+  worldSound(a.type, G.players[ME].stats.upGot > up0);
   if (MP) mpPush(full);
   checkCombatEnd(prev); pump();
 }
@@ -3212,6 +3221,9 @@ function homeMenu() {
     '<button class="btn" style="font-size:21px;padding:10px" data-act="leave">' + (MP ? 'Partie verlassen' : 'Spiel verlassen') + '</button></div></div>';
   mpChip();
 }
+// Klickton für Menü- und Bedienknöpfe (Aktionen mit eigenem Ton ausgenommen)
+const CLICK_ACTS = new Set(['sacdn', 'sacup', 'deckview', 'home', 'resume', 'restart', 'leave', 'newgame', 'stclose', 'stfit', 'stwho', 'stser', 'dismiss']);
+stage.addEventListener('pointerdown', e => { const b = e.target.closest('button'); if (b && (b.id === 'homebtn' || b.id === 'statbtn' || b.classList.contains('logdl') || CLICK_ACTS.has(b.dataset.act))) Snd.play('ui_click'); }, true);
 const homeBtn = document.createElement('button');
 homeBtn.id = 'homebtn'; homeBtn.title = 'Menü: fortsetzen, neu starten, verlassen'; homeBtn.textContent = '⌂';
 homeBtn.addEventListener('click', e => { e.stopPropagation(); if (G && started) homeMenu(); });

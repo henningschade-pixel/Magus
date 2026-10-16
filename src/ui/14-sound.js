@@ -12,7 +12,7 @@ const Snd = (() => {
     } catch (e) { ctx = null; }
   }
   // Grundlautstärke je Sound (Ultimate und Fanfaren laut, Karten leise); vol überschreibt
-  const VOL = { ultimate: .95, game_win: .8, win: .7, lose: .7, draw: .6, showdown_start: .75, monster_defeated: .7, stage_start: .6, atk_fire: .6, atk_earth: .6, atk_water: .6, hit: .6, block: .55, aggro: .6, ruin: .55, purify: .5, heal: .5, mirror_cast: .5, mirror_reflect: .55, recover: .4, turn_change: .35 };
+  const VOL = { ultimate: .95, game_win: .8, win: .7, lose: .7, draw: .6, showdown_start: .75, monster_defeated: .7, stage_start: .6, atk_fire: .6, atk_earth: .6, atk_water: .6, hit: .6, block: .55, aggro: .6, ruin: .55, purify: .5, heal: .5, mirror_cast: .5, mirror_reflect: .55, recover: .4, turn_change: .35, coin_sacrifice: .55, temple_level: .6, spend_upgrade: .45, magic_buy: .6, vendor_upgrade: .55, ui_click: .3 };
   function play(k, delay, vol) {
     if (!on || !ctx || !bufs[k]) return;
     if (ctx.state === 'suspended') ctx.resume();

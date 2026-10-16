@@ -115,6 +115,9 @@ function homeMenu() {
     '<button class="btn" style="font-size:21px;padding:10px" data-act="leave">' + (MP ? 'Partie verlassen' : 'Spiel verlassen') + '</button></div></div>';
   mpChip();
 }
+// Klickton für Menü- und Bedienknöpfe (Aktionen mit eigenem Ton ausgenommen)
+const CLICK_ACTS = new Set(['sacdn', 'sacup', 'deckview', 'home', 'resume', 'restart', 'leave', 'newgame', 'stclose', 'stfit', 'stwho', 'stser', 'dismiss']);
+stage.addEventListener('pointerdown', e => { const b = e.target.closest('button'); if (b && (b.id === 'homebtn' || b.id === 'statbtn' || b.classList.contains('logdl') || CLICK_ACTS.has(b.dataset.act))) Snd.play('ui_click'); }, true);
 const homeBtn = document.createElement('button');
 homeBtn.id = 'homebtn'; homeBtn.title = 'Menü: fortsetzen, neu starten, verlassen'; homeBtn.textContent = '⌂';
 homeBtn.addEventListener('click', e => { e.stopPropagation(); if (G && started) homeMenu(); });
