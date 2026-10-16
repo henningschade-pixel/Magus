@@ -177,3 +177,5 @@ Hinweis: `magic_buy` wurde entfernt (ersetzt durch `magic_lv2` und `magic_lv3`).
 - `upgrade_gain` („level-up-01“ von rhodesmas, freesound.org ID 320655; Lizenz prüfen): spielt, wenn du Upgrade-Punkte erhältst, die nicht aus dem Tempel kommen (Abschnittsbonus, Trostpreis). Tempel-Punkte spielen `temple_level`.
 
 Hinweis: `game_win` und `game_lose` sind entfernt. Das Spielende spielt `win` bzw. `lose` (wie Kampf und Showdown), bei Gleichstand `draw`.
+
+Übernommen aus der Ton-Werkstatt (Synth-Rezepte, gerendert mit `tools/ton-rendern.js`, Pegel −20 dB): `card_lv2` (Zwei Klänge Aufwertung), `card_lv3` (Dreiklang-Aufstieg), `draw` (Gebrochenes Gleichgewicht), `shield_hit` (Synth-Entwurf), `showdown_start` (Synth-Entwurf), `spend_upgrade` (Leiser Runenschimmer), `stage_start` (Synth-Entwurf). Die Vorgänger stehen in der Git-Historie.
