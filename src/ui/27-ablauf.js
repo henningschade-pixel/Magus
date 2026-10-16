@@ -65,18 +65,18 @@ function checkShowdownIntro() {
   modal = { title: 'Showdown ' + (G.showdown + 1) + ' von 3', sub: 'Alle Monster sind besiegt: Duell Spieler gegen Spieler', lines: [first ? first.txt : '', 'Wer gewinnt, erhält 2 Siegpunkte, bei Gleichstand je 1. Es gewinnt, wer zuerst 4 Siegpunkte hat oder nach drei Showdowns vorn liegt.'].filter(Boolean) };
 }
 // Töne zu eigenen Weltphasen-Aktionen (Tempel, Upgrades, Magie, Händler)
-function worldSound(type, gainedUp, magNow, magBefore) {
+function worldSound(type, gainedUp, magNow, cardLv) {
   if (FAST) return;
   if (type === 'temple') { Snd.play('coin_sacrifice'); if (gainedUp) Snd.play('temple_level', .45); }
   else if (type === 'spend') Snd.play('spend_upgrade');
   else if (type === 'magic') { if (magNow === 2) Snd.play('magic_lv2'); else if (magNow === 3) Snd.play('magic_lv3'); }   // Magie auf Stufe 2 bzw. 3 (höher geht es nicht)
-  else if (type === 'vendor') Snd.play('vendor_upgrade');
+  else if (type === 'vendor' && cardLv >= 2) Snd.play('card_lv' + cardLv);   // Karte auf Stufe 2 bzw. 3 aufgewertet
 }
 function act(a) {
   if (!G || G.over || endView || modal) return;
-  const full = Object.assign({ pid: ME }, a), prev = G.logN, up0 = G.players[ME].stats.upGot, mg0 = a.type === 'magic' ? G.players[ME].stats.mag[a.elem] : 0, r = M.apply(G, full);
+  const full = Object.assign({ pid: ME }, a), prev = G.logN, up0 = G.players[ME].stats.upGot, r = M.apply(G, full);
   if (!r.ok) { toast(r.error); return; }
-  worldSound(a.type, G.players[ME].stats.upGot > up0, a.type === 'magic' ? G.players[ME].stats.mag[a.elem] : 0, mg0);
+  worldSound(a.type, G.players[ME].stats.upGot > up0, a.type === 'magic' ? G.players[ME].stats.mag[a.elem] : 0, a.type === 'vendor' ? +String(a.result).slice(1) : 0);
   if (MP) mpPush(full);
   checkCombatEnd(prev); pump();
 }
