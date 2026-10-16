@@ -1896,8 +1896,6 @@ function drawTurn(c, up, t, done) {
       let prev = ptAt(a, sd);
       for (let k = 1; k <= n; k++) { const p = ptAt(lerp(a, b, k / n), sd), f = k / n; c.strokeStyle = 'rgba(' + GOLD + ',' + cl(lerp(1, .12 + .88 * Math.pow(f, 1.6), shade)) + ')'; c.beginPath(); c.moveTo(prev[0], prev[1]); c.lineTo(p[0], p[1]); c.stroke(); prev = p; }
       c.restore();
-      const hd = ptAt(b, sd), r = 24 + T.glow, ha = Math.sin(Math.PI * u), g = c.createRadialGradient(hd[0], hd[1], 0, hd[0], hd[1], r);
-      g.addColorStop(0, 'rgba(255,236,170,' + cl(.9 * ha * T.head) + ')'); g.addColorStop(1, 'rgba(' + GOLD + ',0)'); c.save(); c.fillStyle = g; c.beginPath(); c.arc(hd[0], hd[1], r, 0, 7); c.fill(); c.restore();
     }
   }
   // Einblendung nach der Wanderung: Pille mit dem Namen des aktiven Spielers
