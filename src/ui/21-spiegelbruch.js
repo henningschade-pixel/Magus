@@ -1,4 +1,4 @@
-/* ---------- Spiegelbruch-Effekt (aus der Effektwerkstatt, ohne Figuren): Der Angriff in der Farbe des Angreifers prallt am Spiegel ab, der Spiegel zerbricht, mittig auf dem Bildschirm ---------- */
+/* ---------- Spiegelbruch-Effekt (aus der Effektwerkstatt, ohne Figuren): Der Angriff in der Farbe des Angreifers prallt am Spiegel ab (Rückwurf), ungeblockter Schaden zerbricht Stufen des Spiegels, mittig auf dem Bildschirm ---------- */
 const MirrorFx = (() => {
   const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x)), lerp = (a, b, t) => a + (b - a) * t, seg = (u, a, b) => clamp((u - a) / (b - a));
   const eo = x => 1 - Math.pow(1 - x, 3), eio = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
@@ -14,7 +14,7 @@ const MirrorFx = (() => {
   }
   function frame(ctx, t, p) {
     const u = clamp(t / p.dur), col = EL[p.elem] || EL.W, rnd = rng(p.seed), BIG = 3000;
-    const IMP = .42, SH = IMP + p.crackT, N = clamp(p.markers, 1, 3), nb = clamp(p.broken, 1, N);
+    const IMP = .42, SH = IMP + p.crackT, N = clamp(p.markers, 1, 3), nb = clamp(p.broken, 0, N);
     const S = { x: 360, y: 240 }, R = 150 * p.size, rx = R * .78, ry = R, ang0 = Math.PI + .35;
     const I = { x: S.x + rx * Math.cos(ang0) * .92, y: S.y + ry * Math.sin(ang0) * .92 };
     const aT = p.fromTop ? 20 : 20, aY = p.fromTop ? -10 : 490;   // Ausgangspunkt des Angriffs (links oben beim Gegner, links unten bei dir)
@@ -49,7 +49,7 @@ const MirrorFx = (() => {
     }
     const lit = u < SH ? N : N - nb;   // Marker unter dem Schild
     for (let i = 0; i < N; i++) { const px = S.x + (i - (N - 1) / 2) * 26, py = S.y + ry + 26, on = i < lit; ctx.save(); ctx.globalAlpha = appear; ctx.translate(px, py); ctx.rotate(Math.PI / 4); ctx.strokeStyle = on ? col : 'rgba(255,255,255,.25)'; ctx.lineWidth = 2; if (on) { ctx.shadowColor = col; ctx.shadowBlur = 10; ctx.fillStyle = rgba(col, .6); ctx.fillRect(-6, -6, 12, 12); } ctx.strokeRect(-6, -6, 12, 12); ctx.restore(); }
-    if (u >= IMP && u < SH + .04) {   // Risse
+    if (nb > 0 && u >= IMP && u < SH + .04) {   // Risse
       const gr = eo(seg(u, IMP, SH)), fade = 1 - seg(u, SH, SH + .04), cr = rng(p.seed + 7);
       ctx.save(); ctx.beginPath(); ctx.ellipse(S.x, S.y, rx, ry, 0, 0, Math.PI * 2); const fi = (N - nb) / N; if (fi > 0) { ctx.moveTo(S.x + rx * fi, S.y); ctx.ellipse(S.x, S.y, rx * fi, ry * fi, 0, 0, Math.PI * 2); } ctx.clip('evenodd');
       ctx.globalAlpha = fade; ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.5; ctx.lineJoin = 'round'; ctx.shadowColor = col; ctx.shadowBlur = 8;
@@ -65,8 +65,8 @@ const MirrorFx = (() => {
       const g = seg(u, IMP, IMP + .2);
       if (g < 1) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const fl = ctx.createRadialGradient(I.x, I.y, 0, I.x, I.y, 70 * (1 - g) + 10); fl.addColorStop(0, 'rgba(255,255,255,' + (.9 * (1 - g)) + ')'); fl.addColorStop(1, rgba(col, 0)); ctx.fillStyle = fl; ctx.beginPath(); ctx.arc(I.x, I.y, 80, 0, 7); ctx.fill(); ctx.strokeStyle = rgba(lighten(col, .5), 1 - g); ctx.lineWidth = 2.5 * (1 - g) + .5; ctx.beginPath(); ctx.ellipse(I.x, I.y, g * 90 * .5, g * 90, 0, 0, 7); ctx.stroke(); const sr = rng(p.seed + 11); for (let k = 0; k < 18; k++) { const a = sr() * Math.PI * 2, v = 40 + sr() * 110; ctx.fillStyle = rgba(lighten(col, .6), 1 - g); ctx.fillRect(I.x + Math.cos(a) * v * g - 1.5, I.y + Math.sin(a) * v * g - 1.5, 3, 3); } ctx.restore(); }
     }
-    if (u >= SH && u < SH + .1) { const f = 1 - seg(u, SH, SH + .1); ctx.save(); ctx.globalCompositeOperation = 'lighter'; const fl = ctx.createRadialGradient(S.x, S.y, 0, S.x, S.y, R * 1.3); fl.addColorStop(0, 'rgba(255,255,255,' + (.55 * f) + ')'); fl.addColorStop(1, rgba(col, 0)); ctx.fillStyle = fl; ctx.fillRect(S.x - 400, S.y - 400, 800, 800); ctx.restore(); }
-    if (u > SH + .02) {   // Rückwurf zum Angreifer (auf seine HP-Leiste)
+    if (nb > 0 && u >= SH && u < SH + .1) { const f = 1 - seg(u, SH, SH + .1); ctx.save(); ctx.globalCompositeOperation = 'lighter'; const fl = ctx.createRadialGradient(S.x, S.y, 0, S.x, S.y, R * 1.3); fl.addColorStop(0, 'rgba(255,255,255,' + (.55 * f) + ')'); fl.addColorStop(1, rgba(col, 0)); ctx.fillStyle = fl; ctx.fillRect(S.x - 400, S.y - 400, 800, 800); ctx.restore(); }
+    if (p.r > 0 && u > SH + .02) {   // Rückwurf zum Angreifer (auf seine HP-Leiste)
       const tx = p.hpT ? p.hpT.x : aT, ty = p.hpT ? p.hpT.y : aY;
       const r = seg(u, SH + .02, SH + .27);
       if (r < 1) { const e = eio(r); for (let i = 12; i >= 1; i--) { const bb = clamp(e - i * .02); ctx.save(); ctx.globalAlpha = (1 - i / 13) * .55; orb(ctx, lerp(I.x, tx, bb), lerp(I.y, ty, bb) - Math.sin(bb * Math.PI) * 16, 11 - i * .5, col, lighten(col, .7)); ctx.restore(); } orb(ctx, lerp(I.x, tx, e), lerp(I.y, ty, e) - Math.sin(e * Math.PI) * 16, 13, col, '#ffffff'); }
@@ -79,7 +79,7 @@ const MirrorFx = (() => {
   let cv = null, raf = 0;
   function play(fx) {
     const quiet = FAST || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
-    Snd.play('break', quiet ? 0 : .42 * D.dur, 0.7);   // Bruch-Sound erst, wenn das Projektil den Spiegel trifft (Einschlag bei 42 % der Dauer)
+    if (fx.broken > 0) Snd.play('break', quiet ? 0 : .42 * D.dur, 0.7);   // Bruch-Sound erst, wenn das Projektil den Spiegel trifft (Einschlag bei 42 % der Dauer)
     if (quiet) return;
     fxUntil = Math.max(fxUntil, Date.now() + D.dur * 1000);
     const KK = 1.5, hp0 = FlowFx.hp(fx.att);   // reflektierter Schaden fliegt auf die HP-Leiste des Angreifers

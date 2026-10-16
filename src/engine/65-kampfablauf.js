@@ -236,16 +236,18 @@ function execDefense(state, passOnly) {
   const attacker = c.sides[c.turn === 'a' ? 'b' : 'a'], defEl = sel.length && sel[0].el && !sel[0].curse ? sel[0].el : c.color;
   const defFx = { kind: 'defense', who: side.ctrl, to: attacker.ctrl, attElem: c.color, defElem: defEl, pending: c.pending, block };
   log(state, side.name + (passOnly ? ' erholt sich (+' + gain + ' Mana)' : ' verteidigt' + (block ? ' (Block ' + block + ')' : ' ohne Block')) + ' und verliert ' + leftover + ' HP' + '.', side.ctrl, defFx);
-  // Spiegel (Standard): Gegen jeden Angriff in der Farbe des Spiegels wirkt automatisch ein Marker, sobald eine reguläre Verteidigung (mindestens eine Elementkarte) ausgeführt wird, egal in welcher Farbe; ohne Verteidigung (Erholen) wirkt er nicht. Die Verteidigung kostet wie ohne Spiegel. Der Marker wird verbraucht und wirft 1 unblockbaren Schaden zurück.
-  if (!passOnly && sel.some(x => !x.curse) && mirrorOf(side.stats, c.color) > 0) {
-    const att = c.sides[c.turn === 'a' ? 'b' : 'a'], rel = Math.min(1, mirrorOf(side.stats, c.color)), r = rel;
-    if (rel > 0) {
-    const mBefore = mirrorOf(side.stats, c.color);
-    mirrorTake(side.stats, c.color, rel);
-    att.stats.hp = Math.max(0, att.stats.hp - r);
-    const inline = leftover > 0;   // Es geht Schaden durch: Der Spiegel wird im Kampfeffekt gezeigt (Funken treffen ihn), nicht als eigene Animation
-    if (inline) defFx.mirror = { markers: mBefore, broken: rel, r };
-    log(state, 'Spiegel: ' + side.name + ' wirft ' + r + ' Schaden auf ' + att.name + ' zurück.', side.ctrl, { kind: 'mirror', elem: c.color, markers: mBefore, broken: rel, att: att.ctrl, r, inline });
+  // Spiegel: dauerhaft, je Farbe eine Stufe (1 bis 3). Gegen einen Angriff in der Farbe des Spiegels wirft er so viel Schaden zurück, wie seine Stufe hergibt, höchstens aber so viel, wie tatsächlich geblockt wurde.
+  // Jeder ungeblockte Schaden dieser Farbe (auch beim Erholen ohne Verteidigung) kostet den Spiegel eine Stufe.
+  const mLvl = mirrorOf(side.stats, c.color);
+  if (mLvl > 0) {
+    const att = c.sides[c.turn === 'a' ? 'b' : 'a'], r = Math.min(mLvl, block), lost = Math.min(mLvl, leftover);
+    if (r > 0 || lost > 0) {
+      if (r > 0) att.stats.hp = Math.max(0, att.stats.hp - r);
+      if (lost > 0) mirrorTake(side.stats, c.color, lost);
+      const inline = leftover > 0;   // Es geht Schaden durch: Der Spiegel wird im Kampfeffekt gezeigt (Funken treffen ihn), nicht als eigene Animation
+      if (inline) defFx.mirror = { markers: mLvl, broken: lost, r };
+      const stufen = lost + ' Stufe' + (lost === 1 ? '' : 'n');
+      log(state, 'Spiegel: ' + side.name + (r > 0 ? ' wirft ' + r + ' Schaden auf ' + att.name + ' zurück' + (lost > 0 ? ' und verliert ' + stufen : '') : ' verliert ' + stufen) + '.', side.ctrl, { kind: 'mirror', elem: c.color, markers: mLvl, broken: lost, att: att.ctrl, r, inline });
     }
   }
   if (defEv && defEv.levels && defEv.levels.ulti > 0 && side.stats.hp > 0) {   // Ultimate in der Verteidigung: Todes-Fluch für den Angreifer

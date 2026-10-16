@@ -117,9 +117,9 @@ function combatPlan(state, pid) {
     const left = Math.max(0, pend - (ev.block || 0));
     const nCurse = sub.filter(h => h.curse).length;
     let score = left * (lethal ? Q.dLeth : Q.dPend) + (ev.cost || 0) * Q.dCost + (sub.length - nCurse) * Q.dKeep - nCurse * 0.6;
-    if (M.mirrorOf(s, color) > 0 && left < s.hp) {   // Spiegel: Verteidigung wirft Marker zurück
-      const opp = c.sides[c.turn === 'a' ? 'b' : 'a'], rel = Math.min(M.mirrorOf(s, color), 1);
-      score -= rel * Q.mirW + (rel >= opp.stats.hp ? 60 : 0);
+    if (M.mirrorOf(s, color) > 0) {   // Spiegel: Rückwurf bis zur Stufe (höchstens so viel, wie geblockt wird); ungeblockter Schaden kostet Stufen
+      const opp = c.sides[c.turn === 'a' ? 'b' : 'a'], lv = M.mirrorOf(s, color), rel = Math.min(lv, ev.block || 0);
+      score -= rel * Q.mirW + (rel >= opp.stats.hp ? 60 : 0) - Math.min(lv, left) * Q.mirKeep;
     }
     if (ev.ord) { const o = c.sides[c.turn === 'a' ? 'b' : 'a']; score -= ordComboWorth(side, o, Q, state.rules, M.levelsFor(ev), ev); }
     if (Q.dU > 0 && ev.levels && ev.levels.ulti > 0) { const o = c.sides[c.turn === 'a' ? 'b' : 'a']; score -= Q.dU * ev.levels.ulti * Q.wDeath * (o.stats.death >= ev.levels.ulti ? 0.1 : 1) * Math.max(0.4, Math.min(1.4, o.stats.hp / 4)); }   // Ultimate in der Verteidigung: Todes-Fluch für den Angreifer

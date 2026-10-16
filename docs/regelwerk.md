@@ -58,7 +58,7 @@ Der aktive Spieler wählt ein lebendes Monster und greift an, der Mitspieler fü
 
 **Statt anzugreifen** darf man: nachziehen (gratis, Hand wird getauscht), **erholen** oder passen. Jede dieser Aktionen beendet den Angriffszug.
 
-**Erholen:** Wer den Angriff auslässt, erhält **Mana in Höhe des Abschnitts** (1 / 2 / 3). In der Verteidigung gilt dasselbe: Wer „Erholen“ wählt, führt keine Verteidigung aus, nimmt den Schaden hin (ein Spiegel wirkt dann nicht) und erhält ebenfalls das Mana. Nachziehen, Erholen und Passen beenden den Zug.
+**Erholen:** Wer den Angriff auslässt, erhält **Mana in Höhe des Abschnitts** (1 / 2 / 3). In der Verteidigung gilt dasselbe: Wer „Erholen“ wählt, führt keine Verteidigung aus, nimmt den Schaden hin (es wird nichts gespiegelt, der Schaden kostet den Spiegel Stufen) und erhält ebenfalls das Mana. Nachziehen, Erholen und Passen beenden den Zug.
 
 **Kampfende:**
 - Fällt eine Seite auf 0 HP, hat die andere gewonnen; fallen beide gleichzeitig, gibt es keinen Sieger.
@@ -78,15 +78,15 @@ Die Farbe der ersten markierten Karte bestimmt die Rolle (Feuer aggressiv, Wasse
 |---|---|---|
 | Aggro | Feuer + Erde | **2·S Fluchkarten** (2 / 4 / 6) auf den Ablagestapel der Gegenseite |
 | Zerrüttung | Feuer + Wasser | Gegner wirft S Handkarten seiner Wahl ab |
-| Spiegel (rot) | Wasser + Feuer | roter Spiegel auf S Marker (nicht addiert, höchstens 3 insgesamt) |
-| Spiegel (grün) | Wasser + Erde | grüner Spiegel auf S Marker |
+| Spiegel (rot) | Wasser + Feuer | roter Spiegel auf Stufe S (nicht addiert, höchstens 3 Stufen insgesamt) |
+| Spiegel (grün) | Wasser + Erde | grüner Spiegel auf Stufe S |
 | Heilung | Erde + Wasser | S HP heilen |
 | Läuterung | Erde + Feuer | S beliebige Marker vom Brett entfernen, je entferntem Marker ein Nachziehtoken |
 | Ultimate | alle drei | Todes-Fluch der Stufe S |
 
 **Fluchkarten:** Sie kommen erst in den Zugstapel, wenn der Ablagestapel gemischt wird. Auf der Hand belegen sie einen Platz und wirken nicht. Beim Nachziehen werden sie dauerhaft verworfen, am Kampfende verschwinden alle.
 
-**Spiegel:** Wirkt automatisch gegen jeden Angriff in der Farbe eines Markers, sobald eine reguläre Verteidigung (mindestens eine Elementkarte) ausgeführt wird; wer nur Schaden hinnimmt (Erholen), löst ihn nicht aus. Der Marker wird verbraucht und wirft 1 Schaden unblockbar auf den Angreifer. Wasserangriffe lassen sich nicht spiegeln.
+**Spiegel:** Dauerhaft (bis Kampfende), je Farbe eine Stufe (1 bis 3, zusammen höchstens 3). Gegen einen Angriff in der Farbe des Spiegels wirft er Schaden in Höhe seiner Stufe unblockbar auf den Angreifer zurück, höchstens aber so viel, wie der Verteidiger tatsächlich geblockt hat (wer nur Schaden hinnimmt, spiegelt nichts). Für jeden ungeblockten Schaden dieser Farbe verliert der Spiegel eine Stufe. Wasserangriffe lassen sich nicht spiegeln.
 
 **Läuterung:** Wählbar sind alle Marker auf dem Brett, auch eigene: Todesmarker, Spiegelmarker und **gegnerische Nachziehtokens**. Gegnerische Tokens werden nur zerstört, sie werden nicht gutgeschrieben. Für jeden anderen entfernten Marker erhält der Angreifer ein Nachziehtoken. Keine Heilung.
 

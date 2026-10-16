@@ -56,13 +56,29 @@ test('Ultimate in der Verteidigung: alle drei Farben erlaubt, Todes-Fluch für d
   assert.ok(me.stats.death >= 1, 'Angreifer trägt einen Todesmarker');
 });
 
-test('Erholen in der Verteidigung gibt Mana und löst keinen Spiegel aus', () => {
-  const { s, c, me, op } = combatSetup(11, ['F2']);
-  op.stats.mana = 2; op.stats.mirrorEl = { F: 1, E: 0, W: 0 }; op.stats.mirror = 1;
+// Spiegel: Verteidiger op mit Feuer-Spiegel der Stufe lvl, Angreifer me schlägt mit F2 zu; def = Verteidigungskarte (oder null = Erholen)
+function spiegelFall(lvl, def) {
+  const { s, me, op } = combatSetup(11, ['F2']);
+  op.stats.mag = { F: 3, E: 3, W: 3 }; op.stats.limit = 3; op.stats.mana = 9; op.stats.hp = op.stats.maxHp = 9; me.stats.hp = me.stats.maxHp = 9;
+  op.stats.mirrorEl = { F: lvl, E: 0, W: 0 }; op.stats.mirror = lvl;
+  if (def) op.deck.hand[0] = Object.assign({}, op.deck.hand[0], { id: def });
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
-  assert.ok(M.apply(s, { pid: op.ctrl, type: 'pass' }).ok);
-  assert.equal(op.stats.mirror, 1);                                    // Spiegel nicht verbraucht
-  assert.ok(op.stats.mana >= 3);                                       // +1 im Abschnitt 1
+  if (def) { assert.ok(M.apply(s, { pid: op.ctrl, type: 'mark', slot: 0 }).ok); assert.ok(M.apply(s, { pid: op.ctrl, type: 'defend' }).ok); }
+  else assert.ok(M.apply(s, { pid: op.ctrl, type: 'pass' }).ok);
+  return { me, op };
+}
+test('Spiegel ist dauerhaft: wirft bis zur Stufe zurück und bleibt bei vollem Block bestehen', () => {
+  const { me, op } = spiegelFall(2, 'W2');                              // Block 2, Stufe 2
+  assert.equal(me.stats.hp, 7); assert.equal(op.stats.hp, 9); assert.equal(op.stats.mirror, 2);
+});
+test('Spiegel wirft höchstens so viel zurück, wie geblockt wurde, und verliert Stufen für ungeblockten Schaden', () => {
+  const { me, op } = spiegelFall(2, 'W1');                              // Block 1 von 2: Rückwurf 1, 1 Schaden geht durch
+  assert.equal(me.stats.hp, 8); assert.equal(op.stats.hp, 8); assert.equal(op.stats.mirror, 1);
+});
+test('Ohne Verteidigung (Erholen) wird nichts gespiegelt, der Schaden kostet Stufen', () => {
+  const { me, op } = spiegelFall(3, null);
+  assert.equal(me.stats.hp, 9); assert.equal(op.stats.hp, 7); assert.equal(op.stats.mirror, 1);
+  assert.ok(op.stats.mana >= 3);                                        // Erholen gibt Mana
 });
 
 test('Monsterwerte je Stufe (Zäh, Limit, Beute)', () => {

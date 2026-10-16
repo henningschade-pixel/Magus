@@ -15,14 +15,14 @@ function ctx() {
 const MAX_MARKS = 3;   // Anzahl der Totenkopf-Plätze neben dem Limit
 function marks(n, cls) { let t = ''; for (let i = 0; i < MAX_MARKS; i++) t += '<img class="mkimg' + (cls ? ' ' + cls : '') + (i < n ? '' : ' off') + '" src="' + IMG.curse + '">'; return t; }
 // Todes-Fluch (Ultimate): HP-Verlust am Ende jeder eigenen Angriffsphase, bis Kampfende.
-// Spiegelmarker (Control): je Element ein Stein neben dem Handbrett, mit Zähler ab 2 Stück.
+// Spiegel: je Element ein Stein neben dem Handbrett, mit Stufenzähler ab 2.
 function mirrorStack(s, x, y, who) {
   if (!(s.mirror > 0)) return '';
   const L = who ? lfCtx() : null;
   let t = '';
   for (const e of M.ELEMENTS) {
     const n = (s.mirrorEl && s.mirrorEl[e]) || 0; if (n <= 0) continue;
-    const tip = 'Spiegel ' + M.NAMES[e] + ' ×' + n + ': Gegen einen ' + M.NAMES[e] + '-Angriff wirkt automatisch ein Marker, sobald du dich verteidigst (mit mindestens einer Elementkarte, egal in welcher Farbe; die Kosten bleiben wie ohne Spiegel): Er wirft 1 Schaden auf den Angreifer zurück und wird verbraucht. Wer keine Verteidigung ausführt (Erholen), löst den Spiegel nicht aus.';
+    const tip = 'Spiegel ' + M.NAMES[e] + ' Stufe ' + n + ': Dauerhaft. Gegen einen ' + M.NAMES[e] + '-Angriff wirft er bis zu ' + n + ' Schaden auf den Angreifer zurück, höchstens aber so viel, wie du geblockt hast. Jeder ungeblockte Schaden dieser Farbe kostet ihn eine Stufe.';
     const shield = IMG['shield_' + e], mul = n > 1 ? '<b class="mul">×' + n + '</b>' : '';   // Schildbild je Farbe, bei mehreren Markern mit Multiplikator
     if (L) {
       const sel = L.picks.filter(p => p === who + 'm:' + e).length;

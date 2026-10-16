@@ -7,7 +7,7 @@ const DEFAULTS = {
   vUp: 8.85, vUpW: 1.4,                                                       // Händler-Aufwertung
   smart: 1, wMark: 0.5, keepB: 3, keepOn: 0, wDeath: 6, wDraw: 1.6, wFW: 2, wFE: 0.9, wEW: 2.8, aDmg: 1.5, aCost: 1.5, aCurse: 1.6, aThr: 0.5, oHits: 8, oFree: 3, stallDec: 0.25, stallFrom: 24,   // Angriffsbewertung
   rW: 0, rRef: 3, dRec: 0, dU: 2,                                                 // Erholen als Manaquelle: Angriffsschwelle steigt bei wenig Mana, Verzicht auf Verteidigung bringt Mana
-  dLeth: 40, dPend: 6, dCost: 1.4, dKeep: 0.9, mirW: 4, mirAvoid: 2, lfOpp: 2, lfOppW: 0.8,                            // Verteidigungsbewertung
+  dLeth: 40, dPend: 6, dCost: 1.4, dKeep: 0.9, mirW: 4, mirKeep: 3, mirAvoid: 2, lfOpp: 2, lfOppW: 0.8,                            // Verteidigungsbewertung
   mBase: 14, mCost: 2.1, mCnt: 0.7, mTop: 2,                              // Magie kaufen
 };
 const PARAMS = {};
