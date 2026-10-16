@@ -3,10 +3,15 @@
    Bonusaktionen im eigenen Zug, beliebig oft und ohne den Zug zu beenden: Gold opfern, Magie kaufen, Upgrade-Punkte ausgeben.
    Upgrade-Punkte dürfen aufgespart werden. Im Kampf sind keine Bonusaktionen möglich. */
 
+// Verlauf für die Statistik: ein Messpunkt zu Beginn, nach jedem Zug und nach jedem Kampf (ev = Kampfereignis)
+function sample(state, ev) {
+  state.hist.push({ ev: ev || null, p: state.players.map(p => ({ gold: p.stats.goldGot, up: p.stats.upGot, lvl: p.temple.level, F: p.stats.mag.F, E: p.stats.mag.E, W: p.stats.mag.W, slots: p.slots, limit: p.stats.limit })) });
+}
 function endTurn(state, pid, kind) {
   const nx = other(pid);
   regen(state.players[nx].stats, regenGain(state));
   state.turn = nx; state.worldTurns++;
+  sample(state);
   if (state.worldTurns % 2 === 0) regenMonsters(state);   // Monster erholen sich am Ende jeder Runde (nach den Zügen beider Spieler)
 }
 
@@ -37,7 +42,7 @@ function execTemple(state, pid, amount) {
   const n = amount | 0;
   if (n <= 0 || n > s.gold) return fail('So viel Gold hast du nicht.');
   const pv = previewTemple(p, n);
-  s.gold -= n; p.temple.points = pv.pool; p.temple.level = pv.level; s.pending += pv.gained;
+  s.gold -= n; p.temple.points = pv.pool; p.temple.level = pv.level; s.pending += pv.gained; s.upGot += pv.gained;
   log(state, p.name + ' opfert ' + n + ' Gold im Tempel (+' + pv.points + ' Punkte, +' + pv.gained + ' Upgrade-Punkt' + (pv.gained === 1 ? '' : 'e') + ').', pid);
   return { ok: true };
 }

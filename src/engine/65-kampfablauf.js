@@ -73,7 +73,7 @@ function endCombat(state, end) {
   if (c.mode === 'monster') {
     const m = c.sides.b.monster;
     if (end.winner === 'a') {
-      const loot = Math.max(0, m.stats.gold); m.stats.gold = 0; A.stats.gold += loot;
+      const loot = Math.max(0, m.stats.gold); m.stats.gold = 0; A.stats.gold += loot; A.stats.goldGot += loot;
       log(state, A.name + ' besiegt ' + m.name + ' und erhält ' + loot + ' Gold.', c.att);
       res.monsterDefeated = true; res.loot = loot;
     } else if (end.winner === 'b') {   // Niederlage gegen das Monster: keine Beute, Monster und Spieler bleiben mit ihren Werten auf dem Brett
@@ -82,11 +82,12 @@ function endCombat(state, end) {
     else log(state, end.reason === 'exhaustion' ? 'Beide Seiten sind erschöpft. Kein Sieger, keine Beute.' : 'Beide Seiten fallen. Kein Sieger, keine Beute.');
   } else {
     if (end.winner) { const w = end.winner === 'a' ? A : B; w.sp += 2; log(state, w.name + ' gewinnt den Showdown (+2 Siegpunkte).', end.winner === 'a' ? c.att : c.def);
-      const L = w === A ? B : A; const lu = state.showdown === 1 && state.rules.loserUp2 !== undefined ? state.rules.loserUp2 : state.rules.loserUp; if (lu > 0 && state.showdown < 2) { L.stats.pending += lu; log(state, L.name + ' erhält als Trostpreis ' + lu + ' Upgrade-Punkt' + (lu > 1 ? 'e' : '') + '.', w === A ? c.def : c.att); } }
+      const L = w === A ? B : A; const lu = state.showdown === 1 && state.rules.loserUp2 !== undefined ? state.rules.loserUp2 : state.rules.loserUp; if (lu > 0 && state.showdown < 2) { L.stats.pending += lu; L.stats.upGot += lu; log(state, L.name + ' erhält als Trostpreis ' + lu + ' Upgrade-Punkt' + (lu > 1 ? 'e' : '') + '.', w === A ? c.def : c.att); } }
     else { A.sp += 1; B.sp += 1; log(state, 'Showdown ohne Sieger: je 1 Siegpunkt.'); }
   }
   state.combat = null; state.phase = 'world'; state.lastCombat = res;
   resetPlayers(state, c.mode);
+  sample(state, { type: c.mode, elem: c.elem, stage: state.stage, n: state.showdown + 1, winner: end.winner === 'a' ? c.att : end.winner === 'b' ? c.def : null });
   state.turn = c.def;
   regen(state.players[c.def].stats, regenGain(state));
   state.worldTurns = 0;
@@ -109,7 +110,7 @@ function endCombat(state, end) {
       if (end.winner) { state.turn = end.winner === 'a' ? c.def : c.att; log(state, state.players[state.turn].name + ' verlor den Showdown und beginnt die nächste Runde.'); }   // der Verlierer beginnt
       const gp = (state.rules.stagePoints || [])[state.stage] || 0;
       const gg = (state.rules.stageGold || [])[state.stage] || 0;
-      if (gp > 0 || gg > 0) { state.players.forEach(p => { p.stats.pending += gp; p.stats.gold += gg; }); log(state, 'Jeder Spieler erhält ' + [gp ? gp + ' kostenlose Upgrade-Punkte' : '', gg ? gg + ' Gold' : ''].filter(Boolean).join(' und ') + '.'); }
+      if (gp > 0 || gg > 0) { state.players.forEach(p => { p.stats.pending += gp; p.stats.gold += gg; p.stats.upGot += gp; p.stats.goldGot += gg; }); log(state, 'Jeder Spieler erhält ' + [gp ? gp + ' kostenlose Upgrade-Punkte' : '', gg ? gg + ' Gold' : ''].filter(Boolean).join(' und ') + '.'); }
       state.monsters = spawnForGame(state, state.stage);
       log(state, 'Abschnitt ' + state.stage + ': Die Monster der Stufe ' + STAGE_NUMERAL[state.stage] + ' erscheinen.' + variantLog(state));
     }

@@ -265,7 +265,6 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .overlay h1{font-family:'Alegreya SC',serif;font-size:56px;margin:0 0 4px;color:var(--gold);letter-spacing:.06em}
 .overlay p{font-size:20px;line-height:1.35;margin:8px 0}
 .overlay ul{flex:1 1 auto;min-height:0;overflow-y:auto;text-align:left;font-size:18px;color:var(--mute);line-height:1.35;padding-left:22px;margin:10px 0 18px}
-#expbtn{position:absolute;left:12px;top:54px;width:26px;height:26px;border-radius:50%;border:1px solid var(--line);background:rgba(10,8,14,.55);color:var(--mute);font-size:14px;line-height:1;cursor:var(--cp);z-index:310;padding:0;opacity:.45;transition:opacity .15s}#expbtn:hover{opacity:1;border-color:var(--gold);color:var(--gold)}
 #homebtn{position:absolute;left:56px;top:12px;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:rgba(10,8,14,.7);font-size:22px;line-height:1;cursor:var(--cp);z-index:250;padding:0;color:var(--bone)}#homebtn:hover{border-color:var(--gold)}
 #sndbtn{position:absolute;left:12px;top:12px;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:rgba(10,8,14,.7);font-size:18px;cursor:var(--cp);z-index:250;padding:0}#sndbtn:hover{border-color:var(--gold)}
 @media (prefers-reduced-motion:reduce){.card,.card .inner{transition-duration:.01s}}
@@ -292,6 +291,15 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .overlay .box.start{align-items:center;padding:34px 44px 30px}
 .overlay .box.start .logo{width:170px;height:170px;object-fit:contain;margin:6px 0 12px;mix-blend-mode:lighten;-webkit-mask-image:radial-gradient(circle,#000 58%,transparent 72%);mask-image:radial-gradient(circle,#000 58%,transparent 72%)}
 .overlay .box.start .mpbox{align-self:stretch}
+#statbtn{position:absolute;left:100px;top:12px;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:rgba(10,8,14,.7);font-size:18px;line-height:1;cursor:var(--cp);z-index:250;padding:0;color:var(--bone)}#statbtn:hover{border-color:var(--gold)}
+.logdl{width:26px;height:26px;border-radius:50%;border:1px solid var(--line);background:rgba(10,8,14,.55);color:var(--mute);font-size:14px;line-height:1;cursor:var(--cp);padding:0;margin-right:8px;vertical-align:middle;opacity:.7}.logdl:hover{opacity:1;border-color:var(--gold);color:var(--gold)}
+.overlay .box.stats{width:1060px;max-width:96vw;max-height:760px;padding:18px 22px;overflow-y:auto}
+.stats .sthead{display:flex;align-items:center;justify-content:space-between}.stats h1{font-size:40px;margin:0}
+.stats .stchips{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+.stchip{font-size:16px;padding:4px 12px;border-radius:999px;border:1px solid var(--line);background:rgba(10,8,14,.5);color:var(--mute);cursor:var(--cp);display:inline-flex;align-items:center;gap:7px}.stchip i{width:12px;height:12px;border-radius:50%;background:var(--c);opacity:.35}
+.stchip.on{color:var(--bone);border-color:var(--gold)}.stchip.on i{opacity:1}
+.stats .stkey{margin-top:8px;font-size:15px}
+
 </style>
 </head>
 <body>
@@ -429,7 +437,7 @@ function toggleLock(d, slot) {
 /* Magus – Regelkern (Teil 2): Werte, Upgrade-Kosten, Tempel. */
 
 function newStats() {
-  return { gold: 3, hp: 3, maxHp: 3, mana: 4, maxMana: 4, limit: 1, mag: { F: 1, E: 1, W: 1 }, pending: 0, freeDraws: 0 };
+  return { gold: 3, hp: 3, maxHp: 3, mana: 4, maxMana: 4, limit: 1, mag: { F: 1, E: 1, W: 1 }, pending: 0, freeDraws: 0, goldGot: 0, upGot: 0 };   // goldGot/upGot: insgesamt erhaltenes Gold und Upgrade-Punkte (für die Statistik)
 }
 function regen(stats, n) {   // n = Gewinn an HP und Mana (Regel regenByStage: je Abschnitt 1/2/3)
   n = n || 1;
@@ -761,7 +769,7 @@ function endCombat(state, end) {
   if (c.mode === 'monster') {
     const m = c.sides.b.monster;
     if (end.winner === 'a') {
-      const loot = Math.max(0, m.stats.gold); m.stats.gold = 0; A.stats.gold += loot;
+      const loot = Math.max(0, m.stats.gold); m.stats.gold = 0; A.stats.gold += loot; A.stats.goldGot += loot;
       log(state, A.name + ' besiegt ' + m.name + ' und erhält ' + loot + ' Gold.', c.att);
       res.monsterDefeated = true; res.loot = loot;
     } else if (end.winner === 'b') {   // Niederlage gegen das Monster: keine Beute, Monster und Spieler bleiben mit ihren Werten auf dem Brett
@@ -770,11 +778,12 @@ function endCombat(state, end) {
     else log(state, end.reason === 'exhaustion' ? 'Beide Seiten sind erschöpft. Kein Sieger, keine Beute.' : 'Beide Seiten fallen. Kein Sieger, keine Beute.');
   } else {
     if (end.winner) { const w = end.winner === 'a' ? A : B; w.sp += 2; log(state, w.name + ' gewinnt den Showdown (+2 Siegpunkte).', end.winner === 'a' ? c.att : c.def);
-      const L = w === A ? B : A; const lu = state.showdown === 1 && state.rules.loserUp2 !== undefined ? state.rules.loserUp2 : state.rules.loserUp; if (lu > 0 && state.showdown < 2) { L.stats.pending += lu; log(state, L.name + ' erhält als Trostpreis ' + lu + ' Upgrade-Punkt' + (lu > 1 ? 'e' : '') + '.', w === A ? c.def : c.att); } }
+      const L = w === A ? B : A; const lu = state.showdown === 1 && state.rules.loserUp2 !== undefined ? state.rules.loserUp2 : state.rules.loserUp; if (lu > 0 && state.showdown < 2) { L.stats.pending += lu; L.stats.upGot += lu; log(state, L.name + ' erhält als Trostpreis ' + lu + ' Upgrade-Punkt' + (lu > 1 ? 'e' : '') + '.', w === A ? c.def : c.att); } }
     else { A.sp += 1; B.sp += 1; log(state, 'Showdown ohne Sieger: je 1 Siegpunkt.'); }
   }
   state.combat = null; state.phase = 'world'; state.lastCombat = res;
   resetPlayers(state, c.mode);
+  sample(state, { type: c.mode, elem: c.elem, stage: state.stage, n: state.showdown + 1, winner: end.winner === 'a' ? c.att : end.winner === 'b' ? c.def : null });
   state.turn = c.def;
   regen(state.players[c.def].stats, regenGain(state));
   state.worldTurns = 0;
@@ -797,7 +806,7 @@ function endCombat(state, end) {
       if (end.winner) { state.turn = end.winner === 'a' ? c.def : c.att; log(state, state.players[state.turn].name + ' verlor den Showdown und beginnt die nächste Runde.'); }   // der Verlierer beginnt
       const gp = (state.rules.stagePoints || [])[state.stage] || 0;
       const gg = (state.rules.stageGold || [])[state.stage] || 0;
-      if (gp > 0 || gg > 0) { state.players.forEach(p => { p.stats.pending += gp; p.stats.gold += gg; }); log(state, 'Jeder Spieler erhält ' + [gp ? gp + ' kostenlose Upgrade-Punkte' : '', gg ? gg + ' Gold' : ''].filter(Boolean).join(' und ') + '.'); }
+      if (gp > 0 || gg > 0) { state.players.forEach(p => { p.stats.pending += gp; p.stats.gold += gg; p.stats.upGot += gp; p.stats.goldGot += gg; }); log(state, 'Jeder Spieler erhält ' + [gp ? gp + ' kostenlose Upgrade-Punkte' : '', gg ? gg + ' Gold' : ''].filter(Boolean).join(' und ') + '.'); }
       state.monsters = spawnForGame(state, state.stage);
       log(state, 'Abschnitt ' + state.stage + ': Die Monster der Stufe ' + STAGE_NUMERAL[state.stage] + ' erscheinen.' + variantLog(state));
     }
@@ -1012,10 +1021,15 @@ function applyCombat(state, a) {
    Bonusaktionen im eigenen Zug, beliebig oft und ohne den Zug zu beenden: Gold opfern, Magie kaufen, Upgrade-Punkte ausgeben.
    Upgrade-Punkte dürfen aufgespart werden. Im Kampf sind keine Bonusaktionen möglich. */
 
+// Verlauf für die Statistik: ein Messpunkt zu Beginn, nach jedem Zug und nach jedem Kampf (ev = Kampfereignis)
+function sample(state, ev) {
+  state.hist.push({ ev: ev || null, p: state.players.map(p => ({ gold: p.stats.goldGot, up: p.stats.upGot, lvl: p.temple.level, F: p.stats.mag.F, E: p.stats.mag.E, W: p.stats.mag.W, slots: p.slots, limit: p.stats.limit })) });
+}
 function endTurn(state, pid, kind) {
   const nx = other(pid);
   regen(state.players[nx].stats, regenGain(state));
   state.turn = nx; state.worldTurns++;
+  sample(state);
   if (state.worldTurns % 2 === 0) regenMonsters(state);   // Monster erholen sich am Ende jeder Runde (nach den Zügen beider Spieler)
 }
 
@@ -1046,7 +1060,7 @@ function execTemple(state, pid, amount) {
   const n = amount | 0;
   if (n <= 0 || n > s.gold) return fail('So viel Gold hast du nicht.');
   const pv = previewTemple(p, n);
-  s.gold -= n; p.temple.points = pv.pool; p.temple.level = pv.level; s.pending += pv.gained;
+  s.gold -= n; p.temple.points = pv.pool; p.temple.level = pv.level; s.pending += pv.gained; s.upGot += pv.gained;
   log(state, p.name + ' opfert ' + n + ' Gold im Tempel (+' + pv.points + ' Punkte, +' + pv.gained + ' Upgrade-Punkt' + (pv.gained === 1 ? '' : 'e') + ').', pid);
   return { ok: true };
 }
@@ -1100,14 +1114,15 @@ function newPlayer(state, name, ai) {
 function newGame(opts) {
   opts = opts || {};
   const seed = (opts.seed === undefined ? (Date.now() & 0x7fffffff) : opts.seed) >>> 0;
-  const state = { rules: Object.assign({}, DEFAULT_RULES, opts.rules || {}), seed, rng: makeRng(seed), uid: 1, log: [], logN: 0, stage: 1, showdown: 0, phase: 'world', turn: 0, combat: null, over: false, winner: null, worldTurns: 0, combatTurnsTotal: 0 };
+  const state = { rules: Object.assign({}, DEFAULT_RULES, opts.rules || {}), seed, rng: makeRng(seed), uid: 1, log: [], logN: 0, stage: 1, showdown: 0, phase: 'world', turn: 0, hist: [], combat: null, over: false, winner: null, worldTurns: 0, combatTurnsTotal: 0 };
   const names = opts.names || ['Du', 'Gegner'];
   state.players = [newPlayer(state, names[0], opts.ai ? opts.ai[0] : false), newPlayer(state, names[1], opts.ai ? opts.ai[1] : true)];
   state.monsters = spawnForGame(state, 1);
   state.turn = opts.first === undefined ? 0 : opts.first;
   const gp1 = (state.rules.stagePoints || [])[1] || 0, gg1 = (state.rules.stageGold || [])[1] || 0;
-  state.players.forEach(p => { p.stats.pending += gp1; p.stats.gold += gg1; });
+  state.players.forEach(p => { p.stats.pending += gp1; p.stats.gold += gg1; p.stats.upGot += gp1; p.stats.goldGot += gg1; });
   log(state, 'Abschnitt 1: Die Monster der Stufe I erscheinen.' + variantLog(state) + (gp1 || gg1 ? ' Jeder Spieler erhält ' + [gp1 ? gp1 + ' Upgrade-Punkt' + (gp1 > 1 ? 'e' : '') : '', gg1 ? gg1 + ' Gold' : ''].filter(Boolean).join(' und ') + '.' : ''));
+  sample(state);
   return state;
 }
 // Führt eine Aktion aus: { pid, type, ... }. Antwort { ok } oder { ok:false, error }.
@@ -2747,10 +2762,10 @@ function renderInner() {
   if (cx.combat) {   // links: nur der Kampflog (Einträge seit Kampfbeginn)
     const from = cx.c.logFrom || 0;
     logEl.className = 'logpanel'; logEl.style.cssText = box(LAYOUT.combo);
-    logEl.innerHTML = '<h3>Kampflog</h3><div class="logl">' + G.log.filter(e => e.n > from).slice(-300).map(e => '<div class="' + (e.pid === ME ? 'me' : e.pid === null ? '' : 'op') + '">' + esc(e.txt) + '</div>').join('') + '</div>';
+    logEl.innerHTML = '<h3><button class="logdl" title="Spiellog exportieren (Alt-Klick: in die Zwischenablage)">⤓</button>Kampflog</h3><div class="logl">' + G.log.filter(e => e.n > from).slice(-300).map(e => '<div class="' + (e.pid === ME ? 'me' : e.pid === null ? '' : 'op') + '">' + esc(e.txt) + '</div>').join('') + '</div>';
   } else {
     logEl.className = 'logpanel'; logEl.style.cssText = box(LAYOUT.logPanel);
-    logEl.innerHTML = '<h3>Protokoll</h3><div class="logst">Abschnitt ' + G.stage + '/3 · Showdowns ' + G.showdown + '/3<br>Siegpunkte ' + G.players[ME].sp + ' : ' + G.players[OPP].sp + '</div><div class="logl">' + G.log.slice(-300).map(e => '<div class="' + (e.pid === ME ? 'me' : e.pid === null ? '' : 'op') + '">' + esc(e.txt) + '</div>').join('') + '</div>';
+    logEl.innerHTML = '<h3><button class="logdl" title="Spiellog exportieren (Alt-Klick: in die Zwischenablage)">⤓</button>Protokoll</h3><div class="logst">Abschnitt ' + G.stage + '/3 · Showdowns ' + G.showdown + '/3<br>Siegpunkte ' + G.players[ME].sp + ' : ' + G.players[OPP].sp + '</div><div class="logl">' + G.log.slice(-300).map(e => '<div class="' + (e.pid === ME ? 'me' : e.pid === null ? '' : 'op') + '">' + esc(e.txt) + '</div>').join('') + '</div>';
   }
   { const lg = logEl.querySelector('.logl'); if (lg) lg.scrollTop = lgKeep === null ? lg.scrollHeight : lgKeep; }
   { const mc = cx.combat && G.combat.mode === 'monster' ? G.combat : null, side = mc ? (G.combat.sides.b.ctrl === ME ? 'bot' : 'top') : '';   // Farbe auf der Seite dessen, der das Monster steuert
@@ -3055,6 +3070,8 @@ function onAct(d) {
   switch (d.act) {
     case 'newgame': newGame(); break;
     case 'home': homeMenu(); break;
+    case 'stclose': overlay.style.display = 'none'; overlay.innerHTML = ''; pump(); break;
+    case 'stwho': case 'stser': statsToggle(d.act, d.k); break;
     case 'resume': overlay.style.display = 'none'; overlay.innerHTML = ''; pump(); break;
     case 'restart': if (!MP) newGame(); break;
     case 'leave': clearTimeout(aiTimer); if (MP) { mpLeave(); G = null; started = false; } showStart(); break;
@@ -3172,6 +3189,67 @@ const sndBtn = document.createElement('button');
 sndBtn.id = 'sndbtn'; sndBtn.title = 'Ton an/aus'; sndBtn.textContent = Snd.on ? '🔊' : '🔇';
 sndBtn.addEventListener('click', e => { e.stopPropagation(); sndBtn.textContent = Snd.toggle() ? '🔊' : '🔇'; });
 stage.appendChild(sndBtn);
+/* ---------- Statistik: Verlaufskurven über die Züge (Messpunkte kommen aus G.hist der Engine) ---------- */
+const ST_SERIES = [
+  { k: 'gold', name: 'Gold (insgesamt)', col: '#e0b84a' },
+  { k: 'up', name: 'Upgrades (insgesamt)', col: '#c47fe0' },
+  { k: 'lvl', name: 'Tempelstufe', col: '#e8e3d0' },
+  { k: 'F', name: 'Magie Feuer', col: '#ff7a3d' },
+  { k: 'E', name: 'Magie Erde', col: '#93c24f' },
+  { k: 'W', name: 'Magie Wasser', col: '#52a6f5' },
+  { k: 'slots', name: 'Handkarten', col: '#e58aa0' },
+  { k: 'limit', name: 'Ausspiellimit', col: '#5fd0c4' },
+];
+const stOn = new Set(['gold', 'up', 'lvl']), stWho = { me: true, opp: true };
+function statsView() {
+  const H = G.hist || [], N = H.length, W = 1000, T = 52, B = 40, L = 44, R = 16, PH = 330, ph = T + PH + B, pw = W - L - R;
+  const xs = i => L + (N < 2 ? pw / 2 : i / (N - 1) * pw);
+  const vals = [];
+  ST_SERIES.forEach(s => { if (stOn.has(s.k)) H.forEach(h => { if (stWho.me) vals.push(h.p[ME][s.k]); if (stWho.opp) vals.push(h.p[OPP][s.k]); }); });
+  const top = Math.max(4, Math.ceil(Math.max(0, ...vals) / 2) * 2), ys = v => T + PH - v / top * PH;
+  let svg = '<svg viewBox="0 0 ' + W + ' ' + ph + '" width="' + W + '" height="' + ph + '" style="display:block;max-width:100%">';
+  for (let g = 0; g <= top; g += top <= 10 ? 1 : 2) svg += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + ys(g) + '" y2="' + ys(g) + '" stroke="rgba(255,255,255,.1)"/><text x="' + (L - 8) + '" y="' + (ys(g) + 5) + '" text-anchor="end" fill="#9a97a6" font-size="14">' + g + '</text>';
+  const step = Math.max(1, Math.ceil(N / 16));
+  for (let i = 0; i < N; i += step) svg += '<text x="' + xs(i) + '" y="' + (T + PH + 22) + '" text-anchor="middle" fill="#9a97a6" font-size="14">' + i + '</text>';
+  svg += '<text x="' + (L + pw / 2) + '" y="' + (ph - 4) + '" text-anchor="middle" fill="#9a97a6" font-size="14">Züge</text>';
+  H.forEach((h, i) => {   // Kampfereignisse als Zeichen am oberen Rand, mit Hilfslinie
+    const e = h.ev; if (!e) return;
+    const x = xs(i), mine = e.winner === ME, res = e.winner === null ? 'ohne Sieger' : mine ? 'Sieg für dich' : 'Sieg für den Gegner';
+    svg += '<line x1="' + x + '" x2="' + x + '" y1="' + (T - 8) + '" y2="' + (T + PH) + '" stroke="rgba(255,255,255,.14)" stroke-dasharray="3 4"/>';
+    if (e.type === 'showdown') svg += '<g><title>Showdown ' + e.n + ': ' + res + '</title><text x="' + x + '" y="' + (T - 14) + '" text-anchor="middle" fill="#e0b84a" font-size="30">★</text><text x="' + x + '" y="' + (T + 4) + '" text-anchor="middle" fill="' + (e.winner === null ? '#9a97a6' : mine ? '#9be37a' : '#ff6b6b') + '" font-size="13">' + (e.winner === null ? '=' : mine ? 'Sieg' : 'Nied.') + '</text></g>';
+    else svg += '<g><title>' + M.NAMES[e.elem] + 'monster Stufe ' + e.stage + ': ' + res + '</title><circle cx="' + x + '" cy="' + (T - 12) + '" r="11" fill="' + ({ F: '#ff7a3d', E: '#93c24f', W: '#52a6f5' }[e.elem] || '#888') + '" stroke="#0a080e" stroke-width="2"/><text x="' + x + '" y="' + (T - 7) + '" text-anchor="middle" fill="#0a080e" font-size="15" font-weight="700">' + (e.winner === null ? '–' : mine ? '✓' : '✗') + '</text></g>';
+  });
+  ST_SERIES.forEach(s => {
+    if (!stOn.has(s.k)) return;
+    [['me', ME, ''], ['opp', OPP, '7 5']].forEach(([key, seat, dash]) => {
+      if (!stWho[key]) return;
+      const pts = H.map((h, i) => xs(i).toFixed(1) + ',' + ys(h.p[seat][s.k]).toFixed(1));
+      if (pts.length > 1) svg += '<polyline points="' + pts.join(' ') + '" fill="none" stroke="' + s.col + '" stroke-width="3" stroke-linejoin="round"' + (dash ? ' stroke-dasharray="' + dash + '" opacity=".75"' : '') + '/>';
+      else if (pts.length === 1) { const q = pts[0].split(','); svg += '<circle cx="' + q[0] + '" cy="' + q[1] + '" r="4" fill="' + s.col + '"/>'; }
+      H.forEach((h, i) => { svg += '<circle cx="' + xs(i).toFixed(1) + '" cy="' + ys(h.p[seat][s.k]).toFixed(1) + '" r="' + (N > 60 ? 0 : 3) + '" fill="' + s.col + '"><title>' + s.name + ' (' + (key === 'me' ? 'du' : esc(G.players[OPP].name)) + ') nach Zug ' + i + ': ' + h.p[seat][s.k] + '</title></circle>'; });
+    });
+  });
+  svg += '</svg>';
+  const chip = (on, act, k, label, col) => '<button class="stchip' + (on ? ' on' : '') + '" data-act="' + act + '" data-k="' + k + '"' + (col ? ' style="--c:' + col + '"' : '') + '>' + (col ? '<i></i>' : '') + label + '</button>';
+  return '<div class="box stats"><div class="sthead"><h1>Statistik</h1><button class="btn" data-act="stclose">Schließen</button></div>' +
+    '<div class="stchips">' + chip(stWho.me, 'stwho', 'me', 'Du (durchgezogen)') + chip(stWho.opp, 'stwho', 'opp', esc(G.players[OPP].name) + ' (gestrichelt)') + '</div>' +
+    '<div class="stchips">' + ST_SERIES.map(s => chip(stOn.has(s.k), 'stser', s.k, s.name, s.col)).join('') + '</div>' + svg +
+    '<div class="note stkey"><span style="color:#e0b84a">★</span> Showdown · <b>●</b> Monsterkampf in der Farbe des Monsters (✓ du gewinnst, ✗ Gegner gewinnt, – ohne Sieger) · x-Achse: Messpunkte nach jedem Zug und jedem Kampf</div></div>';
+}
+function statsOpen() {
+  if (!G || !started || overlay.style.display === 'flex') return;
+  clearTimeout(aiTimer);   // das Spiel pausiert, solange die Statistik offen ist
+  overlay.style.display = 'flex'; overlay.innerHTML = statsView();
+}
+function statsToggle(act, k) {
+  if (act === 'stwho') { stWho[k] = !stWho[k]; if (!stWho.me && !stWho.opp) stWho[k === 'me' ? 'opp' : 'me'] = true; }
+  else if (stOn.has(k)) { if (stOn.size > 1) stOn.delete(k); } else stOn.add(k);
+  overlay.innerHTML = statsView();
+}
+const statBtn = document.createElement('button');
+statBtn.id = 'statbtn'; statBtn.title = 'Statistik: Verlauf über die Züge'; statBtn.textContent = '📈';
+statBtn.addEventListener('click', e => { e.stopPropagation(); statsOpen(); });
+stage.appendChild(statBtn);
 /* ---------- Spiellog-Export (jederzeit, auch am Spielende) ---------- */
 function buildExport() {
   if (!G) return null;
@@ -3186,10 +3264,9 @@ function buildExport() {
     log: G.log.map(e => ({ n: e.n, pid: e.pid, text: e.txt }))
   };
 }
-const expBtn = document.createElement('button');
-expBtn.id = 'expbtn'; expBtn.title = 'Spiellog exportieren (Alt-Klick: in die Zwischenablage)'; expBtn.textContent = '⤓';
-expBtn.addEventListener('click', async e => {
-  e.stopPropagation();
+// Der Export-Knopf sitzt in der Kopfzeile des Logs (siehe render in 26-erde.js)
+logEl.addEventListener('click', e => { if (e.target.closest('.logdl')) { e.stopPropagation(); exportLog(e); } });
+async function exportLog(e) {
   const d = buildExport(); if (!d) { toast('Noch keine Partie.'); return; }
   const txt = JSON.stringify(d, null, 1);
   const fn = 'magus-log-' + d.seed + '-' + new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '') + '.json';
@@ -3201,8 +3278,7 @@ expBtn.addEventListener('click', async e => {
     a.href = u; a.download = fn; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000);
     toast('Spiellog exportiert (' + d.actions.length + ' Aktionen).');
   } catch (x) { toast('Export nicht möglich.'); }
-});
-stage.appendChild(expBtn);
+}
 window.__magus = { get mp() { return MP && { n: MP.log.length, started: MP.started, seat: MP.seat }; }, get state() { return G; }, act, newGame, pump };
 showStart();
 mpRestore();

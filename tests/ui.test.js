@@ -30,3 +30,22 @@ test('Spiel startet, Kampf endet mit Ergebnis-Bildschirm, Klick führt zurück i
     assert.deepEqual(errs, []);
   } finally { await b.close(); }
 });
+
+test('Statistikseite öffnet, zeigt den Verlauf und lässt sich filtern und schließen; Export-Knopf sitzt im Log', { skip: !chromium && 'Playwright nicht installiert', timeout: 60000 }, async () => {
+  const b = await chromium.launch({ executablePath: exe });
+  try {
+    const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
+    p.on('pageerror', e => errs.push(e.message));
+    await p.goto(url); await p.waitForTimeout(500);
+    await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
+    assert.equal(await p.locator('#log .logdl').count(), 1);
+    await p.click('#statbtn');
+    await p.waitForSelector('.box.stats svg');
+    assert.ok(await p.locator('.box.stats polyline, .box.stats circle').count() > 0);
+    await p.click('.stchip:has-text("Magie Feuer")');
+    assert.ok(await p.locator('.stchip.on:has-text("Magie Feuer")').count() === 1);
+    await p.click('text=Schließen');
+    assert.equal(await p.evaluate(() => document.getElementById('overlay').style.display), 'none');
+    assert.deepEqual(errs, []);
+  } finally { await b.close(); }
+});

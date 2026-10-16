@@ -13,7 +13,7 @@ Engine, KI und Oberfläche sind drei getrennte Schichten; die Oberfläche kennt 
 - Grundlage: 00 Start/Zustand · 10 Layout · 11 Skalierung · 12 Hilfen · 14 Sound
 - Darstellung: 15 Karten · 16 Seitenleisten · 17 Weltphase · 18 Kampf · 19 Gesamtdarstellung · 26 Erde (Weltphasen-Hintergrund)
 - Animationen: 13 Zugwechsel · 20 Todesfluch · 21 Spiegelbruch · 22 Lifeflow/Aggro · 23 Kampffunken · 24 Funken · 25 Auflösung
-- Ablauf und Eingaben: 27 Ablauf (Spielschleife, Ergebnis-Overlay) · 30 Eingaben · 31 Spiellog
+- Ablauf und Eingaben: 27 Ablauf (Spielschleife, Ergebnis-Overlay) · 30 Eingaben · 31 Statistik · 32 Spiellog (Export)
 - Mehrspieler: 28 PeerJS · 29 Mehrspieler
 
 Regeln: Die Engine hält allen Spielzustand (`G`); die Oberfläche rendert ihn nur und schickt Aktionen über `M.apply`.

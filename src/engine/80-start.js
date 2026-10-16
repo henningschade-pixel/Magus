@@ -13,14 +13,15 @@ function newPlayer(state, name, ai) {
 function newGame(opts) {
   opts = opts || {};
   const seed = (opts.seed === undefined ? (Date.now() & 0x7fffffff) : opts.seed) >>> 0;
-  const state = { rules: Object.assign({}, DEFAULT_RULES, opts.rules || {}), seed, rng: makeRng(seed), uid: 1, log: [], logN: 0, stage: 1, showdown: 0, phase: 'world', turn: 0, combat: null, over: false, winner: null, worldTurns: 0, combatTurnsTotal: 0 };
+  const state = { rules: Object.assign({}, DEFAULT_RULES, opts.rules || {}), seed, rng: makeRng(seed), uid: 1, log: [], logN: 0, stage: 1, showdown: 0, phase: 'world', turn: 0, hist: [], combat: null, over: false, winner: null, worldTurns: 0, combatTurnsTotal: 0 };
   const names = opts.names || ['Du', 'Gegner'];
   state.players = [newPlayer(state, names[0], opts.ai ? opts.ai[0] : false), newPlayer(state, names[1], opts.ai ? opts.ai[1] : true)];
   state.monsters = spawnForGame(state, 1);
   state.turn = opts.first === undefined ? 0 : opts.first;
   const gp1 = (state.rules.stagePoints || [])[1] || 0, gg1 = (state.rules.stageGold || [])[1] || 0;
-  state.players.forEach(p => { p.stats.pending += gp1; p.stats.gold += gg1; });
+  state.players.forEach(p => { p.stats.pending += gp1; p.stats.gold += gg1; p.stats.upGot += gp1; p.stats.goldGot += gg1; });
   log(state, 'Abschnitt 1: Die Monster der Stufe I erscheinen.' + variantLog(state) + (gp1 || gg1 ? ' Jeder Spieler erhält ' + [gp1 ? gp1 + ' Upgrade-Punkt' + (gp1 > 1 ? 'e' : '') : '', gg1 ? gg1 + ' Gold' : ''].filter(Boolean).join(' und ') + '.' : ''));
+  sample(state);
   return state;
 }
 // Führt eine Aktion aus: { pid, type, ... }. Antwort { ok } oder { ok:false, error }.

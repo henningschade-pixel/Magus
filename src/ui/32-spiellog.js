@@ -12,10 +12,9 @@ function buildExport() {
     log: G.log.map(e => ({ n: e.n, pid: e.pid, text: e.txt }))
   };
 }
-const expBtn = document.createElement('button');
-expBtn.id = 'expbtn'; expBtn.title = 'Spiellog exportieren (Alt-Klick: in die Zwischenablage)'; expBtn.textContent = '⤓';
-expBtn.addEventListener('click', async e => {
-  e.stopPropagation();
+// Der Export-Knopf sitzt in der Kopfzeile des Logs (siehe render in 26-erde.js)
+logEl.addEventListener('click', e => { if (e.target.closest('.logdl')) { e.stopPropagation(); exportLog(e); } });
+async function exportLog(e) {
   const d = buildExport(); if (!d) { toast('Noch keine Partie.'); return; }
   const txt = JSON.stringify(d, null, 1);
   const fn = 'magus-log-' + d.seed + '-' + new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '') + '.json';
@@ -27,8 +26,7 @@ expBtn.addEventListener('click', async e => {
     a.href = u; a.download = fn; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000);
     toast('Spiellog exportiert (' + d.actions.length + ' Aktionen).');
   } catch (x) { toast('Export nicht möglich.'); }
-});
-stage.appendChild(expBtn);
+}
 window.__magus = { get mp() { return MP && { n: MP.log.length, started: MP.started, seat: MP.seat }; }, get state() { return G; }, act, newGame, pump };
 showStart();
 mpRestore();

@@ -168,7 +168,10 @@
   "file": "ui/30-eingaben.js"
  },
  {
-  "file": "ui/31-spiellog.js"
+  "file": "ui/31-statistik.js"
+ },
+ {
+  "file": "ui/32-spiellog.js"
  },
  {
   "literal": "</script>"
