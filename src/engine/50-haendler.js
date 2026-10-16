@@ -33,7 +33,6 @@ function vendorPlans(state, pid) {
 }
 function execVendor(state, pid, a) {
   const p = state.players[pid], d = p.deck;
-  if (!campAllowed(state, pid, 'vendor')) return fail('Händler in der Erholungsphase schon genutzt.');
   const sel = markedCards(d);
   const want = JSON.stringify(a.cost || []);
   const opt = vendorChoices(sel, p.stats.limit).find(o => o.result === a.result && JSON.stringify(o.cost) === want);

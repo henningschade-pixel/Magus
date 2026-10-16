@@ -1,12 +1,11 @@
 /* Magus – Regelkern (Teil 8): Spielstart und Schnittstelle nach außen. */
 
 // Regelwerte (Abstimmungs- und Variantenschalter). ‚curses‘: Fluchsystem, siehe 30-curses.js.
-// secondPlayerPending: Upgrade-Punkte, die der zweite Spieler als Ausgleich für den Startvorteil des ersten bekommt.
-// firstPlayerGold: zusätzliches Startgold für den Beginnenden (Ausgleich zum Vorteil des zweiten Spielers).
-const DEFAULT_RULES = { magicCost: [0, 1, 3], limitCost: 2, limitFirstStepCost: 2, secondPlayerPending: 0, campActions: 0, showdownAttacker: 'behind', firstPlayerGold: 0, hpPerPoint: 2, monsterVariants: true, monstersPerStage: 3, fightReset: true, fightCarry: true, stagePoints: [0, 1, 2, 3], stageGold: [0, 1, 2, 3], startGold: 0, secondPlayerGold: 0, loserStarts: true, loserUp: 1, loserUp2: 2, winSp: 4, freshHands: false, showdownRestore: false, lootShare: 0, lootPot: false, recoverByStage: [1, 2, 3], regenByStage: [1, 2, 3] };   // Jede gespielte Karte (auch Kombokarten) kostet 1 Mana, nur Verteidigung in der überlegenen Farbe ist gratis. recoverByStage: Mana-Gewinn von „Erholen“ im Kampf je Abschnitt
+const DEFAULT_RULES = { magicCost: [0, 1, 3], limitCost: 2, limitFirstStepCost: 2, hpPerPoint: 2, stagePoints: [0, 1, 2, 3], stageGold: [0, 1, 2, 3], loserUp: 1, loserUp2: 2, winSp: 4, recoverByStage: [1, 2, 3], regenByStage: [1, 2, 3] };   // Jede gespielte Karte (auch Kombokarten) kostet 1 Mana, nur Verteidigung in der überlegenen Farbe ist gratis. recoverByStage: Mana-Gewinn von „Erholen“ im Kampf je Abschnitt
 
 function newPlayer(state, name, ai) {
   const p = { name, ai: !!ai, stats: newStats(), temple: { points: 0, level: 0 }, sp: 0, slots: MIN_SLOTS };
+  p.stats.gold = 0;   // Das Spiel beginnt ohne Gold; Abschnittsboni kommen in newGame
   p.deck = newDeck(state, START_DECK, MIN_SLOTS);
   return p;
 }
@@ -14,15 +13,11 @@ function newPlayer(state, name, ai) {
 function newGame(opts) {
   opts = opts || {};
   const seed = (opts.seed === undefined ? (Date.now() & 0x7fffffff) : opts.seed) >>> 0;
-  const state = { rules: Object.assign({}, DEFAULT_RULES, opts.rules || {}), seed, rng: makeRng(seed), uid: 1, log: [], logN: 0, stage: 1, showdown: 0, phase: 'world', turn: 0, camp: null, combat: null, over: false, winner: null, worldTurns: 0, combatTurnsTotal: 0 };
+  const state = { rules: Object.assign({}, DEFAULT_RULES, opts.rules || {}), seed, rng: makeRng(seed), uid: 1, log: [], logN: 0, stage: 1, showdown: 0, phase: 'world', turn: 0, combat: null, over: false, winner: null, worldTurns: 0, combatTurnsTotal: 0 };
   const names = opts.names || ['Du', 'Gegner'];
   state.players = [newPlayer(state, names[0], opts.ai ? opts.ai[0] : false), newPlayer(state, names[1], opts.ai ? opts.ai[1] : true)];
-  state.players.forEach(p => { p.stats.gold = state.rules.startGold; });
   state.monsters = spawnForGame(state, 1);
   state.turn = opts.first === undefined ? 0 : opts.first;
-  state.players[other(state.turn)].stats.pending += state.rules.secondPlayerPending;
-  state.players[state.turn].stats.gold += state.rules.firstPlayerGold;
-  state.players[other(state.turn)].stats.gold += state.rules.secondPlayerGold;   // Ausgleich: der Beginnende startet mit mehr Gold
   const gp1 = (state.rules.stagePoints || [])[1] || 0, gg1 = (state.rules.stageGold || [])[1] || 0;
   state.players.forEach(p => { p.stats.pending += gp1; p.stats.gold += gg1; });
   log(state, 'Abschnitt 1: Die Monster der Stufe I erscheinen.' + variantLog(state) + (gp1 || gg1 ? ' Jeder Spieler erhält ' + [gp1 ? gp1 + ' Upgrade-Punkt' + (gp1 > 1 ? 'e' : '') : '', gg1 ? gg1 + ' Gold' : ''].filter(Boolean).join(' und ') + '.' : ''));
@@ -65,6 +60,6 @@ function handCounts(d) { const c = {}; d.hand.forEach(x => { if (x) c[x.id] = (c
 return { ELEMENTS, SUPERIOR, NAMES, START_DECK, MAX_MAGIC, MAX_SLOTS, MIN_SLOTS, MAX_LIMIT, DEFAULT_RULES, MONSTER,
   makeRng, parseCard, selection, newGame, apply, record, prim, actor, other, regen, handCounts,
   vendorOffers, vendorPlans, previewTemple, pointsForGold, nextLevelCost, limitStepCost, manaStepCost, magicCost,
-  evalAttack, evalDefense, recoverGain, regenGain, comboLevels, levelsFor, campAllowed,
+  evalAttack, evalDefense, recoverGain, regenGain, comboLevels, levelsFor,
   mirrorOf, monsterAlive, allMonstersDead, magicProgress, spawnMonsters, spawnForGame };
 }));

@@ -1,8 +1,8 @@
-/* ---------- Weltphase: Händler, Monster, Lager ---------- */
+/* ---------- Weltphase: Händler, Monster ---------- */
 function vendorPanel() {
   const p = G.players[ME];
   const offers = M.vendorOffers(G, ME);
-  const can = myTurn() && M.campAllowed(G, ME, 'vendor');
+  const can = myTurn();
   let h = '<h3>Händler</h3>';
   if (!offers.some(o => !o.free)) h += '<div class="note" style="margin-top:6px">Für Aufwertungen: Karten aus deiner Hand markieren.</div>';
   h += '<div class="row" style="margin-bottom:8px;margin-top:6px">';
@@ -27,17 +27,9 @@ function monsterCards() {
         '<div class="sm">Mana ' + st.mana + '/' + st.maxMana + ' · Limit ' + st.limit + '</div><div class="bar mana"><i style="width:' + st.mana / st.maxMana * 100 + '%"></i></div>' +
         '<div class="sm"><span class="dots F">' + dots(st.mag.F) + '</span> <span class="dots E">' + dots(st.mag.E) + '</span> <span class="dots W">' + dots(st.mag.W) + '</span></div>' +
         '<div class="loot">Beute ' + st.gold + '' + '</div>' +
-        '<button class="btn small" data-act="combat" data-e="' + e + '" ' + (my && !G.camp ? '' : 'disabled') + '>Kämpfen</button>';
+        '<button class="btn small" data-act="combat" data-e="' + e + '" ' + (my ? '' : 'disabled') + '>Kämpfen</button>';
     } else h += '<div class="sm" style="margin-top:12px">' + 'besiegt' + '</div>';
     h += '</div>';
   });
   return h;
-}
-function campPanel() {
-  const c = G.camp, my = myTurn();
-  const left = i => c.remaining[i];
-  let h = '<h3>Erholungsphase</h3><div class="note" style="font-size:17px;margin:4px 0 10px">Alle Monster sind besiegt. Jeder Spieler hat zwei Aktionen: Händler, Erholen oder Passen, jede höchstens einmal. Tempel, Magie und Upgrade-Punkte sind Bonusaktionen. Danach beginnt der Showdown mit neu gemischter, voller Hand.</div>';
-  h += '<div class="statrow"><b style="min-width:120px">Du</b>' + left(ME) + ' Aktion' + (left(ME) === 1 ? '' : 'en') + ' übrig</div><div class="statrow"><b style="min-width:120px">' + esc(G.players[OPP].name) + '</b>' + left(OPP) + ' Aktion' + (left(OPP) === 1 ? '' : 'en') + ' übrig</div>';
-  h += '<div class="btnrow" style="margin-top:18px"><button class="btn primary" data-act="recover" ' + (my && M.campAllowed(G, ME, 'recover') ? '' : 'disabled') + '>Erholen (+' + M.regenGain(G) + ' HP, +' + M.regenGain(G) + ' Mana)</button><button class="btn" data-act="pass" ' + (my ? '' : 'disabled') + '>Passen</button></div>';
-  return '<div class="panel" style="' + box(LAYOUT.camp) + '">' + h + '</div>';
 }

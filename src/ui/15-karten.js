@@ -112,5 +112,5 @@ function deckPopHTML(deck) {
 function canDrawNow() {
   if (!myTurn()) return false;
   if (G.phase === 'combat') return G.combat.action === 'attack';
-  return M.campAllowed(G, ME, 'draw');
+  return true;
 }

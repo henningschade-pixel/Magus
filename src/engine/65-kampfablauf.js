@@ -3,15 +3,14 @@ function playerSide(state, pid, key) {
   const p = state.players[pid];
   return { key, kind: 'player', ctrl: pid, name: p.name, stats: p.stats, deck: p.deck };
 }
-// Vor und nach jedem Kampf: volle HP, volles Mana, frisch gemischtes Deck und volle Hand (Regel fightReset).
-// Regel fightCarry: In Monsterkämpfen bleiben HP und Mana erhalten (sie regenerieren in der Weltphase); nur die Hand wird frisch gemischt. Vor und nach einem Showdown sind HP und Mana voll.
+// Vor und nach jedem Kampf: frisch gemischtes Deck und volle Hand. In Monsterkämpfen bleiben HP und Mana erhalten (sie regenerieren in der Weltphase); vor und nach einem Showdown sind HP und Mana voll.
 function resetPlayers(state, mode) {
-  const parts = state.rules.fightResetParts || (state.rules.fightCarry && mode === 'monster' ? 'd' : 'hmd');
+  const parts = mode === 'monster' ? 'd' : 'hmd';
   state.players.forEach(p => { if (parts.includes('h')) p.stats.hp = p.stats.maxHp; if (parts.includes('m')) p.stats.mana = p.stats.maxMana; p.stats.freeDraws = 0; if (parts.includes('d')) dealFresh(state, p.deck, p.slots); });
 }
 function startCombat(state, attPid, el) {
   const A = state.players[attPid];
-  if (state.rules.fightReset) resetPlayers(state, 'monster');
+  resetPlayers(state, 'monster');
   dealFresh(state, A.deck, A.slots);
   const m = state.monsters[el];
   const mdeck = newDeck(state, m.deckIds, Math.max(MIN_SLOTS, m.stats.limit + 2));
@@ -27,18 +26,15 @@ function startCombat(state, attPid, el) {
   log(state, A.name + ' greift ' + m.name + ' an. ' + state.players[other(attPid)].name + ' führt das Monster.', attPid);
 }
 function pickShowdownAttacker(state) {
-  const mode = state.rules.showdownAttacker;   // 'behind' (Standard: der Zurückliegende beginnt), 'leader' (der Führende beginnt), 'random'
-  if (mode === 'random') return state.rng.random() < 0.5 ? 0 : 1;
+  // der Zurückliegende beginnt
   const key = p => [p.sp, p.temple.points, magicProgress(p), p.stats.gold];
   const k0 = key(state.players[0]), k1 = key(state.players[1]);
-  const lead = mode === 'leader';
-  for (let i = 0; i < k0.length; i++) { if (k0[i] > k1[i]) return lead ? 0 : 1; if (k1[i] > k0[i]) return lead ? 1 : 0; }
+  for (let i = 0; i < k0.length; i++) { if (k0[i] > k1[i]) return 1; if (k1[i] > k0[i]) return 0; }
   return state.rng.random() < 0.5 ? 0 : 1;
 }
 function startShowdown(state) {
   const att = pickShowdownAttacker(state);
-  state.players.forEach(p => { dealFresh(state, p.deck, p.slots); p.stats.freeDraws = 0; if (state.rules.fightReset) { p.stats.hp = p.stats.maxHp; p.stats.mana = p.stats.maxMana; } if (state.rules.showdownRestore) { const n = state.rules.showdownRestore === true ? 99 : state.rules.showdownRestore; p.stats.hp = Math.min(p.stats.maxHp, p.stats.hp + n); p.stats.mana = Math.min(p.stats.maxMana, p.stats.mana + n); } });
-  state.camp = null;
+  state.players.forEach(p => { dealFresh(state, p.deck, p.slots); p.stats.freeDraws = 0; p.stats.hp = p.stats.maxHp; p.stats.mana = p.stats.maxMana; });
   state.combat = {
     logFrom: state.logN,
     mode: 'showdown', elem: null, att, def: other(att),
@@ -80,8 +76,6 @@ function endCombat(state, end) {
       const loot = Math.max(0, m.stats.gold); m.stats.gold = 0; A.stats.gold += loot;
       log(state, A.name + ' besiegt ' + m.name + ' und erhält ' + loot + ' Gold.', c.att);
       res.monsterDefeated = true; res.loot = loot;
-      if (state.rules.lootPot && allMonstersDead(state)) { const stake = state.rules.lootPot === 'all' ? A.stats.gold : loot; if (stake > 0) { A.stats.gold -= stake; state.pot = { owner: c.att, gold: stake }; log(state, (state.rules.lootPot === 'all' ? 'Das gesamte Gold von ' + A.name : 'Die Beute des letzten Monsters') + ' (' + stake + ' Gold) steht im Showdown auf dem Spiel.', c.att); } }   // wer das letzte Monster besiegt, kann die Beute erst nach dem Showdown einsetzen
-      if (state.rules.lootShare > 0) { const sh = Math.floor(loot * state.rules.lootShare); state.players[c.def].stats.gold += sh; A.stats.gold -= sh; if (sh) log(state, B.name + ' erhält als Monsterführer ' + sh + ' Gold aus der Beute.', c.def); }
     } else if (end.winner === 'b') {   // Niederlage gegen das Monster: keine Beute, Monster und Spieler bleiben mit ihren Werten auf dem Brett
       log(state, m.name + ' gewinnt den Kampf. Keine Beute.', c.def);
     }
@@ -90,25 +84,16 @@ function endCombat(state, end) {
     if (end.winner) { const w = end.winner === 'a' ? A : B; w.sp += 2; log(state, w.name + ' gewinnt den Showdown (+2 Siegpunkte).', end.winner === 'a' ? c.att : c.def);
       const L = w === A ? B : A; const lu = state.showdown === 1 && state.rules.loserUp2 !== undefined ? state.rules.loserUp2 : state.rules.loserUp; if (lu > 0 && state.showdown < 2) { L.stats.pending += lu; log(state, L.name + ' erhält als Trostpreis ' + lu + ' Upgrade-Punkt' + (lu > 1 ? 'e' : '') + '.', w === A ? c.def : c.att); } }
     else { A.sp += 1; B.sp += 1; log(state, 'Showdown ohne Sieger: je 1 Siegpunkt.'); }
-    if (state.pot) {   // Einsatz: der Sieger erhält die Beute, bei Remis wird geteilt (Rest an den Besitzer)
-      const pot = state.pot, ow = state.players[pot.owner], ot = state.players[other(pot.owner)];
-      const wp = end.winner ? (end.winner === 'a' ? c.att : c.def) : null;
-      if (wp === null) { const h = Math.floor(pot.gold / 2); ot.stats.gold += h; ow.stats.gold += pot.gold - h; log(state, 'Die Beute (' + pot.gold + ' Gold) wird geteilt.'); }
-      else { state.players[wp].stats.gold += pot.gold; log(state, state.players[wp].name + ' erhält die Beute (' + pot.gold + ' Gold).', wp); }
-      state.pot = null;
-    }
   }
   state.combat = null; state.phase = 'world'; state.lastCombat = res;
-  if (state.rules.fightReset) resetPlayers(state, c.mode);
-  else if (state.rules.freshHands) { dealFresh(state, A.deck, A.slots); if (c.mode === 'showdown') dealFresh(state, B.deck, B.slots); }   // jeder Kampf wird mit frisch gemischtem Deck und voller Hand verlassen
+  resetPlayers(state, c.mode);
   state.turn = c.def;
   regen(state.players[c.def].stats, regenGain(state));
   state.worldTurns = 0;
   if (c.mode === 'monster') {
     if (allMonstersDead(state)) {   // auch wenn das letzte Monster ohne Beute fiel (beide Seiten gleichzeitig auf 0 HP)
-      const n = state.rules.campActions;   // Aktionen je Spieler in der Erholungsphase (0 = ohne Erholungsphase)
-      log(state, (state.rules.monstersPerStage === 2 ? 'Zwei Monster sind besiegt, das dritte zieht sich zurück.' : 'Alle drei Monster sind besiegt.') + (n > 0 ? ' Erholungsphase: jeder Spieler hat ' + (n === 2 ? 'zwei' : n === 1 ? 'eine' : n === 3 ? 'drei' : n) + ' Aktion' + (n === 1 ? '' : 'en') + '.' : ''));
-      if (n > 0) state.camp = { remaining: [n, n], used: [{}, {}] }; else startShowdown(state);
+      log(state, 'Alle drei Monster sind besiegt.');
+      startShowdown(state);
     }
   } else {
     state.showdown++;
@@ -121,7 +106,7 @@ function endCombat(state, end) {
       log(state, state.winner === null ? 'Spielende: Gleichstand, kein Sieger.' : 'Spielende: ' + state.players[state.winner].name + (goal && state.showdown < 3 ? ' erreicht ' + state.rules.winSp + ' Siegpunkte und' : '') + ' gewinnt.');
     } else {
       state.stage = state.showdown + 1;
-      if (state.rules.loserStarts && end.winner) { state.turn = end.winner === 'a' ? c.def : c.att; log(state, state.players[state.turn].name + ' verlor den Showdown und beginnt die nächste Runde.'); }   // der Verlierer beginnt
+      if (end.winner) { state.turn = end.winner === 'a' ? c.def : c.att; log(state, state.players[state.turn].name + ' verlor den Showdown und beginnt die nächste Runde.'); }   // der Verlierer beginnt
       const gp = (state.rules.stagePoints || [])[state.stage] || 0;
       const gg = (state.rules.stageGold || [])[state.stage] || 0;
       if (gp > 0 || gg > 0) { state.players.forEach(p => { p.stats.pending += gp; p.stats.gold += gg; }); log(state, 'Jeder Spieler erhält ' + [gp ? gp + ' kostenlose Upgrade-Punkte' : '', gg ? gg + ' Gold' : ''].filter(Boolean).join(' und ') + '.'); }

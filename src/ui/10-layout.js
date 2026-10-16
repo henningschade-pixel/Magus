@@ -7,7 +7,6 @@ const LAYOUT = {
   vendor:    { left: 920, top: 182, w: 336, h: 408 },       // Händler
   logPanel:  { left: 24,  top: 182, w: 260, h: 408 },       // Protokoll (Weltphase)
   monsters:  { left: 296, top: 182, step: 212, w: 188, h: 408 },
-  camp:      { left: 296, top: 190, w: 612, h: 300 },
   banner:    { left: 372, top: 230, w: 536 },
   turnflag:  { left: 372, top: 126, w: 536 },
   combat:    { left: 372, top: 182, w: 536, h: 310 },       // Kampfmitte

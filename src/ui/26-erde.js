@@ -277,7 +277,7 @@ function renderInner() {
   const cx = ctx();
   let h = sidePanels(cx);
   if (cx.combat) h += combatCenter(cx) + comboRef(cx);
-  else h += vendorPanel() + (G.camp ? campPanel() : monsterCards());
+  else h += vendorPanel() + monsterCards();
   panels.innerHTML = h;
   const lg0 = logEl.querySelector('.logl'), lgKeep = lg0 && lg0.scrollHeight - lg0.scrollTop - lg0.clientHeight > 24 ? lg0.scrollTop : null;   // nicht am Ende: Leseposition merken
   if (cx.combat) {   // links: nur der Kampflog (Einträge seit Kampfbeginn)

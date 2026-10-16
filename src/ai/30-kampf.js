@@ -142,7 +142,7 @@ function fallback(state, pid) {
     if (c.forced) return [A({ type: 'fd', slots: forcedPick(state, pid) })];
     return c.action === 'defense' ? [A({ type: 'pass' })] : [A({ type: 'recover' }), A({ type: 'draw' }), A({ type: 'pass' })];
   }
-  return state.camp ? [A({ type: 'pass' })] : [A({ type: 'draw' })];
+  return [A({ type: 'draw' })];
 }
 function runTurn(state, pid) {
   if (state.phase === 'world') for (let k = 0; k < 12; k++) { const st = ecoStep(state, pid); if (!st) break; const r = M.apply(state, st); if (!r.ok) break; }

@@ -17,7 +17,6 @@ function pickSpend(p, state, pid) {
 function ecoStep(state, pid) {
   const p = state.players[pid], s = p.stats, A = a => Object.assign({ pid }, a), Q = P(pid);
   if (s.pending > 0) { const w = pickSpend(p, state, pid); if (w) return A({ type: 'spend', what: w }); }
-  if (!M.campAllowed(state, pid, 'temple')) return null;
   const allIds = [...p.deck.draw, ...p.deck.discard, ...p.deck.hand.filter(Boolean)].map(c => c.id);
   const countEl = e => allIds.filter(id => id[0] === e).length;
   let best = null;
@@ -49,22 +48,21 @@ function outlook(state, pid, el) {
   return Math.max(0, best);
 }
 function worldPlan(state, pid) {
-  const p = state.players[pid], s = p.stats, d = p.deck, camp = state.camp, Q = P(pid);
+  const p = state.players[pid], s = p.stats, d = p.deck, Q = P(pid);
   const A = a => Object.assign({ pid }, a);
   if (s.pending > 0) {
     const w = pickSpend(p, state, pid);
     if (w) return [A({ type: 'spend', what: w })];
   }
   const hand = handList(d), normals = hand.filter(h => !h.curse), curses = hand.filter(h => h.curse);
-  const ok = k => M.campAllowed(state, pid, k);
   const R = () => state.rng.random() * 0.6;
   const cands = [];
   const emptySlots = d.hand.filter(c => !c).length;
   const allIds = [...d.draw, ...d.discard, ...d.hand.filter(Boolean)].map(c => c.id);
   const countEl = e => allIds.filter(id => id[0] === e).length;
 
-  if (ok('draw') && canDraw(d)) cands.push({ score: Q.dBase + Q.dCurse * curses.length + (normals.length === 0 ? Q.dEmpty : 0) + emptySlots * Q.dSlot - (normals.length >= 3 ? Q.dNorm : 0) + R(), acts: [A({ type: 'draw' })] });
-  if (ok('vendor')) {
+  if (canDraw(d)) cands.push({ score: Q.dBase + Q.dCurse * curses.length + (normals.length === 0 ? Q.dEmpty : 0) + emptySlots * Q.dSlot - (normals.length >= 3 ? Q.dNorm : 0) + R(), acts: [A({ type: 'draw' })] });
+  {
     const plans = M.vendorPlans(state, pid), mk = o => o.slots.map(sl => A({ type: 'mark', slot: sl }));
     const ups = plans.filter(o => !o.free).sort((a, b) => b.result[1] - a.result[1]);
     if (ups.length) cands.push({ score: Q.vUp + ups[0].result[1] * Q.vUpW + R(), acts: [...mk(ups[0]), A({ type: 'vendor', result: ups[0].result, cost: ups[0].cost })] });
@@ -73,7 +71,7 @@ function worldPlan(state, pid) {
       if (free) cands.push({ score: 5 + R(), acts: [A({ type: 'vendor', result: best + '1', cost: [] })] });
     }
   }
-  if (!camp) {
+  {
     const alive = M.ELEMENTS.filter(e => M.monsterAlive(state.monsters[e]));
     if (alive.length && s.hp >= Q.minHp && s.mana >= Q.minMana && normals.length >= 1) {
       let bestC = null;
@@ -85,14 +83,7 @@ function worldPlan(state, pid) {
       cands.push(bestC);
     }
   }
-  if (camp) {
-    if (ok('recover')) cands.push({ score: 4 + (s.maxHp - s.hp) * 4 + (s.maxMana - s.mana) * 3 + R(), acts: [A({ type: 'recover' })] });
-    if (ok('pass') && s.pending <= 0) cands.push({ score: 1, acts: [A({ type: 'pass' })] });
-  }
-  if (!cands.length) {
-    if (camp) return [A({ type: 'pass' })];
-    return [A({ type: 'draw' })];
-  }
+  if (!cands.length) return [A({ type: 'draw' })];
   cands.sort((a, b) => b.score - a.score);
   return cands[0].acts;
 }

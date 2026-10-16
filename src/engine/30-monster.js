@@ -86,13 +86,13 @@ function spawnMonsters(stage, rng) {
   return out;
 }
 function monsterAlive(m) { return m.stats.hp > 0; }
-// Monsterphase vorbei: so viele Monster besiegt, wie die Regel monstersPerStage verlangt (3 = alle, 2 = nur zwei).
-function allMonstersDead(state) { const dead = ELEMENTS.filter(e => !monsterAlive(state.monsters[e])).length; return dead >= Math.min(3, state.rules.monstersPerStage || 3); }
+// Monsterphase vorbei: alle drei Monster sind besiegt.
+function allMonstersDead(state) { return ELEMENTS.every(e => !monsterAlive(state.monsters[e])); }
 function regenMonsters(state) { ELEMENTS.forEach(e => { const m = state.monsters[e]; if (monsterAlive(m)) regen(m.stats); }); }
 
 // Monster eines Abschnitts für ein Spiel: gewürfelt (eigener, vom Spielzufall getrennter Strom) oder feste Grundform.
 function spawnForGame(state, stage) {
-  return spawnMonsters(stage, state.rules.monsterVariants ? makeRng(((state.seed ^ 0x9e3779b1) + stage * 7919) >>> 0) : null);
+  return spawnMonsters(stage, makeRng(((state.seed ^ 0x9e3779b1) + stage * 7919) >>> 0));
 }
 function variantLog(state) {
   const t = ELEMENTS.map(e => state.monsters[e]).filter(m => m.label).map(m => m.name + ' (' + m.label + ')');

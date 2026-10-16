@@ -1,25 +1,9 @@
-/* Magus – Regelkern (Teil 7): Weltphase (Züge außerhalb des Kampfes) und Erholungsphase.
-   Aktionen, die den Zug beenden: Nachziehen, Händler, Kampf, (Erholungsphase:) Erholen und Passen; in der Erholungsphase ist kein Nachziehen möglich (der Showdown beginnt ohnehin mit neu gemischter, voller Hand).
+/* Magus – Regelkern (Teil 7): Weltphase (Züge außerhalb des Kampfes).
+   Aktionen, die den Zug beenden: Nachziehen, Händler, Kampf.
    Bonusaktionen im eigenen Zug, beliebig oft und ohne den Zug zu beenden: Gold opfern, Magie kaufen, Upgrade-Punkte ausgeben.
    Upgrade-Punkte dürfen aufgespart werden. Im Kampf sind keine Bonusaktionen möglich. */
 
-function campAllowed(state, pid, kind) {
-  const cp = state.camp; if (!cp) return true;
-  if (!['temple', 'vendor', 'recover', 'pass'].includes(kind)) return false;
-  if (cp.remaining[pid] <= 0) return false;
-  if (kind === 'temple') return true;                          // Bonusaktion: nicht begrenzt, zählt nicht als Aktion
-  if (['vendor', 'recover'].includes(kind)) return !(cp.used[pid][kind] > 0);
-  return true;
-}
 function endTurn(state, pid, kind) {
-  const cp = state.camp;
-  if (cp) {
-    cp.remaining[pid]--; cp.used[pid][kind] = (cp.used[pid][kind] || 0) + 1;
-    if (cp.remaining[0] <= 0 && cp.remaining[1] <= 0) { startShowdown(state); return; }
-    const nx = other(pid);
-    state.turn = cp.remaining[nx] > 0 ? nx : pid;
-    return;
-  }
   const nx = other(pid);
   regen(state.players[nx].stats, regenGain(state));
   state.turn = nx; state.worldTurns++;
@@ -50,7 +34,6 @@ function execSpend(state, pid, what) {
 }
 function execTemple(state, pid, amount) {
   const p = state.players[pid], s = p.stats;
-  if (!campAllowed(state, pid, 'temple')) return fail('In der Erholungsphase nicht mehr erlaubt.');
   const n = amount | 0;
   if (n <= 0 || n > s.gold) return fail('So viel Gold hast du nicht.');
   const pv = previewTemple(p, n);
@@ -60,7 +43,6 @@ function execTemple(state, pid, amount) {
 }
 function execMagic(state, pid, e) {
   const p = state.players[pid], s = p.stats;
-  if (!campAllowed(state, pid, 'temple')) return fail('In der Erholungsphase nicht mehr erlaubt.');
   if (!ELEMENTS.includes(e)) return fail('Unbekanntes Element.');
   if (s.mag[e] >= MAX_MAGIC) return fail(NAMES[e] + ' ist schon auf Stufe ' + MAX_MAGIC + '.');
   const cost = magicCost(state, s.mag[e]);
@@ -78,7 +60,6 @@ function applyWorld(state, a) {
   if (state.turn !== pid) return fail('Du bist nicht am Zug.');
   switch (a.type) {
     case 'draw': {
-      if (!campAllowed(state, pid, 'draw')) return fail('In der Erholungsphase nicht mehr erlaubt.');
       if (!drawPhase(state, d)) return fail('Alle Karten sind gesperrt, es gibt nichts zu tauschen.');
       log(state, p.name + ' zieht Karten nach.', pid);
       endTurn(state, pid, 'draw'); return { ok: true };
@@ -88,21 +69,9 @@ function applyWorld(state, a) {
     case 'magic': return execMagic(state, pid, a.elem);
     case 'spend': return execSpend(state, pid, a.what);
     case 'combat': {
-      if (state.camp) return fail('In der Erholungsphase gibt es keine Kämpfe.');
       const m = state.monsters[a.elem]; if (!m || !monsterAlive(m)) return fail('Dieses Monster ist besiegt.');
       d.marks = [];
       startCombat(state, pid, a.elem); return { ok: true };
-    }
-    case 'recover': {
-      if (!state.camp) return fail('Erholen gibt es nur in der Erholungsphase.');
-      if (!campAllowed(state, pid, 'recover')) return fail('Erholen schon genutzt.');
-      const rg = regenGain(state); regen(s, rg); log(state, p.name + ' erholt sich (+' + rg + ' HP, +' + rg + ' Mana).', pid);
-      endTurn(state, pid, 'recover'); return { ok: true };
-    }
-    case 'pass': {
-      if (!state.camp) return fail('Passen gibt es nur in der Erholungsphase.');
-      log(state, p.name + ' passt.', pid);
-      endTurn(state, pid, 'pass'); return { ok: true };
     }
   }
   return fail('Unbekannte Aktion.');

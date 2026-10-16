@@ -42,7 +42,7 @@ function statsBlock(name, s, p, size, up, full) {
   } else {
     let sac = '', sacBtn = '';
     if (up && s.gold >= 1) {
-      const can = my && M.campAllowed(G, ME, 'temple');
+      const can = my;
       const n = Math.max(1, Math.min(sacN, s.gold, 4)), pv = M.previewTemple(p, n);
       sacBtn = '<button class="btn small sacbtn" data-act="temple" data-n="' + n + '" ' + (can ? '' : 'disabled') + ' title="Tempel: Punkte ' + p.temple.points + ', Stufe ' + p.temple.level + ', nächste Stufe kostet ' + M.nextLevelCost(p.temple.level) + '">Opfern</button>';
       const stp = '<div class="stepper"><button class="arr" data-act="sacdn" ' + (n > 1 ? '' : 'disabled') + '>◀</button><b title="+' + pv.points + ' Punkte → ' + (pv.gained ? '+' + pv.gained + ' Upgrade' : 'kein Upgrade') + '">' + n + '</b><button class="arr" data-act="sacup" ' + (n < Math.min(s.gold, 4) ? '' : 'disabled') + '>▶</button></div>';
@@ -57,7 +57,7 @@ function statsBlock(name, s, p, size, up, full) {
   h = h.replace('@@G@@', '').replace('@@T@@', '');
   const bsz = size || 140;
   let bd = boardHTML(s.mag, bsz);
-  if (up && my && M.campAllowed(G, ME, 'temple')) {
+  if (up && my) {
     const dir = { F: -90, E: 30, W: 150 }, d = 26;
     let btn = '';
     for (const e of M.ELEMENTS) {

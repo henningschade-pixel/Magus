@@ -544,13 +544,13 @@ function spawnMonsters(stage, rng) {
   return out;
 }
 function monsterAlive(m) { return m.stats.hp > 0; }
-// Monsterphase vorbei: so viele Monster besiegt, wie die Regel monstersPerStage verlangt (3 = alle, 2 = nur zwei).
-function allMonstersDead(state) { const dead = ELEMENTS.filter(e => !monsterAlive(state.monsters[e])).length; return dead >= Math.min(3, state.rules.monstersPerStage || 3); }
+// Monsterphase vorbei: alle drei Monster sind besiegt.
+function allMonstersDead(state) { return ELEMENTS.every(e => !monsterAlive(state.monsters[e])); }
 function regenMonsters(state) { ELEMENTS.forEach(e => { const m = state.monsters[e]; if (monsterAlive(m)) regen(m.stats); }); }
 
 // Monster eines Abschnitts für ein Spiel: gewürfelt (eigener, vom Spielzufall getrennter Strom) oder feste Grundform.
 function spawnForGame(state, stage) {
-  return spawnMonsters(stage, state.rules.monsterVariants ? makeRng(((state.seed ^ 0x9e3779b1) + stage * 7919) >>> 0) : null);
+  return spawnMonsters(stage, makeRng(((state.seed ^ 0x9e3779b1) + stage * 7919) >>> 0));
 }
 function variantLog(state) {
   const t = ELEMENTS.map(e => state.monsters[e]).filter(m => m.label).map(m => m.name + ' (' + m.label + ')');
@@ -615,7 +615,6 @@ function vendorPlans(state, pid) {
 }
 function execVendor(state, pid, a) {
   const p = state.players[pid], d = p.deck;
-  if (!campAllowed(state, pid, 'vendor')) return fail('Händler in der Erholungsphase schon genutzt.');
   const sel = markedCards(d);
   const want = JSON.stringify(a.cost || []);
   const opt = vendorChoices(sel, p.stats.limit).find(o => o.result === a.result && JSON.stringify(o.cost) === want);
@@ -692,15 +691,14 @@ function playerSide(state, pid, key) {
   const p = state.players[pid];
   return { key, kind: 'player', ctrl: pid, name: p.name, stats: p.stats, deck: p.deck };
 }
-// Vor und nach jedem Kampf: volle HP, volles Mana, frisch gemischtes Deck und volle Hand (Regel fightReset).
-// Regel fightCarry: In Monsterkämpfen bleiben HP und Mana erhalten (sie regenerieren in der Weltphase); nur die Hand wird frisch gemischt. Vor und nach einem Showdown sind HP und Mana voll.
+// Vor und nach jedem Kampf: frisch gemischtes Deck und volle Hand. In Monsterkämpfen bleiben HP und Mana erhalten (sie regenerieren in der Weltphase); vor und nach einem Showdown sind HP und Mana voll.
 function resetPlayers(state, mode) {
-  const parts = state.rules.fightResetParts || (state.rules.fightCarry && mode === 'monster' ? 'd' : 'hmd');
+  const parts = mode === 'monster' ? 'd' : 'hmd';
   state.players.forEach(p => { if (parts.includes('h')) p.stats.hp = p.stats.maxHp; if (parts.includes('m')) p.stats.mana = p.stats.maxMana; p.stats.freeDraws = 0; if (parts.includes('d')) dealFresh(state, p.deck, p.slots); });
 }
 function startCombat(state, attPid, el) {
   const A = state.players[attPid];
-  if (state.rules.fightReset) resetPlayers(state, 'monster');
+  resetPlayers(state, 'monster');
   dealFresh(state, A.deck, A.slots);
   const m = state.monsters[el];
   const mdeck = newDeck(state, m.deckIds, Math.max(MIN_SLOTS, m.stats.limit + 2));
@@ -716,18 +714,15 @@ function startCombat(state, attPid, el) {
   log(state, A.name + ' greift ' + m.name + ' an. ' + state.players[other(attPid)].name + ' führt das Monster.', attPid);
 }
 function pickShowdownAttacker(state) {
-  const mode = state.rules.showdownAttacker;   // 'behind' (Standard: der Zurückliegende beginnt), 'leader' (der Führende beginnt), 'random'
-  if (mode === 'random') return state.rng.random() < 0.5 ? 0 : 1;
+  // der Zurückliegende beginnt
   const key = p => [p.sp, p.temple.points, magicProgress(p), p.stats.gold];
   const k0 = key(state.players[0]), k1 = key(state.players[1]);
-  const lead = mode === 'leader';
-  for (let i = 0; i < k0.length; i++) { if (k0[i] > k1[i]) return lead ? 0 : 1; if (k1[i] > k0[i]) return lead ? 1 : 0; }
+  for (let i = 0; i < k0.length; i++) { if (k0[i] > k1[i]) return 1; if (k1[i] > k0[i]) return 0; }
   return state.rng.random() < 0.5 ? 0 : 1;
 }
 function startShowdown(state) {
   const att = pickShowdownAttacker(state);
-  state.players.forEach(p => { dealFresh(state, p.deck, p.slots); p.stats.freeDraws = 0; if (state.rules.fightReset) { p.stats.hp = p.stats.maxHp; p.stats.mana = p.stats.maxMana; } if (state.rules.showdownRestore) { const n = state.rules.showdownRestore === true ? 99 : state.rules.showdownRestore; p.stats.hp = Math.min(p.stats.maxHp, p.stats.hp + n); p.stats.mana = Math.min(p.stats.maxMana, p.stats.mana + n); } });
-  state.camp = null;
+  state.players.forEach(p => { dealFresh(state, p.deck, p.slots); p.stats.freeDraws = 0; p.stats.hp = p.stats.maxHp; p.stats.mana = p.stats.maxMana; });
   state.combat = {
     logFrom: state.logN,
     mode: 'showdown', elem: null, att, def: other(att),
@@ -769,8 +764,6 @@ function endCombat(state, end) {
       const loot = Math.max(0, m.stats.gold); m.stats.gold = 0; A.stats.gold += loot;
       log(state, A.name + ' besiegt ' + m.name + ' und erhält ' + loot + ' Gold.', c.att);
       res.monsterDefeated = true; res.loot = loot;
-      if (state.rules.lootPot && allMonstersDead(state)) { const stake = state.rules.lootPot === 'all' ? A.stats.gold : loot; if (stake > 0) { A.stats.gold -= stake; state.pot = { owner: c.att, gold: stake }; log(state, (state.rules.lootPot === 'all' ? 'Das gesamte Gold von ' + A.name : 'Die Beute des letzten Monsters') + ' (' + stake + ' Gold) steht im Showdown auf dem Spiel.', c.att); } }   // wer das letzte Monster besiegt, kann die Beute erst nach dem Showdown einsetzen
-      if (state.rules.lootShare > 0) { const sh = Math.floor(loot * state.rules.lootShare); state.players[c.def].stats.gold += sh; A.stats.gold -= sh; if (sh) log(state, B.name + ' erhält als Monsterführer ' + sh + ' Gold aus der Beute.', c.def); }
     } else if (end.winner === 'b') {   // Niederlage gegen das Monster: keine Beute, Monster und Spieler bleiben mit ihren Werten auf dem Brett
       log(state, m.name + ' gewinnt den Kampf. Keine Beute.', c.def);
     }
@@ -779,25 +772,16 @@ function endCombat(state, end) {
     if (end.winner) { const w = end.winner === 'a' ? A : B; w.sp += 2; log(state, w.name + ' gewinnt den Showdown (+2 Siegpunkte).', end.winner === 'a' ? c.att : c.def);
       const L = w === A ? B : A; const lu = state.showdown === 1 && state.rules.loserUp2 !== undefined ? state.rules.loserUp2 : state.rules.loserUp; if (lu > 0 && state.showdown < 2) { L.stats.pending += lu; log(state, L.name + ' erhält als Trostpreis ' + lu + ' Upgrade-Punkt' + (lu > 1 ? 'e' : '') + '.', w === A ? c.def : c.att); } }
     else { A.sp += 1; B.sp += 1; log(state, 'Showdown ohne Sieger: je 1 Siegpunkt.'); }
-    if (state.pot) {   // Einsatz: der Sieger erhält die Beute, bei Remis wird geteilt (Rest an den Besitzer)
-      const pot = state.pot, ow = state.players[pot.owner], ot = state.players[other(pot.owner)];
-      const wp = end.winner ? (end.winner === 'a' ? c.att : c.def) : null;
-      if (wp === null) { const h = Math.floor(pot.gold / 2); ot.stats.gold += h; ow.stats.gold += pot.gold - h; log(state, 'Die Beute (' + pot.gold + ' Gold) wird geteilt.'); }
-      else { state.players[wp].stats.gold += pot.gold; log(state, state.players[wp].name + ' erhält die Beute (' + pot.gold + ' Gold).', wp); }
-      state.pot = null;
-    }
   }
   state.combat = null; state.phase = 'world'; state.lastCombat = res;
-  if (state.rules.fightReset) resetPlayers(state, c.mode);
-  else if (state.rules.freshHands) { dealFresh(state, A.deck, A.slots); if (c.mode === 'showdown') dealFresh(state, B.deck, B.slots); }   // jeder Kampf wird mit frisch gemischtem Deck und voller Hand verlassen
+  resetPlayers(state, c.mode);
   state.turn = c.def;
   regen(state.players[c.def].stats, regenGain(state));
   state.worldTurns = 0;
   if (c.mode === 'monster') {
     if (allMonstersDead(state)) {   // auch wenn das letzte Monster ohne Beute fiel (beide Seiten gleichzeitig auf 0 HP)
-      const n = state.rules.campActions;   // Aktionen je Spieler in der Erholungsphase (0 = ohne Erholungsphase)
-      log(state, (state.rules.monstersPerStage === 2 ? 'Zwei Monster sind besiegt, das dritte zieht sich zurück.' : 'Alle drei Monster sind besiegt.') + (n > 0 ? ' Erholungsphase: jeder Spieler hat ' + (n === 2 ? 'zwei' : n === 1 ? 'eine' : n === 3 ? 'drei' : n) + ' Aktion' + (n === 1 ? '' : 'en') + '.' : ''));
-      if (n > 0) state.camp = { remaining: [n, n], used: [{}, {}] }; else startShowdown(state);
+      log(state, 'Alle drei Monster sind besiegt.');
+      startShowdown(state);
     }
   } else {
     state.showdown++;
@@ -810,7 +794,7 @@ function endCombat(state, end) {
       log(state, state.winner === null ? 'Spielende: Gleichstand, kein Sieger.' : 'Spielende: ' + state.players[state.winner].name + (goal && state.showdown < 3 ? ' erreicht ' + state.rules.winSp + ' Siegpunkte und' : '') + ' gewinnt.');
     } else {
       state.stage = state.showdown + 1;
-      if (state.rules.loserStarts && end.winner) { state.turn = end.winner === 'a' ? c.def : c.att; log(state, state.players[state.turn].name + ' verlor den Showdown und beginnt die nächste Runde.'); }   // der Verlierer beginnt
+      if (end.winner) { state.turn = end.winner === 'a' ? c.def : c.att; log(state, state.players[state.turn].name + ' verlor den Showdown und beginnt die nächste Runde.'); }   // der Verlierer beginnt
       const gp = (state.rules.stagePoints || [])[state.stage] || 0;
       const gg = (state.rules.stageGold || [])[state.stage] || 0;
       if (gp > 0 || gg > 0) { state.players.forEach(p => { p.stats.pending += gp; p.stats.gold += gg; }); log(state, 'Jeder Spieler erhält ' + [gp ? gp + ' kostenlose Upgrade-Punkte' : '', gg ? gg + ' Gold' : ''].filter(Boolean).join(' und ') + '.'); }
@@ -1021,28 +1005,12 @@ function applyCombat(state, a) {
   return fail('Unbekannte Aktion.');
 }
 
-/* Magus – Regelkern (Teil 7): Weltphase (Züge außerhalb des Kampfes) und Erholungsphase.
-   Aktionen, die den Zug beenden: Nachziehen, Händler, Kampf, (Erholungsphase:) Erholen und Passen; in der Erholungsphase ist kein Nachziehen möglich (der Showdown beginnt ohnehin mit neu gemischter, voller Hand).
+/* Magus – Regelkern (Teil 7): Weltphase (Züge außerhalb des Kampfes).
+   Aktionen, die den Zug beenden: Nachziehen, Händler, Kampf.
    Bonusaktionen im eigenen Zug, beliebig oft und ohne den Zug zu beenden: Gold opfern, Magie kaufen, Upgrade-Punkte ausgeben.
    Upgrade-Punkte dürfen aufgespart werden. Im Kampf sind keine Bonusaktionen möglich. */
 
-function campAllowed(state, pid, kind) {
-  const cp = state.camp; if (!cp) return true;
-  if (!['temple', 'vendor', 'recover', 'pass'].includes(kind)) return false;
-  if (cp.remaining[pid] <= 0) return false;
-  if (kind === 'temple') return true;                          // Bonusaktion: nicht begrenzt, zählt nicht als Aktion
-  if (['vendor', 'recover'].includes(kind)) return !(cp.used[pid][kind] > 0);
-  return true;
-}
 function endTurn(state, pid, kind) {
-  const cp = state.camp;
-  if (cp) {
-    cp.remaining[pid]--; cp.used[pid][kind] = (cp.used[pid][kind] || 0) + 1;
-    if (cp.remaining[0] <= 0 && cp.remaining[1] <= 0) { startShowdown(state); return; }
-    const nx = other(pid);
-    state.turn = cp.remaining[nx] > 0 ? nx : pid;
-    return;
-  }
   const nx = other(pid);
   regen(state.players[nx].stats, regenGain(state));
   state.turn = nx; state.worldTurns++;
@@ -1073,7 +1041,6 @@ function execSpend(state, pid, what) {
 }
 function execTemple(state, pid, amount) {
   const p = state.players[pid], s = p.stats;
-  if (!campAllowed(state, pid, 'temple')) return fail('In der Erholungsphase nicht mehr erlaubt.');
   const n = amount | 0;
   if (n <= 0 || n > s.gold) return fail('So viel Gold hast du nicht.');
   const pv = previewTemple(p, n);
@@ -1083,7 +1050,6 @@ function execTemple(state, pid, amount) {
 }
 function execMagic(state, pid, e) {
   const p = state.players[pid], s = p.stats;
-  if (!campAllowed(state, pid, 'temple')) return fail('In der Erholungsphase nicht mehr erlaubt.');
   if (!ELEMENTS.includes(e)) return fail('Unbekanntes Element.');
   if (s.mag[e] >= MAX_MAGIC) return fail(NAMES[e] + ' ist schon auf Stufe ' + MAX_MAGIC + '.');
   const cost = magicCost(state, s.mag[e]);
@@ -1101,7 +1067,6 @@ function applyWorld(state, a) {
   if (state.turn !== pid) return fail('Du bist nicht am Zug.');
   switch (a.type) {
     case 'draw': {
-      if (!campAllowed(state, pid, 'draw')) return fail('In der Erholungsphase nicht mehr erlaubt.');
       if (!drawPhase(state, d)) return fail('Alle Karten sind gesperrt, es gibt nichts zu tauschen.');
       log(state, p.name + ' zieht Karten nach.', pid);
       endTurn(state, pid, 'draw'); return { ok: true };
@@ -1111,21 +1076,9 @@ function applyWorld(state, a) {
     case 'magic': return execMagic(state, pid, a.elem);
     case 'spend': return execSpend(state, pid, a.what);
     case 'combat': {
-      if (state.camp) return fail('In der Erholungsphase gibt es keine Kämpfe.');
       const m = state.monsters[a.elem]; if (!m || !monsterAlive(m)) return fail('Dieses Monster ist besiegt.');
       d.marks = [];
       startCombat(state, pid, a.elem); return { ok: true };
-    }
-    case 'recover': {
-      if (!state.camp) return fail('Erholen gibt es nur in der Erholungsphase.');
-      if (!campAllowed(state, pid, 'recover')) return fail('Erholen schon genutzt.');
-      const rg = regenGain(state); regen(s, rg); log(state, p.name + ' erholt sich (+' + rg + ' HP, +' + rg + ' Mana).', pid);
-      endTurn(state, pid, 'recover'); return { ok: true };
-    }
-    case 'pass': {
-      if (!state.camp) return fail('Passen gibt es nur in der Erholungsphase.');
-      log(state, p.name + ' passt.', pid);
-      endTurn(state, pid, 'pass'); return { ok: true };
     }
   }
   return fail('Unbekannte Aktion.');
@@ -1133,12 +1086,11 @@ function applyWorld(state, a) {
 /* Magus – Regelkern (Teil 8): Spielstart und Schnittstelle nach außen. */
 
 // Regelwerte (Abstimmungs- und Variantenschalter). ‚curses‘: Fluchsystem, siehe 30-curses.js.
-// secondPlayerPending: Upgrade-Punkte, die der zweite Spieler als Ausgleich für den Startvorteil des ersten bekommt.
-// firstPlayerGold: zusätzliches Startgold für den Beginnenden (Ausgleich zum Vorteil des zweiten Spielers).
-const DEFAULT_RULES = { magicCost: [0, 1, 3], limitCost: 2, limitFirstStepCost: 2, secondPlayerPending: 0, campActions: 0, showdownAttacker: 'behind', firstPlayerGold: 0, hpPerPoint: 2, monsterVariants: true, monstersPerStage: 3, fightReset: true, fightCarry: true, stagePoints: [0, 1, 2, 3], stageGold: [0, 1, 2, 3], startGold: 0, secondPlayerGold: 0, loserStarts: true, loserUp: 1, loserUp2: 2, winSp: 4, freshHands: false, showdownRestore: false, lootShare: 0, lootPot: false, recoverByStage: [1, 2, 3], regenByStage: [1, 2, 3] };   // Jede gespielte Karte (auch Kombokarten) kostet 1 Mana, nur Verteidigung in der überlegenen Farbe ist gratis. recoverByStage: Mana-Gewinn von „Erholen“ im Kampf je Abschnitt
+const DEFAULT_RULES = { magicCost: [0, 1, 3], limitCost: 2, limitFirstStepCost: 2, hpPerPoint: 2, stagePoints: [0, 1, 2, 3], stageGold: [0, 1, 2, 3], loserUp: 1, loserUp2: 2, winSp: 4, recoverByStage: [1, 2, 3], regenByStage: [1, 2, 3] };   // Jede gespielte Karte (auch Kombokarten) kostet 1 Mana, nur Verteidigung in der überlegenen Farbe ist gratis. recoverByStage: Mana-Gewinn von „Erholen“ im Kampf je Abschnitt
 
 function newPlayer(state, name, ai) {
   const p = { name, ai: !!ai, stats: newStats(), temple: { points: 0, level: 0 }, sp: 0, slots: MIN_SLOTS };
+  p.stats.gold = 0;   // Das Spiel beginnt ohne Gold; Abschnittsboni kommen in newGame
   p.deck = newDeck(state, START_DECK, MIN_SLOTS);
   return p;
 }
@@ -1146,15 +1098,11 @@ function newPlayer(state, name, ai) {
 function newGame(opts) {
   opts = opts || {};
   const seed = (opts.seed === undefined ? (Date.now() & 0x7fffffff) : opts.seed) >>> 0;
-  const state = { rules: Object.assign({}, DEFAULT_RULES, opts.rules || {}), seed, rng: makeRng(seed), uid: 1, log: [], logN: 0, stage: 1, showdown: 0, phase: 'world', turn: 0, camp: null, combat: null, over: false, winner: null, worldTurns: 0, combatTurnsTotal: 0 };
+  const state = { rules: Object.assign({}, DEFAULT_RULES, opts.rules || {}), seed, rng: makeRng(seed), uid: 1, log: [], logN: 0, stage: 1, showdown: 0, phase: 'world', turn: 0, combat: null, over: false, winner: null, worldTurns: 0, combatTurnsTotal: 0 };
   const names = opts.names || ['Du', 'Gegner'];
   state.players = [newPlayer(state, names[0], opts.ai ? opts.ai[0] : false), newPlayer(state, names[1], opts.ai ? opts.ai[1] : true)];
-  state.players.forEach(p => { p.stats.gold = state.rules.startGold; });
   state.monsters = spawnForGame(state, 1);
   state.turn = opts.first === undefined ? 0 : opts.first;
-  state.players[other(state.turn)].stats.pending += state.rules.secondPlayerPending;
-  state.players[state.turn].stats.gold += state.rules.firstPlayerGold;
-  state.players[other(state.turn)].stats.gold += state.rules.secondPlayerGold;   // Ausgleich: der Beginnende startet mit mehr Gold
   const gp1 = (state.rules.stagePoints || [])[1] || 0, gg1 = (state.rules.stageGold || [])[1] || 0;
   state.players.forEach(p => { p.stats.pending += gp1; p.stats.gold += gg1; });
   log(state, 'Abschnitt 1: Die Monster der Stufe I erscheinen.' + variantLog(state) + (gp1 || gg1 ? ' Jeder Spieler erhält ' + [gp1 ? gp1 + ' Upgrade-Punkt' + (gp1 > 1 ? 'e' : '') : '', gg1 ? gg1 + ' Gold' : ''].filter(Boolean).join(' und ') + '.' : ''));
@@ -1197,7 +1145,7 @@ function handCounts(d) { const c = {}; d.hand.forEach(x => { if (x) c[x.id] = (c
 return { ELEMENTS, SUPERIOR, NAMES, START_DECK, MAX_MAGIC, MAX_SLOTS, MIN_SLOTS, MAX_LIMIT, DEFAULT_RULES, MONSTER,
   makeRng, parseCard, selection, newGame, apply, record, prim, actor, other, regen, handCounts,
   vendorOffers, vendorPlans, previewTemple, pointsForGold, nextLevelCost, limitStepCost, manaStepCost, magicCost,
-  evalAttack, evalDefense, recoverGain, regenGain, comboLevels, levelsFor, campAllowed,
+  evalAttack, evalDefense, recoverGain, regenGain, comboLevels, levelsFor,
   mirrorOf, monsterAlive, allMonstersDead, magicProgress, spawnMonsters, spawnForGame };
 }));</script>
 <script>/* Magus – einfacher Computergegner. Wählt nur Aktionen, die auch ein Mensch hätte. */
@@ -1254,7 +1202,6 @@ function pickSpend(p, state, pid) {
 function ecoStep(state, pid) {
   const p = state.players[pid], s = p.stats, A = a => Object.assign({ pid }, a), Q = P(pid);
   if (s.pending > 0) { const w = pickSpend(p, state, pid); if (w) return A({ type: 'spend', what: w }); }
-  if (!M.campAllowed(state, pid, 'temple')) return null;
   const allIds = [...p.deck.draw, ...p.deck.discard, ...p.deck.hand.filter(Boolean)].map(c => c.id);
   const countEl = e => allIds.filter(id => id[0] === e).length;
   let best = null;
@@ -1286,22 +1233,21 @@ function outlook(state, pid, el) {
   return Math.max(0, best);
 }
 function worldPlan(state, pid) {
-  const p = state.players[pid], s = p.stats, d = p.deck, camp = state.camp, Q = P(pid);
+  const p = state.players[pid], s = p.stats, d = p.deck, Q = P(pid);
   const A = a => Object.assign({ pid }, a);
   if (s.pending > 0) {
     const w = pickSpend(p, state, pid);
     if (w) return [A({ type: 'spend', what: w })];
   }
   const hand = handList(d), normals = hand.filter(h => !h.curse), curses = hand.filter(h => h.curse);
-  const ok = k => M.campAllowed(state, pid, k);
   const R = () => state.rng.random() * 0.6;
   const cands = [];
   const emptySlots = d.hand.filter(c => !c).length;
   const allIds = [...d.draw, ...d.discard, ...d.hand.filter(Boolean)].map(c => c.id);
   const countEl = e => allIds.filter(id => id[0] === e).length;
 
-  if (ok('draw') && canDraw(d)) cands.push({ score: Q.dBase + Q.dCurse * curses.length + (normals.length === 0 ? Q.dEmpty : 0) + emptySlots * Q.dSlot - (normals.length >= 3 ? Q.dNorm : 0) + R(), acts: [A({ type: 'draw' })] });
-  if (ok('vendor')) {
+  if (canDraw(d)) cands.push({ score: Q.dBase + Q.dCurse * curses.length + (normals.length === 0 ? Q.dEmpty : 0) + emptySlots * Q.dSlot - (normals.length >= 3 ? Q.dNorm : 0) + R(), acts: [A({ type: 'draw' })] });
+  {
     const plans = M.vendorPlans(state, pid), mk = o => o.slots.map(sl => A({ type: 'mark', slot: sl }));
     const ups = plans.filter(o => !o.free).sort((a, b) => b.result[1] - a.result[1]);
     if (ups.length) cands.push({ score: Q.vUp + ups[0].result[1] * Q.vUpW + R(), acts: [...mk(ups[0]), A({ type: 'vendor', result: ups[0].result, cost: ups[0].cost })] });
@@ -1310,7 +1256,7 @@ function worldPlan(state, pid) {
       if (free) cands.push({ score: 5 + R(), acts: [A({ type: 'vendor', result: best + '1', cost: [] })] });
     }
   }
-  if (!camp) {
+  {
     const alive = M.ELEMENTS.filter(e => M.monsterAlive(state.monsters[e]));
     if (alive.length && s.hp >= Q.minHp && s.mana >= Q.minMana && normals.length >= 1) {
       let bestC = null;
@@ -1322,14 +1268,7 @@ function worldPlan(state, pid) {
       cands.push(bestC);
     }
   }
-  if (camp) {
-    if (ok('recover')) cands.push({ score: 4 + (s.maxHp - s.hp) * 4 + (s.maxMana - s.mana) * 3 + R(), acts: [A({ type: 'recover' })] });
-    if (ok('pass') && s.pending <= 0) cands.push({ score: 1, acts: [A({ type: 'pass' })] });
-  }
-  if (!cands.length) {
-    if (camp) return [A({ type: 'pass' })];
-    return [A({ type: 'draw' })];
-  }
+  if (!cands.length) return [A({ type: 'draw' })];
   cands.sort((a, b) => b.score - a.score);
   return cands[0].acts;
 }
@@ -1478,7 +1417,7 @@ function fallback(state, pid) {
     if (c.forced) return [A({ type: 'fd', slots: forcedPick(state, pid) })];
     return c.action === 'defense' ? [A({ type: 'pass' })] : [A({ type: 'recover' }), A({ type: 'draw' }), A({ type: 'pass' })];
   }
-  return state.camp ? [A({ type: 'pass' })] : [A({ type: 'draw' })];
+  return [A({ type: 'draw' })];
 }
 function runTurn(state, pid) {
   if (state.phase === 'world') for (let k = 0; k < 12; k++) { const st = ecoStep(state, pid); if (!st) break; const r = M.apply(state, st); if (!r.ok) break; }
@@ -1520,7 +1459,6 @@ const LAYOUT = {
   vendor:    { left: 920, top: 182, w: 336, h: 408 },       // Händler
   logPanel:  { left: 24,  top: 182, w: 260, h: 408 },       // Protokoll (Weltphase)
   monsters:  { left: 296, top: 182, step: 212, w: 188, h: 408 },
-  camp:      { left: 296, top: 190, w: 612, h: 300 },
   banner:    { left: 372, top: 230, w: 536 },
   turnflag:  { left: 372, top: 126, w: 536 },
   combat:    { left: 372, top: 182, w: 536, h: 310 },       // Kampfmitte
@@ -1793,7 +1731,7 @@ function deckPopHTML(deck) {
 function canDrawNow() {
   if (!myTurn()) return false;
   if (G.phase === 'combat') return G.combat.action === 'attack';
-  return M.campAllowed(G, ME, 'draw');
+  return true;
 }
 /* ---------- Seitenleisten ---------- */
 function boardHTML(mag, size) {
@@ -1839,7 +1777,7 @@ function statsBlock(name, s, p, size, up, full) {
   } else {
     let sac = '', sacBtn = '';
     if (up && s.gold >= 1) {
-      const can = my && M.campAllowed(G, ME, 'temple');
+      const can = my;
       const n = Math.max(1, Math.min(sacN, s.gold, 4)), pv = M.previewTemple(p, n);
       sacBtn = '<button class="btn small sacbtn" data-act="temple" data-n="' + n + '" ' + (can ? '' : 'disabled') + ' title="Tempel: Punkte ' + p.temple.points + ', Stufe ' + p.temple.level + ', nächste Stufe kostet ' + M.nextLevelCost(p.temple.level) + '">Opfern</button>';
       const stp = '<div class="stepper"><button class="arr" data-act="sacdn" ' + (n > 1 ? '' : 'disabled') + '>◀</button><b title="+' + pv.points + ' Punkte → ' + (pv.gained ? '+' + pv.gained + ' Upgrade' : 'kein Upgrade') + '">' + n + '</b><button class="arr" data-act="sacup" ' + (n < Math.min(s.gold, 4) ? '' : 'disabled') + '>▶</button></div>';
@@ -1854,7 +1792,7 @@ function statsBlock(name, s, p, size, up, full) {
   h = h.replace('@@G@@', '').replace('@@T@@', '');
   const bsz = size || 140;
   let bd = boardHTML(s.mag, bsz);
-  if (up && my && M.campAllowed(G, ME, 'temple')) {
+  if (up && my) {
     const dir = { F: -90, E: 30, W: 150 }, d = 26;
     let btn = '';
     for (const e of M.ELEMENTS) {
@@ -1888,11 +1826,11 @@ function sidePanels(cx) {
   return '<div class="panel" style="' + box(LAYOUT.mePanel, 'padding:6px 12px') + '">' + me + '</div>' +
     '<div class="panel" style="' + box(LAYOUT.oppPanel, 'padding:6px 12px;font-size:16px') + '">' + op.replace(/<h3>/, '<h3 style="font-size:17px;margin-bottom:2px">') + '</div>';
 }
-/* ---------- Weltphase: Händler, Monster, Lager ---------- */
+/* ---------- Weltphase: Händler, Monster ---------- */
 function vendorPanel() {
   const p = G.players[ME];
   const offers = M.vendorOffers(G, ME);
-  const can = myTurn() && M.campAllowed(G, ME, 'vendor');
+  const can = myTurn();
   let h = '<h3>Händler</h3>';
   if (!offers.some(o => !o.free)) h += '<div class="note" style="margin-top:6px">Für Aufwertungen: Karten aus deiner Hand markieren.</div>';
   h += '<div class="row" style="margin-bottom:8px;margin-top:6px">';
@@ -1917,19 +1855,11 @@ function monsterCards() {
         '<div class="sm">Mana ' + st.mana + '/' + st.maxMana + ' · Limit ' + st.limit + '</div><div class="bar mana"><i style="width:' + st.mana / st.maxMana * 100 + '%"></i></div>' +
         '<div class="sm"><span class="dots F">' + dots(st.mag.F) + '</span> <span class="dots E">' + dots(st.mag.E) + '</span> <span class="dots W">' + dots(st.mag.W) + '</span></div>' +
         '<div class="loot">Beute ' + st.gold + '' + '</div>' +
-        '<button class="btn small" data-act="combat" data-e="' + e + '" ' + (my && !G.camp ? '' : 'disabled') + '>Kämpfen</button>';
+        '<button class="btn small" data-act="combat" data-e="' + e + '" ' + (my ? '' : 'disabled') + '>Kämpfen</button>';
     } else h += '<div class="sm" style="margin-top:12px">' + 'besiegt' + '</div>';
     h += '</div>';
   });
   return h;
-}
-function campPanel() {
-  const c = G.camp, my = myTurn();
-  const left = i => c.remaining[i];
-  let h = '<h3>Erholungsphase</h3><div class="note" style="font-size:17px;margin:4px 0 10px">Alle Monster sind besiegt. Jeder Spieler hat zwei Aktionen: Händler, Erholen oder Passen, jede höchstens einmal. Tempel, Magie und Upgrade-Punkte sind Bonusaktionen. Danach beginnt der Showdown mit neu gemischter, voller Hand.</div>';
-  h += '<div class="statrow"><b style="min-width:120px">Du</b>' + left(ME) + ' Aktion' + (left(ME) === 1 ? '' : 'en') + ' übrig</div><div class="statrow"><b style="min-width:120px">' + esc(G.players[OPP].name) + '</b>' + left(OPP) + ' Aktion' + (left(OPP) === 1 ? '' : 'en') + ' übrig</div>';
-  h += '<div class="btnrow" style="margin-top:18px"><button class="btn primary" data-act="recover" ' + (my && M.campAllowed(G, ME, 'recover') ? '' : 'disabled') + '>Erholen (+' + M.regenGain(G) + ' HP, +' + M.regenGain(G) + ' Mana)</button><button class="btn" data-act="pass" ' + (my ? '' : 'disabled') + '>Passen</button></div>';
-  return '<div class="panel" style="' + box(LAYOUT.camp) + '">' + h + '</div>';
 }
 /* ---------- Kampf ---------- */
 const ORD_ROWS = [['ra', 'Aggro', 'F', 'E'], ['rm', 'Zerrüttung', 'F', 'W'], ['bm', 'Spiegel', 'W', 'F'], ['bg', 'Spiegel', 'W', 'E'], ['gh', 'Heilung', 'E', 'W'], ['gr', 'Läuterung', 'E', 'F']];
@@ -2830,7 +2760,7 @@ function renderInner() {
   const cx = ctx();
   let h = sidePanels(cx);
   if (cx.combat) h += combatCenter(cx) + comboRef(cx);
-  else h += vendorPanel() + (G.camp ? campPanel() : monsterCards());
+  else h += vendorPanel() + monsterCards();
   panels.innerHTML = h;
   const lg0 = logEl.querySelector('.logl'), lgKeep = lg0 && lg0.scrollHeight - lg0.scrollTop - lg0.clientHeight > 24 ? lg0.scrollTop : null;   // nicht am Ende: Leseposition merken
   if (cx.combat) {   // links: nur der Kampflog (Einträge seit Kampfbeginn)
