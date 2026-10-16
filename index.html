@@ -292,7 +292,8 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .overlay .box.start .logo{width:170px;height:170px;object-fit:contain;margin:6px 0 12px;mix-blend-mode:lighten;-webkit-mask-image:radial-gradient(circle,#000 58%,transparent 72%);mask-image:radial-gradient(circle,#000 58%,transparent 72%)}
 .overlay .box.start .mpbox{align-self:stretch}
 #statbtn{position:absolute;left:100px;top:12px;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:rgba(10,8,14,.7);font-size:18px;line-height:1;cursor:var(--cp);z-index:250;padding:0;color:var(--bone)}#statbtn:hover{border-color:var(--gold)}
-.logdl{width:26px;height:26px;border-radius:50%;border:1px solid var(--line);background:rgba(10,8,14,.55);color:var(--mute);font-size:14px;line-height:1;cursor:var(--cp);padding:0;margin-right:8px;vertical-align:middle;opacity:.7}.logdl:hover{opacity:1;border-color:var(--gold);color:var(--gold)}
+#log.logpanel h3{display:flex;align-items:center}
+.logdl{order:2;margin-left:auto;width:26px;height:26px;border-radius:50%;border:1px solid var(--line);background:rgba(10,8,14,.55);color:var(--mute);font-size:14px;line-height:1;cursor:var(--cp);padding:0;opacity:.7}.logdl:hover{opacity:1;border-color:var(--gold);color:var(--gold)}
 .overlay .box.stats{width:1060px;max-width:96vw;max-height:760px;padding:18px 22px;overflow-y:auto}
 .stats .sthead{display:flex;align-items:center;justify-content:space-between}.stats h1{font-size:40px;margin:0}
 .stats .stchips{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
@@ -1022,8 +1023,14 @@ function applyCombat(state, a) {
    Upgrade-Punkte dürfen aufgespart werden. Im Kampf sind keine Bonusaktionen möglich. */
 
 // Verlauf für die Statistik: ein Messpunkt zu Beginn, nach jedem Zug und nach jedem Kampf (ev = Kampfereignis)
+// avg: durchschnittliche Kartenstufe je Farbe im ganzen Deck (Stapel, Ablage, Hand; ohne Fluchkarten)
+function deckAvg(p) {
+  const d = p.deck, all = [].concat(d.draw, d.discard, d.hand.filter(Boolean)), out = {};
+  for (const e of ELEMENTS) { const cs = all.filter(c => c.id[0] === e); out['a' + e] = cs.length ? Math.round(cs.reduce((n, c) => n + +c.id.slice(1), 0) / cs.length * 100) / 100 : 0; }
+  return out;
+}
 function sample(state, ev) {
-  state.hist.push({ ev: ev || null, p: state.players.map(p => ({ gold: p.stats.goldGot, up: p.stats.upGot, lvl: p.temple.level, F: p.stats.mag.F, E: p.stats.mag.E, W: p.stats.mag.W, slots: p.slots, limit: p.stats.limit })) });
+  state.hist.push({ ev: ev || null, p: state.players.map(p => Object.assign(deckAvg(p), { gold: p.stats.goldGot, up: p.stats.upGot, lvl: p.temple.level, F: p.stats.mag.F, E: p.stats.mag.E, W: p.stats.mag.W, slots: p.slots, limit: p.stats.limit })) });
 }
 function endTurn(state, pid, kind) {
   const nx = other(pid);
@@ -3199,6 +3206,9 @@ const ST_SERIES = [
   { k: 'W', name: 'Magie Wasser', col: '#52a6f5' },
   { k: 'slots', name: 'Handkarten', col: '#e58aa0' },
   { k: 'limit', name: 'Ausspiellimit', col: '#5fd0c4' },
+  { k: 'aF', name: 'Ø Karte Feuer', col: '#ffb48a' },
+  { k: 'aE', name: 'Ø Karte Erde', col: '#c6e48f' },
+  { k: 'aW', name: 'Ø Karte Wasser', col: '#9fd0ff' },
 ];
 const stOn = new Set(['gold', 'up', 'lvl']), stWho = { me: true, opp: true };
 function statsView() {

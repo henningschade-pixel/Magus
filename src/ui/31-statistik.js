@@ -8,6 +8,9 @@ const ST_SERIES = [
   { k: 'W', name: 'Magie Wasser', col: '#52a6f5' },
   { k: 'slots', name: 'Handkarten', col: '#e58aa0' },
   { k: 'limit', name: 'Ausspiellimit', col: '#5fd0c4' },
+  { k: 'aF', name: 'Ø Karte Feuer', col: '#ffb48a' },
+  { k: 'aE', name: 'Ø Karte Erde', col: '#c6e48f' },
+  { k: 'aW', name: 'Ø Karte Wasser', col: '#9fd0ff' },
 ];
 const stOn = new Set(['gold', 'up', 'lvl']), stWho = { me: true, opp: true };
 function statsView() {

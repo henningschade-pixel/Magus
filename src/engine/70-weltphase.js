@@ -4,8 +4,14 @@
    Upgrade-Punkte dürfen aufgespart werden. Im Kampf sind keine Bonusaktionen möglich. */
 
 // Verlauf für die Statistik: ein Messpunkt zu Beginn, nach jedem Zug und nach jedem Kampf (ev = Kampfereignis)
+// avg: durchschnittliche Kartenstufe je Farbe im ganzen Deck (Stapel, Ablage, Hand; ohne Fluchkarten)
+function deckAvg(p) {
+  const d = p.deck, all = [].concat(d.draw, d.discard, d.hand.filter(Boolean)), out = {};
+  for (const e of ELEMENTS) { const cs = all.filter(c => c.id[0] === e); out['a' + e] = cs.length ? Math.round(cs.reduce((n, c) => n + +c.id.slice(1), 0) / cs.length * 100) / 100 : 0; }
+  return out;
+}
 function sample(state, ev) {
-  state.hist.push({ ev: ev || null, p: state.players.map(p => ({ gold: p.stats.goldGot, up: p.stats.upGot, lvl: p.temple.level, F: p.stats.mag.F, E: p.stats.mag.E, W: p.stats.mag.W, slots: p.slots, limit: p.stats.limit })) });
+  state.hist.push({ ev: ev || null, p: state.players.map(p => Object.assign(deckAvg(p), { gold: p.stats.goldGot, up: p.stats.upGot, lvl: p.temple.level, F: p.stats.mag.F, E: p.stats.mag.E, W: p.stats.mag.W, slots: p.slots, limit: p.stats.limit })) });
 }
 function endTurn(state, pid, kind) {
   const nx = other(pid);
