@@ -307,12 +307,17 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 [data-shieldfx="oE"] .mirstack[data-who="o"] .msh.E{visibility:hidden}
 [data-shieldfx="oW"] .mirstack[data-who="o"] .msh.W{visibility:hidden}
 
+/* Sanftes Abdunkeln des Spielfelds (wie im Schild-Effekt): Hauptmenü, Statistik, Deckübersicht */
+@keyframes dimin{from{opacity:0}to{opacity:1}}
+.overlay.soft{background:rgba(0,0,0,.45);animation:dimin .35s ease-out both}
+#dimdeck{position:absolute;left:0;top:0;width:1280px;height:800px;z-index:140;background:rgba(0,0,0,.45);opacity:0;pointer-events:none;transition:opacity .35s;cursor:var(--cp)}#dimdeck.on{opacity:1;pointer-events:auto}
+
 </style>
 </head>
 <body>
 <div id="viewport"><div id="stage">
   <div id="runes1"></div><div id="runes2"></div><div id="panels"></div><div id="ph"></div><div id="cards"></div>
-  <div id="log"></div>
+  <div id="log"></div><div id="dimdeck" data-act="deckclose"></div>
   <div id="toast"></div><div id="overlay" class="overlay" style="display:none"></div>
 </div></div>
 <script>const IMG={"shield_E": "assets/img/shield_E.webp", "shield_F": "assets/img/shield_F.webp", "F1": "assets/img/F1.webp", "F2": "assets/img/F2.webp", "F3": "assets/img/F3.webp", "E1": "assets/img/E1.webp", "E2": "assets/img/E2.webp", "E3": "assets/img/E3.webp", "W1": "assets/img/W1.webp", "W2": "assets/img/W2.webp", "W3": "assets/img/W3.webp", "C1": "assets/img/C1.webp", "C2": "assets/img/C2.webp", "C3": "assets/img/C3.webp", "back": "assets/img/back.webp", "lock": "assets/img/lock.webp", "m_f1": "assets/img/m_f1.webp", "m_f2": "assets/img/m_f2.webp", "m_f3": "assets/img/m_f3.webp", "d_f": "assets/img/d_f.webp", "m_e1": "assets/img/m_e1.webp", "m_e2": "assets/img/m_e2.webp", "m_e3": "assets/img/m_e3.webp", "d_e": "assets/img/d_e.webp", "m_w1": "assets/img/m_w1.webp", "m_w2": "assets/img/m_w2.webp", "m_w3": "assets/img/m_w3.webp", "d_w": "assets/img/d_w.webp", "board": "assets/img/board.webp", "gold": "assets/img/gold.webp", "hp": "assets/img/hp.webp", "mana": "assets/img/mana.webp", "limit": "assets/img/limit.webp", "attack": "assets/img/attack.webp", "defense": "assets/img/defense.webp", "wait": "assets/img/wait.webp", "gratis": "assets/img/gratis.webp", "upgrade": "assets/img/upgrade.webp", "arrow": "assets/img/arrow.webp"};</script>
@@ -935,7 +940,7 @@ function execDefense(state, passOnly) {
   const gain = recoverGain(state);
   if (passOnly) side.stats.mana = Math.min(side.stats.maxMana, side.stats.mana + gain);   // „Erholen“ in der Verteidigung: wie im Angriffszug
   if (sel.length) consumeSelection(d, sel); else d.marks = [];
-  const leftover = Math.max(0, c.pending - block);
+  const leftover = Math.max(0, c.pending - block), hpPre = { [side.ctrl]: side.stats.hp, [c.sides[c.turn === 'a' ? 'b' : 'a'].ctrl]: c.sides[c.turn === 'a' ? 'b' : 'a'].stats.hp };   // HP vor dem Schaden (Oberfläche zeigt sie, bis der Schild-Effekt durch ist)
   side.stats.hp = Math.max(0, side.stats.hp - leftover);
   const attacker = c.sides[c.turn === 'a' ? 'b' : 'a'], defEl = sel.length && sel[0].el && !sel[0].curse ? sel[0].el : c.color;
   const defFx = { kind: 'defense', rec: !!passOnly, who: side.ctrl, to: attacker.ctrl, attElem: c.color, defElem: defEl, pending: c.pending, block };
@@ -949,7 +954,8 @@ function execDefense(state, passOnly) {
       if (r > 0) att.stats.hp = Math.max(0, att.stats.hp - r);
       if (lost > 0) mirrorTake(side.stats, c.color, lost);
       const stufen = lost + ' Stufe' + (lost === 1 ? '' : 'n');
-      log(state, 'Spiegel: ' + side.name + (r > 0 ? ' wirft ' + r + ' Schaden auf ' + att.name + ' zurück' + (lost > 0 ? ' und verliert ' + stufen : '') : ' verliert ' + stufen) + '.', side.ctrl, { kind: 'mirror', late: true, elem: c.color, markers: mLvl, broken: lost, who: side.ctrl, att: att.ctrl, r, d: c.pending, blk: block });
+      log(state, 'Spiegel: ' + side.name + (r > 0 ? ' wirft ' + r + ' Schaden auf ' + att.name + ' zurück' + (lost > 0 ? ' und verliert ' + stufen : '') : ' verliert ' + stufen) + '.', side.ctrl, undefined);
+      defFx.mirror = { hpPre, elem: c.color, markers: mLvl, broken: lost, who: side.ctrl, att: att.ctrl, r, d: c.pending, blk: block };   // der Schild-Effekt läuft in der Verteidigungsanimation, vor dem Schaden auf den HP
     }
   }
   if (defEv && defEv.levels && defEv.levels.ulti > 0 && side.stats.hp > 0) {   // Ultimate in der Verteidigung: Todes-Fluch für den Angreifer
@@ -1476,7 +1482,7 @@ const NAMES = M.NAMES;
 const $ = id => document.getElementById(id);
 const stage = $('stage'), layerPh = $('ph'), layerCards = $('cards'), panels = $('panels'), logEl = $('log'), toastEl = $('toast'), overlay = $('overlay');
 let fxUntil = 0, lateN = 0;   // Zeitpunkt, bis zu dem eine Kampfanimation läuft (die Siegmeldung wartet darauf)
-let stageSeen = 1, endSnd = null, sacN = 0, G = null, hold = 0, aiTimer = null, endView = null, modal = null, introSeen = -1, preStats = null, seenCombat = null, toastTimer = null, started = false;
+let hpHold = null, stageSeen = 1, endSnd = null, sacN = 0, G = null, hold = 0, aiTimer = null, endView = null, modal = null, introSeen = -1, preStats = null, seenCombat = null, toastTimer = null, started = false;
 
 /* ---------- Layout: alle Maße der 1280×800-Bühne an einer Stelle ---------- */
 const CW = 128, CH = 194;                                   // Kartengröße
@@ -1734,6 +1740,7 @@ function renderCards() {
   const canDraw = canDrawNow();
   ph += '<div class="pilehit ' + (canDraw ? '' : 'off') + '" data-act="draw" title="Nachziehen: nicht gesperrte Karten ablegen und neu füllen" style="left:' + L_MY.draw.x + 'px;top:' + L_MY.draw.y + 'px;width:' + CW * L_MY.ps + 'px;height:' + CH * L_MY.ps + 'px"></div>';
   ph += '<div class="pilehit" data-act="deckview" title="Dein Deck als Balkendiagramm (Stufen der Karten)" style="left:' + L_MY.disc.x + 'px;top:' + L_MY.disc.y + 'px;width:' + CW * L_MY.ps + 'px;height:' + CH * L_MY.ps + 'px"></div>';
+  $('dimdeck').classList.toggle('on', !!deckView);   // Deckübersicht: Spielfeld dahinter sanft abdunkeln
   if (deckView) ph += deckPopHTML(cx.myDeck);
   if (cx.combat && cx.myStats.freeDraws > 0) ph += '<div class="freedraw" data-act="freedraw" style="left:' + L_MY.draw.x + 'px;top:' + (L_MY.draw.y - 42) + 'px"><img src="' + IMG.gratis + '">' + cx.myStats.freeDraws + '× Nachziehen</div>';
   if (cx.combat && cx.oppStats.freeDraws > 0) {   // gegnerische Nachziehtokens; im Läuterungs-Angriff anklickbar (werden zerstört, nicht gutgeschrieben)
@@ -2201,7 +2208,9 @@ const MirrorFx = (() => {
     };
     requestAnimationFrame(step);
   }
-  return { play };
+  // Zeit (ab Start des Effekts), bis der Schaden auf die HP darf: nach Aufprall, Durchschlag und Rückwurf
+  const delay = fx => { const ev = plan(fx); return ev.tEv + .1; };
+  return { play, delay };
 })();
 /* ---------- Lifeflow- und Aggro-Effekt (aus der Effektwerkstatt, auf die echte Oberfläche übertragen) ---------- */
 const FlowFx = (() => {
@@ -2686,11 +2695,13 @@ function earthFormRaw(ctx, x, by, seed, i, t, tCrack, tRise, endAt, ending) {
   function applyDef(fx) {
     const bb = Math.max(0, Math.min(10, fx.block));
     const e = ex, p = e.p, now = (performance.now() - e.t0) / 1000, tD = Math.max(now, e.tAe + p.hover), pairs = Math.min(e.n, bb);
-    const tDe = bb ? tD + (bb - 1) * p.gap + p.flight : tD, tC = tDe + .12, tK = tC + (pairs ? .3 : 0), left = e.n - pairs, tH = tK + (pairs ? .45 : 0);
+    const tDe = bb ? tD + (bb - 1) * p.gap + p.flight : tD, tC = tDe + .12, tK = tC + (pairs ? .3 : 0), left = e.n - pairs;
     p.def = fx.defElem || fx.attElem;
-    const hf = .8;
+    const sh = fx.mirror && !off() ? fx.mirror : null, shD = sh ? MirrorFx.delay(sh) : 0, hf = .8;
+    const tH = tK + Math.max(pairs ? .45 : 0, shD);   // der Schild-Effekt (Start nach dem Aufeinandertreffen) läuft vor dem Schaden auf den HP
     e.def = { H: handOf(fx.who), hp: hpOf(fx.who), ha: hpOf(fx.to), b: bb, T: { tA: 0, tD, tC, tK, tH, hf, cl: .6, pairs, left, end: (left ? tH + hf + .7 : tK + .6) + .3 + (p.atk === 'E' || p.def === 'E' ? .35 : 0) } };
     fxUntil = Math.max(fxUntil, Date.now() + (e.def.T.end - now) * 1000);
+    if (sh) { hpHold = { until: Date.now() + (tH - now + .35) * 1000, pre: sh.hpPre }; setTimeout(() => { if (G) render(); }, Math.round((tH - now + .4) * 1000)); lateN++; setTimeout(() => { lateN--; MirrorFx.play(sh); }, Math.max(0, Math.round((tK - now) * 1000))); }
     if (pairs > 0) Snd.play('block', Math.max(0, tC - now));
     if (left > 0) Snd.play('hit', Math.max(0, tH + hf - now));   // Bruch-Sound beim Einschlag der Funken
   }
@@ -2715,7 +2726,7 @@ function showFx() {
   let k = 0;
   for (const e of G.log) {
     if (e.n <= fxLast) continue;
-    const go = f => { if (!FAST) fxSound(f); if (f.kind === 'mirror') MirrorFx.play(f); else if (f.kind === 'lifeflow') FlowFx.lifeflow(f); else if (f.kind === 'aggro') FlowFx.aggro(f); else if (f.kind === 'drain') FlowFx.drain(f); else if (f.kind === 'ruin') FlowFx.ruin(f); else if (f.kind === 'attack') FlowFx.attack(f); else if (f.kind === 'defense') FlowFx.defense(f); };
+    const go = f => { if (!FAST) fxSound(f); if (f.kind === 'lifeflow') FlowFx.lifeflow(f); else if (f.kind === 'aggro') FlowFx.aggro(f); else if (f.kind === 'drain') FlowFx.drain(f); else if (f.kind === 'ruin') FlowFx.ruin(f); else if (f.kind === 'attack') FlowFx.attack(f); else if (f.kind === 'defense') FlowFx.defense(f); };
     [].concat(e.fx || []).forEach(f => { if (f.late) { lateN++; setTimeout(() => { lateN--; go(f); }, Math.round(1000 * FlowFx.wait()) + 150); } else go(f); });   // Kombo der Verteidigung erst nach der Kampfanimation
     const m = /^(Spiegel|Todes-Fluch): /.exec(e.txt); if (!m) continue;
     if (m[1] === 'Todes-Fluch') Snd.play('curse', 0, 0.7);   // Fluch-Sound, wenn der Todes-Fluch Schaden macht
@@ -2723,7 +2734,7 @@ function showFx() {
     const d = document.createElement('div'); d.className = 'fxnote ' + (mirror ? 'mirror' : 'death');
     d.style.top = (victimMe ? 546 - k * 54 : 172 + k * 54) + 'px';
     d.innerHTML = '<i>' + (mirror ? '⟲' : '☠') + '</i><span>' + esc(e.txt) + '</span>';
-    stage.appendChild(d); setTimeout(() => d.remove(), 3300); k++;
+    setTimeout(() => { stage.appendChild(d); setTimeout(() => d.remove(), 3300); }, mirror ? Math.round(1000 * FlowFx.wait()) : 0); k++;   // Spiegel-Hinweis erst nach dem Schild-Effekt
   }
   fxLast = G.logN;
 }
@@ -2737,7 +2748,13 @@ document.addEventListener('pointerdown', () => { curDown = true; applyCursor(); 
 document.addEventListener('pointerup', () => { curDown = false; applyCursor(); }, true);
 function render() {   // läuft der Ergebnis-Bildschirm, wird der Endstand des Kampfes gezeigt (die Engine ist schon in der Weltphase)
   if (!G) return;
-  if (!endView) renderInner();
+  if (!endView) {
+    if (hpHold && Date.now() < hpHold.until && G.phase === 'combat' && G.combat) {   // Schild-Effekt läuft: die HP-Werte zeigen noch den Stand vor dem Schaden
+      const sides = [G.combat.sides.a, G.combat.sides.b], keep = sides.map(s => s.stats.hp);
+      sides.forEach(s => { if (hpHold.pre[s.ctrl] !== undefined) s.stats.hp = hpHold.pre[s.ctrl]; });
+      try { renderInner(); } finally { sides.forEach((s, i) => { s.stats.hp = keep[i]; }); }
+    } else renderInner();
+  }
   else {
     const sp = G.phase, sc = G.combat;
     G.phase = 'combat'; G.combat = endView.cur;
@@ -2789,7 +2806,7 @@ function renderInner() {
 }
 function showStart() {
   setCursor('human');
-  overlay.style.display = 'flex';
+  overlay.style.display = 'flex'; overlay.className = 'overlay';
   overlay.innerHTML = '<div class="box start"><h1>Magus</h1><p style="flex:none;color:var(--mute)">Ein Duell aus Magie, Monstern und bis zu drei Showdowns. Wer zuerst 4 Siegpunkte hat, gewinnt.</p>' +
     '<img class="logo" alt="" src="assets/img/bg-9c4789d6.webp">' +
     (G && !G.over && !MP && started ? '<button class="btn primary" style="font-size:22px;padding:10px 28px;flex:none;align-self:center;margin-bottom:8px" data-act="resume">Spiel fortsetzen</button>' : '') + '<button class="btn' + (G && !G.over && !MP && started ? '' : ' primary') + '" style="font-size:22px;padding:10px 28px;flex:none;align-self:center" data-act="newgame">' + (G && !G.over && !MP && started ? 'Neues Spiel gegen den Computer' : 'Gegen den Computer spielen') + '</button>' +
@@ -2798,7 +2815,7 @@ function showStart() {
 }
 function showEnd() {
   const w = G.winner, a = G.players[ME].sp, b = G.players[OPP].sp;
-  overlay.style.display = 'flex';
+  overlay.style.display = 'flex'; overlay.className = 'overlay';
   overlay.innerHTML = '<div class="box"><h1>' + (w === ME ? 'Gewonnen' : w === null ? 'Unentschieden' : 'Verloren') + '</h1><p style="font-size:26px">' + a + ' : ' + b + ' Siegpunkte</p><p>' + (w === null ? 'Bei Gleichstand an Siegpunkten und Gold gibt es keinen Sieger.' : esc(G.players[w].name) + (G.goldWin ? ' hat bei Punktgleichstand das meiste Gold (' + G.players[ME].stats.gold + ' : ' + G.players[OPP].stats.gold + ').' : ' hat die meisten Siegpunkte.')) + '</p><button class="btn primary" style="font-size:22px;padding:10px 28px" data-act="' + (MP ? 'mpexit' : 'newgame') + '">' + (MP ? 'Zum Startbildschirm' : 'Neues Spiel') + '</button></div>';
 }
 /* ---------- Ablauf ---------- */
@@ -3041,7 +3058,7 @@ function mpRecv(from, list) {
   if (applied) { mpSave(); pump(); }
 }
 function mpWait(title, text) {
-  overlay.style.display = 'flex';
+  overlay.style.display = 'flex'; overlay.className = 'overlay';
   overlay.innerHTML = '<div class="box"><h1>' + title + '</h1>' + text + '<button class="btn" style="margin-top:14px" data-act="mpexit">Abbrechen</button></div>';
 }
 async function mpHost() {
@@ -3189,7 +3206,7 @@ stage.addEventListener('contextmenu', e => { const c = e.target.closest('.card.m
 function homeMenu() {
   if (overlay.style.display === 'flex') return;
   clearTimeout(aiTimer);   // das Spiel pausiert, solange das Menü offen ist
-  overlay.style.display = 'flex';
+  overlay.style.display = 'flex'; overlay.className = 'overlay soft';   // Menü: Spielfeld sanft abdunkeln wie beim Schild-Effekt
   homeMenuDraw();
 }
 function homeMenuDraw() {
@@ -3306,7 +3323,7 @@ function statsOpen(fromMenu) {
   if (!G || !started || (overlay.style.display === 'flex' && !fromMenu)) return;
   stFromMenu = !!fromMenu;
   clearTimeout(aiTimer);   // das Spiel pausiert, solange die Statistik offen ist
-  stView.auto = true; overlay.style.display = 'flex'; overlay.innerHTML = statsView();
+  stView.auto = true; overlay.style.display = 'flex'; overlay.className = 'overlay soft'; overlay.innerHTML = statsView();
 }
 function statsToggle(act, k) {
   if (act === 'stwho') { stWho[k] = !stWho[k]; if (!stWho.me && !stWho.opp) stWho[k === 'me' ? 'opp' : 'me'] = true; }

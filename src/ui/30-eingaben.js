@@ -110,7 +110,7 @@ stage.addEventListener('contextmenu', e => { const c = e.target.closest('.card.m
 function homeMenu() {
   if (overlay.style.display === 'flex') return;
   clearTimeout(aiTimer);   // das Spiel pausiert, solange das Menü offen ist
-  overlay.style.display = 'flex';
+  overlay.style.display = 'flex'; overlay.className = 'overlay soft';   // Menü: Spielfeld sanft abdunkeln wie beim Schild-Effekt
   homeMenuDraw();
 }
 function homeMenuDraw() {

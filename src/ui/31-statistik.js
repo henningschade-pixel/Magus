@@ -95,7 +95,7 @@ function statsOpen(fromMenu) {
   if (!G || !started || (overlay.style.display === 'flex' && !fromMenu)) return;
   stFromMenu = !!fromMenu;
   clearTimeout(aiTimer);   // das Spiel pausiert, solange die Statistik offen ist
-  stView.auto = true; overlay.style.display = 'flex'; overlay.innerHTML = statsView();
+  stView.auto = true; overlay.style.display = 'flex'; overlay.className = 'overlay soft'; overlay.innerHTML = statsView();
 }
 function statsToggle(act, k) {
   if (act === 'stwho') { stWho[k] = !stWho[k]; if (!stWho.me && !stWho.opp) stWho[k === 'me' ? 'opp' : 'me'] = true; }

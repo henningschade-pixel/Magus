@@ -184,11 +184,13 @@ function earthFormRaw(ctx, x, by, seed, i, t, tCrack, tRise, endAt, ending) {
   function applyDef(fx) {
     const bb = Math.max(0, Math.min(10, fx.block));
     const e = ex, p = e.p, now = (performance.now() - e.t0) / 1000, tD = Math.max(now, e.tAe + p.hover), pairs = Math.min(e.n, bb);
-    const tDe = bb ? tD + (bb - 1) * p.gap + p.flight : tD, tC = tDe + .12, tK = tC + (pairs ? .3 : 0), left = e.n - pairs, tH = tK + (pairs ? .45 : 0);
+    const tDe = bb ? tD + (bb - 1) * p.gap + p.flight : tD, tC = tDe + .12, tK = tC + (pairs ? .3 : 0), left = e.n - pairs;
     p.def = fx.defElem || fx.attElem;
-    const hf = .8;
+    const sh = fx.mirror && !off() ? fx.mirror : null, shD = sh ? MirrorFx.delay(sh) : 0, hf = .8;
+    const tH = tK + Math.max(pairs ? .45 : 0, shD);   // der Schild-Effekt (Start nach dem Aufeinandertreffen) läuft vor dem Schaden auf den HP
     e.def = { H: handOf(fx.who), hp: hpOf(fx.who), ha: hpOf(fx.to), b: bb, T: { tA: 0, tD, tC, tK, tH, hf, cl: .6, pairs, left, end: (left ? tH + hf + .7 : tK + .6) + .3 + (p.atk === 'E' || p.def === 'E' ? .35 : 0) } };
     fxUntil = Math.max(fxUntil, Date.now() + (e.def.T.end - now) * 1000);
+    if (sh) { hpHold = { until: Date.now() + (tH - now + .35) * 1000, pre: sh.hpPre }; setTimeout(() => { if (G) render(); }, Math.round((tH - now + .4) * 1000)); lateN++; setTimeout(() => { lateN--; MirrorFx.play(sh); }, Math.max(0, Math.round((tK - now) * 1000))); }
     if (pairs > 0) Snd.play('block', Math.max(0, tC - now));
     if (left > 0) Snd.play('hit', Math.max(0, tH + hf - now));   // Bruch-Sound beim Einschlag der Funken
   }
@@ -213,7 +215,7 @@ function showFx() {
   let k = 0;
   for (const e of G.log) {
     if (e.n <= fxLast) continue;
-    const go = f => { if (!FAST) fxSound(f); if (f.kind === 'mirror') MirrorFx.play(f); else if (f.kind === 'lifeflow') FlowFx.lifeflow(f); else if (f.kind === 'aggro') FlowFx.aggro(f); else if (f.kind === 'drain') FlowFx.drain(f); else if (f.kind === 'ruin') FlowFx.ruin(f); else if (f.kind === 'attack') FlowFx.attack(f); else if (f.kind === 'defense') FlowFx.defense(f); };
+    const go = f => { if (!FAST) fxSound(f); if (f.kind === 'lifeflow') FlowFx.lifeflow(f); else if (f.kind === 'aggro') FlowFx.aggro(f); else if (f.kind === 'drain') FlowFx.drain(f); else if (f.kind === 'ruin') FlowFx.ruin(f); else if (f.kind === 'attack') FlowFx.attack(f); else if (f.kind === 'defense') FlowFx.defense(f); };
     [].concat(e.fx || []).forEach(f => { if (f.late) { lateN++; setTimeout(() => { lateN--; go(f); }, Math.round(1000 * FlowFx.wait()) + 150); } else go(f); });   // Kombo der Verteidigung erst nach der Kampfanimation
     const m = /^(Spiegel|Todes-Fluch): /.exec(e.txt); if (!m) continue;
     if (m[1] === 'Todes-Fluch') Snd.play('curse', 0, 0.7);   // Fluch-Sound, wenn der Todes-Fluch Schaden macht
@@ -221,7 +223,7 @@ function showFx() {
     const d = document.createElement('div'); d.className = 'fxnote ' + (mirror ? 'mirror' : 'death');
     d.style.top = (victimMe ? 546 - k * 54 : 172 + k * 54) + 'px';
     d.innerHTML = '<i>' + (mirror ? '⟲' : '☠') + '</i><span>' + esc(e.txt) + '</span>';
-    stage.appendChild(d); setTimeout(() => d.remove(), 3300); k++;
+    setTimeout(() => { stage.appendChild(d); setTimeout(() => d.remove(), 3300); }, mirror ? Math.round(1000 * FlowFx.wait()) : 0); k++;   // Spiegel-Hinweis erst nach dem Schild-Effekt
   }
   fxLast = G.logN;
 }
@@ -235,7 +237,13 @@ document.addEventListener('pointerdown', () => { curDown = true; applyCursor(); 
 document.addEventListener('pointerup', () => { curDown = false; applyCursor(); }, true);
 function render() {   // läuft der Ergebnis-Bildschirm, wird der Endstand des Kampfes gezeigt (die Engine ist schon in der Weltphase)
   if (!G) return;
-  if (!endView) renderInner();
+  if (!endView) {
+    if (hpHold && Date.now() < hpHold.until && G.phase === 'combat' && G.combat) {   // Schild-Effekt läuft: die HP-Werte zeigen noch den Stand vor dem Schaden
+      const sides = [G.combat.sides.a, G.combat.sides.b], keep = sides.map(s => s.stats.hp);
+      sides.forEach(s => { if (hpHold.pre[s.ctrl] !== undefined) s.stats.hp = hpHold.pre[s.ctrl]; });
+      try { renderInner(); } finally { sides.forEach((s, i) => { s.stats.hp = keep[i]; }); }
+    } else renderInner();
+  }
   else {
     const sp = G.phase, sc = G.combat;
     G.phase = 'combat'; G.combat = endView.cur;
@@ -287,7 +295,7 @@ function renderInner() {
 }
 function showStart() {
   setCursor('human');
-  overlay.style.display = 'flex';
+  overlay.style.display = 'flex'; overlay.className = 'overlay';
   overlay.innerHTML = '<div class="box start"><h1>Magus</h1><p style="flex:none;color:var(--mute)">Ein Duell aus Magie, Monstern und bis zu drei Showdowns. Wer zuerst 4 Siegpunkte hat, gewinnt.</p>' +
     '<img class="logo" alt="" src="assets/img/bg-9c4789d6.webp">' +
     (G && !G.over && !MP && started ? '<button class="btn primary" style="font-size:22px;padding:10px 28px;flex:none;align-self:center;margin-bottom:8px" data-act="resume">Spiel fortsetzen</button>' : '') + '<button class="btn' + (G && !G.over && !MP && started ? '' : ' primary') + '" style="font-size:22px;padding:10px 28px;flex:none;align-self:center" data-act="newgame">' + (G && !G.over && !MP && started ? 'Neues Spiel gegen den Computer' : 'Gegen den Computer spielen') + '</button>' +
@@ -296,6 +304,6 @@ function showStart() {
 }
 function showEnd() {
   const w = G.winner, a = G.players[ME].sp, b = G.players[OPP].sp;
-  overlay.style.display = 'flex';
+  overlay.style.display = 'flex'; overlay.className = 'overlay';
   overlay.innerHTML = '<div class="box"><h1>' + (w === ME ? 'Gewonnen' : w === null ? 'Unentschieden' : 'Verloren') + '</h1><p style="font-size:26px">' + a + ' : ' + b + ' Siegpunkte</p><p>' + (w === null ? 'Bei Gleichstand an Siegpunkten und Gold gibt es keinen Sieger.' : esc(G.players[w].name) + (G.goldWin ? ' hat bei Punktgleichstand das meiste Gold (' + G.players[ME].stats.gold + ' : ' + G.players[OPP].stats.gold + ').' : ' hat die meisten Siegpunkte.')) + '</p><button class="btn primary" style="font-size:22px;padding:10px 28px" data-act="' + (MP ? 'mpexit' : 'newgame') + '">' + (MP ? 'Zum Startbildschirm' : 'Neues Spiel') + '</button></div>';
 }

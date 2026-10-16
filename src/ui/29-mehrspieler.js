@@ -82,7 +82,7 @@ function mpRecv(from, list) {
   if (applied) { mpSave(); pump(); }
 }
 function mpWait(title, text) {
-  overlay.style.display = 'flex';
+  overlay.style.display = 'flex'; overlay.className = 'overlay';
   overlay.innerHTML = '<div class="box"><h1>' + title + '</h1>' + text + '<button class="btn" style="margin-top:14px" data-act="mpexit">Abbrechen</button></div>';
 }
 async function mpHost() {

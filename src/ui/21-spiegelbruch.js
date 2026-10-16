@@ -90,5 +90,7 @@ const MirrorFx = (() => {
     };
     requestAnimationFrame(step);
   }
-  return { play };
+  // Zeit (ab Start des Effekts), bis der Schaden auf die HP darf: nach Aufprall, Durchschlag und Rückwurf
+  const delay = fx => { const ev = plan(fx); return ev.tEv + .1; };
+  return { play, delay };
 })();

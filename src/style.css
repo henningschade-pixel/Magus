@@ -296,3 +296,8 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 [data-shieldfx="oF"] .mirstack[data-who="o"] .msh.F{visibility:hidden}
 [data-shieldfx="oE"] .mirstack[data-who="o"] .msh.E{visibility:hidden}
 [data-shieldfx="oW"] .mirstack[data-who="o"] .msh.W{visibility:hidden}
+
+/* Sanftes Abdunkeln des Spielfelds (wie im Schild-Effekt): Hauptmenü, Statistik, Deckübersicht */
+@keyframes dimin{from{opacity:0}to{opacity:1}}
+.overlay.soft{background:rgba(0,0,0,.45);animation:dimin .35s ease-out both}
+#dimdeck{position:absolute;left:0;top:0;width:1280px;height:800px;z-index:140;background:rgba(0,0,0,.45);opacity:0;pointer-events:none;transition:opacity .35s;cursor:var(--cp)}#dimdeck.on{opacity:1;pointer-events:auto}
