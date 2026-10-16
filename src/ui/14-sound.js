@@ -18,7 +18,7 @@ const Snd = (() => {
     } catch (e) { ctx = null; }
   }
   // Grundlautstärke je Sound (Ultimate und Fanfaren laut, Karten leise); vol überschreibt
-  const VOL = { ultimate: 1, shield_hit: .8, game_win: .8, game_lose: .8, win: .7, lose: .7, draw: .6, showdown_start: .75, stage_start: .6, atk_fire: .6, atk_earth: .6, atk_water: .6, hit: .6, block: .55, aggro: .6, ruin: .55, purify: .5, heal: .5, mirror_cast: .5, mirror_reflect: .55, recover: .4, turn_change: .35, coin_sacrifice: .95, temple_level: .6, upgrade_gain: .7, spend_upgrade: .6, magic_lv2: .7, magic_lv3: .8, card_lv2: .7, card_lv3: .8, ui_click: .3 };
+  const VOL = { ultimate: 1, shield_hit: .8, win: .7, lose: .7, draw: .6, showdown_start: .75, stage_start: .6, atk_fire: .6, atk_earth: .6, atk_water: .6, hit: .6, block: .55, aggro: .6, ruin: .55, purify: .5, heal: .5, mirror_cast: .5, mirror_reflect: .55, recover: .4, turn_change: .35, coin_sacrifice: .95, temple_level: .6, upgrade_gain: .7, spend_upgrade: .6, magic_lv2: .7, magic_lv3: .8, card_lv2: .7, card_lv3: .8, ui_click: .3 };
   // Gesamtanhebung x1,35: die Dateien sind auf -20 dB mittleren Pegel normalisiert
   function play(k, delay, vol) {
     if (!on || !ctx || !bufs[k]) return;
