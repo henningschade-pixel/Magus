@@ -24,6 +24,12 @@ function checkCombatEnd(prevLog) {
     endView = Object.assign({ stage: 'anim', cur, snap: sn, res }, endTexts(res, sn, lines));
   }
 }
+// Ton zum Ergebnis-Bildschirm: Monster besiegt (nur wenn du es warst) dann Sieg, Niederlage oder Unentschieden
+function resultSound(ev) {
+  const win = ev.cls === 'win';
+  if (ev.res && ev.res.monsterDefeated && win) { Snd.play('monster_defeated'); Snd.play('win', .9); }
+  else Snd.play(ev.cls === 'win' ? 'win' : ev.cls === 'lose' ? 'lose' : 'draw');
+}
 // Texte des Ergebnis-Bildschirms (aus Sicht von ME)
 function endTexts(res, sn, lines) {
   const rest = lines.filter(t => /^(Alle drei Monster|Zwei Monster|Erholungsphase|Abschnitt|Jeder Spieler erhält|.* erhält als Trostpreis|.* verlor den Showdown|Spielende|Gleichstand|Die Beute|.* erhält die Beute)/.test(t)), me = G.players[ME], opp = G.players[OPP];
@@ -44,7 +50,7 @@ function endTick() {
   if (FlowFx.busy() || lateN > 0 || now < fxUntil + 250) { if (!endView.tm) endView.tm = setTimeout(() => { if (endView) endView.tm = 0; render(); }, 260); return; }
   endView.cur = JSON.parse(JSON.stringify(endView.snap)); endView.stage = 'values';   // Endwerte zeigen (HP- und Manaleisten laufen auf den neuen Stand)
   setTimeout(() => render(), 0);
-  setTimeout(() => { if (endView && endView.stage === 'values') { endView.stage = 'result'; render(); } }, 1100);
+  setTimeout(() => { if (endView && endView.stage === 'values') { endView.stage = 'result'; resultSound(endView); render(); } }, 1100);
 }
 function overlayHTML() {
   if (endView && endView.stage === 'result') return '<div class="endov" data-act="dismiss" style="position:absolute;inset:0"><div class="endbox ' + endView.cls + '"><div class="et">' + esc(endView.title) + '</div><div class="es">' + esc(endView.sub) + '</div>' + (endView.loot ? '<div class="el">' + esc(endView.loot) + '</div>' : '') + (endView.rest.length ? '<div class="er">' + endView.rest.map(esc).join('<br>') + '</div>' : '') + '<small>Klicken, um fortzufahren</small></div></div>';
@@ -54,7 +60,7 @@ function overlayHTML() {
 // Showdown beginnt: vorher klar sagen, was jetzt passiert
 function checkShowdownIntro() {
   if (FAST || !G || G.over || endView || modal || G.phase !== 'combat' || G.combat.mode !== 'showdown' || introSeen === G.showdown) return;
-  introSeen = G.showdown;
+  introSeen = G.showdown; Snd.play('showdown_start');
   const first = G.log.slice().reverse().find(e => /^Showdown \d/.test(e.txt));
   modal = { title: 'Showdown ' + (G.showdown + 1) + ' von 3', sub: 'Alle Monster sind besiegt: Duell Spieler gegen Spieler', lines: [first ? first.txt : '', 'Wer gewinnt, erhält 2 Siegpunkte, bei Gleichstand je 1. Es gewinnt, wer zuerst 4 Siegpunkte hat oder nach drei Showdowns vorn liegt.'].filter(Boolean) };
 }

@@ -15,7 +15,7 @@ function onAct(d) {
     case 'deckview': deckView = !deckView; render(); break;
     case 'deckclose': deckView = false; render(); break;
     case 'dismiss':
-      if (endView && endView.stage === 'result') { endView = null; hold = 0; pump(); }
+      if (endView && endView.stage === 'result') { endView = null; hold = 0; if (G && G.stage > stageSeen) Snd.play('stage_start'); stageSeen = G ? G.stage : stageSeen; pump(); }
       else if (modal) { modal = null; hold = 0; pump(); }
       break;
     case 'combat': act({ type: 'combat', elem: d.e }); break;

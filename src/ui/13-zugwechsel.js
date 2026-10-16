@@ -14,6 +14,7 @@ function startTurn(from, to) {
   if (turnAnim && turnAnim.cv) turnAnim.cv.remove();
   const cv = document.createElement('canvas'); cv.id = 'turncv'; cv.width = 1280; cv.height = 800; stage.appendChild(cv);
   const me = { from, to, t0: performance.now(), cv, done: false }; turnAnim = me;
+  Snd.play('turn_change');
   const c = cv.getContext('2d'), tMove = TURN.pause + TURN.dur, tEnd = tMove + .1;
   const loop = ts => {
     if (turnAnim !== me) return;

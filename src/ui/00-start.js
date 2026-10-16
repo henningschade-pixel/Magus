@@ -10,5 +10,5 @@ const NAMES = M.NAMES;
 const $ = id => document.getElementById(id);
 const stage = $('stage'), layerPh = $('ph'), layerCards = $('cards'), panels = $('panels'), logEl = $('log'), toastEl = $('toast'), overlay = $('overlay');
 let fxUntil = 0, lateN = 0;   // Zeitpunkt, bis zu dem eine Kampfanimation läuft (die Siegmeldung wartet darauf)
-let sacN = 0, G = null, hold = 0, aiTimer = null, endView = null, modal = null, introSeen = -1, preStats = null, seenCombat = null, toastTimer = null, started = false;
+let stageSeen = 1, endSnd = null, sacN = 0, G = null, hold = 0, aiTimer = null, endView = null, modal = null, introSeen = -1, preStats = null, seenCombat = null, toastTimer = null, started = false;
 

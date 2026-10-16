@@ -148,3 +148,12 @@ Prompt: *“A very short subtle UI click on a stone tablet with a tiny wooden ti
 4. Weltphase und Rest (`coin_sacrifice`, `temple_level`, `spend_upgrade`, `magic_buy`, `vendor_upgrade`, `turn_change`, `stage_start`, `game_win`, `game_lose`, `ui_click`)
 
 Wenn du die mp3-Dateien in `assets/audio/` ablegst (oder mir schickst), binde ich sie ein und stimme die Zeitpunkte auf die Animationen ab.
+
+---
+
+## Stand der Einbindung
+- **Eingebunden (21 neue):** `atk_fire`, `atk_earth`, `atk_water`, `hit`, `block`, `mirror_reflect`, `mirror_cast`, `recover`, `aggro`, `ruin`, `purify`, `heal`, `ultimate`, `monster_defeated`, `win`, `lose`, `draw`, `showdown_start`, `stage_start`, `turn_change`, `game_win` (Spielende gewonnen; bei verlorenem Spiel spielt `lose`).
+- **Noch offen:** `game_lose`, `coin_sacrifice`, `temple_level`, `spend_upgrade`, `magic_buy`, `vendor_upgrade`, `ui_click`.
+- **Alternativen** der fünf alten Sounds (`flip`, `play`, `shuffle`, `break`, `curse`) liegen aufbereitet unter `assets/audio/alt/*_neu.mp3`, sind aber nicht aktiv. Zum Tauschen die Datei nach `assets/audio/<name>.mp3` kopieren.
+- Neue Roh-Dateien aufbereiten (mono, Stille vorn weg, Lautstärke angleichen): `tools/sounds-aufbereiten.sh <Quellordner> <Zielordner>`. Der Dateiname muss mit dem Sound-Namen beginnen, der Rest hinter `_(` wird ignoriert.
+- Alle neuen Dateien sind nur etwa 1 Sekunde lang (der Generator lieferte jeweils 1,03 s), auch `ultimate`, das als 3 bis 4 Sekunden geplant war.

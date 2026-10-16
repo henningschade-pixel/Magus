@@ -166,7 +166,7 @@ function passAttackTurn(state) {
 function applyComboPlan(state, side, opp, plan, ev, texts, fxs) {
   const c = state.combat;
   for (const [k, lvl] of plan) {
-    if (k === 'fw') { const mel = ev.ord.el; mirrorAdd(side.stats, mel, lvl); texts.push('Spiegel ' + lvl + ' (' + NAMES[mel] + ', ' + (side.stats.mirror || 0) + ' Marker)'); }
+    if (k === 'fw') { const mel = ev.ord.el; mirrorAdd(side.stats, mel, lvl); fxs.push({ kind: 'mirrorcast', who: side.ctrl, to: opp.ctrl, elem: mel, n: lvl }); texts.push('Spiegel ' + lvl + ' (' + NAMES[mel] + ', ' + (side.stats.mirror || 0) + ' Marker)'); }
     if (k === 'fe') { texts.push('Aggro ' + lvl + ': ' + inflictCurses(state, opp, lvl)); fxs.push({ kind: 'aggro', who: side.ctrl, to: opp.ctrl, n: lvl }); }
     if (k === 'rm') {   // Zerrüttung: Der Gegner muss S Handkarten seiner Wahl abwerfen
       const n = Math.min(lvl, opp.deck.hand.filter(Boolean).length);
@@ -206,7 +206,7 @@ function execAttack(state) {
   consumeSelection(d, sel);
   const texts = [], fxs = [];
   applyComboPlan(state, side, opp, plan, ev, texts, fxs);
-  if (death) { opp.stats.death = Math.max(opp.stats.death || 0, ev.levels.ulti); texts.push('Ultimate ' + ev.levels.ulti + ': Todes-Fluch für ' + opp.name + ' (' + opp.stats.death + ' HP am Ende jeder seiner Angriffsphasen bis Kampfende)'); }
+  if (death) { opp.stats.death = Math.max(opp.stats.death || 0, ev.levels.ulti); fxs.push({ kind: 'ultimate', who: side.ctrl, to: opp.ctrl, n: ev.levels.ulti }); texts.push('Ultimate ' + ev.levels.ulti + ': Todes-Fluch für ' + opp.name + ' (' + opp.stats.death + ' HP am Ende jeder seiner Angriffsphasen bis Kampfende)'); }
   c.lfp = null;
   const dmg = ev.prim ? ev.damage : 0;
   if (dmg > 0) fxs.push({ kind: 'attack', who: side.ctrl, to: opp.ctrl, elem: ev.prim, n: dmg });
@@ -235,7 +235,7 @@ function execDefense(state, passOnly) {
   const leftover = Math.max(0, c.pending - block);
   side.stats.hp = Math.max(0, side.stats.hp - leftover);
   const attacker = c.sides[c.turn === 'a' ? 'b' : 'a'], defEl = sel.length && sel[0].el && !sel[0].curse ? sel[0].el : c.color;
-  const defFx = { kind: 'defense', who: side.ctrl, to: attacker.ctrl, attElem: c.color, defElem: defEl, pending: c.pending, block };
+  const defFx = { kind: 'defense', rec: !!passOnly, who: side.ctrl, to: attacker.ctrl, attElem: c.color, defElem: defEl, pending: c.pending, block };
   log(state, side.name + (passOnly ? ' erholt sich (+' + gain + ' Mana)' : ' verteidigt' + (block ? ' (Block ' + block + ')' : ' ohne Block')) + ' und verliert ' + leftover + ' HP' + '.', side.ctrl, defFx);
   // Spiegel: dauerhaft, je Farbe eine Stufe (1 bis 3). Gegen einen Angriff in der Farbe des Spiegels wirft er so viel Schaden zurück, wie seine Stufe hergibt, höchstens aber so viel, wie tatsächlich geblockt wurde.
   // Jeder ungeblockte Schaden dieser Farbe (auch beim Erholen ohne Verteidigung) kostet den Spiegel eine Stufe.
@@ -253,7 +253,7 @@ function execDefense(state, passOnly) {
   }
   if (defEv && defEv.levels && defEv.levels.ulti > 0 && side.stats.hp > 0) {   // Ultimate in der Verteidigung: Todes-Fluch für den Angreifer
     attacker.stats.death = Math.max(attacker.stats.death || 0, defEv.levels.ulti);
-    log(state, side.name + ' wirkt eine Ultimate: Ultimate ' + defEv.levels.ulti + ': Todes-Fluch für ' + attacker.name + ' (' + attacker.stats.death + ' HP am Ende jeder seiner Angriffsphasen bis Kampfende).', side.ctrl, { kind: 'aggro', who: side.ctrl, to: attacker.ctrl, n: defEv.levels.ulti, late: true });
+    log(state, side.name + ' wirkt eine Ultimate: Ultimate ' + defEv.levels.ulti + ': Todes-Fluch für ' + attacker.name + ' (' + attacker.stats.death + ' HP am Ende jeder seiner Angriffsphasen bis Kampfende).', side.ctrl, { kind: 'aggro', who: side.ctrl, to: attacker.ctrl, n: defEv.levels.ulti, late: true, ult: true });
   }
   if (defEv && defEv.ord && side.stats.hp > 0) {   // Kombo der Verteidigung: erst nach der Verteidigung (und dem Spiegelrückwurf)
     const lvs = levelsFor(defEv), plan = [], texts = [], fxs = [];
@@ -301,7 +301,7 @@ function applyCombat(state, a) {
       const gain = recoverGain(state);
       side.stats.mana = Math.min(side.stats.maxMana, side.stats.mana + gain);
       side.deck.marks = [];
-      log(state, side.name + ' erholt sich: +' + gain + ' Mana.', side.ctrl);
+      log(state, side.name + ' erholt sich: +' + gain + ' Mana.', side.ctrl, { kind: 'recover', who: side.ctrl });
       passAttackTurn(state); return { ok: true, combatEnd: finishStep(state) };
     }
     case 'draw': {

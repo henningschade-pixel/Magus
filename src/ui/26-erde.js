@@ -111,6 +111,7 @@ function earthFormRaw(ctx, x, by, seed, i, t, tCrack, tRise, endAt, ending) {
 }
   function startEx(fx, pre) {
     endEx();
+    if (!pre) Snd.play('atk_' + ({ F: 'fire', E: 'earth', W: 'water' }[fx.elem] || 'fire'));
     const cv = document.createElement('canvas'); cv.width = 1280; cv.height = 800; cv.style.cssText = 'position:absolute;left:0;top:0;width:1280px;height:800px;z-index:287;pointer-events:none'; stage.appendChild(cv);
     const n = Math.max(1, Math.min(10, fx.n)), rn = rng(Math.floor(Math.random() * 9999)), seeds = []; for (let i = 0; i < 20; i++) seeds.push(Math.floor(rn() * 1e5));
     ex = { cv, ctx: cv.getContext('2d'), t0: performance.now(), n, who: fx.who, to: fx.to, C0: center(), seeds, p: Object.assign({}, KP, { atk: fx.elem, def: fx.elem }), def: null, tAe: (n - 1) * KP.gap + KP.flight };
@@ -224,7 +225,10 @@ function earthFormRaw(ctx, x, by, seed, i, t, tCrack, tRise, endAt, ending) {
     const mir = fx.mirror && left > 0 ? fx.mirror : null, hf = mir ? .95 : .8;
     e.def = { H: handOf(fx.who), hp: hpOf(fx.who), ha: hpOf(fx.to), b: bb, mir, T: { tA: 0, tD, tC, tK, tH, hf, cl: .6, pairs, left, end: (left ? tH + hf + .7 + (mir ? .6 : 0) : tK + .6) + .3 + (p.atk === 'E' || p.def === 'E' ? .35 : 0) } };
     fxUntil = Math.max(fxUntil, Date.now() + (e.def.T.end - now) * 1000);
-    if (mir && mir.broken > 0 && !off()) Snd.play('break', Math.max(0, tH + .5 - now), 0.7);   // Bruch-Sound beim Einschlag der Funken
+    if (mir && mir.broken > 0 && !off()) Snd.play('break', Math.max(0, tH + .5 - now), 0.7);
+    if (mir && mir.r > 0 && !off()) Snd.play('mirror_reflect', Math.max(0, tH + .55 - now));
+    if (pairs > 0) Snd.play('block', Math.max(0, tC - now));
+    if (left > 0) Snd.play('hit', Math.max(0, tH + hf - now));   // Bruch-Sound beim Einschlag der Funken
   }
   return { attack, defense, reset() { queue = []; endEx(); }, busy() { return queue.length > 0 || !!(ex && (ex.def || performance.now() - ex.t0 < 3000)); }, remaining() { if (!ex || !ex.def) return 0; return Math.max(0, ex.def.T.end - (performance.now() - ex.t0) / 1000); } };
 })();
@@ -233,12 +237,21 @@ const fdSel = new Set();   // Zerrüttung: von mir gewählte Abwurfkarten (Handp
 const forcedMe = () => !!(G && G.phase === 'combat' && G.combat && G.combat.forced && G.combat.forced.pid === ME);
 let curKey = null, curDown = false, mkSeen = null, dthSeen = null, fxFor = null, fxLast = 0;
 // Sekundär ausgelöste Effekte (Spiegel wirft Schaden zurück, Todes-Fluch zehrt) kurz an der betroffenen Seite einblenden
+// Ton zu einem Kampfeffekt (Angriff und Verteidigung bringen ihre Sounds im Ablauf der Animation selbst mit)
+function fxSound(f) {
+  if (f.kind === 'ultimate' || (f.kind === 'aggro' && f.ult)) Snd.play('ultimate');
+  else if (f.kind === 'aggro') Snd.play('aggro');
+  else if (f.kind === 'ruin') Snd.play('ruin');
+  else if (f.kind === 'lifeflow') Snd.play(f.removed > 0 || !(f.heal > 0) ? 'purify' : 'heal');
+  else if (f.kind === 'mirrorcast') Snd.play('mirror_cast');
+  else if (f.kind === 'recover' || (f.kind === 'defense' && f.rec)) Snd.play('recover');
+}
 function showFx() {
   if (fxFor !== G) { fxFor = G; fxLast = G.logN; FlowFx.resetEx(); return; }
   let k = 0;
   for (const e of G.log) {
     if (e.n <= fxLast) continue;
-    const go = f => { if (f.kind === 'mirror') { if (!f.inline) MirrorFx.play(f); } else if (f.kind === 'lifeflow') FlowFx.lifeflow(f); else if (f.kind === 'aggro') FlowFx.aggro(f); else if (f.kind === 'drain') FlowFx.drain(f); else if (f.kind === 'ruin') FlowFx.ruin(f); else if (f.kind === 'attack') FlowFx.attack(f); else if (f.kind === 'defense') FlowFx.defense(f); };
+    const go = f => { if (!FAST) fxSound(f); if (f.kind === 'mirror') { if (!f.inline) MirrorFx.play(f); } else if (f.kind === 'lifeflow') FlowFx.lifeflow(f); else if (f.kind === 'aggro') FlowFx.aggro(f); else if (f.kind === 'drain') FlowFx.drain(f); else if (f.kind === 'ruin') FlowFx.ruin(f); else if (f.kind === 'attack') FlowFx.attack(f); else if (f.kind === 'defense') FlowFx.defense(f); };
     [].concat(e.fx || []).forEach(f => { if (f.late) { lateN++; setTimeout(() => { lateN--; go(f); }, Math.round(1000 * FlowFx.wait()) + 150); } else go(f); });   // Kombo der Verteidigung erst nach der Kampfanimation
     const m = /^(Spiegel|Todes-Fluch): /.exec(e.txt); if (!m) continue;
     if (m[1] === 'Todes-Fluch') Snd.play('curse', 0, 0.7);   // Fluch-Sound, wenn der Todes-Fluch Schaden macht
@@ -307,7 +320,7 @@ function renderInner() {
   setCursor(cx.combat && cx.mine.kind === 'monster' ? 'monster' : 'human');
   renderCards();
   pvSticky();
-  if (G.over && !endView && !modal) showEnd();
+  if (G.over && !endView && !modal) { if (endSnd !== G) { endSnd = G; Snd.play(G.winner === ME ? 'game_win' : G.winner === null ? 'draw' : 'lose'); } showEnd(); }
   endTick();
 }
 function showStart() {
