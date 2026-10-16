@@ -2868,10 +2868,10 @@ function endTexts(res, sn, lines) {
 function endTick() {
   if (!endView || endView.stage !== 'anim') return;
   const now = Date.now();
-  if (FlowFx.busy() || lateN > 0 || now < fxUntil + 250) { if (!endView.tm) endView.tm = setTimeout(() => { if (endView) endView.tm = 0; render(); }, 260); return; }
+  if (FlowFx.busy() || lateN > 0 || now < fxUntil + 60) { if (!endView.tm) endView.tm = setTimeout(() => { if (endView) endView.tm = 0; render(); }, 80); return; }
   endView.cur = JSON.parse(JSON.stringify(endView.snap)); endView.stage = 'values';   // Endwerte zeigen (HP- und Manaleisten laufen auf den neuen Stand)
   setTimeout(() => render(), 0);
-  setTimeout(() => { if (endView && endView.stage === 'values') { endView.stage = 'result'; resultSound(endView); render(); } }, 1100);
+  setTimeout(() => { if (endView && endView.stage === 'values') { endView.stage = 'result'; resultSound(endView); render(); } }, 450);
 }
 function overlayHTML() {
   if (endView && endView.stage === 'result') return '<div class="endov" data-act="dismiss" style="position:absolute;inset:0"><div class="endbox ' + endView.cls + '"><div class="et">' + esc(endView.title) + '</div><div class="es">' + esc(endView.sub) + '</div>' + (endView.loot ? '<div class="el">' + esc(endView.loot) + '</div>' : '') + (endView.rest.length ? '<div class="er">' + endView.rest.map(esc).join('<br>') + '</div>' : '') + '<small>Klicken, um fortzufahren</small></div></div>';
