@@ -71,3 +71,19 @@ test('Zuschauermodus: zwei Computer spielen gegeneinander, Eingaben sind gesperr
     assert.deepEqual(errs, []);
   } finally { await b.close(); }
 });
+
+test('Am Partieende lassen sich Statistik und Protokoll öffnen und die Statistik führt zurück zum Endbildschirm', { skip: !chromium && 'Playwright nicht installiert', timeout: 60000 }, async () => {
+  const b = await chromium.launch({ executablePath: exe });
+  try {
+    const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
+    p.on('pageerror', e => errs.push(e.message));
+    await p.goto(url); await p.waitForTimeout(500);
+    await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(500);
+    await p.evaluate(() => { const G = window.__magus.state; G.over = true; G.winner = 0; G.players[0].sp = 4; window.__magus.pump(); });
+    await p.waitForSelector('#overlay [data-act="stend"]', { timeout: 5000 });
+    assert.ok(await p.$('#overlay [data-act="logdl"]'), 'Protokoll-Knopf am Ende');
+    await p.click('#overlay [data-act="stend"]'); await p.waitForSelector('#overlay [data-act="stclose"]', { timeout: 5000 });
+    await p.click('#overlay [data-act="stclose"]'); await p.waitForSelector('#overlay [data-act="stend"]', { timeout: 5000 });
+    assert.deepEqual(errs, []);
+  } finally { await b.close(); }
+});

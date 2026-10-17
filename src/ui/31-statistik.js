@@ -90,7 +90,7 @@ overlay.addEventListener('pointermove', e => {
 const stDragEnd = () => { stDrag = null; };
 overlay.addEventListener('pointerup', stDragEnd); overlay.addEventListener('pointercancel', stDragEnd);
 overlay.addEventListener('dblclick', e => { const sv = document.getElementById('stsvg'); if (sv && sv.contains(e.target)) statsFitView(); });
-let stFromMenu = false;
+let stFromMenu = false, stFromEnd = false;   // woher die Statistik geöffnet wurde: Menü oder Endbildschirm (dorthin geht „Zurück“)
 function statsOpen(fromMenu) {
   if (!G || !started || (overlay.style.display === 'flex' && !fromMenu)) return;
   stFromMenu = !!fromMenu;

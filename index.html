@@ -2866,7 +2866,7 @@ function showStart() {
 function showEnd() {
   const w = G.winner, a = G.players[ME].sp, b = G.players[OPP].sp;
   overlay.style.display = 'flex'; overlay.className = 'overlay';
-  overlay.innerHTML = '<div class="box"><h1>' + (SPEC ? (w === null ? 'Unentschieden' : esc(G.players[w].name) + ' gewinnt') : w === ME ? 'Gewonnen' : w === null ? 'Unentschieden' : 'Verloren') + '</h1><p style="font-size:26px">' + a + ' : ' + b + ' Siegpunkte</p><p>' + (w === null ? 'Bei Gleichstand an Siegpunkten und Gold gibt es keinen Sieger.' : esc(G.players[w].name) + (G.goldWin ? ' hat bei Punktgleichstand das meiste Gold (' + G.players[ME].stats.gold + ' : ' + G.players[OPP].stats.gold + ').' : ' hat die meisten Siegpunkte.')) + '</p><button class="btn primary" style="font-size:22px;padding:10px 28px" data-act="' + (MP ? 'mpexit' : SPEC ? 'newspec' : 'newgame') + '">' + (MP ? 'Zum Startbildschirm' : SPEC ? 'Neue Zuschauer-Partie' : 'Neues Spiel') + '</button></div>';
+  overlay.innerHTML = '<div class="box"><h1>' + (SPEC ? (w === null ? 'Unentschieden' : esc(G.players[w].name) + ' gewinnt') : w === ME ? 'Gewonnen' : w === null ? 'Unentschieden' : 'Verloren') + '</h1><p style="font-size:26px">' + a + ' : ' + b + ' Siegpunkte</p><p>' + (w === null ? 'Bei Gleichstand an Siegpunkten und Gold gibt es keinen Sieger.' : esc(G.players[w].name) + (G.goldWin ? ' hat bei Punktgleichstand das meiste Gold (' + G.players[ME].stats.gold + ' : ' + G.players[OPP].stats.gold + ').' : ' hat die meisten Siegpunkte.')) + '</p><div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button class="btn" style="font-size:19px;padding:8px 18px" data-act="stend" title="Verlauf der Partie">📈 Statistik</button><button class="btn" style="font-size:19px;padding:8px 18px" data-act="logdl" title="Protokoll der Partie als Datei speichern">⬇ Protokoll</button></div><button class="btn primary" style="font-size:22px;padding:10px 28px" data-act="' + (MP ? 'mpexit' : SPEC ? 'newspec' : 'newgame') + '">' + (MP ? 'Zum Startbildschirm' : SPEC ? 'Neue Zuschauer-Partie' : 'Neues Spiel') + '</button></div>';
 }
 /* ---------- Ablauf ---------- */
 function newGame(spec) {
@@ -3160,7 +3160,9 @@ function onAct(d) {
     case 'home': homeMenu(); break;
     case 'stopen': statsOpen(true); break;
     case 'sndtoggle': Snd.toggle(); Snd.play('ui_click', 0, .8); setTimeout(homeMenuDraw, 350); homeMenuDraw(); break;
-    case 'stclose': if (stFromMenu) { stFromMenu = false; homeMenuDraw(); } else { overlay.style.display = 'none'; overlay.innerHTML = ''; pump(); } break;
+    case 'stend': statsOpen(true); stFromMenu = false; stFromEnd = true; break;
+    case 'logdl': exportLog({}); break;
+    case 'stclose': if (stFromEnd) { stFromEnd = false; showEnd(); } else if (stFromMenu) { stFromMenu = false; homeMenuDraw(); } else { overlay.style.display = 'none'; overlay.innerHTML = ''; pump(); } break;
     case 'stfit': statsFitView(); break;
     case 'stwho': case 'stser': statsToggle(d.act, d.k); break;
     case 'resume': overlay.style.display = 'none'; overlay.innerHTML = ''; pump(); break;
@@ -3277,7 +3279,7 @@ function homeMenuDraw() {
   mpChip();
 }
 // Klickton für Menü- und Bedienknöpfe (Aktionen mit eigenem Ton ausgenommen)
-const CLICK_ACTS = new Set(['sacdn', 'sacup', 'deckview', 'home', 'resume', 'restart', 'leave', 'newgame', 'newspec', 'specspeed', 'stclose', 'stopen', 'sndtoggle', 'stfit', 'stwho', 'stser', 'dismiss']);
+const CLICK_ACTS = new Set(['sacdn', 'sacup', 'deckview', 'home', 'resume', 'restart', 'leave', 'newgame', 'newspec', 'specspeed', 'stend', 'logdl', 'stclose', 'stopen', 'sndtoggle', 'stfit', 'stwho', 'stser', 'dismiss']);
 stage.addEventListener('pointerdown', e => { const b = e.target.closest('button'); if (b && (b.id === 'homebtn' || b.classList.contains('logdl') || CLICK_ACTS.has(b.dataset.act))) Snd.play('ui_click'); }, true);
 const homeBtn = document.createElement('button');
 homeBtn.id = 'homebtn'; homeBtn.title = 'Menü: fortsetzen, neu starten, verlassen'; homeBtn.textContent = '⌂';
@@ -3375,7 +3377,7 @@ overlay.addEventListener('pointermove', e => {
 const stDragEnd = () => { stDrag = null; };
 overlay.addEventListener('pointerup', stDragEnd); overlay.addEventListener('pointercancel', stDragEnd);
 overlay.addEventListener('dblclick', e => { const sv = document.getElementById('stsvg'); if (sv && sv.contains(e.target)) statsFitView(); });
-let stFromMenu = false;
+let stFromMenu = false, stFromEnd = false;   // woher die Statistik geöffnet wurde: Menü oder Endbildschirm (dorthin geht „Zurück“)
 function statsOpen(fromMenu) {
   if (!G || !started || (overlay.style.display === 'flex' && !fromMenu)) return;
   stFromMenu = !!fromMenu;

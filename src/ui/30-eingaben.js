@@ -7,7 +7,9 @@ function onAct(d) {
     case 'home': homeMenu(); break;
     case 'stopen': statsOpen(true); break;
     case 'sndtoggle': Snd.toggle(); Snd.play('ui_click', 0, .8); setTimeout(homeMenuDraw, 350); homeMenuDraw(); break;
-    case 'stclose': if (stFromMenu) { stFromMenu = false; homeMenuDraw(); } else { overlay.style.display = 'none'; overlay.innerHTML = ''; pump(); } break;
+    case 'stend': statsOpen(true); stFromMenu = false; stFromEnd = true; break;
+    case 'logdl': exportLog({}); break;
+    case 'stclose': if (stFromEnd) { stFromEnd = false; showEnd(); } else if (stFromMenu) { stFromMenu = false; homeMenuDraw(); } else { overlay.style.display = 'none'; overlay.innerHTML = ''; pump(); } break;
     case 'stfit': statsFitView(); break;
     case 'stwho': case 'stser': statsToggle(d.act, d.k); break;
     case 'resume': overlay.style.display = 'none'; overlay.innerHTML = ''; pump(); break;
@@ -124,7 +126,7 @@ function homeMenuDraw() {
   mpChip();
 }
 // Klickton für Menü- und Bedienknöpfe (Aktionen mit eigenem Ton ausgenommen)
-const CLICK_ACTS = new Set(['sacdn', 'sacup', 'deckview', 'home', 'resume', 'restart', 'leave', 'newgame', 'newspec', 'specspeed', 'stclose', 'stopen', 'sndtoggle', 'stfit', 'stwho', 'stser', 'dismiss']);
+const CLICK_ACTS = new Set(['sacdn', 'sacup', 'deckview', 'home', 'resume', 'restart', 'leave', 'newgame', 'newspec', 'specspeed', 'stend', 'logdl', 'stclose', 'stopen', 'sndtoggle', 'stfit', 'stwho', 'stser', 'dismiss']);
 stage.addEventListener('pointerdown', e => { const b = e.target.closest('button'); if (b && (b.id === 'homebtn' || b.classList.contains('logdl') || CLICK_ACTS.has(b.dataset.act))) Snd.play('ui_click'); }, true);
 const homeBtn = document.createElement('button');
 homeBtn.id = 'homebtn'; homeBtn.title = 'Menü: fortsetzen, neu starten, verlassen'; homeBtn.textContent = '⌂';
