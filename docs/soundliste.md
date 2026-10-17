@@ -168,7 +168,7 @@ Hinweis: Frühere Fassung der Aufbereitung hatte einen Fehler (Sounds waren fast
 
 Hinweis: `magic_buy` wurde entfernt (ersetzt durch `magic_lv2` und `magic_lv3`). Im Repo gelöschte Altlasten (Migrationsskripte, Spiellog der alten Regeln, Regelwerk v6) stehen weiter in der Git-Historie.
 - `spend_upgrade` („upgrade.wav“, 0,3 s) und `coin_sacrifice` („coins.wav“, 0,8 s): eigene Dateien des Spielers. `spend_upgrade` spielt einmal je angewendetem Upgrade, `coin_sacrifice` beim Opfern von Gold. Das Aufbereitungsskript nimmt jetzt auch wav, ogg, m4a und flac.
-- `card_lv2`, `card_lv3` („uprising2.wav“, „uprising3.wav“, je 1 s): spielen, wenn der Händler eine Karte auf Stufe 2 bzw. 3 aufwertet. Sie ersetzen `vendor_upgrade`, das entfernt wurde. Das kostenlose Tauschen gegen eine Stufe-1-Karte bleibt ohne eigenen Ton.
+- `card_lv2`, `card_lv3` („uprising2.wav“, „uprising3.wav“, je 1 s): spielen, wenn der Händler eine Karte auf Stufe 2 bzw. 3 aufwertet. Sie ersetzen `vendor_upgrade`, das entfernt wurde. Das kostenlose Tauschen gegen eine Stufe-1-Karte bleibt ohne eigenen Ton. Seit 17.10. vorläufig dieselben Klänge wie `magic_lv2` und `magic_lv3` (Kopien der Dateien; die Kategorie bleibt getrennt, damit sich die Kartenaufwertung später wieder eigens vertonen lässt). Die Synth-Fassungen davor stehen in der Git-Historie.
 - `win` („win.mp3“, 4,3 s) und `lose` („loss.wav“, 2,8 s): eigene Dateien des Spielers für Sieg und Niederlage in Monsterkämpfen und Showdowns (Ergebnis-Bildschirm). 
 - `shuffle` („card-shuffling“ von someonecool15, freesound.org ID 423767, 2,1 s): wieder die frühere Version des Spielers; ersetzt die generierte. Lizenz auf der Seite prüfen.
 - `shield_hit` („explosion-outdoors-medium“ von evanboyerman, freesound.org ID 753843; Lizenz prüfen): Aufprall von Geschossen auf dem Schild/Spiegel (Spiel und Schild-Werkstatt); auf 1,9 s gekürzt. `break` (Splitter) spielt, wenn Stufen des Spiegels zerbrechen.
@@ -178,6 +178,6 @@ Hinweis: `magic_buy` wurde entfernt (ersetzt durch `magic_lv2` und `magic_lv3`).
 
 Hinweis: `game_win` und `game_lose` sind entfernt. Das Spielende spielt `win` bzw. `lose` (wie Kampf und Showdown), bei Gleichstand `draw`.
 
-Übernommen aus der Ton-Werkstatt (Synth-Rezepte, gerendert mit `tools/ton-rendern.js`, Pegel −20 dB): `card_lv2` (Zwei Klänge Aufwertung), `card_lv3` (Dreiklang-Aufstieg), `draw` (Gebrochenes Gleichgewicht), `shield_hit` (Synth-Entwurf), `showdown_start` (Synth-Entwurf), `spend_upgrade` (Leiser Runenschimmer), `stage_start` (Synth-Entwurf). Die Vorgänger stehen in der Git-Historie.
+Übernommen aus der Ton-Werkstatt (Synth-Rezepte, gerendert mit `tools/ton-rendern.js`, Pegel −20 dB): `draw` (Gebrochenes Gleichgewicht), `shield_hit` (Synth-Entwurf), `showdown_start` (Synth-Entwurf), `spend_upgrade` (Leiser Runenschimmer), `stage_start` (Synth-Entwurf). Die Vorgänger stehen in der Git-Historie.
 
 Zusätzlich übernommen: `block` (Dumpfer Schildschlag, Synth-Rezept aus der Ton-Werkstatt, 0,35 s) ersetzt die eigene Datei des Spielers; diese steht in der Git-Historie.
