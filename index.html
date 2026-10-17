@@ -86,11 +86,12 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .dkpop .dklab span{flex:1;text-align:center;font-size:17px}
 .dkpop small{display:block;color:var(--mute);font-size:15px;margin-top:6px}
 .pilehit.off{cursor:var(--cd)}.pilehit.off:hover{box-shadow:none}
-.freedraw{position:absolute;z-index:61;display:flex;align-items:center;gap:6px;background:rgba(10,8,14,.8);border:1px solid var(--gold);border-radius:20px;padding:2px 12px 2px 4px;cursor:var(--cp);font-size:17px}
-.freedraw img{width:34px;height:34px;object-fit:contain}
+.freedraw{position:absolute;z-index:61;display:block;width:44px;height:48px;background:none;border:0;padding:0;cursor:var(--cp);filter:drop-shadow(0 2px 4px rgba(0,0,0,.65))}
+.freedraw img{width:100%;height:100%;object-fit:contain;display:block}
+.freedraw .mul{position:absolute;right:-7px;bottom:-4px;font:700 20px Alegreya,serif;color:#f2d27a;text-shadow:0 0 2px #000,0 0 3px #000,0 0 6px #000}
 .freedraw.opp{cursor:default;pointer-events:none;font-size:15px;color:inherit;font-family:inherit}
-.freedraw.opp.lf{pointer-events:auto;cursor:var(--cp);border:1px dashed rgba(210,173,79,.8)}
-.freedraw.opp.lf.sel{background:rgba(242,210,122,.35)}
+.freedraw.opp.lf{pointer-events:auto;cursor:var(--cp);transition:transform .12s}.freedraw.opp.lf:hover{transform:scale(1.08)}
+.freedraw.opp.lf.sel{filter:drop-shadow(0 0 7px #f2d27a) drop-shadow(0 0 3px #f2d27a)}
 .freedraw.opp .lfb{font-style:normal;font-size:12px;color:var(--gold)}
 /* Panels, Spielerstatus, Händler, Monster */
 .panel{position:absolute;background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:12px;padding:12px 14px;overflow:hidden}
@@ -1862,10 +1863,10 @@ function renderCards() {
   ph += '<div class="pilehit" data-act="deckview" title="Dein Deck als Balkendiagramm (Stufen der Karten)" style="left:' + L_MY.disc.x + 'px;top:' + L_MY.disc.y + 'px;width:' + CW * L_MY.ps + 'px;height:' + CH * L_MY.ps + 'px"></div>';
   $('dimdeck').classList.toggle('on', !!deckView);   // Deckübersicht: Spielfeld dahinter sanft abdunkeln
   if (deckView) ph += deckPopHTML(cx.myDeck);
-  if (cx.combat && cx.myStats.freeDraws > 0) ph += '<div class="freedraw" data-act="freedraw" style="left:' + L_MY.draw.x + 'px;top:' + (L_MY.draw.y - 42) + 'px"><img src="' + IMG.gratis + '">' + cx.myStats.freeDraws + '× Nachziehen</div>';
+  if (cx.combat && cx.myStats.freeDraws > 0) ph += '<div class="freedraw" data-act="freedraw" title="Gratis-Nachziehen: ' + cx.myStats.freeDraws + 'x (Klick)" style="left:' + L_MY.draw.x + 'px;top:' + (L_MY.draw.y - 52) + 'px"><img src="' + IMG.gratis + '">' + (cx.myStats.freeDraws > 1 ? '<b class="mul">×' + cx.myStats.freeDraws + '</b>' : '') + '</div>';
   if (cx.combat && cx.oppStats.freeDraws > 0) {   // gegnerische Nachziehtokens; im Läuterungs-Angriff anklickbar (werden zerstört, nicht gutgeschrieben)
-    const lf = lfCtx(), sel = lf ? lf.picks.filter(p => p === 'ot').length : 0, pos = 'left:' + L_OP.draw.x + 'px;top:' + (L_OP.draw.y + CH * L_OP.ps + 22) + 'px', inner = '<img src="' + IMG.gratis + '">' + cx.oppStats.freeDraws + '× Nachziehen' + (sel ? '<i class="lfb">✓' + sel + '</i>' : '');
-    ph += lf ? '<button class="freedraw opp lf' + (sel ? ' sel' : '') + '" data-act="lfm" data-k="ot" title="Läuterung: gegnerische Nachziehtokens zerstören (Klick: einen mehr, nach dem Maximum wieder alle weg). Sie werden nicht gutgeschrieben." style="' + pos + '">' + inner + '</button>' : '<div class="freedraw opp" style="' + pos + '">' + inner + '</div>';
+    const lf = lfCtx(), sel = lf ? lf.picks.filter(p => p === 'ot').length : 0, pos = 'left:' + L_OP.draw.x + 'px;top:' + (L_OP.draw.y + CH * L_OP.ps + 22) + 'px', inner = '<img src="' + IMG.gratis + '">' + (cx.oppStats.freeDraws > 1 ? '<b class="mul">×' + cx.oppStats.freeDraws + '</b>' : '') + (sel ? '<i class="lfb">✓' + sel + '</i>' : '');
+    ph += lf ? '<button class="freedraw opp lf' + (sel ? ' sel' : '') + '" data-act="lfm" data-k="ot" title="Läuterung: gegnerische Nachziehtokens zerstören (Klick: einen mehr, nach dem Maximum wieder alle weg). Sie werden nicht gutgeschrieben." style="' + pos + '">' + inner + '</button>' : '<div class="freedraw opp" title="Gratis-Nachziehen des Gegners: ' + cx.oppStats.freeDraws + 'x" style="' + pos + '">' + inner + '</div>';
   }
   const pnd = G.players[ME].stats.pending;
   if (!cx.combat && pnd > 0 && G.players[ME].slots < M.MAX_SLOTS) {

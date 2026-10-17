@@ -74,10 +74,10 @@ function renderCards() {
   ph += '<div class="pilehit" data-act="deckview" title="Dein Deck als Balkendiagramm (Stufen der Karten)" style="left:' + L_MY.disc.x + 'px;top:' + L_MY.disc.y + 'px;width:' + CW * L_MY.ps + 'px;height:' + CH * L_MY.ps + 'px"></div>';
   $('dimdeck').classList.toggle('on', !!deckView);   // Deckübersicht: Spielfeld dahinter sanft abdunkeln
   if (deckView) ph += deckPopHTML(cx.myDeck);
-  if (cx.combat && cx.myStats.freeDraws > 0) ph += '<div class="freedraw" data-act="freedraw" style="left:' + L_MY.draw.x + 'px;top:' + (L_MY.draw.y - 42) + 'px"><img src="' + IMG.gratis + '">' + cx.myStats.freeDraws + '× Nachziehen</div>';
+  if (cx.combat && cx.myStats.freeDraws > 0) ph += '<div class="freedraw" data-act="freedraw" title="Gratis-Nachziehen: ' + cx.myStats.freeDraws + 'x (Klick)" style="left:' + L_MY.draw.x + 'px;top:' + (L_MY.draw.y - 52) + 'px"><img src="' + IMG.gratis + '">' + (cx.myStats.freeDraws > 1 ? '<b class="mul">×' + cx.myStats.freeDraws + '</b>' : '') + '</div>';
   if (cx.combat && cx.oppStats.freeDraws > 0) {   // gegnerische Nachziehtokens; im Läuterungs-Angriff anklickbar (werden zerstört, nicht gutgeschrieben)
-    const lf = lfCtx(), sel = lf ? lf.picks.filter(p => p === 'ot').length : 0, pos = 'left:' + L_OP.draw.x + 'px;top:' + (L_OP.draw.y + CH * L_OP.ps + 22) + 'px', inner = '<img src="' + IMG.gratis + '">' + cx.oppStats.freeDraws + '× Nachziehen' + (sel ? '<i class="lfb">✓' + sel + '</i>' : '');
-    ph += lf ? '<button class="freedraw opp lf' + (sel ? ' sel' : '') + '" data-act="lfm" data-k="ot" title="Läuterung: gegnerische Nachziehtokens zerstören (Klick: einen mehr, nach dem Maximum wieder alle weg). Sie werden nicht gutgeschrieben." style="' + pos + '">' + inner + '</button>' : '<div class="freedraw opp" style="' + pos + '">' + inner + '</div>';
+    const lf = lfCtx(), sel = lf ? lf.picks.filter(p => p === 'ot').length : 0, pos = 'left:' + L_OP.draw.x + 'px;top:' + (L_OP.draw.y + CH * L_OP.ps + 22) + 'px', inner = '<img src="' + IMG.gratis + '">' + (cx.oppStats.freeDraws > 1 ? '<b class="mul">×' + cx.oppStats.freeDraws + '</b>' : '') + (sel ? '<i class="lfb">✓' + sel + '</i>' : '');
+    ph += lf ? '<button class="freedraw opp lf' + (sel ? ' sel' : '') + '" data-act="lfm" data-k="ot" title="Läuterung: gegnerische Nachziehtokens zerstören (Klick: einen mehr, nach dem Maximum wieder alle weg). Sie werden nicht gutgeschrieben." style="' + pos + '">' + inner + '</button>' : '<div class="freedraw opp" title="Gratis-Nachziehen des Gegners: ' + cx.oppStats.freeDraws + 'x" style="' + pos + '">' + inner + '</div>';
   }
   const pnd = G.players[ME].stats.pending;
   if (!cx.combat && pnd > 0 && G.players[ME].slots < M.MAX_SLOTS) {
