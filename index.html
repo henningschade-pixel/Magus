@@ -184,7 +184,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .vrow{display:flex;align-items:center;gap:6px;padding:4px 6px;border:1px solid #44444c;border-radius:9px;margin-bottom:5px;cursor:var(--cp);background:rgba(0,0,0,.18)}
 .vrow:hover{border-color:var(--gold)}
 .vrow.off{opacity:.4;cursor:var(--cd)}.vrow.off:hover{border-color:#44444c}
-.stock{display:grid;grid-template-columns:repeat(3,1fr);gap:4px 6px;margin:6px 0 8px}.stk{display:flex;align-items:center;gap:5px;padding:2px 4px;border:1px solid #44444c;border-radius:7px;background:rgba(0,0,0,.18)}.stk b{font-size:13px;color:var(--gold)}.stk.out{opacity:.35}.stk.out b{color:#d88}
+.stock{display:grid;grid-template-columns:repeat(3,1fr);gap:4px 6px;margin:6px 0 8px}.stk{display:flex;align-items:center;gap:5px;padding:2px 4px;border:1px solid #44444c;border-radius:7px;background:rgba(0,0,0,.18)}.stk b{font-size:13px;color:var(--gold)}.stk.buy{border-color:var(--gold);box-shadow:0 0 8px rgba(255,205,90,.65),inset 0 0 6px rgba(255,205,90,.3);cursor:var(--cp)}.stk.buy:hover{background:rgba(255,205,90,.16)}.stk.out{opacity:.35}.stk.out b{color:#d88}
 .thumb{width:30px;height:45px;background-size:100% 100%;border-radius:4px;box-shadow:0 1px 4px rgba(0,0,0,.6)}
 .vrow .plus{color:var(--mute);font-size:16px}
 .vrow img.ar{width:26px}
@@ -2002,18 +2002,18 @@ function vendorPanel() {
   const can = myTurn();
   let h = '<h3>Händler</h3>';
   if (G.supply) {   // Vorrat: wie viele Karten jeder Art der Händler noch hat; vergriffene sind abgedunkelt
-    h += '<div class="stock" title="Vorrat des Händlers. Getauschte Karten gehen zurück in den Vorrat.">';
-    ['F', 'E', 'W'].forEach(e => [1, 2, 3].forEach(t => { const n = G.supply[e + t]; h += '<div class="stk' + (n > 0 ? '' : ' out') + '" title="' + (n > 0 ? 'noch ' + n + ' im Vorrat' : 'vergriffen') + '">' + thumb(e + t) + '<b>' + e + t + ' ' + (n > 0 ? '×' + n : 'weg') + '</b></div>'; }));
+    h += '<div class="stock" title="Vorrat des Händlers. Getauschte Karten gehen zurück in den Vorrat. Golden gerahmt: mit deinen markierten Karten kaufbar (Klick).">';
+    ['F', 'E', 'W'].forEach(e => [1, 2, 3].forEach(t => {
+      const id = e + t, n = G.supply[id], buy = offers.filter(o => !o.free && o.available && o.result === id), canBuy = can && buy.length > 0;
+      const tip = n <= 0 ? 'vergriffen' : canBuy ? buy.map(o => o.cost.join(' + ') + ' → ' + id).join(' oder ') + ' (noch ' + n + ')' : 'noch ' + n + ' im Vorrat';
+      h += '<div class="stk' + (n > 0 ? '' : ' out') + (canBuy ? ' buy' : '') + '"' + (canBuy ? ' data-act="vendorres" data-r="' + id + '"' : '') + ' title="' + tip + '">' + thumb(id) + '<b>' + id + ' ' + (n > 0 ? '×' + n : 'weg') + '</b></div>';
+    }));
     h += '</div>';
   }
-  if (!offers.some(o => !o.free)) h += '<div class="note" style="margin-top:6px">Für Aufwertungen: Karten aus deiner Hand markieren.</div>';
+  if (!offers.some(o => !o.free)) h += '<div class="note" style="margin-top:6px">Für Aufwertungen: Karten aus deiner Hand markieren, kaufbare Karten leuchten golden.</div>';
   h += '<div class="row" style="margin-bottom:8px;margin-top:6px">';
   offers.forEach((o, i) => { if (o.free) h += '<div class="vrow ' + (can && o.available ? '' : 'off') + '" data-act="vendor" data-i="' + i + '" title="' + (o.available ? 'Gratis' : 'vergriffen') + '">' + thumb(o.result) + '<span class="note">' + (o.available ? 'gratis' : 'weg') + '</span></div>'; });
   h += '</div>';
-  offers.forEach((o, i) => {
-    if (o.free) return;
-    h += '<div class="vrow ' + (can && o.available ? '' : 'off') + '" data-act="vendor" data-i="' + i + '" title="' + (o.available ? 'noch ' + o.stock + ' im Vorrat' : 'vergriffen') + '">' + o.cost.map((c, k) => (k ? '<span class="plus">+</span>' : '') + thumb(c)).join('') + '<img class="ar" src="' + IMG.arrow + '">' + thumb(o.result) + '<span class="note" style="margin-left:auto">' + (o.available ? (o.cost.length === 2 ? 'zwei gleiche' : 'überlegenes Element') + (G.supply ? ' · noch ' + o.stock : '') : 'vergriffen') + '</span></div>';
-  });
   return '<div class="panel" style="' + box(LAYOUT.vendor, 'overflow-y:auto') + '">' + h + '</div>';
 }
 function monsterCards() {
@@ -3270,6 +3270,7 @@ function onAct(d) {
     case 'deckclose': deckView = false; render(); break;
     case 'dismiss': dismissOverlay(); break;
     case 'combat': act({ type: 'combat', elem: d.e }); break;
+    case 'vendorres': { const o = M.vendorOffers(G, ME).filter(x => !x.free && x.available && x.result === d.r).sort((x, y) => x.cost.length - y.cost.length)[0]; if (o) act({ type: 'vendor', result: o.result, cost: o.cost }); break; }
     case 'vendor': { const o = M.vendorOffers(G, ME)[+d.i]; if (o) act({ type: 'vendor', result: o.result, cost: o.cost }); break; }
     case 'sacdn': sacN = Math.max(0, sacN - 1); render(); break;
     case 'sacup': sacN = Math.min(4, sacN + 1); render(); break;

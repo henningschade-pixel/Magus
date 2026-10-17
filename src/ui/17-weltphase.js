@@ -5,18 +5,18 @@ function vendorPanel() {
   const can = myTurn();
   let h = '<h3>Händler</h3>';
   if (G.supply) {   // Vorrat: wie viele Karten jeder Art der Händler noch hat; vergriffene sind abgedunkelt
-    h += '<div class="stock" title="Vorrat des Händlers. Getauschte Karten gehen zurück in den Vorrat.">';
-    ['F', 'E', 'W'].forEach(e => [1, 2, 3].forEach(t => { const n = G.supply[e + t]; h += '<div class="stk' + (n > 0 ? '' : ' out') + '" title="' + (n > 0 ? 'noch ' + n + ' im Vorrat' : 'vergriffen') + '">' + thumb(e + t) + '<b>' + e + t + ' ' + (n > 0 ? '×' + n : 'weg') + '</b></div>'; }));
+    h += '<div class="stock" title="Vorrat des Händlers. Getauschte Karten gehen zurück in den Vorrat. Golden gerahmt: mit deinen markierten Karten kaufbar (Klick).">';
+    ['F', 'E', 'W'].forEach(e => [1, 2, 3].forEach(t => {
+      const id = e + t, n = G.supply[id], buy = offers.filter(o => !o.free && o.available && o.result === id), canBuy = can && buy.length > 0;
+      const tip = n <= 0 ? 'vergriffen' : canBuy ? buy.map(o => o.cost.join(' + ') + ' → ' + id).join(' oder ') + ' (noch ' + n + ')' : 'noch ' + n + ' im Vorrat';
+      h += '<div class="stk' + (n > 0 ? '' : ' out') + (canBuy ? ' buy' : '') + '"' + (canBuy ? ' data-act="vendorres" data-r="' + id + '"' : '') + ' title="' + tip + '">' + thumb(id) + '<b>' + id + ' ' + (n > 0 ? '×' + n : 'weg') + '</b></div>';
+    }));
     h += '</div>';
   }
-  if (!offers.some(o => !o.free)) h += '<div class="note" style="margin-top:6px">Für Aufwertungen: Karten aus deiner Hand markieren.</div>';
+  if (!offers.some(o => !o.free)) h += '<div class="note" style="margin-top:6px">Für Aufwertungen: Karten aus deiner Hand markieren, kaufbare Karten leuchten golden.</div>';
   h += '<div class="row" style="margin-bottom:8px;margin-top:6px">';
   offers.forEach((o, i) => { if (o.free) h += '<div class="vrow ' + (can && o.available ? '' : 'off') + '" data-act="vendor" data-i="' + i + '" title="' + (o.available ? 'Gratis' : 'vergriffen') + '">' + thumb(o.result) + '<span class="note">' + (o.available ? 'gratis' : 'weg') + '</span></div>'; });
   h += '</div>';
-  offers.forEach((o, i) => {
-    if (o.free) return;
-    h += '<div class="vrow ' + (can && o.available ? '' : 'off') + '" data-act="vendor" data-i="' + i + '" title="' + (o.available ? 'noch ' + o.stock + ' im Vorrat' : 'vergriffen') + '">' + o.cost.map((c, k) => (k ? '<span class="plus">+</span>' : '') + thumb(c)).join('') + '<img class="ar" src="' + IMG.arrow + '">' + thumb(o.result) + '<span class="note" style="margin-left:auto">' + (o.available ? (o.cost.length === 2 ? 'zwei gleiche' : 'überlegenes Element') + (G.supply ? ' · noch ' + o.stock : '') : 'vergriffen') + '</span></div>';
-  });
   return '<div class="panel" style="' + box(LAYOUT.vendor, 'overflow-y:auto') + '">' + h + '</div>';
 }
 function monsterCards() {
