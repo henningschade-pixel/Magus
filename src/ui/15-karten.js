@@ -112,5 +112,6 @@ function deckPopHTML(deck) {
 }
 function canDrawNow() {
   if (!myTurn()) return false;
-  return true;   // im Kampf auch in der Verteidigung (ersetzt sie)
+  if (G.phase === 'combat') return G.combat.action === 'attack';
+  return true;
 }

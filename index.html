@@ -952,7 +952,7 @@ function canFlee(state, pid) {
   return me.ctrl === pid && opp.stats.mana <= 0 && !(me.stats.death > 0);
 }
 function recoverGain(state) { const r = state.rules.recoverByStage; return r ? (r[Math.min(r.length, Math.max(1, state.stage)) - 1] || 1) : 1; }
-function execDefense(state, passOnly, drew) {
+function execDefense(state, passOnly) {
   const c = state.combat, side = c.sides[c.turn], c0pending = c.pending;
   const d = side.deck;
   let block = 0, cost = 0, sel = [], defEv = null;
@@ -976,7 +976,7 @@ function execDefense(state, passOnly, drew) {
   side.stats.hp = Math.max(0, side.stats.hp - leftover);
   const attacker = c.sides[c.turn === 'a' ? 'b' : 'a'], defEl = sel.length && sel[0].el && !sel[0].curse ? sel[0].el : c.color;
   const defFx = { kind: 'defense', rec: !!passOnly, who: side.ctrl, to: attacker.ctrl, attElem: c.color, defElem: defEl, pending: c.pending, block, hpPre };   // hpPre: HP vor dem Schaden, die Oberfläche zeigt sie, bis die Geschosse einschlagen
-  log(state, side.name + (passOnly ? (drew ? ' nimmt den Schaden hin' : ' passt und nimmt den Schaden hin') : ' verteidigt' + (block ? ' (Block ' + block + ')' : ' ohne Block')) + ' und verliert ' + leftover + ' HP' + '.', side.ctrl, defFx);
+  log(state, side.name + (passOnly ? ' passt und nimmt den Schaden hin' : ' verteidigt' + (block ? ' (Block ' + block + ')' : ' ohne Block')) + ' und verliert ' + leftover + ' HP' + '.', side.ctrl, defFx);
   if (lost > 0) {
     if (refl > 0) attacker.stats.hp = Math.max(0, attacker.stats.hp - refl);
     mirrorTake(side.stats, c.color, lost);
@@ -1048,11 +1048,8 @@ function applyCombat(state, a) {
       passAttackTurn(state); return { ok: true, combatEnd: finishStep(state) };
     }
     case 'draw': {
+      if (c.action !== 'attack') return fail('Nachziehen geht nur im Angriffszug.');
       if (!drawPhase(state, side.deck)) return fail('Alle Karten sind gesperrt, es gibt nichts zu tauschen.');
-      if (c.action === 'defense') {   // Nachziehen in der Verteidigung: ersetzt die Verteidigung, der Schaden geht durch (ein Spiegel gleicht wie beim Passen aus), kein Mana
-        log(state, side.name + ' zieht Karten nach (ersetzt die Verteidigung).', side.ctrl);
-        return execDefense(state, true, true);
-      }
       log(state, side.name + ' zieht Karten nach (ersetzt den Angriff).', side.ctrl);
       passAttackTurn(state); return { ok: true, combatEnd: finishStep(state) };
     }
@@ -1254,7 +1251,6 @@ const DEFAULTS = {
   xPen: 0, xCost: 2, xHp: 1.5, xHor: 3,   // Erschöpfung: Ein überhasteter Angriff, der das Monster nicht schafft, lässt es angeschlagen zurück, und der Gegner (der danach am Zug ist) besiegt es leicht
   fleeT: 999,   // Fliehen: ab so vielen Kampfschritten ohne brauchbaren Angriff gegen ein Monster ohne Mana (999 = nie; im Selbstspiel verlor die KI mit 14 Schritten 48 %, mit 6 Schritten 42 %)
   fleeHits: 20,   // Fliehen als Monsterführer: fliehe, wenn der Angreifer kein Mana mehr hat und ich das Monster danach in höchstens so vielen Angriffen selbst besiege (0 = nie; 20 gewann 50,9 % gegen 0 in 1600 Partien, 1 bis 4 waren wirkungslos, weil der Fall selten vorkommt)
-  dDraw: 1,   // Verteidigung: statt zu passen nachziehen, wenn die Hand auch für einen Angriff nichts taugt (1 an, 0 aus)
   strat: 0, fHand: 3, fWeak: 4, sLock: 1,   // Eröffnung (Spielerstrategien): 0 frei, 1 Limit zuerst (Tempel-Gold für Ausspiellimit 2), 2 Fokus (eine Farbe, Handplätze erst nach dem ersten Sieg), 3 zwei Richtungen (zwei Farben auf 2, Handplätze erst nach dem 1. Showdown), 4 wählt je nach Starthand; fHand/fWeak: Farbwahl nach Handkarten bzw. geschwächtem Monster; sLock 0 hebt die Sperre der Handplätze auf
   tRace: 0, tHorizon: 3, tAlive: 0, tLoot: 0, mCounter: 0, mCatch: -1.5,   // Zeitdruck (Gegner nimmt mir ein Monster weg, Beute, wenige Monster übrig) und Reaktion auf den Aufbau des Gegners (überlegene Magie, Rückstand aufholen)                              // Magie kaufen
 };
@@ -1561,10 +1557,7 @@ function combatPlan(state, pid) {
     if (Q.dU > 0 && ev.levels && ev.levels.ulti > 0) { const o = c.sides[c.turn === 'a' ? 'b' : 'a']; score -= Q.dU * ev.levels.ulti * Q.wDeath * (o.stats.death >= ev.levels.ulti ? 0.1 : 1) * Math.max(0.4, Math.min(1.4, o.stats.hp / 4)); }   // Ultimate in der Verteidigung: Todes-Fluch für den Angreifer
     if (score < best.score) best = { score, ord: sub };
   }
-  if (!best.ord.length) {   // keine Verteidigung lohnt: bei schwacher Hand lieber nachziehen (der Schaden geht in beiden Fällen durch)
-    if (Q.dDraw > 0 && canDraw(d) && !lethal) { const att = bestAttack(side, c.sides[c.turn === 'a' ? 'b' : 'a'], hand, Q, state); if (!att || att.value <= Q.aThr) return [A({ type: 'draw' })]; }
-    return [A({ type: 'pass' })];
-  }
+  if (!best.ord.length) return [A({ type: 'pass' })];
   const acts = best.ord.map(h => A({ type: 'mark', slot: h.slot }));
   acts.push(A({ type: 'defend' }));
   return acts;
@@ -1915,7 +1908,8 @@ function deckPopHTML(deck) {
 }
 function canDrawNow() {
   if (!myTurn()) return false;
-  return true;   // im Kampf auch in der Verteidigung (ersetzt sie)
+  if (G.phase === 'combat') return G.combat.action === 'attack';
+  return true;
 }
 /* ---------- Seitenleisten ---------- */
 function boardHTML(mag, size) {
@@ -2134,7 +2128,7 @@ function combatCenter(cx) {
   const canFlee = c.mode === 'monster' && my && M.canFlee(G, ME), rg = M.recoverGain(G);
   if (!canFlee) fleeAsk = false;
   if (atk) h += '<button class="btn danger" data-act="attack" ' + (my && canExec ? '' : 'disabled') + ' title="Angriff ausführen: Schaden der markierten Karten">Angriff (' + val + ')</button><button class="btn blue" data-act="recover" ' + (my ? '' : 'disabled') + ' title="Nur du erhältst +' + rg + ' Mana">Erholen (+' + rg + ')</button><button class="btn" data-act="draw" ' + (my ? '' : 'disabled') + ' title="Hand tauschen, ersetzt den Angriff">Nachziehen</button><button class="btn" data-act="pass" ' + (my ? '' : 'disabled') + '>Passen</button>' + (c.mode === 'monster' ? '<button class="btn" data-act="fleeask" ' + (canFlee ? '' : 'disabled') + ' title="Den Kampf abbrechen: kein Sieger, keine Beute. Geht nur im eigenen Angriffszug, wenn der Gegner kein Mana mehr hat und du nicht unter einem Todes-Fluch stehst.">Fliehen</button>' : '');
-  else if (my) h += '<button class="btn primary" data-act="defend" ' + (canExec ? '' : 'disabled') + ' title="Verteidigung ausführen: Block der markierten Karten">Verteidigen (' + val + ')</button><button class="btn" data-act="pass" title="Passen: keine Verteidigung, den Schaden hinnehmen (kein Mana)">Passen</button><button class="btn" data-act="draw" title="Nachziehen: Hand tauschen statt zu verteidigen, der Schaden geht durch">Nachziehen</button>';   // Verteidigung ist rein reaktiv: nur bei eingehendem Schaden, nur Verteidigen und Passen
+  else if (my) h += '<button class="btn primary" data-act="defend" ' + (canExec ? '' : 'disabled') + ' title="Verteidigung ausführen: Block der markierten Karten">Verteidigen (' + val + ')</button><button class="btn" data-act="pass" title="Passen: keine Verteidigung, den Schaden hinnehmen (kein Mana)">Passen</button>';   // Verteidigung ist rein reaktiv: nur bei eingehendem Schaden, nur Verteidigen und Passen
   h += '</div>';
   if (fleeAsk && canFlee) {   // Warnung: Fliehen muss bestätigt werden
     const nextMe = c.def === ME;
