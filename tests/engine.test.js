@@ -199,3 +199,15 @@ test('Läuterung kann Todesmarker beider Seiten entfernen (eigene und gegnerisch
     assert.equal(me.stats.freeDraws, 1);
   }
 });
+
+test('Nachziehen in der Verteidigung ersetzt sie: Hand wird getauscht, der Schaden geht durch, kein Mana', () => {
+  const { s, me, op } = combatSetup(11, ['F1']);
+  op.stats.hp = op.stats.maxHp = 9; op.stats.mana = 5;
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+  assert.equal(s.combat.action, 'defense');
+  const before = op.deck.hand.map(c => c && c.uid).join(), hp = op.stats.hp;
+  assert.ok(M.apply(s, { pid: op.ctrl, type: 'draw' }).ok);
+  assert.equal(op.stats.hp, hp - 1, 'Schaden 1 geht durch'); assert.equal(op.stats.mana, 5, 'kein Mana');
+  assert.notEqual(op.deck.hand.map(c => c && c.uid).join(), before, 'Hand ist neu');
+  assert.equal(s.combat.action, 'attack');
+});

@@ -231,7 +231,7 @@ function canFlee(state, pid) {
   return me.ctrl === pid && opp.stats.mana <= 0 && !(me.stats.death > 0);
 }
 function recoverGain(state) { const r = state.rules.recoverByStage; return r ? (r[Math.min(r.length, Math.max(1, state.stage)) - 1] || 1) : 1; }
-function execDefense(state, passOnly) {
+function execDefense(state, passOnly, drew) {
   const c = state.combat, side = c.sides[c.turn], c0pending = c.pending;
   const d = side.deck;
   let block = 0, cost = 0, sel = [], defEv = null;
@@ -255,7 +255,7 @@ function execDefense(state, passOnly) {
   side.stats.hp = Math.max(0, side.stats.hp - leftover);
   const attacker = c.sides[c.turn === 'a' ? 'b' : 'a'], defEl = sel.length && sel[0].el && !sel[0].curse ? sel[0].el : c.color;
   const defFx = { kind: 'defense', rec: !!passOnly, who: side.ctrl, to: attacker.ctrl, attElem: c.color, defElem: defEl, pending: c.pending, block, hpPre };   // hpPre: HP vor dem Schaden, die Oberfläche zeigt sie, bis die Geschosse einschlagen
-  log(state, side.name + (passOnly ? ' passt und nimmt den Schaden hin' : ' verteidigt' + (block ? ' (Block ' + block + ')' : ' ohne Block')) + ' und verliert ' + leftover + ' HP' + '.', side.ctrl, defFx);
+  log(state, side.name + (passOnly ? (drew ? ' nimmt den Schaden hin' : ' passt und nimmt den Schaden hin') : ' verteidigt' + (block ? ' (Block ' + block + ')' : ' ohne Block')) + ' und verliert ' + leftover + ' HP' + '.', side.ctrl, defFx);
   if (lost > 0) {
     if (refl > 0) attacker.stats.hp = Math.max(0, attacker.stats.hp - refl);
     mirrorTake(side.stats, c.color, lost);
@@ -327,8 +327,11 @@ function applyCombat(state, a) {
       passAttackTurn(state); return { ok: true, combatEnd: finishStep(state) };
     }
     case 'draw': {
-      if (c.action !== 'attack') return fail('Nachziehen geht nur im Angriffszug.');
       if (!drawPhase(state, side.deck)) return fail('Alle Karten sind gesperrt, es gibt nichts zu tauschen.');
+      if (c.action === 'defense') {   // Nachziehen in der Verteidigung: ersetzt die Verteidigung, der Schaden geht durch (ein Spiegel gleicht wie beim Passen aus), kein Mana
+        log(state, side.name + ' zieht Karten nach (ersetzt die Verteidigung).', side.ctrl);
+        return execDefense(state, true, true);
+      }
       log(state, side.name + ' zieht Karten nach (ersetzt den Angriff).', side.ctrl);
       passAttackTurn(state); return { ok: true, combatEnd: finishStep(state) };
     }

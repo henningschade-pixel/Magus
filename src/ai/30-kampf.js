@@ -137,7 +137,10 @@ function combatPlan(state, pid) {
     if (Q.dU > 0 && ev.levels && ev.levels.ulti > 0) { const o = c.sides[c.turn === 'a' ? 'b' : 'a']; score -= Q.dU * ev.levels.ulti * Q.wDeath * (o.stats.death >= ev.levels.ulti ? 0.1 : 1) * Math.max(0.4, Math.min(1.4, o.stats.hp / 4)); }   // Ultimate in der Verteidigung: Todes-Fluch für den Angreifer
     if (score < best.score) best = { score, ord: sub };
   }
-  if (!best.ord.length) return [A({ type: 'pass' })];
+  if (!best.ord.length) {   // keine Verteidigung lohnt: bei schwacher Hand lieber nachziehen (der Schaden geht in beiden Fällen durch)
+    if (Q.dDraw > 0 && canDraw(d) && !lethal) { const att = bestAttack(side, c.sides[c.turn === 'a' ? 'b' : 'a'], hand, Q, state); if (!att || att.value <= Q.aThr) return [A({ type: 'draw' })]; }
+    return [A({ type: 'pass' })];
+  }
   const acts = best.ord.map(h => A({ type: 'mark', slot: h.slot }));
   acts.push(A({ type: 'defend' }));
   return acts;
