@@ -105,7 +105,8 @@ function combatPlan(state, pid) {
   // Verteidigung
   const color = c.color, pend = c.pending, lethal = pend >= s.hp;
   const cand = hand.filter(h => !h.curse);
-  let best = { score: pend * (lethal ? Q.dLeth : Q.dPend) - Q.dRec * Math.min(M.recoverGain ? M.recoverGain(state) : 1, s.maxMana - s.mana), ord: [] };   // Verzicht auf Verteidigung bringt Mana
+  const abs0 = Math.min(M.mirrorOf(s, color), pend);   // ohne Verteidigung gleicht ein Spiegel bis zu seiner Stufe aus
+  let best = { score: (pend - abs0) * (lethal ? Q.dLeth : Q.dPend) + abs0 * Q.mirKeep - Q.dRec * Math.min(M.recoverGain ? M.recoverGain(state) : 1, s.maxMana - s.mana), ord: [] };   // Verzicht auf Verteidigung bringt Mana
   const variants = [];
   for (const sub0 of subsets(cand, Math.max(1, s.limit))) {
     const firsts = [...new Set(sub0.filter(h => !h.curse).map(h => h.el))];
@@ -114,12 +115,12 @@ function combatPlan(state, pid) {
   for (const sub of variants) {
     const ev = M.evalDefense(s, sub, color);
     if (!ev.valid || ev.affordable === false) continue;
-    const left = Math.max(0, pend - (ev.block || 0));
+    const left0 = Math.max(0, pend - (ev.block || 0)), lvM = M.mirrorOf(s, color), absorbed = Math.min(lvM, left0), left = left0 - absorbed;   // Spiegel gleicht fehlende Verteidigung bis zu seiner Stufe aus
     const nCurse = sub.filter(h => h.curse).length;
     let score = left * (lethal ? Q.dLeth : Q.dPend) + (ev.cost || 0) * Q.dCost + (sub.length - nCurse) * Q.dKeep - nCurse * 0.6;
-    if (M.mirrorOf(s, color) > 0) {   // Spiegel: Rückwurf bis zur Stufe (höchstens so viel, wie geblockt wird); ungeblockter Schaden kostet Stufen
-      const opp = c.sides[c.turn === 'a' ? 'b' : 'a'], lv = M.mirrorOf(s, color), rel = Math.min(lv, ev.block || 0);
-      score -= rel * Q.mirW + (rel >= opp.stats.hp ? 60 : 0) - Math.min(lv, left) * Q.mirKeep;
+    if (lvM > 0) {   // Spiegel: Überschuss der Verteidigung wird bis zur Stufe zurückgeworfen; jeder ausgeglichene oder zurückgeworfene Schaden kostet eine Stufe
+      const opp = c.sides[c.turn === 'a' ? 'b' : 'a'], rel = Math.min(lvM, Math.max(0, (ev.block || 0) - pend));
+      score -= rel * Q.mirW + (rel >= opp.stats.hp ? 60 : 0) - (rel + absorbed) * Q.mirKeep;
     }
     if (ev.ord) { const o = c.sides[c.turn === 'a' ? 'b' : 'a']; score -= ordComboWorth(side, o, Q, state.rules, M.levelsFor(ev), ev); }
     if (Q.dU > 0 && ev.levels && ev.levels.ulti > 0) { const o = c.sides[c.turn === 'a' ? 'b' : 'a']; score -= Q.dU * ev.levels.ulti * Q.wDeath * (o.stats.death >= ev.levels.ulti ? 0.1 : 1) * Math.max(0.4, Math.min(1.4, o.stats.hp / 4)); }   // Ultimate in der Verteidigung: Todes-Fluch für den Angreifer

@@ -22,7 +22,7 @@ function mirrorStack(s, x, y, who) {
   let t = '';
   for (const e of M.ELEMENTS) {
     const n = (s.mirrorEl && s.mirrorEl[e]) || 0; if (n <= 0) continue;
-    const tip = 'Spiegel ' + M.NAMES[e] + ' Stufe ' + n + ': Dauerhaft. Gegen einen ' + M.NAMES[e] + '-Angriff wirft er bis zu ' + n + ' Schaden auf den Angreifer zurück, höchstens aber so viel, wie du geblockt hast. Jeder ungeblockte Schaden dieser Farbe kostet ihn eine Stufe.';
+    const tip = 'Spiegel ' + M.NAMES[e] + ' Stufe ' + n + ': Dauerhaft. Gegen einen ' + M.NAMES[e] + '-Angriff gleicht er fehlende Verteidigung bis zu ' + n + ' Schaden aus und verliert dabei je eine Stufe. Verteidigst du mehr als nötig, wirft er den Überschuss (höchstens ' + n + ') auf den Angreifer zurück und verliert dabei ebenfalls je eine Stufe.';
     const shield = IMG['shield_' + e], mul = n > 1 ? '<b class="mul">×' + n + '</b>' : '';   // Schildbild je Farbe, bei mehreren Markern mit Multiplikator
     if (L) {
       const sel = L.picks.filter(p => p === who + 'm:' + e).length;

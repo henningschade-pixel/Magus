@@ -4,7 +4,7 @@ function ordText(k, lv, short) {
   if (k === 'ra' && lv === 'S') return 'Lege 2·S Fluchkarten (2/4/6) auf den Ablagestapel der Gegenseite; sie kommen beim nächsten Nachziehen des Gegners zuerst auf seine Hand und werden beim darauffolgenden Nachziehen dauerhaft vernichtet';
   if (k === 'ra') return short ? 2 * lv + ' Flüche auf den Ablagestapel der Gegenseite' : 'Lege ' + 2 * lv + ' Flüche auf den Ablagestapel der Gegenseite; sie kommen beim nächsten Nachziehen des Gegners zuerst auf seine Hand und werden beim darauffolgenden Nachziehen dauerhaft vernichtet';
   if (k === 'rm') return 'Der Gegner muss ' + (lv === 'S' ? 'S' : lv) + ' Handkarte' + (lv === 1 ? '' : 'n') + ' seiner Wahl abwerfen';
-  if (k === 'bm' || k === 'bg') return 'Dein ' + (k === 'bm' ? 'roter' : 'grüner') + ' Spiegel steht danach auf Stufe ' + lv + ' (nicht addiert, höchstens 3 Stufen insgesamt). Er ist dauerhaft, wirft Schaden dieser Farbe bis zur Stufe zurück (höchstens so viel, wie geblockt wurde) und verliert eine Stufe je ungeblocktem Schaden';
+  if (k === 'bm' || k === 'bg') return 'Dein ' + (k === 'bm' ? 'roter' : 'grüner') + ' Spiegel steht danach auf Stufe ' + lv + ' (nicht addiert, höchstens 3 Stufen insgesamt). Er ist dauerhaft, gleicht fehlende Verteidigung gegen Angriffe dieser Farbe bis zur Stufe aus und wirft den Überschuss einer zu starken Verteidigung zurück (ebenfalls höchstens bis zur Stufe). Jeder ausgeglichene oder zurückgeworfene Schaden kostet ihn eine Stufe';
   if (k === 'gh') return 'Heile um ' + lv + ' HP';
   return 'Entferne ' + lv + ' beliebige Marker vom Brett (anklicken, auch eigene, Spiegelmarker und gegnerische Nachziehtokens, die dann nur zerstört werden) und erhalte für jeden einen Nachziehtoken';
 }

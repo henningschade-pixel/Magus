@@ -232,23 +232,22 @@ function execDefense(state, passOnly) {
   const gain = recoverGain(state);
   if (passOnly) side.stats.mana = Math.min(side.stats.maxMana, side.stats.mana + gain);   // „Erholen“ in der Verteidigung: wie im Angriffszug
   if (sel.length) consumeSelection(d, sel); else d.marks = [];
-  const leftover = Math.max(0, c.pending - block), hpPre = { [side.ctrl]: side.stats.hp, [c.sides[c.turn === 'a' ? 'b' : 'a'].ctrl]: c.sides[c.turn === 'a' ? 'b' : 'a'].stats.hp };   // HP vor dem Schaden (Oberfläche zeigt sie, bis der Schild-Effekt durch ist)
+  // Spiegel (dauerhaft, je Farbe eine Stufe, zusammen höchstens 3). Gegen einen Angriff in seiner Farbe gleicht er zuerst fehlende Verteidigung aus
+  // (höchstens seine Stufe) und verliert dafür je ausgeglichenen Schaden eine Stufe. Nur wenn der Verteidiger mehr verteidigt als nötig, wirft er den
+  // Überschuss zurück (ebenfalls höchstens seine Stufe) und verliert dafür je zurückgeworfenen Schaden eine Stufe. Das gilt auch beim Erholen.
+  const mLvl = mirrorOf(side.stats, c.color), missing = Math.max(0, c.pending - block), excess = Math.max(0, block - c.pending);
+  const absorb = Math.min(mLvl, missing), refl = Math.min(mLvl, excess), lost = absorb + refl, leftover = missing - absorb;
+  const hpPre = { [side.ctrl]: side.stats.hp, [c.sides[c.turn === 'a' ? 'b' : 'a'].ctrl]: c.sides[c.turn === 'a' ? 'b' : 'a'].stats.hp };   // HP vor dem Schaden (Oberfläche zeigt sie, bis der Schild-Effekt durch ist)
   side.stats.hp = Math.max(0, side.stats.hp - leftover);
   const attacker = c.sides[c.turn === 'a' ? 'b' : 'a'], defEl = sel.length && sel[0].el && !sel[0].curse ? sel[0].el : c.color;
   const defFx = { kind: 'defense', rec: !!passOnly, who: side.ctrl, to: attacker.ctrl, attElem: c.color, defElem: defEl, pending: c.pending, block };
   log(state, side.name + (passOnly ? ' erholt sich (+' + gain + ' Mana)' : ' verteidigt' + (block ? ' (Block ' + block + ')' : ' ohne Block')) + ' und verliert ' + leftover + ' HP' + '.', side.ctrl, defFx);
-  // Spiegel: dauerhaft, je Farbe eine Stufe (1 bis 3). Gegen einen Angriff in der Farbe des Spiegels wirft er so viel Schaden zurück, wie seine Stufe hergibt, höchstens aber so viel, wie tatsächlich geblockt wurde.
-  // Jeder ungeblockte Schaden dieser Farbe (auch beim Erholen ohne Verteidigung) kostet den Spiegel eine Stufe.
-  const mLvl = mirrorOf(side.stats, c.color);
-  if (mLvl > 0) {
-    const att = c.sides[c.turn === 'a' ? 'b' : 'a'], r = Math.min(mLvl, block), lost = Math.min(mLvl, leftover);
-    if (r > 0 || lost > 0) {
-      if (r > 0) att.stats.hp = Math.max(0, att.stats.hp - r);
-      if (lost > 0) mirrorTake(side.stats, c.color, lost);
-      const stufen = lost + ' Stufe' + (lost === 1 ? '' : 'n');
-      log(state, 'Spiegel: ' + side.name + (r > 0 ? ' wirft ' + r + ' Schaden auf ' + att.name + ' zurück' + (lost > 0 ? ' und verliert ' + stufen : '') : ' verliert ' + stufen) + '.', side.ctrl, undefined);
-      defFx.mirror = { hpPre, elem: c.color, markers: mLvl, broken: lost, who: side.ctrl, att: att.ctrl, r, d: c.pending, blk: block };   // der Schild-Effekt läuft in der Verteidigungsanimation, vor dem Schaden auf den HP
-    }
+  if (lost > 0) {
+    if (refl > 0) attacker.stats.hp = Math.max(0, attacker.stats.hp - refl);
+    mirrorTake(side.stats, c.color, lost);
+    const stufen = lost + ' Stufe' + (lost === 1 ? '' : 'n');
+    log(state, 'Spiegel: ' + side.name + (refl > 0 ? ' wirft ' + refl + ' Schaden auf ' + attacker.name + ' zurück' : ' gleicht ' + absorb + ' Schaden aus') + ' und verliert ' + stufen + '.', side.ctrl, undefined);
+    defFx.mirror = { hpPre, elem: c.color, markers: mLvl, broken: lost, who: side.ctrl, att: attacker.ctrl, r: refl, abs: absorb, d: c.pending, blk: block };   // der Schild-Effekt läuft in der Verteidigungsanimation, vor dem Schaden auf den HP
   }
   if (defEv && defEv.levels && defEv.levels.ulti > 0 && side.stats.hp > 0) {   // Ultimate in der Verteidigung: Todes-Fluch für den Angreifer
     attacker.stats.death = Math.max(attacker.stats.death || 0, defEv.levels.ulti);

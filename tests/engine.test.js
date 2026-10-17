@@ -67,18 +67,23 @@ function spiegelFall(lvl, def) {
   else assert.ok(M.apply(s, { pid: op.ctrl, type: 'pass' }).ok);
   return { me, op };
 }
-test('Spiegel ist dauerhaft: wirft bis zur Stufe zurück und bleibt bei vollem Block bestehen', () => {
-  const { me, op } = spiegelFall(2, 'W2');                              // Block 2, Stufe 2
-  assert.equal(me.stats.hp, 7); assert.equal(op.stats.hp, 9); assert.equal(op.stats.mirror, 2);
+test('Spiegel reflektiert nichts, wenn genau so viel verteidigt wurde wie nötig', () => {
+  const { me, op } = spiegelFall(2, 'W2');                              // Block 2 = Schaden 2
+  assert.equal(me.stats.hp, 9); assert.equal(op.stats.hp, 9); assert.equal(op.stats.mirror, 2);
 });
-test('Spiegel wirft höchstens so viel zurück, wie geblockt wurde, und verliert Stufen für ungeblockten Schaden', () => {
-  const { me, op } = spiegelFall(2, 'W1');                              // Block 1 von 2: Rückwurf 1, 1 Schaden geht durch
-  assert.equal(me.stats.hp, 8); assert.equal(op.stats.hp, 8); assert.equal(op.stats.mirror, 1);
+test('Spiegel gleicht fehlende Verteidigung aus und verliert dafür je eine Stufe', () => {
+  const { me, op } = spiegelFall(2, 'W1');                              // Block 1 von 2: Spiegel gleicht 1 aus
+  assert.equal(me.stats.hp, 9); assert.equal(op.stats.hp, 9); assert.equal(op.stats.mirror, 1);
 });
-test('Ohne Verteidigung (Erholen) wird nichts gespiegelt, der Schaden kostet Stufen', () => {
-  const { me, op } = spiegelFall(3, null);
-  assert.equal(me.stats.hp, 9); assert.equal(op.stats.hp, 7); assert.equal(op.stats.mirror, 1);
-  assert.ok(op.stats.mana >= 3);                                        // Erholen gibt Mana
+test('Spiegel gleicht höchstens seine Stufe aus, der Rest geht auf die HP (auch beim Erholen)', () => {
+  let r = spiegelFall(3, null);                                         // Schaden 2, Stufe 3: alles ausgeglichen
+  assert.equal(r.op.stats.hp, 9); assert.equal(r.op.stats.mirror, 1); assert.ok(r.op.stats.mana >= 3);   // Erholen gibt Mana
+  r = spiegelFall(1, null);                                             // Stufe 1: 1 ausgeglichen, 1 geht durch
+  assert.equal(r.op.stats.hp, 8); assert.equal(r.op.stats.mirror, undefined);
+});
+test('Spiegel wirft nur den Überschuss einer zu starken Verteidigung zurück und verliert dafür Stufen', () => {
+  const { me, op } = spiegelFall(3, 'W3');                              // Block 3, Schaden 2: Überschuss 1
+  assert.equal(me.stats.hp, 8); assert.equal(op.stats.hp, 9); assert.equal(op.stats.mirror, 2);
 });
 
 test('Monsterwerte je Stufe (Zäh, Limit, Beute)', () => {

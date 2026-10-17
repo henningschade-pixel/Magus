@@ -940,23 +940,22 @@ function execDefense(state, passOnly) {
   const gain = recoverGain(state);
   if (passOnly) side.stats.mana = Math.min(side.stats.maxMana, side.stats.mana + gain);   // „Erholen“ in der Verteidigung: wie im Angriffszug
   if (sel.length) consumeSelection(d, sel); else d.marks = [];
-  const leftover = Math.max(0, c.pending - block), hpPre = { [side.ctrl]: side.stats.hp, [c.sides[c.turn === 'a' ? 'b' : 'a'].ctrl]: c.sides[c.turn === 'a' ? 'b' : 'a'].stats.hp };   // HP vor dem Schaden (Oberfläche zeigt sie, bis der Schild-Effekt durch ist)
+  // Spiegel (dauerhaft, je Farbe eine Stufe, zusammen höchstens 3). Gegen einen Angriff in seiner Farbe gleicht er zuerst fehlende Verteidigung aus
+  // (höchstens seine Stufe) und verliert dafür je ausgeglichenen Schaden eine Stufe. Nur wenn der Verteidiger mehr verteidigt als nötig, wirft er den
+  // Überschuss zurück (ebenfalls höchstens seine Stufe) und verliert dafür je zurückgeworfenen Schaden eine Stufe. Das gilt auch beim Erholen.
+  const mLvl = mirrorOf(side.stats, c.color), missing = Math.max(0, c.pending - block), excess = Math.max(0, block - c.pending);
+  const absorb = Math.min(mLvl, missing), refl = Math.min(mLvl, excess), lost = absorb + refl, leftover = missing - absorb;
+  const hpPre = { [side.ctrl]: side.stats.hp, [c.sides[c.turn === 'a' ? 'b' : 'a'].ctrl]: c.sides[c.turn === 'a' ? 'b' : 'a'].stats.hp };   // HP vor dem Schaden (Oberfläche zeigt sie, bis der Schild-Effekt durch ist)
   side.stats.hp = Math.max(0, side.stats.hp - leftover);
   const attacker = c.sides[c.turn === 'a' ? 'b' : 'a'], defEl = sel.length && sel[0].el && !sel[0].curse ? sel[0].el : c.color;
   const defFx = { kind: 'defense', rec: !!passOnly, who: side.ctrl, to: attacker.ctrl, attElem: c.color, defElem: defEl, pending: c.pending, block };
   log(state, side.name + (passOnly ? ' erholt sich (+' + gain + ' Mana)' : ' verteidigt' + (block ? ' (Block ' + block + ')' : ' ohne Block')) + ' und verliert ' + leftover + ' HP' + '.', side.ctrl, defFx);
-  // Spiegel: dauerhaft, je Farbe eine Stufe (1 bis 3). Gegen einen Angriff in der Farbe des Spiegels wirft er so viel Schaden zurück, wie seine Stufe hergibt, höchstens aber so viel, wie tatsächlich geblockt wurde.
-  // Jeder ungeblockte Schaden dieser Farbe (auch beim Erholen ohne Verteidigung) kostet den Spiegel eine Stufe.
-  const mLvl = mirrorOf(side.stats, c.color);
-  if (mLvl > 0) {
-    const att = c.sides[c.turn === 'a' ? 'b' : 'a'], r = Math.min(mLvl, block), lost = Math.min(mLvl, leftover);
-    if (r > 0 || lost > 0) {
-      if (r > 0) att.stats.hp = Math.max(0, att.stats.hp - r);
-      if (lost > 0) mirrorTake(side.stats, c.color, lost);
-      const stufen = lost + ' Stufe' + (lost === 1 ? '' : 'n');
-      log(state, 'Spiegel: ' + side.name + (r > 0 ? ' wirft ' + r + ' Schaden auf ' + att.name + ' zurück' + (lost > 0 ? ' und verliert ' + stufen : '') : ' verliert ' + stufen) + '.', side.ctrl, undefined);
-      defFx.mirror = { hpPre, elem: c.color, markers: mLvl, broken: lost, who: side.ctrl, att: att.ctrl, r, d: c.pending, blk: block };   // der Schild-Effekt läuft in der Verteidigungsanimation, vor dem Schaden auf den HP
-    }
+  if (lost > 0) {
+    if (refl > 0) attacker.stats.hp = Math.max(0, attacker.stats.hp - refl);
+    mirrorTake(side.stats, c.color, lost);
+    const stufen = lost + ' Stufe' + (lost === 1 ? '' : 'n');
+    log(state, 'Spiegel: ' + side.name + (refl > 0 ? ' wirft ' + refl + ' Schaden auf ' + attacker.name + ' zurück' : ' gleicht ' + absorb + ' Schaden aus') + ' und verliert ' + stufen + '.', side.ctrl, undefined);
+    defFx.mirror = { hpPre, elem: c.color, markers: mLvl, broken: lost, who: side.ctrl, att: attacker.ctrl, r: refl, abs: absorb, d: c.pending, blk: block };   // der Schild-Effekt läuft in der Verteidigungsanimation, vor dem Schaden auf den HP
   }
   if (defEv && defEv.levels && defEv.levels.ulti > 0 && side.stats.hp > 0) {   // Ultimate in der Verteidigung: Todes-Fluch für den Angreifer
     attacker.stats.death = Math.max(attacker.stats.death || 0, defEv.levels.ulti);
@@ -1414,7 +1413,8 @@ function combatPlan(state, pid) {
   // Verteidigung
   const color = c.color, pend = c.pending, lethal = pend >= s.hp;
   const cand = hand.filter(h => !h.curse);
-  let best = { score: pend * (lethal ? Q.dLeth : Q.dPend) - Q.dRec * Math.min(M.recoverGain ? M.recoverGain(state) : 1, s.maxMana - s.mana), ord: [] };   // Verzicht auf Verteidigung bringt Mana
+  const abs0 = Math.min(M.mirrorOf(s, color), pend);   // ohne Verteidigung gleicht ein Spiegel bis zu seiner Stufe aus
+  let best = { score: (pend - abs0) * (lethal ? Q.dLeth : Q.dPend) + abs0 * Q.mirKeep - Q.dRec * Math.min(M.recoverGain ? M.recoverGain(state) : 1, s.maxMana - s.mana), ord: [] };   // Verzicht auf Verteidigung bringt Mana
   const variants = [];
   for (const sub0 of subsets(cand, Math.max(1, s.limit))) {
     const firsts = [...new Set(sub0.filter(h => !h.curse).map(h => h.el))];
@@ -1423,12 +1423,12 @@ function combatPlan(state, pid) {
   for (const sub of variants) {
     const ev = M.evalDefense(s, sub, color);
     if (!ev.valid || ev.affordable === false) continue;
-    const left = Math.max(0, pend - (ev.block || 0));
+    const left0 = Math.max(0, pend - (ev.block || 0)), lvM = M.mirrorOf(s, color), absorbed = Math.min(lvM, left0), left = left0 - absorbed;   // Spiegel gleicht fehlende Verteidigung bis zu seiner Stufe aus
     const nCurse = sub.filter(h => h.curse).length;
     let score = left * (lethal ? Q.dLeth : Q.dPend) + (ev.cost || 0) * Q.dCost + (sub.length - nCurse) * Q.dKeep - nCurse * 0.6;
-    if (M.mirrorOf(s, color) > 0) {   // Spiegel: Rückwurf bis zur Stufe (höchstens so viel, wie geblockt wird); ungeblockter Schaden kostet Stufen
-      const opp = c.sides[c.turn === 'a' ? 'b' : 'a'], lv = M.mirrorOf(s, color), rel = Math.min(lv, ev.block || 0);
-      score -= rel * Q.mirW + (rel >= opp.stats.hp ? 60 : 0) - Math.min(lv, left) * Q.mirKeep;
+    if (lvM > 0) {   // Spiegel: Überschuss der Verteidigung wird bis zur Stufe zurückgeworfen; jeder ausgeglichene oder zurückgeworfene Schaden kostet eine Stufe
+      const opp = c.sides[c.turn === 'a' ? 'b' : 'a'], rel = Math.min(lvM, Math.max(0, (ev.block || 0) - pend));
+      score -= rel * Q.mirW + (rel >= opp.stats.hp ? 60 : 0) - (rel + absorbed) * Q.mirKeep;
     }
     if (ev.ord) { const o = c.sides[c.turn === 'a' ? 'b' : 'a']; score -= ordComboWorth(side, o, Q, state.rules, M.levelsFor(ev), ev); }
     if (Q.dU > 0 && ev.levels && ev.levels.ulti > 0) { const o = c.sides[c.turn === 'a' ? 'b' : 'a']; score -= Q.dU * ev.levels.ulti * Q.wDeath * (o.stats.death >= ev.levels.ulti ? 0.1 : 1) * Math.max(0.4, Math.min(1.4, o.stats.hp / 4)); }   // Ultimate in der Verteidigung: Todes-Fluch für den Angreifer
@@ -1541,7 +1541,7 @@ function mirrorStack(s, x, y, who) {
   let t = '';
   for (const e of M.ELEMENTS) {
     const n = (s.mirrorEl && s.mirrorEl[e]) || 0; if (n <= 0) continue;
-    const tip = 'Spiegel ' + M.NAMES[e] + ' Stufe ' + n + ': Dauerhaft. Gegen einen ' + M.NAMES[e] + '-Angriff wirft er bis zu ' + n + ' Schaden auf den Angreifer zurück, höchstens aber so viel, wie du geblockt hast. Jeder ungeblockte Schaden dieser Farbe kostet ihn eine Stufe.';
+    const tip = 'Spiegel ' + M.NAMES[e] + ' Stufe ' + n + ': Dauerhaft. Gegen einen ' + M.NAMES[e] + '-Angriff gleicht er fehlende Verteidigung bis zu ' + n + ' Schaden aus und verliert dabei je eine Stufe. Verteidigst du mehr als nötig, wirft er den Überschuss (höchstens ' + n + ') auf den Angreifer zurück und verliert dabei ebenfalls je eine Stufe.';
     const shield = IMG['shield_' + e], mul = n > 1 ? '<b class="mul">×' + n + '</b>' : '';   // Schildbild je Farbe, bei mehreren Markern mit Multiplikator
     if (L) {
       const sel = L.picks.filter(p => p === who + 'm:' + e).length;
@@ -1916,7 +1916,7 @@ function ordText(k, lv, short) {
   if (k === 'ra' && lv === 'S') return 'Lege 2·S Fluchkarten (2/4/6) auf den Ablagestapel der Gegenseite; sie kommen beim nächsten Nachziehen des Gegners zuerst auf seine Hand und werden beim darauffolgenden Nachziehen dauerhaft vernichtet';
   if (k === 'ra') return short ? 2 * lv + ' Flüche auf den Ablagestapel der Gegenseite' : 'Lege ' + 2 * lv + ' Flüche auf den Ablagestapel der Gegenseite; sie kommen beim nächsten Nachziehen des Gegners zuerst auf seine Hand und werden beim darauffolgenden Nachziehen dauerhaft vernichtet';
   if (k === 'rm') return 'Der Gegner muss ' + (lv === 'S' ? 'S' : lv) + ' Handkarte' + (lv === 1 ? '' : 'n') + ' seiner Wahl abwerfen';
-  if (k === 'bm' || k === 'bg') return 'Dein ' + (k === 'bm' ? 'roter' : 'grüner') + ' Spiegel steht danach auf Stufe ' + lv + ' (nicht addiert, höchstens 3 Stufen insgesamt). Er ist dauerhaft, wirft Schaden dieser Farbe bis zur Stufe zurück (höchstens so viel, wie geblockt wurde) und verliert eine Stufe je ungeblocktem Schaden';
+  if (k === 'bm' || k === 'bg') return 'Dein ' + (k === 'bm' ? 'roter' : 'grüner') + ' Spiegel steht danach auf Stufe ' + lv + ' (nicht addiert, höchstens 3 Stufen insgesamt). Er ist dauerhaft, gleicht fehlende Verteidigung gegen Angriffe dieser Farbe bis zur Stufe aus und wirft den Überschuss einer zu starken Verteidigung zurück (ebenfalls höchstens bis zur Stufe). Jeder ausgeglichene oder zurückgeworfene Schaden kostet ihn eine Stufe';
   if (k === 'gh') return 'Heile um ' + lv + ' HP';
   return 'Entferne ' + lv + ' beliebige Marker vom Brett (anklicken, auch eigene, Spiegelmarker und gegnerische Nachziehtokens, die dann nur zerstört werden) und erhalte für jeden einen Nachziehtoken';
 }

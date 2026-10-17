@@ -58,7 +58,7 @@ Der aktive Spieler wählt ein lebendes Monster und greift an, der Mitspieler fü
 
 **Statt anzugreifen** darf man: nachziehen (gratis, Hand wird getauscht), **erholen** oder passen. Jede dieser Aktionen beendet den Angriffszug.
 
-**Erholen:** Wer den Angriff auslässt, erhält **Mana in Höhe des Abschnitts** (1 / 2 / 3). In der Verteidigung gilt dasselbe: Wer „Erholen“ wählt, führt keine Verteidigung aus, nimmt den Schaden hin (es wird nichts gespiegelt, der Schaden kostet den Spiegel Stufen) und erhält ebenfalls das Mana. Nachziehen, Erholen und Passen beenden den Zug.
+**Erholen:** Wer den Angriff auslässt, erhält **Mana in Höhe des Abschnitts** (1 / 2 / 3). In der Verteidigung gilt dasselbe: Wer „Erholen“ wählt, führt keine Verteidigung aus, nimmt den Schaden hin (ein Spiegel dieser Farbe gleicht bis zu seiner Stufe aus und verliert dafür Stufen) und erhält ebenfalls das Mana. Nachziehen, Erholen und Passen beenden den Zug.
 
 **Kampfende:**
 - Fällt eine Seite auf 0 HP, hat die andere gewonnen; fallen beide gleichzeitig, gibt es keinen Sieger.
@@ -86,7 +86,7 @@ Die Farbe der ersten markierten Karte bestimmt die Rolle (Feuer aggressiv, Wasse
 
 **Fluchkarten:** Sie kommen erst in den Zugstapel, wenn der Ablagestapel gemischt wird. Auf der Hand belegen sie einen Platz und wirken nicht. Beim Nachziehen werden sie dauerhaft verworfen, am Kampfende verschwinden alle.
 
-**Spiegel:** Dauerhaft (bis Kampfende), je Farbe eine Stufe (1 bis 3, zusammen höchstens 3). Gegen einen Angriff in der Farbe des Spiegels wirft er Schaden in Höhe seiner Stufe unblockbar auf den Angreifer zurück, höchstens aber so viel, wie der Verteidiger tatsächlich geblockt hat (wer nur Schaden hinnimmt, spiegelt nichts). Für jeden ungeblockten Schaden dieser Farbe verliert der Spiegel eine Stufe. Wasserangriffe lassen sich nicht spiegeln.
+**Spiegel:** Dauerhaft (bis Kampfende), je Farbe eine Stufe (1 bis 3, zusammen höchstens 3). Er wirkt gegen Angriffe in seiner Farbe: (1) Fehlt dem Verteidiger Verteidigung, gleicht der Spiegel den fehlenden Schaden aus, höchstens in Höhe seiner Stufe, und verliert dafür je ausgeglichenem Schaden eine Stufe (die HP des Verteidigers werden um diesen Betrag geschont). (2) Verteidigt der Verteidiger mehr als nötig, wirft der Spiegel den Überschuss unblockbar auf den Angreifer zurück, höchstens in Höhe seiner Stufe, und verliert dafür je zurückgeworfenem Schaden eine Stufe. Beides schließt sich aus. Beim Erholen (ohne Verteidigung) gleicht der Spiegel ebenfalls aus. Wasserangriffe lassen sich nicht spiegeln.
 
 **Läuterung:** Wählbar sind alle Marker auf dem Brett, auch eigene: Todesmarker, Spiegelmarker und **gegnerische Nachziehtokens**. Gegnerische Tokens werden nur zerstört, sie werden nicht gutgeschrieben. Für jeden anderen entfernten Marker erhält der Angreifer ein Nachziehtoken. Keine Heilung.
 
