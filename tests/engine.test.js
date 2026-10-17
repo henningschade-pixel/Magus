@@ -16,7 +16,7 @@ test('Erholen und Regeneration wachsen mit dem Abschnitt (1/2/3)', () => {
   assert.deepEqual([1, 2, 3].map(g => M.regenGain({ rules, stage: g })), [1, 2, 3]);
 });
 
-test('Aggro legt 2·S Fluchkarten auf den Ablagestapel des Gegners', () => {
+test('Lähmung legt 2·S Fluchkarten auf den Ablagestapel des Gegners', () => {
   for (const [hand, expect] of [[['F1', 'E1'], 2], [['F2', 'E2'], 4], [['F3', 'E3'], 6]]) {
     const { s, c, me, op } = combatSetup(11, hand);
     hand.forEach((_, i) => assert.ok(M.apply(s, { pid: 0, type: 'mark', slot: i }).ok));

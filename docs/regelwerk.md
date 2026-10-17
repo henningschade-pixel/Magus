@@ -76,7 +76,7 @@ Die Farbe der ersten markierten Karte bestimmt die Rolle (Feuer aggressiv, Wasse
 
 | Kombo | Farben | Wirkung bei Stufe S |
 |---|---|---|
-| Aggro | Feuer + Erde | **2·S Fluchkarten** (2 / 4 / 6) auf den Ablagestapel der Gegenseite |
+| Lähmung | Feuer + Erde | **2·S Fluchkarten** (2 / 4 / 6) auf den Ablagestapel der Gegenseite |
 | Zerrüttung | Feuer + Wasser | Gegner wirft S Handkarten seiner Wahl ab |
 | Spiegel (rot) | Wasser + Feuer | roter Spiegel auf Stufe S (nicht addiert, höchstens 3 Stufen insgesamt) |
 | Spiegel (grün) | Wasser + Erde | grüner Spiegel auf Stufe S |
@@ -122,7 +122,7 @@ Ein goldener Rand zeigt, wer am Zug ist (unten du, oben Gegner). Am Zugende teil
 - Kartenkosten: jede gespielte Karte 1 Mana, nur überlegene Verteidigung gratis (`comboCardCost`).
 - Erholen im Kampf gibt Mana je Abschnitt 1/2/3 (`recoverByStage`), auch in der Verteidigung („Erholen“ statt „Schaden nehmen“).
 - Regeneration in der Weltphase je Abschnitt 1/2/3 HP und Mana (`regenByStage`).
-- Aggro 2/4/6 Fluchkarten; Läuterung mit Auswahl eigener Marker und gegnerischer Nachziehtokens; Ultimate in der Verteidigung.
+- Lähmung 2/4/6 Fluchkarten; Läuterung mit Auswahl eigener Marker und gegnerischer Nachziehtokens; Ultimate in der Verteidigung.
 - Trostpreis nach Showdown 2: 2 Upgrade-Punkte (`loserUp2`).
 - Oberfläche: Ergebnis-Bildschirme nach Kampf und Showdown, Showdown-Ankündigung, Zugwechsel-Animation, Opfer-Vorschau, zweizeilige Kampfeffekte ab 6 Geschossen, neue Grafiken für besiegte Monster.
 - Technik: Bilder, Sounds und Cursor liegen in `assets/` (Einzeldatei-Build per `tools/build-single.js`).

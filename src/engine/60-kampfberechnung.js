@@ -1,6 +1,6 @@
 /* Magus – Regelkern (Teil 6): Kampf (Monsterkämpfe und Showdowns).
    Ein Angriffszug: Karten markieren (erste Karte bestimmt das Element), angreifen; die Gegenseite verteidigt.
-   Kombos aus zwei Elementen: Control (F+W), Aggro (F+E), Lifeflow (E+W); alle drei ergeben eine Ultimate. */
+   Kombos aus zwei Elementen: Control (F+W), Lähmung (F+E), Lifeflow (E+W); alle drei ergeben eine Ultimate. */
 
 /* ---------- Kampfberechnung ---------- */
 function comboLevels(tiers, mag, prim) {
@@ -22,7 +22,7 @@ function comboLevels(tiers, mag, prim) {
   }
   return lv;
 }
-// Rot = Feuer (Aggro), Blau = Wasser (Defensiv), Grün = Erde (Heilend): ra Flüche, rm Mana-Entzug, bm/bg roter/grüner Spiegel, gh Heilung, gr Marker entfernen + Nachziehen.
+// Rot = Feuer (Lähmung), Blau = Wasser (Defensiv), Grün = Erde (Heilend): ra Flüche, rm Mana-Entzug, bm/bg roter/grüner Spiegel, gh Heilung, gr Marker entfernen + Nachziehen.
 const ORD_COMBO = { FE: 'ra', FW: 'rm', WF: 'bm', WE: 'bg', EW: 'gh', EF: 'gr' };
 // Kombostufen auf die Plätze fw (Spiegel), fe (Flüche), ew (Marker entfernen), rm (Mana-Entzug), gh (Heilung) abgebildet.
 function levelsFor(ev) {

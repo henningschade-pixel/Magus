@@ -167,7 +167,7 @@ function applyComboPlan(state, side, opp, plan, ev, texts, fxs) {
   const c = state.combat;
   for (const [k, lvl] of plan) {
     if (k === 'fw') { const mel = ev.ord.el; mirrorAdd(side.stats, mel, lvl); fxs.push({ kind: 'mirrorcast', who: side.ctrl, to: opp.ctrl, elem: mel, n: lvl }); texts.push('Spiegel ' + lvl + ' (' + NAMES[mel] + ', ' + (side.stats.mirror || 0) + ' Marker)'); }
-    if (k === 'fe') { texts.push('Aggro ' + lvl + ': ' + inflictCurses(state, opp, lvl)); fxs.push({ kind: 'aggro', who: side.ctrl, to: opp.ctrl, n: lvl }); }
+    if (k === 'fe') { texts.push('Lähmung ' + lvl + ': ' + inflictCurses(state, opp, lvl)); fxs.push({ kind: 'aggro', who: side.ctrl, to: opp.ctrl, n: lvl }); }
     if (k === 'rm') {   // Zerrüttung: Der Gegner muss S Handkarten seiner Wahl abwerfen
       const n = Math.min(lvl, opp.deck.hand.filter(Boolean).length);
       if (n > 0) { c.forced = { pid: opp.ctrl, n }; fxs.push({ kind: 'ruin', who: side.ctrl, to: opp.ctrl, n }); }

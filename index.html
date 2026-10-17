@@ -577,13 +577,13 @@ function variantLog(state) {
   return t.length ? ' Besonderheiten: ' + t.join('; ') + '.' : '';
 }
 /* Magus – Regelkern (Teil 4): Flüche.
-   Aggro Stufe S legt 2·S Fluchkarten (C1) auf den Ablagestapel der Gegenseite. Fluchkarten belegen Handplätze, kosten beim Ausspielen oder
+   Lähmung Stufe S legt 2·S Fluchkarten (C1) auf den Ablagestapel der Gegenseite. Fluchkarten belegen Handplätze, kosten beim Ausspielen oder
    Verteidigen so viel Mana wie ihre Stufe und wirken sonst nicht. Sie kommen erst auf die Hand, wenn der Ablagestapel in den Zugstapel gemischt wird;
    die Aktion „Nachziehen“ ersetzt erst die übrigen (nicht gesperrten) Karten und wirft danach alle Fluchkarten der Hand ab. Am Kampfende verschwinden alle.
    Der Todes-Fluch (Ultimate) liegt als Marker (1 Marker = 1 HP am Ende der eigenen Angriffsphase); Läuterung kann Marker entfernen. */
 
 function inflictCurses(state, victim, level) {
-  const n = 2 * Math.max(1, Math.min(3, level));   // Aggro S = 2/4/6 Flüche
+  const n = 2 * Math.max(1, Math.min(3, level));   // Lähmung S = 2/4/6 Flüche
   for (let i = 0; i < n; i++) victim.deck.discard.push(mkCard(state, 'C1'));
   return n + ' Fluchkarte' + (n > 1 ? 'n' : '') + ' auf den Ablagestapel von ' + victim.name;
 }
@@ -648,7 +648,7 @@ function execVendor(state, pid, a) {
 }
 /* Magus – Regelkern (Teil 6): Kampf (Monsterkämpfe und Showdowns).
    Ein Angriffszug: Karten markieren (erste Karte bestimmt das Element), angreifen; die Gegenseite verteidigt.
-   Kombos aus zwei Elementen: Control (F+W), Aggro (F+E), Lifeflow (E+W); alle drei ergeben eine Ultimate. */
+   Kombos aus zwei Elementen: Control (F+W), Lähmung (F+E), Lifeflow (E+W); alle drei ergeben eine Ultimate. */
 
 /* ---------- Kampfberechnung ---------- */
 function comboLevels(tiers, mag, prim) {
@@ -670,7 +670,7 @@ function comboLevels(tiers, mag, prim) {
   }
   return lv;
 }
-// Rot = Feuer (Aggro), Blau = Wasser (Defensiv), Grün = Erde (Heilend): ra Flüche, rm Mana-Entzug, bm/bg roter/grüner Spiegel, gh Heilung, gr Marker entfernen + Nachziehen.
+// Rot = Feuer (Lähmung), Blau = Wasser (Defensiv), Grün = Erde (Heilend): ra Flüche, rm Mana-Entzug, bm/bg roter/grüner Spiegel, gh Heilung, gr Marker entfernen + Nachziehen.
 const ORD_COMBO = { FE: 'ra', FW: 'rm', WF: 'bm', WE: 'bg', EW: 'gh', EF: 'gr' };
 // Kombostufen auf die Plätze fw (Spiegel), fe (Flüche), ew (Marker entfernen), rm (Mana-Entzug), gh (Heilung) abgebildet.
 function levelsFor(ev) {
@@ -875,7 +875,7 @@ function applyComboPlan(state, side, opp, plan, ev, texts, fxs) {
   const c = state.combat;
   for (const [k, lvl] of plan) {
     if (k === 'fw') { const mel = ev.ord.el; mirrorAdd(side.stats, mel, lvl); fxs.push({ kind: 'mirrorcast', who: side.ctrl, to: opp.ctrl, elem: mel, n: lvl }); texts.push('Spiegel ' + lvl + ' (' + NAMES[mel] + ', ' + (side.stats.mirror || 0) + ' Marker)'); }
-    if (k === 'fe') { texts.push('Aggro ' + lvl + ': ' + inflictCurses(state, opp, lvl)); fxs.push({ kind: 'aggro', who: side.ctrl, to: opp.ctrl, n: lvl }); }
+    if (k === 'fe') { texts.push('Lähmung ' + lvl + ': ' + inflictCurses(state, opp, lvl)); fxs.push({ kind: 'aggro', who: side.ctrl, to: opp.ctrl, n: lvl }); }
     if (k === 'rm') {   // Zerrüttung: Der Gegner muss S Handkarten seiner Wahl abwerfen
       const n = Math.min(lvl, opp.deck.hand.filter(Boolean).length);
       if (n > 0) { c.forced = { pid: opp.ctrl, n }; fxs.push({ kind: 'ruin', who: side.ctrl, to: opp.ctrl, n }); }
@@ -1911,7 +1911,7 @@ function monsterCards() {
   return h;
 }
 /* ---------- Kampf ---------- */
-const ORD_ROWS = [['ra', 'Aggro', 'F', 'E'], ['rm', 'Zerrüttung', 'F', 'W'], ['bm', 'Spiegel', 'W', 'F'], ['bg', 'Spiegel', 'W', 'E'], ['gh', 'Heilung', 'E', 'W'], ['gr', 'Läuterung', 'E', 'F']];
+const ORD_ROWS = [['ra', 'Lähmung', 'F', 'E'], ['rm', 'Zerrüttung', 'F', 'W'], ['bm', 'Spiegel', 'W', 'F'], ['bg', 'Spiegel', 'W', 'E'], ['gh', 'Heilung', 'E', 'W'], ['gr', 'Läuterung', 'E', 'F']];
 function ordText(k, lv, short) {
   if (k === 'ra' && lv === 'S') return 'Lege 2·S Fluchkarten (2/4/6) auf den Ablagestapel der Gegenseite; sie kommen beim nächsten Nachziehen des Gegners zuerst auf seine Hand und werden beim darauffolgenden Nachziehen dauerhaft vernichtet';
   if (k === 'ra') return short ? 2 * lv + ' Flüche auf den Ablagestapel der Gegenseite' : 'Lege ' + 2 * lv + ' Flüche auf den Ablagestapel der Gegenseite; sie kommen beim nächsten Nachziehen des Gegners zuerst auf seine Hand und werden beim darauffolgenden Nachziehen dauerhaft vernichtet';
@@ -2212,7 +2212,7 @@ const MirrorFx = (() => {
   const delay = fx => { const ev = plan(fx); return ev.tEv + .1; };
   return { play, delay };
 })();
-/* ---------- Lifeflow- und Aggro-Effekt (aus der Effektwerkstatt, auf die echte Oberfläche übertragen) ---------- */
+/* ---------- Lifeflow- und Lähmungs-Effekt (aus der Effektwerkstatt, auf die echte Oberfläche übertragen) ---------- */
 const FlowFx = (() => {
   const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x)), lerp = (a, b, t) => a + (b - a) * t, seg = (u, a, b) => clamp((u - a) / (b - a));
   const eo = x => 1 - Math.pow(1 - x, 3), eio = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
@@ -2275,7 +2275,7 @@ const FlowFx = (() => {
       }
     });
   }
-  /* Aggro: Feuer- und Erdfunken fliegen von der Hand des Angreifers auf den Ablagestapel des Gegners (ohne eigene Karte) */
+  /* Lähmung: Feuer- und Erdfunken fliegen von der Hand des Angreifers auf den Ablagestapel des Gegners (ohne eigene Karte) */
   function aggro(fx) {
     if (off()) return;
     const n = Math.max(1, fx.n || 1), H = handOf(fx.who), P = pileOf(fx.to), gap = .22, flight = .75, start = .3, arc = 110, dur = start + (n - 1) * gap + flight + .9;

@@ -71,7 +71,7 @@ Prompt: *“Calm magical energy flowing back into a person: a soft rising airy c
 
 ## C. Neu: Kombos
 
-**aggro** (≈ 1–1,5 s) – Flüche werden auf den Ablagestapel des Gegners gelegt.
+**aggro** (Kombo „Lähmung“; der Dateiname bleibt) (≈ 1–1,5 s) – Flüche werden auf den Ablagestapel des Gegners gelegt.
 Prompt: *“Cursed cards being thrown onto a pile: dark whispers, low growl and a papery slap with a sinister magical hiss, 1.2 seconds.”*
 
 **ruin** (≈ 0,8–1,2 s) – Zerrüttung: Gegner muss Handkarten abwerfen.

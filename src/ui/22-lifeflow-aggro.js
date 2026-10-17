@@ -1,4 +1,4 @@
-/* ---------- Lifeflow- und Aggro-Effekt (aus der Effektwerkstatt, auf die echte Oberfläche übertragen) ---------- */
+/* ---------- Lifeflow- und Lähmungs-Effekt (aus der Effektwerkstatt, auf die echte Oberfläche übertragen) ---------- */
 const FlowFx = (() => {
   const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x)), lerp = (a, b, t) => a + (b - a) * t, seg = (u, a, b) => clamp((u - a) / (b - a));
   const eo = x => 1 - Math.pow(1 - x, 3), eio = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
@@ -61,7 +61,7 @@ const FlowFx = (() => {
       }
     });
   }
-  /* Aggro: Feuer- und Erdfunken fliegen von der Hand des Angreifers auf den Ablagestapel des Gegners (ohne eigene Karte) */
+  /* Lähmung: Feuer- und Erdfunken fliegen von der Hand des Angreifers auf den Ablagestapel des Gegners (ohne eigene Karte) */
   function aggro(fx) {
     if (off()) return;
     const n = Math.max(1, fx.n || 1), H = handOf(fx.who), P = pileOf(fx.to), gap = .22, flight = .75, start = .3, arc = 110, dur = start + (n - 1) * gap + flight + .9;
