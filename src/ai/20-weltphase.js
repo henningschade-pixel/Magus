@@ -81,7 +81,10 @@ function worldPlan(state, pid) {
         // Zeitdruck: Monster sind gemeinsam und die Beute geht an den Sieger. Kann der Gegner dieses Monster bald besiegen, lohnt es sich, ihm zuvorzukommen; wenige Monster übrig und hohe Beute erhöhen die Eile.
         const o = state.players[1 - pid].stats, oNet = o.hp >= Q.minHp && o.mana >= Q.minMana ? outlook(state, 1 - pid, target) : 0, oHits = oNet > 0 ? m.stats.hp / oNet : 99;
         const press = Q.tRace * Math.max(0, Q.tHorizon - oHits) + Q.tAlive * (3 - alive.length) + Q.tLoot * m.stats.gold;
-        const score = -Q.oHits * Math.max(0, hits - Q.oFree) + Q.cBase + Q.cHp * (s.hp - 1) + Q.cMana * (s.mana - 2) + state.worldTurns * Q.cWt - m.stats.hp * Q.cMon + press + R();
+        // Erschöpfung: Reicht mein Mana und meine Lebenskraft nicht für das ganze Monster, bleibt es angeschlagen zurück und der Gegner, der danach am Zug ist, kann es leicht besiegen (die Beute ginge an ihn).
+        const atk = Math.max(0, Math.min(s.mana / Q.xCost, (s.hp - 1) / Q.xHp)), left = Math.max(0, m.stats.hp - net * atk), oFin = oNet > 0 ? left / oNet : 99;
+        const steal = Q.xPen > 0 && left > 0 ? Q.xPen * Math.max(0, Math.min(1, (Q.xHor - oFin) / Q.xHor)) * Math.max(1, m.stats.gold) : 0;
+        const score = -steal - Q.oHits * Math.max(0, hits - Q.oFree) + Q.cBase + Q.cHp * (s.hp - 1) + Q.cMana * (s.mana - 2) + state.worldTurns * Q.cWt - m.stats.hp * Q.cMon + press + R();
         if (!bestC || score > bestC.score) bestC = { score, acts: [A({ type: 'combat', elem: target })] };
       }
       cands.push(bestC);
