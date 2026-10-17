@@ -123,3 +123,17 @@ test('Kampfende hält den Endstand für die Oberfläche fest (keepSnap)', () => 
   let steps = 0; while (!s.lastCombat && steps++ < 5000) if (!AI.runTurn(s, M.actor(s)).ok) break;
   assert.ok(s.lastCombat && s.lastCombat.snap && s.lastCombat.snap.sides, 'Snapshot vorhanden');
 });
+
+test('Monsterdecks passen zur Magie: zu jeder Magiestufe ab 2 eine Karte dieser Stufe, keine Karte über der Magie ihrer Farbe', () => {
+  for (const st of [1, 2, 3]) for (let seed = 1; seed <= 120; seed++) {
+    const s = M.newGame({ seed, ai: [true, true] }), r = M.spawnMonsters(st, s.rng);
+    for (const el of Object.keys(r)) {
+      const m = r[el];
+      for (const e of ['F', 'E', 'W']) {
+        const tiers = m.deckIds.filter(id => id[0] === e).map(id => +id[1]), mag = m.stats.mag[e];
+        assert.ok(!tiers.some(t => t > mag), 'Abschnitt ' + st + ' ' + el + ': Karte über Magie ' + e + mag);
+        if (mag >= 2) assert.ok(tiers.includes(mag), 'Abschnitt ' + st + ' ' + el + ': keine ' + e + mag + '-Karte');
+      }
+    }
+  }
+});

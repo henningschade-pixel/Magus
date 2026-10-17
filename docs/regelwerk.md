@@ -102,6 +102,8 @@ Variante je Monster wird beim Erscheinen gewürfelt (Tempel-Verbesserungen, Nebe
 | II | 2 | 8 | 4–6 | 2 | 3 / 2 / 1 |
 | III | 3 | 11 | 6–7 | 3 | 3 / 2 / 1 |
 
+Monsterdecks passen zur Magie (Test in `tests/engine.test.js`): Zu jeder Magiestufe ab 2 gibt es mindestens eine Karte dieser Stufe, und keine Karte steht über der Magie ihrer Farbe (Stufe III: Nebenelement höchstens Stufe 2, drittes Element Stufe 1). Das Erdmonster I hat dafür wie die anderen eine Stufe-2-Karte (E2 statt eines F1).
+
 Hauptelement / Nebenelement: Feuermonster Feuer und Erde, Erdmonster Erde und Wasser, Wassermonster Wasser und Feuer. Monster haben Ausspiellimit + 2 Handplätze (mindestens 3).
 
 ## Showdown

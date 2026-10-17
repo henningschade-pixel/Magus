@@ -506,7 +506,7 @@ const MONSTER = {
     },
     deckNames: ['', 'breit', 'spitz'],
   },
-  upgrades: { F: 2, E: 0, W: 1 },   // Karten des Startdecks, die auf Stufe 2 gehoben werden (nur Abschnitt I)
+  upgrades: { F: 2, E: 1, W: 1 },   // Karten des Startdecks, die auf Stufe 2 gehoben werden (nur Abschnitt I); mindestens eine, weil das Monster seine Hauptmagie auf Stufe 2 hat (ohne passende Karte wäre sie wertlos)
   gold: { 1: 1, 2: 2, 3: 3 },                                              // Beute
   names: { F: 'Feuermonster', E: 'Erdmonster', W: 'Wassermonster' },
 };
@@ -535,6 +535,7 @@ function spawnOne(el, stage, rng, v) {
     finalDeck = (st === stage && V.deck[st][v.d]) ? V.deck[st][v.d](P, S, T) : M.deck[st](P, S, T);
     stats.gold = M.gold[st];
   }
+  finalDeck = finalDeck.map(id => id[0] !== 'C' && +id[1] > stats.mag[id[0]] ? id[0] + stats.mag[id[0]] : id);   // Eine Karte wirkt höchstens mit der Magie ihrer Farbe: die Anzeige soll das zeigen
   rng.shuffle(finalDeck);
   const tags = [], hints = [];
   const FHINT = { hp: 'Zäh: zusätzliche maximale HP.', mana: 'Mana: zusätzliches maximales Mana.', limit: 'Limit: darf mehr Karten gleichzeitig spielen (höheres Ausspiellimit).' };
