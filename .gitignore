@@ -2,3 +2,5 @@ dist/
 tools/balance/opt.log
 tools/balance/.gen/
 tools/balance/champion.json
+tools/balance/opt2.log
+tools/balance/champion2.json
