@@ -19,7 +19,7 @@ const MirrorFx = (() => {
   // Zeitplan. Zwei Fälle: Ausgleich (abs Geschosse des Angreifers schlagen im Schild ein, das dafür Stufen verliert) oder Rückwurf
   // (die überschüssigen Verteidigungsgeschosse r prallen am Schild ab und fliegen zum Angreifer, das Schild verliert dafür Stufen)
   function plan(fx) {
-    const refl = fx.r || 0, N = refl > 0 ? refl : Math.max(1, fx.abs || 1), F = .55 / P.tempo, G = .14 / P.tempo, t0 = .3 + P.fly, ev = { sparks: [], refl: [], mode: refl > 0 ? 'r' : 'a' };
+    const refl = fx.r || 0, N = refl > 0 ? refl : Math.max(1, fx.abs || 1), F = .55 / P.tempo, G = .14 / P.tempo, t0 = .3 + (refl > 0 ? 0 : P.fly), ev = { sparks: [], refl: [], mode: refl > 0 ? 'r' : 'a' };
     for (let i = 0; i < N; i++) ev.sparks.push({ tl: t0 + i * G, ta: t0 + i * G + F, blocked: refl > 0, a: -Math.PI / 2 + (i - (N - 1) / 2) * .09 });
     if (refl > 0) { const last = ev.sparks[N - 1].ta; for (let j = 0; j < refl; j++) ev.refl.push({ tl: last + .1 + j * .11 / P.tempo, ta: last + .1 + j * .11 / P.tempo + .6 / P.tempo }); }
     ev.tBreak = refl > 0 ? ev.refl[0].tl + .05 : ev.sparks[0].ta;   // das Schild verliert Stufen: beim Ausgleich im ersten Einschlag, beim Rückwurf, sobald es zurückwirft
@@ -31,11 +31,11 @@ const MirrorFx = (() => {
   function frame(ctx, t, fx, ev, home, hpAtt, from) {
     const col = EL[fx.elem] || EL.F, n = ev.n, gone = ev.after === 0, Z = { x: 640, y: 400 }, im = img(fx.elem);
     ctx.clearRect(0, 0, 1280, 800);
-    const u = eo(seg(t, 0, P.fly)), v = eio(seg(t, ev.tOut, ev.tOut + P.back)), m = gone ? u : u * (1 - v), md = u * (1 - v);
+    const rf = ev.mode === 'r', u = eo(seg(t, 0, P.fly)), v = eio(seg(t, ev.tOut, ev.tOut + P.back)), m = rf ? 0 : gone ? u : u * (1 - v), md = rf ? 0 : u * (1 - v);   // Rückwurf: das Schild bleibt an seinem Platz, die überschüssige Verteidigung fliegt aus der Mitte zu ihm
     ctx.fillStyle = 'rgba(0,0,0,' + (P.dim * md) + ')'; ctx.fillRect(0, 0, 1280, 800);
     const hit = ev.sparks.find(s => t >= s.ta && t < s.ta + .15), brk = t > ev.tBreak;
-    const amp = (brk ? P.shake * 9 * Math.exp(-(t - ev.tBreak) * 6) : 0) + (hit ? P.shake * 2 : 0);
-    const pos = { x: lerp(home.x, Z.x, m) + Math.sin(t * 90) * amp * m, y: lerp(home.y, Z.y, m) + Math.cos(t * 70) * amp * .7 * m }, h = lerp(home.h, P.size, m), w = h * 132 / 180;
+    const amp = ((brk ? P.shake * 9 * Math.exp(-(t - ev.tBreak) * 6) : 0) + (hit ? P.shake * 2 : 0)) * (rf ? .5 : 1);
+    const pos = { x: lerp(home.x, Z.x, m) + Math.sin(t * 90) * amp * (rf ? 1 : m), y: lerp(home.y, Z.y, m) + Math.cos(t * 70) * amp * .7 * (rf ? 1 : m) }, h = lerp(home.h, P.size, m) * (rf && hit ? 1.3 : 1), w = h * 132 / 180;
     const rEdge = h * .5 + 8, edge = a => ({ x: pos.x + rEdge * Math.cos(a) * .86, y: pos.y + rEdge * Math.sin(a) });
     const tShat = ev.tBreak + .12 + (n - 1) * .04 + .1, shattered = gone && t > tShat;
     if (im && im.complete) {
@@ -50,7 +50,7 @@ const MirrorFx = (() => {
         ctx.save(); ctx.translate(pos.x, pos.y); ctx.shadowColor = col; ctx.shadowBlur = P.glow * (.5 + m) * (1 + (hit ? P.flash : 0)); ctx.drawImage(im, -w / 2, -h / 2, w, h); ctx.shadowBlur = 0;
         if (hit) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = Math.min(1, .55 * P.flash); ctx.drawImage(im, -w / 2, -h / 2, w, h); }
         if (brk) {   // Risse nur in der großen Darstellung
-          ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = .9 * clamp((t - ev.tBreak) / .12) * seg(m, .55, .95); const cr = rng(11); ctx.strokeStyle = '#fff'; ctx.shadowColor = col; ctx.shadowBlur = 6; ctx.lineWidth = Math.max(1, h / 120); ctx.lineJoin = 'round';
+          ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = .9 * clamp((t - ev.tBreak) / .12) * (rf ? 1 : seg(m, .55, .95)); const cr = rng(11); ctx.strokeStyle = '#fff'; ctx.shadowColor = col; ctx.shadowBlur = 6; ctx.lineWidth = Math.max(1, h / 120); ctx.lineJoin = 'round';
           for (let q = 0; q < P.cracks; q++) { let a = q / P.cracks * Math.PI * 2 + (cr() - .5) * .9, x = (cr() - .5) * w * .12, y = -h * .28 + (cr() - .5) * h * .08; const len = h * (.18 + cr() * .3); ctx.beginPath(); ctx.moveTo(x, y); for (let s2 = 1; s2 <= 6; s2++) { a += (cr() - .5) * .6; x += Math.cos(a) * len / 6; y += Math.sin(a) * len / 6; ctx.lineTo(x, y); } ctx.stroke(); }
         }
         ctx.restore();
@@ -59,7 +59,7 @@ const MirrorFx = (() => {
     const lit = brk && t > ev.tBreak + .12 ? ev.after : n;   // Stufenanzeige: die gebrochene Stufe erlischt
     for (let i = 0; i < n && !shattered; i++) { const on = i < lit; ctx.save(); ctx.translate(pos.x + (i - (n - 1) / 2) * lerp(18, 34, m), pos.y + h / 2 + lerp(14, 34, m)); ctx.rotate(Math.PI / 4); ctx.strokeStyle = on ? col : 'rgba(255,255,255,.25)'; ctx.lineWidth = 2; const sz = lerp(4, 8, m); if (on) { ctx.shadowColor = col; ctx.shadowBlur = 10; ctx.fillStyle = rgba(col, .6); ctx.fillRect(-sz, -sz, 2 * sz, 2 * sz); } ctx.strokeRect(-sz, -sz, 2 * sz, 2 * sz); ctx.restore(); }
     ev.sparks.forEach(sp => {   // Geschosse und Aufprall (der durchgehende Schaden selbst läuft in der Kampfanimation)
-      const tgt = edge(sp.a);
+      const tgt = edge(rf ? Math.atan2(from.y - pos.y, from.x - pos.x) + sp.a + Math.PI / 2 : sp.a);
       if (t >= sp.tl && t < sp.ta) { const b = (t - sp.tl) / (sp.ta - sp.tl); for (let q = 8; q >= 1; q--) { const bb = clamp(b - q * .02); ctx.save(); ctx.globalAlpha = (1 - q / 9) * .5; orb(ctx, lerp(from.x, tgt.x, bb), lerp(from.y, tgt.y, bb), (7 - q * .4) * P.spark, col); ctx.restore(); } orb(ctx, lerp(from.x, tgt.x, b), lerp(from.y, tgt.y, b), 9 * P.spark, col); }
       if (t >= sp.ta && t < sp.ta + .4) { const g = seg(t, sp.ta, sp.ta + .4); ctx.save(); ctx.globalCompositeOperation = 'lighter'; const fl = ctx.createRadialGradient(tgt.x, tgt.y, 0, tgt.x, tgt.y, 80 * (1 - g) + 10); fl.addColorStop(0, 'rgba(255,255,255,' + (Math.min(1, .9 * P.flash) * (1 - g)) + ')'); fl.addColorStop(1, rgba(col, 0)); ctx.fillStyle = fl; ctx.beginPath(); ctx.arc(tgt.x, tgt.y, 90, 0, 7); ctx.fill(); ctx.strokeStyle = rgba(lighten(col, .5), (1 - g) * Math.min(1, P.flash)); ctx.lineWidth = 2.5 * (1 - g) + .5; ctx.beginPath(); ctx.ellipse(tgt.x, tgt.y, 8 + g * 54, 4 + g * 24, 0, 0, 7); ctx.stroke(); ctx.restore(); }
     });
@@ -76,7 +76,7 @@ const MirrorFx = (() => {
     if (quiet) return;
     const side = fx.who === ME ? 's' : 'o', homeEl = stage.querySelector('.mirstack[data-who="' + side + '"] .msh.' + fx.elem);
     const hp = FlowFx.hp(fx.att), home = homeEl ? toStage(homeEl) : { x: fx.who === ME ? 90 : 1190, y: fx.who === ME ? 690 : 110, h: 52 };
-    const ev = plan(fx), from = { x: 640, y: (fx.who === ME) === (ev0(fx) === 'a') ? 70 : 730 };
+    const ev = plan(fx), from = ev0(fx) === 'r' ? { x: 640, y: 400 } : { x: 640, y: fx.who === ME ? 70 : 730 };   // Rückwurf: der Überschuss liegt in der Mitte
     fxUntil = Math.max(fxUntil, Date.now() + ev.tEnd * 1000);
     stage.dataset.shieldfx = side + fx.elem;   // das eigentliche Schild neben der Hand ausblenden, solange es fliegt
     ev.sparks.forEach((s, i) => Snd.play('shield_hit', s.ta, i === 0 ? .9 : .5));   // Aufprall der Geschosse auf dem Schild
