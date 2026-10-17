@@ -193,7 +193,12 @@ function earthFormRaw(ctx, x, by, seed, i, t, tCrack, tRise, endAt, ending) {
     const tH = sh ? tS + shD : tK + (pairs ? .45 : 0);   // der Schaden auf den HP kommt nach dem Schild-Effekt
     e.def = { H: handOf(fx.who), hp: hpOf(fx.who), ha: hpOf(fx.to), b: bb, T: { tA: 0, tD, tC, tK, tS, tH, hf, cl: .6, pairs, left, abs, end: Math.max(left ? tH + hf + .7 : tK + .6, sh ? tS + shD : 0) + .3 + (p.atk === 'E' || p.def === 'E' ? .35 : 0) } };
     fxUntil = Math.max(fxUntil, Date.now() + (e.def.T.end - now) * 1000);
-    if (sh) { hpHold = { until: Date.now() + (tH - now + .35) * 1000, pre: sh.hpPre }; setTimeout(() => { if (G) render(); }, Math.round((tH - now + .4) * 1000)); lateN++; setTimeout(() => { lateN--; MirrorFx.play(sh); }, Math.max(0, Math.round((tS - now) * 1000))); }
+    if (fx.hpPre) {   // HP-Balken zeigen den Schaden genau im Moment des Einschlags (ohne Verzögerung)
+      const at = tt => Math.max(0, Math.round((tt - now) * 1000)), msD = at(left > 0 ? tH + hf : tH), msA = sh && sh.r > 0 ? at(tS + MirrorFx.landing(sh)) : 0;   // Verteidiger: Einschlag der Geschosse; Angreifer: Rückwurf
+      hpHold = { until: Date.now() + Math.max(msD, msA), pre: fx.hpPre, un: { [fx.who]: Date.now() + msD, [fx.to]: Date.now() + msA } };
+      [msD, msA].forEach(ms => setTimeout(() => { if (G) render(); }, ms + 15));
+    }
+    if (sh) { lateN++; setTimeout(() => { lateN--; MirrorFx.play(sh); }, Math.max(0, Math.round((tS - now) * 1000))); }
     if (pairs > 0) Snd.play('block', Math.max(0, tC - now));
     if (left > 0) Snd.play('hit', Math.max(0, tH + hf - now));   // Bruch-Sound beim Einschlag der Funken
   }
@@ -248,14 +253,15 @@ function render() {   // läuft der Ergebnis-Bildschirm, wird der Endstand des K
   if (!endView) {
     if (hpHold && Date.now() < hpHold.until && G.phase === 'combat' && G.combat) {   // Schild-Effekt läuft: die HP-Werte zeigen noch den Stand vor dem Schaden
       const sides = [G.combat.sides.a, G.combat.sides.b], keep = sides.map(s => s.stats.hp);
-      sides.forEach(s => { if (hpHold.pre[s.ctrl] !== undefined) s.stats.hp = hpHold.pre[s.ctrl]; });
+      sides.forEach(s => { if (hpHold.pre[s.ctrl] !== undefined && Date.now() < (hpHold.un[s.ctrl] || 0)) s.stats.hp = hpHold.pre[s.ctrl]; });
       try { renderInner(); } finally { sides.forEach((s, i) => { s.stats.hp = keep[i]; }); }
     } else renderInner();
   }
   else {
-    const sp = G.phase, sc = G.combat;
-    G.phase = 'combat'; G.combat = endView.cur;
-    try { renderInner(); } finally { G.phase = sp; G.combat = sc; }
+    const sp = G.phase, sc = G.combat, cur = endView.cur, keep = [cur.sides.a.stats.hp, cur.sides.b.stats.hp];
+    if (endView.stage === 'anim' && hpHold && Date.now() >= hpHold.until) { cur.sides.a.stats.hp = endView.snap.sides.a.stats.hp; cur.sides.b.stats.hp = endView.snap.sides.b.stats.hp; }   // der Schaden steht sofort da, wenn die Geschosse einschlagen
+    G.phase = 'combat'; G.combat = cur;
+    try { renderInner(); } finally { G.phase = sp; G.combat = sc; cur.sides.a.stats.hp = keep[0]; cur.sides.b.stats.hp = keep[1]; }
   }
   let ov = document.getElementById('endov');
   const html = overlayHTML();

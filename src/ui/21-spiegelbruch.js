@@ -93,5 +93,7 @@ const MirrorFx = (() => {
   }
   // Zeit (ab Start des Effekts), bis der Schaden auf die HP darf: nach Aufprall, Durchschlag und Rückwurf
   const delay = fx => { const ev = plan(fx); return ev.tEv + .1; };
-  return { play, delay };
+  // Zeit (ab Start des Effekts), zu der der letzte zurückgeworfene Schaden beim Angreifer einschlägt (0, wenn nichts zurückgeworfen wird)
+  const landing = fx => { const ev = plan(fx); return ev.refl.length ? ev.refl[ev.refl.length - 1].ta : 0; };
+  return { play, delay, landing };
 })();

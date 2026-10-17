@@ -240,7 +240,7 @@ function execDefense(state, passOnly) {
   const hpPre = { [side.ctrl]: side.stats.hp, [c.sides[c.turn === 'a' ? 'b' : 'a'].ctrl]: c.sides[c.turn === 'a' ? 'b' : 'a'].stats.hp };   // HP vor dem Schaden (Oberfläche zeigt sie, bis der Schild-Effekt durch ist)
   side.stats.hp = Math.max(0, side.stats.hp - leftover);
   const attacker = c.sides[c.turn === 'a' ? 'b' : 'a'], defEl = sel.length && sel[0].el && !sel[0].curse ? sel[0].el : c.color;
-  const defFx = { kind: 'defense', rec: !!passOnly, who: side.ctrl, to: attacker.ctrl, attElem: c.color, defElem: defEl, pending: c.pending, block };
+  const defFx = { kind: 'defense', rec: !!passOnly, who: side.ctrl, to: attacker.ctrl, attElem: c.color, defElem: defEl, pending: c.pending, block, hpPre };   // hpPre: HP vor dem Schaden, die Oberfläche zeigt sie, bis die Geschosse einschlagen
   log(state, side.name + (passOnly ? ' erholt sich (+' + gain + ' Mana)' : ' verteidigt' + (block ? ' (Block ' + block + ')' : ' ohne Block')) + ' und verliert ' + leftover + ' HP' + '.', side.ctrl, defFx);
   if (lost > 0) {
     if (refl > 0) attacker.stats.hp = Math.max(0, attacker.stats.hp - refl);
