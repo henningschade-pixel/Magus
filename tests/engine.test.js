@@ -57,8 +57,8 @@ test('Ultimate in der Verteidigung: alle drei Farben erlaubt, Todes-Fluch für d
 });
 
 // Spiegel: Verteidiger op mit Feuer-Spiegel der Stufe lvl, Angreifer me schlägt mit F2 zu; def = Verteidigungskarte (oder null = Erholen)
-function spiegelFall(lvl, def) {
-  const { s, me, op } = combatSetup(11, ['F2']);
+function spiegelFall(lvl, def, att) {
+  const { s, me, op } = combatSetup(11, [att || 'F2']);
   op.stats.mag = { F: 3, E: 3, W: 3 }; op.stats.limit = 3; op.stats.mana = 9; op.stats.hp = op.stats.maxHp = 9; me.stats.hp = me.stats.maxHp = 9;
   op.stats.mirrorEl = { F: lvl, E: 0, W: 0 }; op.stats.mirror = lvl;
   if (def) op.deck.hand[0] = Object.assign({}, op.deck.hand[0], { id: def });
@@ -84,6 +84,11 @@ test('Spiegel gleicht höchstens seine Stufe aus, der Rest geht auf die HP (auch
 test('Spiegel wirft nur den Überschuss einer zu starken Verteidigung zurück und verliert dafür Stufen', () => {
   const { me, op } = spiegelFall(3, 'W3');                              // Block 3, Schaden 2: Überschuss 1
   assert.equal(me.stats.hp, 8); assert.equal(op.stats.hp, 9); assert.equal(op.stats.mirror, 2);
+});
+
+test('Rückwurf ist durch den eingehenden Schaden gedeckelt', () => {
+  const { me, op } = spiegelFall(3, 'W3', 'F1');                        // Schaden 1, Block 3 (Überschuss 2), Stufe 3: nur 1 wird zurückgeworfen
+  assert.equal(me.stats.hp, 8); assert.equal(op.stats.mirror, 2);
 });
 
 test('Monsterwerte je Stufe (Zäh, Limit, Beute)', () => {
