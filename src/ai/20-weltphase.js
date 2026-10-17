@@ -65,8 +65,10 @@ function worldPlan(state, pid) {
   if (canDraw(d)) cands.push({ score: Q.dBase + Q.dCurse * curses.length + (normals.length === 0 ? Q.dEmpty : 0) + emptySlots * Q.dSlot - (normals.length >= 3 ? Q.dNorm : 0) + R(), acts: [A({ type: 'draw' })] });
   {
     const plans = M.vendorPlans(state, pid), mk = o => o.slots.map(sl => A({ type: 'mark', slot: sl }));
-    const ups = plans.filter(o => !o.free).sort((a, b) => b.result[1] - a.result[1]);
-    if (ups.length) cands.push({ score: Q.vUp + ups[0].result[1] * Q.vUpW + R(), acts: [...mk(ups[0]), A({ type: 'vendor', result: ups[0].result, cost: ups[0].cost })] });
+    // Wirksamer Wert einer Aufwertung: Eine Karte zählt höchstens mit dem Magielevel ihrer Farbe. Darüber (ohne bald erschwingliche Magie) kostet die Aufwertung nur Zeit.
+    const worth = o => { const e = o.result[0], t = +o.result[1], soon = Q.vFut > 0 && s.gold >= M.magicCost(state, s.mag[e]) && s.mag[e] < M.MAX_MAGIC; return t * (t <= s.mag[e] || soon ? 1 : Q.vOver); };
+    const ups = plans.filter(o => !o.free).sort((a, b) => worth(b) - worth(a));
+    if (ups.length) cands.push({ score: Q.vUp + worth(ups[0]) * Q.vUpW + R(), acts: [...mk(ups[0]), A({ type: 'vendor', result: ups[0].result, cost: ups[0].cost })] });
     else if (normals.length >= 1 && normals.length < 2 && allIds.length < 12) {
       const best = M.ELEMENTS.slice().sort((a, b) => s.mag[b] - s.mag[a])[0], free = plans.find(o => o.free && o.result === best + '1');
       if (free) cands.push({ score: 5 + R(), acts: [A({ type: 'vendor', result: best + '1', cost: [] })] });

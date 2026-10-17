@@ -1199,6 +1199,7 @@ const DEFAULTS = {
   rW: 0, rRef: 3, dRec: 0, dU: 2,                                                 // Erholen als Manaquelle: Angriffsschwelle steigt bei wenig Mana, Verzicht auf Verteidigung bringt Mana
   dLeth: 40, dPend: 6, dCost: 1.4, dKeep: 0.9, mirW: 4, mirKeep: 3, mirAvoid: 2, lfOpp: 2, lfOppW: 0.8,                            // Verteidigungsbewertung
   mBase: 14, mCost: 2.1, mCnt: 0.7, mTop: 2,
+  vOver: 1, vFut: 0,   // Händler: Eine Karte über dem Magielevel ihrer Farbe bringt (noch) nichts: Wert dieser Aufwertung × vOver (1 = wie bisher), vFut: ab so viel Gold zum Magiekauf zählt sie schon
   xPen: 0, xCost: 2, xHp: 1.5, xHor: 3,   // Erschöpfung: Ein überhasteter Angriff, der das Monster nicht schafft, lässt es angeschlagen zurück, und der Gegner (der danach am Zug ist) besiegt es leicht
   tRace: 0, tHorizon: 3, tAlive: 0, tLoot: 0, mCounter: 0, mCatch: 0,   // Zeitdruck (Gegner nimmt mir ein Monster weg, Beute, wenige Monster übrig) und Reaktion auf den Aufbau des Gegners (überlegene Magie, Rückstand aufholen)                              // Magie kaufen
 };
@@ -1285,8 +1286,10 @@ function worldPlan(state, pid) {
   if (canDraw(d)) cands.push({ score: Q.dBase + Q.dCurse * curses.length + (normals.length === 0 ? Q.dEmpty : 0) + emptySlots * Q.dSlot - (normals.length >= 3 ? Q.dNorm : 0) + R(), acts: [A({ type: 'draw' })] });
   {
     const plans = M.vendorPlans(state, pid), mk = o => o.slots.map(sl => A({ type: 'mark', slot: sl }));
-    const ups = plans.filter(o => !o.free).sort((a, b) => b.result[1] - a.result[1]);
-    if (ups.length) cands.push({ score: Q.vUp + ups[0].result[1] * Q.vUpW + R(), acts: [...mk(ups[0]), A({ type: 'vendor', result: ups[0].result, cost: ups[0].cost })] });
+    // Wirksamer Wert einer Aufwertung: Eine Karte zählt höchstens mit dem Magielevel ihrer Farbe. Darüber (ohne bald erschwingliche Magie) kostet die Aufwertung nur Zeit.
+    const worth = o => { const e = o.result[0], t = +o.result[1], soon = Q.vFut > 0 && s.gold >= M.magicCost(state, s.mag[e]) && s.mag[e] < M.MAX_MAGIC; return t * (t <= s.mag[e] || soon ? 1 : Q.vOver); };
+    const ups = plans.filter(o => !o.free).sort((a, b) => worth(b) - worth(a));
+    if (ups.length) cands.push({ score: Q.vUp + worth(ups[0]) * Q.vUpW + R(), acts: [...mk(ups[0]), A({ type: 'vendor', result: ups[0].result, cost: ups[0].cost })] });
     else if (normals.length >= 1 && normals.length < 2 && allIds.length < 12) {
       const best = M.ELEMENTS.slice().sort((a, b) => s.mag[b] - s.mag[a])[0], free = plans.find(o => o.free && o.result === best + '1');
       if (free) cands.push({ score: 5 + R(), acts: [A({ type: 'vendor', result: best + '1', cost: [] })] });
