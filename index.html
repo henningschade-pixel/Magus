@@ -184,6 +184,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .vrow{display:flex;align-items:center;gap:6px;padding:4px 6px;border:1px solid #44444c;border-radius:9px;margin-bottom:5px;cursor:var(--cp);background:rgba(0,0,0,.18)}
 .vrow:hover{border-color:var(--gold)}
 .vrow.off{opacity:.4;cursor:var(--cd)}.vrow.off:hover{border-color:#44444c}
+.stock{display:grid;grid-template-columns:repeat(3,1fr);gap:4px 6px;margin:6px 0 8px}.stk{display:flex;align-items:center;gap:5px;padding:2px 4px;border:1px solid #44444c;border-radius:7px;background:rgba(0,0,0,.18)}.stk b{font-size:13px;color:var(--gold)}.stk.out{opacity:.35}.stk.out b{color:#d88}
 .thumb{width:30px;height:45px;background-size:100% 100%;border-radius:4px;box-shadow:0 1px 4px rgba(0,0,0,.6)}
 .vrow .plus{color:var(--mute);font-size:16px}
 .vrow img.ar{width:26px}
@@ -1242,7 +1243,7 @@ const DEFAULTS = {
   vOver: 0.5, vFut: 0,   // Händler: Eine Karte über dem Magielevel ihrer Farbe bringt (noch) nichts: Wert dieser Aufwertung × vOver (1 = wie bisher), vFut: ab so viel Gold zum Magiekauf zählt sie schon
   xPen: 0, xCost: 2, xHp: 1.5, xHor: 3,   // Erschöpfung: Ein überhasteter Angriff, der das Monster nicht schafft, lässt es angeschlagen zurück, und der Gegner (der danach am Zug ist) besiegt es leicht
   fleeT: 999,   // Fliehen: ab so vielen Kampfschritten ohne brauchbaren Angriff gegen ein Monster ohne Mana (999 = nie; im Selbstspiel verlor die KI mit 14 Schritten 48 %, mit 6 Schritten 42 %)
-  fleeHits: 0,   // Fliehen als Monsterführer: fliehe, wenn der Angreifer kein Mana mehr hat und ich das Monster danach in höchstens so vielen Angriffen selbst besiege (0 = nie)
+  fleeHits: 20,   // Fliehen als Monsterführer: fliehe, wenn der Angreifer kein Mana mehr hat und ich das Monster danach in höchstens so vielen Angriffen selbst besiege (0 = nie; 20 gewann 50,9 % gegen 0 in 1600 Partien, 1 bis 4 waren wirkungslos, weil der Fall selten vorkommt)
   strat: 0, fHand: 3, fWeak: 4, sLock: 1,   // Eröffnung (Spielerstrategien): 0 frei, 1 Limit zuerst (Tempel-Gold für Ausspiellimit 2), 2 Fokus (eine Farbe, Handplätze erst nach dem ersten Sieg), 3 zwei Richtungen (zwei Farben auf 2, Handplätze erst nach dem 1. Showdown), 4 wählt je nach Starthand; fHand/fWeak: Farbwahl nach Handkarten bzw. geschwächtem Monster; sLock 0 hebt die Sperre der Handplätze auf
   tRace: 0, tHorizon: 3, tAlive: 0, tLoot: 0, mCounter: 0, mCatch: -1.5,   // Zeitdruck (Gegner nimmt mir ein Monster weg, Beute, wenige Monster übrig) und Reaktion auf den Aufbau des Gegners (überlegene Magie, Rückstand aufholen)                              // Magie kaufen
 };
@@ -2000,13 +2001,18 @@ function vendorPanel() {
   const offers = M.vendorOffers(G, ME);
   const can = myTurn();
   let h = '<h3>Händler</h3>';
+  if (G.supply) {   // Vorrat: wie viele Karten jeder Art der Händler noch hat; vergriffene sind abgedunkelt
+    h += '<div class="stock" title="Vorrat des Händlers. Getauschte Karten gehen zurück in den Vorrat.">';
+    ['F', 'E', 'W'].forEach(e => [1, 2, 3].forEach(t => { const n = G.supply[e + t]; h += '<div class="stk' + (n > 0 ? '' : ' out') + '" title="' + (n > 0 ? 'noch ' + n + ' im Vorrat' : 'vergriffen') + '">' + thumb(e + t) + '<b>' + e + t + ' ' + (n > 0 ? '×' + n : 'weg') + '</b></div>'; }));
+    h += '</div>';
+  }
   if (!offers.some(o => !o.free)) h += '<div class="note" style="margin-top:6px">Für Aufwertungen: Karten aus deiner Hand markieren.</div>';
   h += '<div class="row" style="margin-bottom:8px;margin-top:6px">';
-  offers.forEach((o, i) => { if (o.free) h += '<div class="vrow ' + (can ? '' : 'off') + '" data-act="vendor" data-i="' + i + '" title="Gratis">' + thumb(o.result) + '<span class="note">gratis</span></div>'; });
+  offers.forEach((o, i) => { if (o.free) h += '<div class="vrow ' + (can && o.available ? '' : 'off') + '" data-act="vendor" data-i="' + i + '" title="' + (o.available ? 'Gratis' : 'vergriffen') + '">' + thumb(o.result) + '<span class="note">' + (o.available ? 'gratis' : 'weg') + '</span></div>'; });
   h += '</div>';
   offers.forEach((o, i) => {
     if (o.free) return;
-    h += '<div class="vrow ' + (can ? '' : 'off') + '" data-act="vendor" data-i="' + i + '">' + o.cost.map((c, k) => (k ? '<span class="plus">+</span>' : '') + thumb(c)).join('') + '<img class="ar" src="' + IMG.arrow + '">' + thumb(o.result) + '<span class="note" style="margin-left:auto">' + (o.cost.length === 2 ? 'zwei gleiche' : 'überlegenes Element') + '</span></div>';
+    h += '<div class="vrow ' + (can && o.available ? '' : 'off') + '" data-act="vendor" data-i="' + i + '" title="' + (o.available ? 'noch ' + o.stock + ' im Vorrat' : 'vergriffen') + '">' + o.cost.map((c, k) => (k ? '<span class="plus">+</span>' : '') + thumb(c)).join('') + '<img class="ar" src="' + IMG.arrow + '">' + thumb(o.result) + '<span class="note" style="margin-left:auto">' + (o.available ? (o.cost.length === 2 ? 'zwei gleiche' : 'überlegenes Element') + (G.supply ? ' · noch ' + o.stock : '') : 'vergriffen') + '</span></div>';
   });
   return '<div class="panel" style="' + box(LAYOUT.vendor, 'overflow-y:auto') + '">' + h + '</div>';
 }

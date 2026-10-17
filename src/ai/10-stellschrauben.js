@@ -13,7 +13,7 @@ const DEFAULTS = {
   vOver: 0.5, vFut: 0,   // Händler: Eine Karte über dem Magielevel ihrer Farbe bringt (noch) nichts: Wert dieser Aufwertung × vOver (1 = wie bisher), vFut: ab so viel Gold zum Magiekauf zählt sie schon
   xPen: 0, xCost: 2, xHp: 1.5, xHor: 3,   // Erschöpfung: Ein überhasteter Angriff, der das Monster nicht schafft, lässt es angeschlagen zurück, und der Gegner (der danach am Zug ist) besiegt es leicht
   fleeT: 999,   // Fliehen: ab so vielen Kampfschritten ohne brauchbaren Angriff gegen ein Monster ohne Mana (999 = nie; im Selbstspiel verlor die KI mit 14 Schritten 48 %, mit 6 Schritten 42 %)
-  fleeHits: 0,   // Fliehen als Monsterführer: fliehe, wenn der Angreifer kein Mana mehr hat und ich das Monster danach in höchstens so vielen Angriffen selbst besiege (0 = nie)
+  fleeHits: 20,   // Fliehen als Monsterführer: fliehe, wenn der Angreifer kein Mana mehr hat und ich das Monster danach in höchstens so vielen Angriffen selbst besiege (0 = nie; 20 gewann 50,9 % gegen 0 in 1600 Partien, 1 bis 4 waren wirkungslos, weil der Fall selten vorkommt)
   strat: 0, fHand: 3, fWeak: 4, sLock: 1,   // Eröffnung (Spielerstrategien): 0 frei, 1 Limit zuerst (Tempel-Gold für Ausspiellimit 2), 2 Fokus (eine Farbe, Handplätze erst nach dem ersten Sieg), 3 zwei Richtungen (zwei Farben auf 2, Handplätze erst nach dem 1. Showdown), 4 wählt je nach Starthand; fHand/fWeak: Farbwahl nach Handkarten bzw. geschwächtem Monster; sLock 0 hebt die Sperre der Handplätze auf
   tRace: 0, tHorizon: 3, tAlive: 0, tLoot: 0, mCounter: 0, mCatch: -1.5,   // Zeitdruck (Gegner nimmt mir ein Monster weg, Beute, wenige Monster übrig) und Reaktion auf den Aufbau des Gegners (überlegene Magie, Rückstand aufholen)                              // Magie kaufen
 };
