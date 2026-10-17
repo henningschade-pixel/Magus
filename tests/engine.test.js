@@ -75,9 +75,9 @@ test('Spiegel gleicht fehlende Verteidigung aus und verliert dafür je eine Stuf
   const { me, op } = spiegelFall(2, 'W1');                              // Block 1 von 2: Spiegel gleicht 1 aus
   assert.equal(me.stats.hp, 9); assert.equal(op.stats.hp, 9); assert.equal(op.stats.mirror, 1);
 });
-test('Spiegel gleicht höchstens seine Stufe aus, der Rest geht auf die HP (auch beim Erholen)', () => {
+test('Spiegel gleicht höchstens seine Stufe aus, der Rest geht auf die HP (auch beim Passen)', () => {
   let r = spiegelFall(3, null);                                         // Schaden 2, Stufe 3: alles ausgeglichen
-  assert.equal(r.op.stats.hp, 9); assert.equal(r.op.stats.mirror, 1); assert.ok(r.op.stats.mana >= 3);   // Erholen gibt Mana
+  assert.equal(r.op.stats.hp, 9); assert.equal(r.op.stats.mirror, 1); assert.equal(r.op.stats.mana, 9, 'Passen in der Verteidigung gibt kein Mana');
   r = spiegelFall(1, null);                                             // Stufe 1: 1 ausgeglichen, 1 geht durch
   assert.equal(r.op.stats.hp, 8); assert.equal(r.op.stats.mirror, undefined);
 });

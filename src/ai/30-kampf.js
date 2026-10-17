@@ -117,7 +117,7 @@ function combatPlan(state, pid) {
   const color = c.color, pend = c.pending, lethal = pend - Math.min(M.mirrorOf(s, c.color), pend) >= s.hp;
   const cand = hand.filter(h => !h.curse);
   const abs0 = Math.min(M.mirrorOf(s, color), pend);   // ohne Verteidigung gleicht ein Spiegel bis zu seiner Stufe aus
-  let best = { score: (pend - abs0) * (lethal ? Q.dLeth : Q.dPend) + abs0 * Q.mirKeep - Q.dRec * Math.min(M.recoverGain ? M.recoverGain(state) : 1, s.maxMana - s.mana), ord: [] };   // Verzicht auf Verteidigung bringt Mana
+  let best = { score: (pend - abs0) * (lethal ? Q.dLeth : Q.dPend) + abs0 * Q.mirKeep, ord: [] };   // Verzicht auf Verteidigung bringt Mana
   const variants = [];
   for (const sub0 of subsets(cand, Math.max(1, s.limit))) {
     const firsts = [...new Set(sub0.filter(h => !h.curse).map(h => h.el))];

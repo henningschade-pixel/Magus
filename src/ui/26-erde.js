@@ -216,7 +216,7 @@ function fxSound(f) {
   else if (f.kind === 'ruin') Snd.play('ruin');
   else if (f.kind === 'lifeflow') Snd.play(f.removed > 0 || !(f.heal > 0) ? 'purify' : 'heal');
   else if (f.kind === 'mirrorcast') Snd.play('mirror_cast');
-  else if (f.kind === 'recover' || (f.kind === 'defense' && f.rec)) Snd.play('recover');
+  else if (f.kind === 'recover') Snd.play('recover');
 }
 function showFx() {
   if (fxFor !== G) { fxFor = G; fxLast = G.logN; FlowFx.resetEx(); return; }
