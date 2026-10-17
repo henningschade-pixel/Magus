@@ -305,7 +305,7 @@ function renderInner() {
   renderCards();
   pvSticky();
   if (G.over && !endView && !modal) { if (endSnd !== G) { endSnd = G; Snd.play(G.winner === ME ? 'win' : G.winner === null ? 'draw' : 'lose'); } showEnd(); }
-  endTick();
+  endTick(); specAdvance();
 }
 function showStart() {
   setCursor('human');
@@ -313,11 +313,12 @@ function showStart() {
   overlay.innerHTML = '<div class="box start"><h1>Magus</h1><p style="flex:none;color:var(--mute)">Ein Duell aus Magie, Monstern und bis zu drei Showdowns. Wer zuerst 4 Siegpunkte hat, gewinnt.</p>' +
     '<img class="logo" alt="" src="assets/img/bg-9c4789d6.webp">' +
     (G && !G.over && !MP && started ? '<button class="btn primary" style="font-size:22px;padding:10px 28px;flex:none;align-self:center;margin-bottom:8px" data-act="resume">Spiel fortsetzen</button>' : '') + '<button class="btn' + (G && !G.over && !MP && started ? '' : ' primary') + '" style="font-size:22px;padding:10px 28px;flex:none;align-self:center" data-act="newgame">' + (G && !G.over && !MP && started ? 'Neues Spiel gegen den Computer' : 'Gegen den Computer spielen') + '</button>' +
+    '<button class="btn" style="font-size:18px;padding:8px 22px;flex:none;align-self:center;margin-top:8px" data-act="newspec" title="Zwei Computerspieler spielen gegeneinander, du schaust zu (für Spielablauf und Statistik)">Zwei Computern zuschauen</button>' +
     '<div id="mpbox" class="mpbox" style="display:none"><b>Mehrspieler</b> <span class="note">zwei Geräte, ein Raum</span><div class="mprow"><button class="btn" data-act="mphost">Raum erstellen</button><input id="mpcode" maxlength="5" placeholder="Code" autocomplete="off" spellcheck="false"><button class="btn" data-act="mpjoin">Beitreten</button></div><div id="mpmsg" class="note"></div></div></div>';
   mpOffer();
 }
 function showEnd() {
   const w = G.winner, a = G.players[ME].sp, b = G.players[OPP].sp;
   overlay.style.display = 'flex'; overlay.className = 'overlay';
-  overlay.innerHTML = '<div class="box"><h1>' + (w === ME ? 'Gewonnen' : w === null ? 'Unentschieden' : 'Verloren') + '</h1><p style="font-size:26px">' + a + ' : ' + b + ' Siegpunkte</p><p>' + (w === null ? 'Bei Gleichstand an Siegpunkten und Gold gibt es keinen Sieger.' : esc(G.players[w].name) + (G.goldWin ? ' hat bei Punktgleichstand das meiste Gold (' + G.players[ME].stats.gold + ' : ' + G.players[OPP].stats.gold + ').' : ' hat die meisten Siegpunkte.')) + '</p><button class="btn primary" style="font-size:22px;padding:10px 28px" data-act="' + (MP ? 'mpexit' : 'newgame') + '">' + (MP ? 'Zum Startbildschirm' : 'Neues Spiel') + '</button></div>';
+  overlay.innerHTML = '<div class="box"><h1>' + (SPEC ? (w === null ? 'Unentschieden' : esc(G.players[w].name) + ' gewinnt') : w === ME ? 'Gewonnen' : w === null ? 'Unentschieden' : 'Verloren') + '</h1><p style="font-size:26px">' + a + ' : ' + b + ' Siegpunkte</p><p>' + (w === null ? 'Bei Gleichstand an Siegpunkten und Gold gibt es keinen Sieger.' : esc(G.players[w].name) + (G.goldWin ? ' hat bei Punktgleichstand das meiste Gold (' + G.players[ME].stats.gold + ' : ' + G.players[OPP].stats.gold + ').' : ' hat die meisten Siegpunkte.')) + '</p><button class="btn primary" style="font-size:22px;padding:10px 28px" data-act="' + (MP ? 'mpexit' : SPEC ? 'newspec' : 'newgame') + '">' + (MP ? 'Zum Startbildschirm' : SPEC ? 'Neue Zuschauer-Partie' : 'Neues Spiel') + '</button></div>';
 }

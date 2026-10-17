@@ -10,12 +10,18 @@ function pickMirrorEl(side, opp) {
   }
   return best;
 }
+// Zerrüttung: Der Gegner wirft S Handkarten seiner Wahl ab, zuerst Fluchkarten. Wert hat nur, was darüber hinaus echte Karten kostet.
+function ruinWorth(opp, n) {
+  if (!(n > 0)) return 0;
+  const hand = opp.deck.hand.filter(Boolean), curses = hand.filter(h => M.parseCard(h.id).curse).length;
+  return Math.max(0, Math.min(n, hand.length) - curses) * 0.9;
+}
 // Wert eines geordneten Kombos (ohne Ultimate) für die KI; gleiche Gewichte wie im Angriff
 function ordComboWorth(side, opp, Q, rules, lvs, ev) {
   const st = side.stats, hurt = st.maxHp - st.hp, oMir = opp.stats.mirror || 0;
   const wEw = oMir > 0 ? 1.2 + oMir * Math.max(0.3, Q.lfOppW || 0) : 0.1;
   let wFw = Q.wFW; if (ev.ord && ev.ord.el && pickMirrorEl(side, opp) !== ev.ord.el) wFw *= 0.5;
-  return lvs.fw * wFw + lvs.fe * Q.wFE + lvs.ew * wEw + Math.min(lvs.rm, opp.stats.mana) * (opp.stats.mana > 0 ? 0.8 : 0) + Math.min(lvs.gh * (rules.lifeflowHeal || 1), hurt) * Q.wEW + (lvs.gh > 0 && hurt === 0 ? 0.1 : 0);
+  return lvs.fw * wFw + lvs.fe * Q.wFE + lvs.ew * wEw + ruinWorth(opp, lvs.rm) + Math.min(lvs.gh * (rules.lifeflowHeal || 1), hurt) * Q.wEW + (lvs.gh > 0 && hurt === 0 ? 0.1 : 0);
 }
 function bestAttack(side, opp, hand, Q, state0) {
   const stats = side.stats, lim = Math.max(1, stats.limit);
@@ -28,16 +34,16 @@ function bestAttack(side, opp, hand, Q, state0) {
       const ev = M.evalAttack(stats, ord);
       if (!ev.valid || !ev.affordable) continue;
       const hurt = stats.maxHp - stats.hp, oMir = opp.stats.mirror || 0;
-      const w = { fw: Q.wFW, fe: Q.wFE, ew: oMir > 0 ? 1.2 + oMir * Math.max(0.3, Q.lfOppW || 0) : 0.1, rm: opp.stats.mana > 0 ? 0.8 : 0 };   // Läuterung lohnt, wenn der Gegner Spiegelmarker trägt
+      const w = { fw: Q.wFW, fe: Q.wFE, ew: oMir > 0 ? 1.2 + oMir * Math.max(0.3, Q.lfOppW || 0) : 0.1 };   // Läuterung lohnt, wenn der Gegner Spiegelmarker trägt
       if (ev.ord && ev.ord.el && pickMirrorEl(side, opp) !== ev.ord.el) w.fw *= 0.5;
       const lvs = M.levelsFor(ev);
       let combo = 0;
       if (ev.levels.ulti > 0) combo = ev.levels.ulti * Q.wDeath * (opp.stats.death >= ev.levels.ulti ? 0.1 : 1) * (Q.smart ? Math.max(0.4, Math.min(1.4, opp.stats.hp / 4)) : 1);
-      else combo = lvs.fw * w.fw + lvs.fe * w.fe + lvs.ew * w.ew + Math.min(lvs.rm, opp.stats.mana) * w.rm + Math.min(lvs.gh * 1, hurt) * Q.wEW + (lvs.gh > 0 && hurt === 0 ? 0.1 : 0);
+      else combo = lvs.fw * w.fw + lvs.fe * w.fe + lvs.ew * w.ew + ruinWorth(opp, lvs.rm) + Math.min(lvs.gh * 1, hurt) * Q.wEW + (lvs.gh > 0 && hurt === 0 ? 0.1 : 0);
       const dmg = ev.prim ? ev.damage : 0;
       let value = dmg * Q.aDmg + combo - ev.cost * Q.aCost + ev.curses * Q.aCurse;
       if (dmg >= opp.stats.hp && dmg > 0) value += 100;
-      if (dmg > 0 && ev.prim && M.mirrorOf(opp.stats, ev.prim) > 0) value -= M.mirrorOf(opp.stats, ev.prim) * Q.mirAvoid;   // Spiegel des Gegners: ein Angriff kann zurückgeworfen werden
+      if (dmg > 0 && ev.prim && M.mirrorOf(opp.stats, ev.prim) > 0) value -= Math.min(M.mirrorOf(opp.stats, ev.prim), dmg) * Q.mirAvoid;   // Spiegel des Gegners: gleicht bis zu seiner Stufe von meinem Schaden aus (zurückgeworfen wird nur Überverteidigung)
       if (ord.length > 1 && dmg === 0 && combo === 0 && ev.curses === 0) value -= 5;
       if (!best || value > best.value) best = { value, ord, ev, dmg };
     }
@@ -103,7 +109,7 @@ function combatPlan(state, pid) {
     return [A({ type: 'recover' })];
   }
   // Verteidigung
-  const color = c.color, pend = c.pending, lethal = pend >= s.hp;
+  const color = c.color, pend = c.pending, lethal = pend - Math.min(M.mirrorOf(s, c.color), pend) >= s.hp;
   const cand = hand.filter(h => !h.curse);
   const abs0 = Math.min(M.mirrorOf(s, color), pend);   // ohne Verteidigung gleicht ein Spiegel bis zu seiner Stufe aus
   let best = { score: (pend - abs0) * (lethal ? Q.dLeth : Q.dPend) + abs0 * Q.mirKeep - Q.dRec * Math.min(M.recoverGain ? M.recoverGain(state) : 1, s.maxMana - s.mana), ord: [] };   // Verzicht auf Verteidigung bringt Mana

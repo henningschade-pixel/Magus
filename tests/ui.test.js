@@ -54,3 +54,20 @@ test('Statistikseite öffnet, zeigt den Verlauf und lässt sich filtern und schl
     assert.deepEqual(errs, []);
   } finally { await b.close(); }
 });
+
+test('Zuschauermodus: zwei Computer spielen gegeneinander, Eingaben sind gesperrt', { skip: !chromium && 'Playwright nicht installiert', timeout: 60000 }, async () => {
+  const b = await chromium.launch({ executablePath: exe });
+  try {
+    const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
+    p.on('pageerror', e => errs.push(e.message));
+    await p.goto(url); await p.waitForTimeout(500);
+    await p.click('text=Zwei Computern zuschauen'); await p.waitForTimeout(500);
+    const n0 = await p.evaluate(() => window.__magus.state.logN);
+    await p.evaluate(() => window.__magus.act({ type: 'temple', amount: 1 }));   // Eingabe eines Menschen: wird ignoriert
+    await p.waitForTimeout(6000);
+    const r = await p.evaluate(() => ({ n: window.__magus.state.logN, names: window.__magus.state.players.map(x => x.name) }));
+    assert.ok(r.n > n0, 'die Partie schreitet von selbst voran');
+    assert.deepEqual(r.names, ['Computer A', 'Computer B']);
+    assert.deepEqual(errs, []);
+  } finally { await b.close(); }
+});

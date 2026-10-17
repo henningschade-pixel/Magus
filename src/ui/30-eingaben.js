@@ -2,6 +2,8 @@
 function onAct(d) {
   switch (d.act) {
     case 'newgame': newGame(); break;
+    case 'newspec': newGame(true); break;
+    case 'specspeed': specSpeed = specSpeed === 1 ? 3 : specSpeed === 3 ? 8 : 1; homeMenuDraw(); break;
     case 'home': homeMenu(); break;
     case 'stopen': statsOpen(true); break;
     case 'sndtoggle': Snd.toggle(); Snd.play('ui_click', 0, .8); setTimeout(homeMenuDraw, 350); homeMenuDraw(); break;
@@ -9,17 +11,14 @@ function onAct(d) {
     case 'stfit': statsFitView(); break;
     case 'stwho': case 'stser': statsToggle(d.act, d.k); break;
     case 'resume': overlay.style.display = 'none'; overlay.innerHTML = ''; pump(); break;
-    case 'restart': if (!MP) newGame(); break;
+    case 'restart': if (!MP) newGame(SPEC); break;
     case 'leave': clearTimeout(aiTimer); if (MP) { mpLeave(); G = null; started = false; } showStart(); break;
     case 'mphost': mpHost(); break;
     case 'mpjoin': mpJoin(); break;
     case 'mpexit': mpLeave(); showStart(); break;
     case 'deckview': deckView = !deckView; render(); break;
     case 'deckclose': deckView = false; render(); break;
-    case 'dismiss':
-      if (endView && endView.stage === 'result') { endView = null; hold = 0; if (G && G.stage > stageSeen) Snd.play('stage_start'); stageSeen = G ? G.stage : stageSeen; pump(); }
-      else if (modal) { modal = null; hold = 0; pump(); }
-      break;
+    case 'dismiss': dismissOverlay(); break;
     case 'combat': act({ type: 'combat', elem: d.e }); break;
     case 'vendor': { const o = M.vendorOffers(G, ME)[+d.i]; if (o) act({ type: 'vendor', result: o.result, cost: o.cost }); break; }
     case 'sacdn': sacN = Math.max(0, sacN - 1); render(); break;
@@ -119,12 +118,13 @@ function homeMenuDraw() {
     '<button class="btn primary" style="font-size:21px;padding:10px" data-act="resume">Fortsetzen</button>' +
     '<button class="btn" style="font-size:21px;padding:10px" data-act="stopen" title="Verlauf über die Züge">📈 Statistik</button>' +
     '<button class="btn" style="font-size:21px;padding:10px" data-act="sndtoggle" title="Ton an oder aus">' + (si.on ? '🔊 Ton: an' : '🔇 Ton: aus') + (si.on && si.state !== 'nicht gestartet' ? '<small style="display:block;font-size:14px;color:var(--mute)">' + si.loaded + '/' + si.total + ' Sounds geladen · Audio ' + si.state + '</small>' : '') + '</button>' +
-    (MP ? '' : '<button class="btn" style="font-size:21px;padding:10px" data-act="restart" title="Beginnt eine neue Partie gegen den Computer">Neu starten</button>') +
+    (SPEC ? '<button class="btn" style="font-size:21px;padding:10px" data-act="specspeed" title="Tempo der Computerzüge beim Zuschauen">⏩ Tempo: ' + (specSpeed === 1 ? 'normal' : '×' + specSpeed) + '</button>' : '') +
+    (MP ? '' : '<button class="btn" style="font-size:21px;padding:10px" data-act="restart" title="Beginnt eine neue Partie (gleiche Art)">Neu starten</button>') +
     '<button class="btn" style="font-size:21px;padding:10px" data-act="leave">' + (MP ? 'Partie verlassen' : 'Spiel verlassen') + '</button></div></div>';
   mpChip();
 }
 // Klickton für Menü- und Bedienknöpfe (Aktionen mit eigenem Ton ausgenommen)
-const CLICK_ACTS = new Set(['sacdn', 'sacup', 'deckview', 'home', 'resume', 'restart', 'leave', 'newgame', 'stclose', 'stopen', 'sndtoggle', 'stfit', 'stwho', 'stser', 'dismiss']);
+const CLICK_ACTS = new Set(['sacdn', 'sacup', 'deckview', 'home', 'resume', 'restart', 'leave', 'newgame', 'newspec', 'specspeed', 'stclose', 'stopen', 'sndtoggle', 'stfit', 'stwho', 'stser', 'dismiss']);
 stage.addEventListener('pointerdown', e => { const b = e.target.closest('button'); if (b && (b.id === 'homebtn' || b.classList.contains('logdl') || CLICK_ACTS.has(b.dataset.act))) Snd.play('ui_click'); }, true);
 const homeBtn = document.createElement('button');
 homeBtn.id = 'homebtn'; homeBtn.title = 'Menü: fortsetzen, neu starten, verlassen'; homeBtn.textContent = '⌂';

@@ -1,10 +1,11 @@
 /* ---------- Ablauf ---------- */
-function newGame() {
+function newGame(spec) {
   if (MP) mpLeave();
+  SPEC = !!spec; clearTimeout(specT); specT = 0; specSpeed = 1;
   ME = 0; OPP = 1;
   clearTimeout(aiTimer);
   els.forEach(r => r.el.remove()); els.clear();
-  G = M.newGame({ seed: (/[?&]seed=(\d+)/.exec(location.search) || [0, (Math.random() * 2 ** 31) | 0])[1] | 0, names: ['Du', 'Computer'], ai: [false, true] });
+  G = M.newGame({ seed: (/[?&]seed=(\d+)/.exec(location.search) || [0, (Math.random() * 2 ** 31) | 0])[1] | 0, names: SPEC ? ['Computer A', 'Computer B'] : ['Du', 'Computer'], ai: [SPEC, true] });
   M.record(G); G.keepSnap = true;
   seenCombat = null; upSeen = null; endView = null; modal = null; introSeen = -1; hold = 0; started = true;
   overlay.style.display = 'none'; overlay.innerHTML = '';
@@ -69,7 +70,7 @@ function worldSound(type, gainedUp, magNow, cardLv) {
   else if (type === 'vendor' && cardLv >= 2) Snd.play('card_lv' + cardLv);   // Karte auf Stufe 2 bzw. 3 aufgewertet
 }
 function act(a) {
-  if (!G || G.over || endView || modal) return;
+  if (!G || G.over || endView || modal || SPEC) return;   // beim Zuschauen gibt es keine Eingaben
   const full = Object.assign({ pid: ME }, a), prev = G.logN, up0 = G.players[ME].stats.upGot, r = M.apply(G, full);
   if (!r.ok) { toast(r.error); return; }
   if (a.type === 'temple') upSeen = G.players[ME].stats.upGot;   // Upgrade-Punkte aus dem Tempel haben ihren eigenen Ton (Tempelstufe)
@@ -84,22 +85,31 @@ function pump() {
   render();
   if (!G || G.over) return;
   const who = M.actor(G);
-  if (who === ME || MP) return;
-  aiTimer = setTimeout(aiTurn, FAST ? 4 : Math.max(700, hold - Date.now()));
+  if ((who === ME && !SPEC) || MP) return;
+  aiTimer = setTimeout(aiTurn, FAST ? 4 : Math.max(700 / (SPEC ? specSpeed : 1), hold - Date.now()));
 }
 async function execPlan(acts) {
   for (let i = 0; i < acts.length; i++) {
     const prev = G.logN, r = M.apply(G, acts[i]);
     if (!r.ok) { const d = G.phase === 'combat' ? G.combat.sides[G.combat.turn].deck : G.players[OPP].deck; d.marks = []; render(); return false; }
     checkCombatEnd(prev); render();
-    if (i < acts.length - 1) await sleep(430);
+    if (i < acts.length - 1) await sleep(430 / (SPEC ? specSpeed : 1));
   }
   return true;
 }
 async function aiTurn() {
-  if (!G || G.over || M.actor(G) !== OPP) return;
-  const who = OPP;
+  if (!G || G.over || (!SPEC && M.actor(G) !== OPP)) return;
+  const who = SPEC ? M.actor(G) : OPP;
   let ok = await execPlan(AI.plan(G, who));
   if (!ok) for (const fb of AI.fallback(G, who)) { ok = await execPlan([fb]); if (ok) break; }
   pump();
+}
+// Ergebnis-Bildschirm oder Ankündigung wegklicken (beim Zuschauen geschieht das nach kurzer Zeit von selbst)
+function dismissOverlay() {
+  if (endView && endView.stage === 'result') { endView = null; hold = 0; if (G && G.stage > stageSeen) Snd.play('stage_start'); stageSeen = G ? G.stage : stageSeen; pump(); }
+  else if (modal) { modal = null; hold = 0; pump(); }
+}
+function specAdvance() {
+  if (!SPEC || specT || !((endView && endView.stage === 'result') || modal)) return;
+  specT = setTimeout(() => { specT = 0; if (SPEC && overlay.style.display !== 'flex') dismissOverlay(); else if (SPEC) specAdvance(); }, 2600);
 }
