@@ -2,6 +2,10 @@
 
 Gedanken zu Regeln und Balance, über die noch nicht entschieden ist. Neue Einträge oben.
 
+## Fliehen (17.10.)
+
+Fliehen als Option im Kampf einbauen, immer dann, wenn der Gegner auf 0 Mana sitzt. Offen: Was kostet das Fliehen (Gold, HP, ein Zug)? Gilt es im Monsterkampf, im Showdown oder in beiden? Wie bewertet die KI die Option?
+
 ## Trostpreis (17.10.)
 
 - Soll der Trostpreis nach Showdown 1 besser 2 Upgrade-Punkte betragen (bisher 1)?
