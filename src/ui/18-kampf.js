@@ -119,6 +119,6 @@ function comboRef(cx) {
     } else {   // alle drei Farben: Ultimate
       h += row('Ultimate', ['F', 'E', 'W'], lv.ulti, 'Todes-Fluch: Der Gegner bekommt ' + (lv.ulti || 'S') + ' Todesmarker und verliert ' + (lv.ulti || 'S') + ' HP am Ende jeder seiner Angriffsphasen bis Kampfende. Die Kombos entfallen.', lv.ulti > 0);
     }
-    return '<div class="panel" style="' + box(LAYOUT.oppInfo, 'overflow-y:auto;padding:10px 12px') + '">' + h + '</div>';
+    return '<div class="panel" style="' + box(LAYOUT.oppInfo, 'overflow-y:auto;padding:10px 12px;scrollbar-width:none') + '">' + h + '</div>';
   }
 }

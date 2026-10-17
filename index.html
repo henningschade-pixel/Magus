@@ -318,6 +318,8 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .overlay.soft{background:rgba(0,0,0,.45);animation:dimin .35s ease-out both}
 #dimdeck{position:absolute;left:0;top:0;width:1280px;height:800px;z-index:140;background:rgba(0,0,0,.45);opacity:0;pointer-events:none;transition:opacity .35s;cursor:var(--cp)}#dimdeck.on{opacity:1;pointer-events:auto}
 
+.panel[style*="scrollbar-width:none"]::-webkit-scrollbar{display:none}
+
 </style>
 </head>
 <body>
@@ -2160,7 +2162,7 @@ function comboRef(cx) {
     } else {   // alle drei Farben: Ultimate
       h += row('Ultimate', ['F', 'E', 'W'], lv.ulti, 'Todes-Fluch: Der Gegner bekommt ' + (lv.ulti || 'S') + ' Todesmarker und verliert ' + (lv.ulti || 'S') + ' HP am Ende jeder seiner Angriffsphasen bis Kampfende. Die Kombos entfallen.', lv.ulti > 0);
     }
-    return '<div class="panel" style="' + box(LAYOUT.oppInfo, 'overflow-y:auto;padding:10px 12px') + '">' + h + '</div>';
+    return '<div class="panel" style="' + box(LAYOUT.oppInfo, 'overflow-y:auto;padding:10px 12px;scrollbar-width:none') + '">' + h + '</div>';
   }
 }
 /* ---------- Gesamtdarstellung ---------- */
