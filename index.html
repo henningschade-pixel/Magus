@@ -1209,6 +1209,7 @@ const DEFAULTS = {
   mPlan: 0, vOff: 0.5,   // Ziel-Farbe: gegen ein Monster zählt die ihm überlegene Magie. mPlan: Bonus beim Magiekauf, vOff: Aufwertungen anderer Farben zählen nur so viel
   vOver: 0.5, vFut: 0,   // Händler: Eine Karte über dem Magielevel ihrer Farbe bringt (noch) nichts: Wert dieser Aufwertung × vOver (1 = wie bisher), vFut: ab so viel Gold zum Magiekauf zählt sie schon
   xPen: 0, xCost: 2, xHp: 1.5, xHor: 3,   // Erschöpfung: Ein überhasteter Angriff, der das Monster nicht schafft, lässt es angeschlagen zurück, und der Gegner (der danach am Zug ist) besiegt es leicht
+  strat: 0, fHand: 3, fWeak: 4, sLock: 1,   // Eröffnung (Spielerstrategien): 0 frei, 1 Limit zuerst (Tempel-Gold für Ausspiellimit 2), 2 Fokus (eine Farbe, Handplätze erst nach dem ersten Sieg), 3 zwei Richtungen (zwei Farben auf 2, Handplätze erst nach dem 1. Showdown), 4 wählt je nach Starthand; fHand/fWeak: Farbwahl nach Handkarten bzw. geschwächtem Monster; sLock 0 hebt die Sperre der Handplätze auf
   tRace: 0, tHorizon: 3, tAlive: 0, tLoot: 0, mCounter: 0, mCatch: -1.5,   // Zeitdruck (Gegner nimmt mir ein Monster weg, Beute, wenige Monster übrig) und Reaktion auf den Aufbau des Gegners (überlegene Magie, Rückstand aufholen)                              // Magie kaufen
 };
 const PARAMS = {};
@@ -1237,26 +1238,64 @@ function planElement(state, pid) {
   for (const x of alive) { const e = M.SUPERIOR[x], v = 2 * s.mag[e] + ids.filter(id => id[0] === e).length * 0.5; if (!best || v > best.v) best = { v, e }; }
   return best.e;
 }
+// ---- Eröffnungsstrategien (aus Spielerbeobachtung): 1 Limit zuerst, 2 Fokus auf eine Farbe, 3 zwei Richtungen ----
+const stageBonusGold = (state) => { let g = 0; for (let i = 1; i <= state.stage; i++) g += state.rules.stageGold[i] || 0; return g; };
+const looted = (state, s) => s.goldGot > stageBonusGold(state);   // schon Beute aus einem eigenen Sieg erhalten
+// Farbe, in die ein Spieler zuerst investiert: viele Karten der Farbe auf der Hand, oder die dem geschwächtesten Monster überlegene Farbe
+function focusScore(state, pid, e) {
+  const p = state.players[pid], Q = P(pid), hand = p.deck.hand.filter(Boolean);
+  let sc = Q.fHand * hand.filter(c => c.id[0] === e).length;
+  for (const x of M.ELEMENTS) { const m = state.monsters[x]; if (M.monsterAlive(m) && M.SUPERIOR[x] === e) sc += Q.fWeak * (1 - m.stats.hp / m.stats.maxHp); }
+  return sc + 0.01 * (e === planElement(state, pid));
+}
+function stratPlan(state, pid) {
+  const all = state.aiPlan = state.aiPlan || {};
+  let pl = all[pid]; if (pl) return pl;
+  const Q = P(pid); let st = Q.strat;
+  if (st === 4) { const hand = state.players[pid].deck.hand.filter(Boolean), mx = Math.max(...M.ELEMENTS.map(e => hand.filter(c => c.id[0] === e).length)); st = mx >= 2 ? 2 : 3; }
+  pl = all[pid] = { st, els: [] };
+  return pl;
+}
+const stratSlotLock = (state, p, pid) => { const Q = P(pid), pl = stratPlan(state, pid); return Q.sLock && ((pl.st === 2 && !looted(state, p.stats) && state.showdown === 0) || (pl.st === 3 && state.showdown === 0)); };
 // Welche Verbesserung kauft die KI mit offenen Upgrade-Punkten? Liefert null, wenn sie auf den Limit-Schritt spart.
 function pickSpend(p, state, pid) {
   const s = p.stats, Q = P(pid);
   const lc = M.limitStepCost(state, s);
   const canL = lc <= s.pending;
   const canM = M.manaStepCost(state, s) <= s.pending;
+  const pl = stratPlan(state, pid);
+  if (pl.st === 1 && s.limit < 2) return canL ? 'limit' : null;   // auf Ausspiellimit 2 sparen
+  const noSlot = stratSlotLock(state, p, pid);
   const order = [
     ['limit', s.limit < Q.limitA && canL], ['slot', p.slots < Q.slotA], ['mana', s.maxMana < Q.manaA && canM], ['hp', s.maxHp < Q.hpA],
     ['limit', s.limit < Q.limitB && canL], ['slot', p.slots < Q.slotB], ['hp', true], ['mana', canM], ['limit', s.limit < M.MAX_LIMIT && canL],
   ];
   if (s.limit < Q.limitA && !canL && s.pending < lc) return null;   // auf den Limit-Schritt sparen
-  for (const [w, ok] of order) if (ok) return w;
+  for (const [w, ok] of order) if (ok && !(w === 'slot' && noSlot)) return w;
   return 'hp';
 }
 // Bonusaktionen: Punkte ausgeben, Magie kaufen, Gold opfern; danach folgt die eigentliche Aktion des Zuges.
 function ecoStep(state, pid) {
   const p = state.players[pid], s = p.stats, A = a => Object.assign({ pid }, a), Q = P(pid);
   if (s.pending > 0) { const w = pickSpend(p, state, pid); if (w) return A({ type: 'spend', what: w }); }
+  const pl = stratPlan(state, pid);
+  if (pl.st === 1 && s.limit < 2 && s.pending < M.limitStepCost(state, s)) {   // Tempel-Gold opfern, damit das Ausspiellimit sofort auf 2 geht
+    const need = M.limitStepCost(state, s) - s.pending;
+    for (let n = 1; n <= s.gold; n++) if (M.previewTemple(p, n).gained >= need) return A({ type: 'temple', amount: n });
+  }
   const allIds = [...p.deck.draw, ...p.deck.discard, ...p.deck.hand.filter(Boolean)].map(c => c.id);
   const countEl = e => allIds.filter(id => id[0] === e).length;
+  if ((pl.st === 2 || pl.st === 3) && state.showdown === 0) {   // Eröffnung: nur die gewählte(n) Farbe(n) auf Stufe 2
+    const want = pl.st === 2 ? 1 : 2;
+    if (pl.els.length < want && s.gold >= 1) {
+      const ranked = M.ELEMENTS.filter(e => !pl.els.includes(e) && s.mag[e] < 2).sort((x, y) => focusScore(state, pid, y) - focusScore(state, pid, x));
+      if (ranked.length && s.gold >= M.magicCost(state, s.mag[ranked[0]])) { pl.els.push(ranked[0]); return A({ type: 'magic', elem: ranked[0] }); }
+    }
+    const foc = pl.st === 2 ? pl.els[0] : null;   // Fokus: danach weiter in dieselbe Farbe (Stufe 3)
+    if (foc && s.mag[foc] < M.MAX_MAGIC && s.gold >= M.magicCost(state, s.mag[foc])) return A({ type: 'magic', elem: foc });
+    if (s.gold >= 2) return A({ type: 'temple', amount: Math.min(s.gold, 3) });
+    return null;
+  }
   const opp = state.players[1 - pid].stats, oppTop = M.ELEMENTS.slice().sort((x, y) => opp.mag[y] - opp.mag[x])[0];   // Aufbau des Gegners: seine stärkste Magie, und welche Farbe ihr überlegen ist
   const planEl = planElement(state, pid);
   let best = null;
