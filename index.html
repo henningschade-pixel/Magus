@@ -40,7 +40,6 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .btn.small{padding:3px 10px;font-size:16px}
 .btn.blue{background:linear-gradient(180deg,#3f7fc4,#2a568f);border-color:#6fa8e6;color:#f1f7ff}.btn.blue:hover:not(:disabled){background:linear-gradient(180deg,#4f90d6,#336aa8);border-color:#9cc6f2}
 .btn.danger{background:linear-gradient(180deg,#b04a3f,#7d2d26);border-color:#e08577;color:#fff}.btn.danger:hover:not(:disabled){background:linear-gradient(180deg,#c35a4f,#8d3730)}
-.btn .ico{width:1.15em;height:1.15em;vertical-align:-.2em}.btn.ib{display:inline-flex;align-items:center;gap:4px;padding:7px 12px}.btn.ib .ico{width:1.35em;height:1.35em;vertical-align:baseline}.btn.ib b{font-size:.95em}
 .fleewarn{margin-top:8px;padding:8px 12px;border:1px solid #e08577;border-radius:9px;background:rgba(125,45,38,.35);font-size:16px;text-align:center}
 .row{display:flex;align-items:center;gap:8px}
 .statrow{display:flex;align-items:center;gap:7px;font-size:20px;margin:2px 0}
@@ -244,6 +243,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .combo small{display:block;color:var(--mute);font-size:15px}
 .combo input{width:20px;height:20px;accent-color:var(--gold)}
 .combatcenter>.btnrow{flex:none;padding-top:4px}.btnrow{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.combatcenter .btnrow{gap:6px}.combatcenter .btnrow .btn{padding:7px 10px;font-size:17px;white-space:nowrap}
 .banner{position:absolute;z-index:120;text-align:center;background:rgba(14,10,22,.93);border:1px solid var(--gold);border-radius:14px;padding:16px 20px;font-size:21px;line-height:1.3;cursor:var(--cp)}
 .banner small{display:block;color:var(--mute);font-size:15px;margin-top:6px}
 #turncv{position:absolute;left:0;top:0;width:1280px;height:800px;z-index:285;pointer-events:none}
@@ -1649,16 +1649,6 @@ const sleep = ms => new Promise(r => setTimeout(r, FAST_URL ? 4 : ms));
 function toast(t) { toastEl.textContent = t; toastEl.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2200); }
 function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 function dots(n, max) { max = Math.max(max || 3, n); let s = ''; for (let i = 0; i < max; i++) s += i < n ? '●' : '○'; return s; }
-// Symbole für die Kampfknöpfe (Strichzeichnungen in der Textfarbe)
-const ICO = {
-  swords: '<path d="M4 20 15 9M20 20 9 9M14 5l5-1-1 5M10 5 5 4l1 5M3 21l3-1M21 21l-3-1"/>',
-  flask: '<path d="M9 3h6M10 3v6L5 19a2 2 0 0 0 1.8 3h10.4A2 2 0 0 0 19 19l-5-10V3"/><path d="M7.5 15h9"/>',
-  cards: '<rect x="3" y="6" width="11" height="15" rx="2"/><path d="M8 3.5h9a2 2 0 0 1 2 2V17"/>',
-  none: '<circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/>',
-  run: '<circle cx="14" cy="4.5" r="2"/><path d="M9 21l3-6-3-3 2-5 4 2 3 2M12 15l4 2v4M10 9 6 11"/>',
-  shield: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',
-};
-const ico = k => '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICO[k] + '</svg>';
 function thumb(id) { return '<span class="thumb" style="background-image:url(' + IMG[id] + ')"></span>'; }
 function ctx() {
   if (G.phase === 'combat') {
@@ -2135,12 +2125,12 @@ function combatCenter(cx) {
   h += '<div class="preview">' + prev + '</div><div class="btnrow">';
   const canFlee = c.mode === 'monster' && my && M.canFlee(G, ME), rg = M.recoverGain(G);
   if (!canFlee) fleeAsk = false;
-  if (atk) h += '<button class="btn primary" data-act="attack" ' + (my && canExec ? '' : 'disabled') + ' title="Angriff ausführen">' + ico('swords') + ' Angriff</button><button class="btn blue ib" data-act="recover" ' + (my ? '' : 'disabled') + ' title="Erholen: nur du erhältst +' + rg + ' Mana">' + ico('flask') + '<b>+' + rg + '</b></button><button class="btn ib" data-act="draw" ' + (my ? '' : 'disabled') + ' title="Nachziehen: Hand tauschen, ersetzt den Angriff">' + ico('cards') + '</button><button class="btn ib" data-act="pass" ' + (my ? '' : 'disabled') + ' title="Passen: nichts tun">' + ico('none') + '</button>' + (c.mode === 'monster' ? '<button class="btn ib" data-act="fleeask" ' + (canFlee ? '' : 'disabled') + ' title="Fliehen: den Kampf abbrechen (kein Sieger, keine Beute). Geht nur im eigenen Angriffszug, wenn der Gegner kein Mana mehr hat und du nicht unter einem Todes-Fluch stehst.">' + ico('run') + '</button>' : '');
-  else h += '<button class="btn primary" data-act="defend" ' + (my && canExec ? '' : 'disabled') + ' title="Verteidigung ausführen">' + ico('shield') + ' Verteidigen</button><button class="btn blue ib" data-act="pass" ' + (my ? '' : 'disabled') + ' title="Erholen: keine Verteidigung ausführen, Schaden hinnehmen, +' + rg + ' Mana">' + ico('flask') + '<b>+' + rg + '</b></button>';
+  if (atk) h += '<button class="btn danger" data-act="attack" ' + (my && canExec ? '' : 'disabled') + ' title="Angriff ausführen">Angriff</button><button class="btn blue" data-act="recover" ' + (my ? '' : 'disabled') + ' title="Nur du erhältst +' + rg + ' Mana">Erholen (+' + rg + ')</button><button class="btn" data-act="draw" ' + (my ? '' : 'disabled') + ' title="Hand tauschen, ersetzt den Angriff">Nachziehen</button><button class="btn" data-act="pass" ' + (my ? '' : 'disabled') + '>Passen</button>' + (c.mode === 'monster' ? '<button class="btn" data-act="fleeask" ' + (canFlee ? '' : 'disabled') + ' title="Den Kampf abbrechen: kein Sieger, keine Beute. Geht nur im eigenen Angriffszug, wenn der Gegner kein Mana mehr hat und du nicht unter einem Todes-Fluch stehst.">Fliehen</button>' : '');
+  else h += '<button class="btn primary" data-act="defend" ' + (my && canExec ? '' : 'disabled') + '>Verteidigung ausführen</button><button class="btn blue" data-act="pass" ' + (my ? '' : 'disabled') + ' title="Keine Verteidigung ausführen: Schaden hinnehmen, +' + rg + ' Mana">Erholen (+' + rg + ')</button>';
   h += '</div>';
   if (fleeAsk && canFlee) {   // Warnung: Fliehen muss bestätigt werden
     const nextMe = c.def === ME;
-    h += '<div class="fleewarn"><b>Wirklich fliehen?</b> Der Kampf endet ohne Sieger und ohne Beute. ' + esc(c.sides.b.name) + ' behält seine Verletzungen. ' + (nextMe ? 'Du bist danach am Zug und kannst das Monster selbst angreifen.' : esc(G.players[c.def].name) + ' ist danach am Zug und kann das Monster angreifen und die Beute holen.') + '<div class="btnrow" style="margin-top:6px"><button class="btn danger" data-act="flee">' + ico('run') + ' Fliehen</button><button class="btn" data-act="fleeno">Bleiben</button></div></div>';
+    h += '<div class="fleewarn"><b>Wirklich fliehen?</b> Der Kampf endet ohne Sieger und ohne Beute. ' + esc(c.sides.b.name) + ' behält seine Verletzungen. ' + (nextMe ? 'Du bist danach am Zug und kannst das Monster selbst angreifen.' : esc(G.players[c.def].name) + ' ist danach am Zug und kann das Monster angreifen und die Beute holen.') + '<div class="btnrow" style="margin-top:6px"><button class="btn danger" data-act="flee">Fliehen</button><button class="btn" data-act="fleeno">Bleiben</button></div></div>';
   }
   h += '</div>';
   return '<div class="panel" style="' + box(LAYOUT.combat, 'padding:10px 14px') + '">' + h + '</div>';

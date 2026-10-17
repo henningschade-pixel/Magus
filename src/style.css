@@ -30,7 +30,6 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .btn.small{padding:3px 10px;font-size:16px}
 .btn.blue{background:linear-gradient(180deg,#3f7fc4,#2a568f);border-color:#6fa8e6;color:#f1f7ff}.btn.blue:hover:not(:disabled){background:linear-gradient(180deg,#4f90d6,#336aa8);border-color:#9cc6f2}
 .btn.danger{background:linear-gradient(180deg,#b04a3f,#7d2d26);border-color:#e08577;color:#fff}.btn.danger:hover:not(:disabled){background:linear-gradient(180deg,#c35a4f,#8d3730)}
-.btn .ico{width:1.15em;height:1.15em;vertical-align:-.2em}.btn.ib{display:inline-flex;align-items:center;gap:4px;padding:7px 12px}.btn.ib .ico{width:1.35em;height:1.35em;vertical-align:baseline}.btn.ib b{font-size:.95em}
 .fleewarn{margin-top:8px;padding:8px 12px;border:1px solid #e08577;border-radius:9px;background:rgba(125,45,38,.35);font-size:16px;text-align:center}
 .row{display:flex;align-items:center;gap:8px}
 .statrow{display:flex;align-items:center;gap:7px;font-size:20px;margin:2px 0}
@@ -234,6 +233,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .combo small{display:block;color:var(--mute);font-size:15px}
 .combo input{width:20px;height:20px;accent-color:var(--gold)}
 .combatcenter>.btnrow{flex:none;padding-top:4px}.btnrow{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.combatcenter .btnrow{gap:6px}.combatcenter .btnrow .btn{padding:7px 10px;font-size:17px;white-space:nowrap}
 .banner{position:absolute;z-index:120;text-align:center;background:rgba(14,10,22,.93);border:1px solid var(--gold);border-radius:14px;padding:16px 20px;font-size:21px;line-height:1.3;cursor:var(--cp)}
 .banner small{display:block;color:var(--mute);font-size:15px;margin-top:6px}
 #turncv{position:absolute;left:0;top:0;width:1280px;height:800px;z-index:285;pointer-events:none}
