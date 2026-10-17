@@ -187,3 +187,15 @@ test('Kartenvorrat: Startdecks aus gemischten Stufe-1-Karten, getauschte Karten 
   d.hand[2] = Object.assign({}, d.hand[2], { id: 'E1' }); d.marks = []; M.apply(s, { pid: 0, type: 'mark', slot: 2 });
   assert.equal(M.apply(s, { pid: 0, type: 'vendor', result: 'W2', cost: ['E1'] }).ok, false);
 });
+
+test('Läuterung kann Todesmarker beider Seiten entfernen (eigene und gegnerische), je entferntem Marker ein Gratis-Nachziehen', () => {
+  for (const [pick, mineLeft, theirsLeft] of [['sd', 0, 2], ['od', 1, 1]]) {
+    const { s, me, op } = combatSetup(11, ['E1', 'F1']);
+    me.stats.death = 1; op.stats.death = 2; me.stats.freeDraws = 0;
+    M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
+    assert.ok(M.apply(s, { pid: 0, type: 'lfp', pick: [pick] }).ok);
+    assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+    assert.equal(me.stats.death || 0, mineLeft, pick + ': eigene Marker'); assert.equal(op.stats.death || 0, theirsLeft, pick + ': gegnerische Marker');
+    assert.equal(me.stats.freeDraws, 1);
+  }
+});
