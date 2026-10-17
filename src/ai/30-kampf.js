@@ -139,6 +139,7 @@ function combatPlan(state, pid) {
 }
 
 function plan(state, pid) {
+  if (state.phase === 'world') { const st = ecoStep(state, pid); if (st) return [st]; }   // Bonusaktionen zuerst (Punkte ausgeben, Magie kaufen, Gold opfern), wie in runTurn; ohne das kaufte die KI in der Oberfläche nie Magie
   return state.phase === 'combat' ? combatPlan(state, pid) : worldPlan(state, pid);
 }
 // Führt einen vollständigen KI-Zug aus; bei Fehlern greift eine sichere Rückfalloption.

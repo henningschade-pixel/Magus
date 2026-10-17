@@ -1,4 +1,13 @@
 /* ---------- Weltphase ---------- */
+// Ziel-Farbe: Gegen ein Monster der Farbe X wirkt die überlegene Farbe SUPERIOR[X] am besten (es kann sie kaum blocken). Gewählt wird unter den lebenden Monstern die Farbe, in der ich schon am weitesten bin (Magie und Karten), damit sich der Ausbau auf eine Richtung konzentriert.
+function planElement(state, pid) {
+  const p = state.players[pid], s = p.stats, alive = M.ELEMENTS.filter(e => M.monsterAlive(state.monsters[e]));
+  if (!alive.length) return null;
+  const ids = [...p.deck.draw, ...p.deck.discard, ...p.deck.hand.filter(Boolean)].map(c => c.id);
+  let best = null;
+  for (const x of alive) { const e = M.SUPERIOR[x], v = 2 * s.mag[e] + ids.filter(id => id[0] === e).length * 0.5; if (!best || v > best.v) best = { v, e }; }
+  return best.e;
+}
 // Welche Verbesserung kauft die KI mit offenen Upgrade-Punkten? Liefert null, wenn sie auf den Limit-Schritt spart.
 function pickSpend(p, state, pid) {
   const s = p.stats, Q = P(pid);
@@ -20,8 +29,9 @@ function ecoStep(state, pid) {
   const allIds = [...p.deck.draw, ...p.deck.discard, ...p.deck.hand.filter(Boolean)].map(c => c.id);
   const countEl = e => allIds.filter(id => id[0] === e).length;
   const opp = state.players[1 - pid].stats, oppTop = M.ELEMENTS.slice().sort((x, y) => opp.mag[y] - opp.mag[x])[0];   // Aufbau des Gegners: seine stärkste Magie, und welche Farbe ihr überlegen ist
+  const planEl = planElement(state, pid);
   let best = null;
-  for (const e of M.ELEMENTS) { const cost = M.magicCost(state, s.mag[e]); if (s.mag[e] < M.MAX_MAGIC && s.gold >= cost) { const sc = Q.mBase - cost * Q.mCost + countEl(e) * Q.mCnt + (s.mag[e] === Math.max(s.mag.F, s.mag.E, s.mag.W) ? Q.mTop : 0) + (e === M.SUPERIOR[oppTop] ? Q.mCounter * opp.mag[oppTop] : 0) + Q.mCatch * Math.max(0, opp.mag[e] - s.mag[e]); if (!best || sc > best.sc) best = { sc, a: A({ type: 'magic', elem: e }) }; } }
+  for (const e of M.ELEMENTS) { const cost = M.magicCost(state, s.mag[e]); if (s.mag[e] < M.MAX_MAGIC && s.gold >= cost) { const sc = Q.mBase - cost * Q.mCost + countEl(e) * Q.mCnt + (s.mag[e] === Math.max(s.mag.F, s.mag.E, s.mag.W) ? Q.mTop : 0) + (e === M.SUPERIOR[oppTop] ? Q.mCounter * opp.mag[oppTop] : 0) + (e === planEl ? Q.mPlan : 0) + Q.mCatch * Math.max(0, opp.mag[e] - s.mag[e]); if (!best || sc > best.sc) best = { sc, a: A({ type: 'magic', elem: e }) }; } }
   if (best) return best.a;
   if (s.gold >= 2) return A({ type: 'temple', amount: Math.min(s.gold, 3) });
   return null;
@@ -66,7 +76,8 @@ function worldPlan(state, pid) {
   {
     const plans = M.vendorPlans(state, pid), mk = o => o.slots.map(sl => A({ type: 'mark', slot: sl }));
     // Wirksamer Wert einer Aufwertung: Eine Karte zählt höchstens mit dem Magielevel ihrer Farbe. Darüber (ohne bald erschwingliche Magie) kostet die Aufwertung nur Zeit.
-    const worth = o => { const e = o.result[0], t = +o.result[1], soon = Q.vFut > 0 && s.gold >= M.magicCost(state, s.mag[e]) && s.mag[e] < M.MAX_MAGIC; return t * (t <= s.mag[e] || soon ? 1 : Q.vOver); };
+    const planEl = planElement(state, pid);
+    const worth = o => { const e = o.result[0], t = +o.result[1], soon = Q.vFut > 0 && s.gold >= M.magicCost(state, s.mag[e]) && s.mag[e] < M.MAX_MAGIC; return t * (t <= s.mag[e] || soon ? 1 : Q.vOver) * (e === planEl || !planEl ? 1 : Q.vOff); };
     const ups = plans.filter(o => !o.free).sort((a, b) => worth(b) - worth(a));
     if (ups.length) cands.push({ score: Q.vUp + worth(ups[0]) * Q.vUpW + R(), acts: [...mk(ups[0]), A({ type: 'vendor', result: ups[0].result, cost: ups[0].cost })] });
     else if (normals.length >= 1 && normals.length < 2 && allIds.length < 12) {
