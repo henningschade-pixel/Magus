@@ -15,3 +15,9 @@ Gilt für KI-Spiel; Fehlerspanne bei 3000–4000 Partien etwa ±2 Prozentpunkte.
     node tools/balance/mon3.js 300 3,1,5,1                      # Stufe-III-/II-Monster: Zäh- und Mana-Schritte
 
 Stand 15.10.: KI gegen die alte KI (gleiche Regeln) 80 % Siegquote. Die Erholen-Parameter (rW, rRef, dRec) schaden im Selbstspiel und stehen auf 0.
+
+## Pool-Abstimmung (17.10.)
+
+Im reinen Selbstspiel schaukelten sich beide KIs auf „erst alle Karten aufwerten, dann angreifen“ hoch (beim ersten Monsterangriff im Mittel 2 Stufe-III-Karten, 92 Logzeilen), was gegen einen früh angreifenden Menschen Beute kostet. `node tools/balance/opt2.js <Runden> <Partien>` stimmt deshalb gegen einen Pool ab (Champion plus drei früh angreifende Gegner).
+Übernommene Werte (Standard): `cBase` 34, `oHits` 2, `oFree` 4 (früher und mutiger angreifen), `vOver` 0,5 (Aufwertungen über dem Magielevel zählen halb), `mCatch` −1,5 (beim Magiekauf nicht dem Gegner hinterherlaufen, die eigene Richtung stärken).
+Ergebnis: Siegquote 55 bis 57 % gegen die bisherige KI und 52 bis 71 % gegen fünf früh angreifende Gegner, die nicht im Training waren; beim ersten Monsterangriff im Mittel 0,2 Stufe-III-Karten und 37 statt 92 Logzeilen. Zeitdruck-Gewichte (`tRace`, `tAlive`, `tLoot`) und Erschöpfungs-Gewichte (`xPen`) blieben auf 0, sie brachten im Test nichts Messbares.
