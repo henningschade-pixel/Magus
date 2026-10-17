@@ -2101,7 +2101,7 @@ function combatCenter(cx) {
     h += '</div>';
     return '<div class="panel" style="' + box(LAYOUT.combat, 'padding:10px 14px') + '">' + h + '</div>';
   }
-  let prev = '', canExec = false;
+  let prev = '', canExec = false, val = 0;   // val: Wert der markierten Karten (Schaden bzw. Block) für den Knopf
   if (my) {
     const sel = M.selection(cx.mine.deck);
     if (atk) {
@@ -2110,7 +2110,7 @@ function combatCenter(cx) {
         const ev = M.evalAttack(cx.myStats, sel);
         if (ev.valid) manaPv = ev.cost;
         prev = '';
-        canExec = ev.valid && ev.affordable;
+        canExec = ev.valid && ev.affordable; val = ev.valid && ev.prim ? ev.damage : 0;
         const lvC = ev.valid ? M.levelsFor(ev) : ev.levels;
         if (ev.valid && lvC.ew > 0 && !(ev.levels.ulti > 0)) prev += lfSummary(cx, lvC.ew);
         if (!ev.affordable) prev += '<div class="bad">Zu wenig Mana.</div>';
@@ -2119,14 +2119,14 @@ function combatCenter(cx) {
       const ev = M.evalDefense(cx.myStats, sel, c.color);
       if (!sel.length) prev = '';
       else if (!ev.valid) prev = '<span class="bad">' + esc(ev.reason) + '</span>';
-      else { if (ev.cost > 0) manaPv = ev.cost; prev = ''; canExec = ev.affordable; if (ev.ord) { const r = ORD_ROWS.find(x => x[0] === ev.ord.key); prev += '<div class="note"><b>' + r[1] + '</b> Stufe ' + ev.ord.lvl + ' nach der Verteidigung: ' + ordText(r[0], ev.ord.lvl) + '</div>'; } if (!ev.affordable) prev += '<div class="bad">Zu wenig Mana.</div>'; }
+      else { if (ev.cost > 0) manaPv = ev.cost; prev = ''; canExec = ev.affordable; val = ev.block || 0; if (ev.ord) { const r = ORD_ROWS.find(x => x[0] === ev.ord.key); prev += '<div class="note"><b>' + r[1] + '</b> Stufe ' + ev.ord.lvl + ' nach der Verteidigung: ' + ordText(r[0], ev.ord.lvl) + '</div>'; } if (!ev.affordable) prev += '<div class="bad">Zu wenig Mana.</div>'; }
     }
   }
   h += '<div class="preview">' + prev + '</div><div class="btnrow">';
   const canFlee = c.mode === 'monster' && my && M.canFlee(G, ME), rg = M.recoverGain(G);
   if (!canFlee) fleeAsk = false;
-  if (atk) h += '<button class="btn danger" data-act="attack" ' + (my && canExec ? '' : 'disabled') + ' title="Angriff ausführen">Angriff</button><button class="btn blue" data-act="recover" ' + (my ? '' : 'disabled') + ' title="Nur du erhältst +' + rg + ' Mana">Erholen (+' + rg + ')</button><button class="btn" data-act="draw" ' + (my ? '' : 'disabled') + ' title="Hand tauschen, ersetzt den Angriff">Nachziehen</button><button class="btn" data-act="pass" ' + (my ? '' : 'disabled') + '>Passen</button>' + (c.mode === 'monster' ? '<button class="btn" data-act="fleeask" ' + (canFlee ? '' : 'disabled') + ' title="Den Kampf abbrechen: kein Sieger, keine Beute. Geht nur im eigenen Angriffszug, wenn der Gegner kein Mana mehr hat und du nicht unter einem Todes-Fluch stehst.">Fliehen</button>' : '');
-  else h += '<button class="btn primary" data-act="defend" ' + (my && canExec ? '' : 'disabled') + '>Verteidigung ausführen</button><button class="btn blue" data-act="pass" ' + (my ? '' : 'disabled') + ' title="Keine Verteidigung ausführen: Schaden hinnehmen, +' + rg + ' Mana">Erholen (+' + rg + ')</button>';
+  if (atk) h += '<button class="btn danger" data-act="attack" ' + (my && canExec ? '' : 'disabled') + ' title="Angriff ausführen: Schaden der markierten Karten">Angriff (' + val + ')</button><button class="btn blue" data-act="recover" ' + (my ? '' : 'disabled') + ' title="Nur du erhältst +' + rg + ' Mana">Erholen (+' + rg + ')</button><button class="btn" data-act="draw" ' + (my ? '' : 'disabled') + ' title="Hand tauschen, ersetzt den Angriff">Nachziehen</button><button class="btn" data-act="pass" ' + (my ? '' : 'disabled') + '>Passen</button>' + (c.mode === 'monster' ? '<button class="btn" data-act="fleeask" ' + (canFlee ? '' : 'disabled') + ' title="Den Kampf abbrechen: kein Sieger, keine Beute. Geht nur im eigenen Angriffszug, wenn der Gegner kein Mana mehr hat und du nicht unter einem Todes-Fluch stehst.">Fliehen</button>' : '');
+  else h += '<button class="btn primary" data-act="defend" ' + (my && canExec ? '' : 'disabled') + ' title="Verteidigung ausführen: Block der markierten Karten">Verteidigen (' + val + ')</button><button class="btn blue" data-act="pass" ' + (my ? '' : 'disabled') + ' title="Keine Verteidigung ausführen: Schaden hinnehmen, +' + rg + ' Mana">Erholen (+' + rg + ')</button>';
   h += '</div>';
   if (fleeAsk && canFlee) {   // Warnung: Fliehen muss bestätigt werden
     const nextMe = c.def === ME;
