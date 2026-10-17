@@ -6,6 +6,16 @@ const sleep = ms => new Promise(r => setTimeout(r, FAST_URL ? 4 : ms));
 function toast(t) { toastEl.textContent = t; toastEl.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2200); }
 function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 function dots(n, max) { max = Math.max(max || 3, n); let s = ''; for (let i = 0; i < max; i++) s += i < n ? '●' : '○'; return s; }
+// Symbole für die Kampfknöpfe (Strichzeichnungen in der Textfarbe)
+const ICO = {
+  swords: '<path d="M4 20 15 9M20 20 9 9M14 5l5-1-1 5M10 5 5 4l1 5M3 21l3-1M21 21l-3-1"/>',
+  flask: '<path d="M9 3h6M10 3v6L5 19a2 2 0 0 0 1.8 3h10.4A2 2 0 0 0 19 19l-5-10V3"/><path d="M7.5 15h9"/>',
+  cards: '<rect x="3" y="6" width="11" height="15" rx="2"/><path d="M8 3.5h9a2 2 0 0 1 2 2V17"/>',
+  none: '<circle cx="12" cy="12" r="9"/><path d="M5.6 5.6l12.8 12.8"/>',
+  run: '<circle cx="14" cy="4.5" r="2"/><path d="M9 21l3-6-3-3 2-5 4 2 3 2M12 15l4 2v4M10 9 6 11"/>',
+  shield: '<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>',
+};
+const ico = k => '<svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + ICO[k] + '</svg>';
 function thumb(id) { return '<span class="thumb" style="background-image:url(' + IMG[id] + ')"></span>'; }
 function ctx() {
   if (G.phase === 'combat') {

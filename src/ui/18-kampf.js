@@ -82,9 +82,16 @@ function combatCenter(cx) {
     }
   }
   h += '<div class="preview">' + prev + '</div><div class="btnrow">';
-  if (atk) h += '<button class="btn primary" data-act="attack" ' + (my && canExec ? '' : 'disabled') + '>Angriff ausführen</button><button class="btn" data-act="recover" ' + (my ? '' : 'disabled') + ' title="Nur du erhältst +' + M.recoverGain(G) + ' Mana">Erholen (+' + M.recoverGain(G) + ')</button><button class="btn" data-act="draw" ' + (my ? '' : 'disabled') + ' title="Hand tauschen, ersetzt den Angriff">Nachziehen</button><button class="btn" data-act="pass" ' + (my ? '' : 'disabled') + '>Passen</button>' + (c.mode === 'monster' ? '<button class="btn" data-act="flee" ' + (my && M.canFlee(G, ME) ? '' : 'disabled') + ' title="Den Kampf abbrechen: kein Sieger, keine Beute, das Monster behält seine Verletzungen. Geht nur im eigenen Angriffszug, wenn das Monster kein Mana mehr hat und du nicht unter einem Todes-Fluch stehst.">Fliehen</button>' : '');
-  else h += '<button class="btn primary" data-act="defend" ' + (my && canExec ? '' : 'disabled') + '>Verteidigung ausführen</button><button class="btn" data-act="pass" ' + (my ? '' : 'disabled') + ' title="Keine Verteidigung ausführen: Schaden hinnehmen, +' + M.recoverGain(G) + ' Mana">Erholen (+' + M.recoverGain(G) + ')</button>';
-  h += '</div></div>';
+  const canFlee = c.mode === 'monster' && my && M.canFlee(G, ME), rg = M.recoverGain(G);
+  if (!canFlee) fleeAsk = false;
+  if (atk) h += '<button class="btn primary" data-act="attack" ' + (my && canExec ? '' : 'disabled') + ' title="Angriff ausführen">' + ico('swords') + ' Angriff</button><button class="btn blue ib" data-act="recover" ' + (my ? '' : 'disabled') + ' title="Erholen: nur du erhältst +' + rg + ' Mana">' + ico('flask') + '<b>+' + rg + '</b></button><button class="btn ib" data-act="draw" ' + (my ? '' : 'disabled') + ' title="Nachziehen: Hand tauschen, ersetzt den Angriff">' + ico('cards') + '</button><button class="btn ib" data-act="pass" ' + (my ? '' : 'disabled') + ' title="Passen: nichts tun">' + ico('none') + '</button>' + (c.mode === 'monster' ? '<button class="btn ib" data-act="fleeask" ' + (canFlee ? '' : 'disabled') + ' title="Fliehen: den Kampf abbrechen (kein Sieger, keine Beute). Geht nur im eigenen Angriffszug, wenn der Gegner kein Mana mehr hat und du nicht unter einem Todes-Fluch stehst.">' + ico('run') + '</button>' : '');
+  else h += '<button class="btn primary" data-act="defend" ' + (my && canExec ? '' : 'disabled') + ' title="Verteidigung ausführen">' + ico('shield') + ' Verteidigen</button><button class="btn blue ib" data-act="pass" ' + (my ? '' : 'disabled') + ' title="Erholen: keine Verteidigung ausführen, Schaden hinnehmen, +' + rg + ' Mana">' + ico('flask') + '<b>+' + rg + '</b></button>';
+  h += '</div>';
+  if (fleeAsk && canFlee) {   // Warnung: Fliehen muss bestätigt werden
+    const nextMe = c.def === ME;
+    h += '<div class="fleewarn"><b>Wirklich fliehen?</b> Der Kampf endet ohne Sieger und ohne Beute. ' + esc(c.sides.b.name) + ' behält seine Verletzungen. ' + (nextMe ? 'Du bist danach am Zug und kannst das Monster selbst angreifen.' : esc(G.players[c.def].name) + ' ist danach am Zug und kann das Monster angreifen und die Beute holen.') + '<div class="btnrow" style="margin-top:6px"><button class="btn danger" data-act="flee">' + ico('run') + ' Fliehen</button><button class="btn" data-act="fleeno">Bleiben</button></div></div>';
+  }
+  h += '</div>';
   return '<div class="panel" style="' + box(LAYOUT.combat, 'padding:10px 14px') + '">' + h + '</div>';
 }
 // Rechte Kampfseite: Übersicht der Kombos (statt einer Doppelanzeige des Gegners, der steht schon oben rechts).

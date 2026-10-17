@@ -10,6 +10,7 @@ const NAMES = M.NAMES;
 const $ = id => document.getElementById(id);
 const stage = $('stage'), layerPh = $('ph'), layerCards = $('cards'), panels = $('panels'), logEl = $('log'), toastEl = $('toast'), overlay = $('overlay');
 let fxUntil = 0, lateN = 0;   // Zeitpunkt, bis zu dem eine Kampfanimation läuft (die Siegmeldung wartet darauf)
+let fleeAsk = false;   // Fliehen: Bestätigung wird gezeigt
 let SPEC = false, specT = 0, specSpeed = 1;   // SPEC: Zuschauermodus, zwei Computerspieler spielen gegeneinander
 let upSeen = null, hpHold = null, stageSeen = 1, endSnd = null, sacN = 0, G = null, hold = 0, aiTimer = null, endView = null, modal = null, introSeen = -1, preStats = null, seenCombat = null, toastTimer = null, started = false;
 

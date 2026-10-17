@@ -21,7 +21,7 @@ test('Spiel startet, Kampf endet mit Ergebnis-Bildschirm, Klick führt zurück i
       me.deck.hand[0] = Object.assign({}, me.deck.hand[0], { id: 'F3' });
       M.apply(G, { pid: 0, type: 'mark', slot: 0 }); window.__magus.pump();
     });
-    await p.click('text=Angriff ausführen');
+    await p.click('[data-act="attack"]');
     await p.waitForSelector('#endov .endbox', { timeout: 30000 });
     assert.match(await p.textContent('#endov .et'), /Sieg/);
     await p.click('#endov .endov');
@@ -114,11 +114,15 @@ test('Fliehen: Knopf ist nur bei Monster ohne Mana bedienbar und beendet den Kam
     await p.goto(url); await p.waitForTimeout(500);
     await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
     await p.evaluate(() => { const G = window.__magus.state; window.Magus.apply(G, { pid: 0, type: 'combat', elem: 'F' }); window.__magus.pump(); });
-    await p.waitForSelector('[data-act="flee"]');
-    assert.equal(await p.getAttribute('[data-act="flee"]', 'disabled') !== null, true, 'mit Monster-Mana gesperrt');
+    await p.waitForSelector('[data-act="fleeask"]');
+    assert.equal(await p.getAttribute('[data-act="fleeask"]', 'disabled') !== null, true, 'mit Monster-Mana gesperrt');
     await p.evaluate(() => { const G = window.__magus.state; G.combat.sides.b.stats.mana = 0; window.__magus.pump(); });
-    await p.waitForFunction(() => !document.querySelector('[data-act="flee"]').disabled);
-    await p.click('[data-act="flee"]');
+    await p.waitForFunction(() => !document.querySelector('[data-act="fleeask"]').disabled);
+    await p.click('[data-act="fleeask"]');
+    await p.waitForSelector('.fleewarn');
+    await p.click('[data-act="fleeno"]'); assert.equal(await p.$('.fleewarn'), null, 'Bleiben schließt die Warnung');
+    assert.equal(await p.evaluate(() => window.__magus.state.phase), 'combat');
+    await p.click('[data-act="fleeask"]'); await p.click('.fleewarn [data-act="flee"]');
     await p.waitForFunction(() => window.__magus.state.phase === 'world', null, { timeout: 15000 });
     assert.match(await p.evaluate(() => window.__magus.state.log.slice(-4).map(l => l.txt).join(' | ')), /flieht vor/);
     assert.deepEqual(errs, []);

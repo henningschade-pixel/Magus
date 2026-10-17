@@ -38,7 +38,9 @@ function onAct(d) {
     case 'defend': act({ type: 'defend' }); break;
     case 'pass': act({ type: 'pass' }); break;
     case 'recover': act({ type: 'recover' }); break;
-    case 'flee': act({ type: 'flee' }); break;
+    case 'fleeask': fleeAsk = true; render(); break;
+    case 'fleeno': fleeAsk = false; render(); break;
+    case 'flee': fleeAsk = false; act({ type: 'flee' }); break;
     case 'lfm': {
       const L = lfCtx(); if (!L) break;
       const k = d.k, e = d.e || '', key = e ? k + ':' + e : k, have = lfHave(L.cx, k, e), n = L.picks.filter(x => x === key).length;
