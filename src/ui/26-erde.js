@@ -134,16 +134,17 @@ function earthFormRaw(ctx, x, by, seed, i, t, tCrack, tRise, endAt, ending) {
     };
     const slotA = i => grid(i, n, true), slotD = j => grid(j, b, false);
     for (let i = 0; i < n; i++) {   // Angriffsfunken
-      const s0 = i * p.gap, s = seg(t, s0, s0 + p.flight), sl = slotA(i), paired = i < T.pairs;
+      const s0 = i * p.gap, s = seg(t, s0, s0 + p.flight), sl = slotA(i), paired = i < T.pairs, absd = !paired && i < T.pairs + (T.abs || 0);   // absd: vom Schild ausgeglichen
       if (s <= 0) continue;
       if (p.atk === 'E') {   // Erde bricht am Platz aus dem Boden, zerbirst beim Aufprall; der Rest fliegt als Brocken zu den HP
-        earthForm(ctx, sl.x, sl.y, seeds[i], i, t, s0, s0 + p.flight - EP.rise, paired ? T.tK : T.tH, 'zerbersten');
-        if (paired || t < T.tH) continue;
+        earthForm(ctx, sl.x, sl.y, seeds[i], i, t, s0, s0 + p.flight - EP.rise, paired ? T.tK : absd ? T.tS : T.tH, 'zerbersten');
+        if (paired || absd || t < T.tH) continue;
       } else {
         if (s < 1) { drawProjectile(ctx, p, p.atk, HA, sl, s, seeds[i], t); continue; }
         if (paired && t >= T.tC) { const m = seg(t, T.tC, T.tK); if (m >= 1) continue; drawIdle(ctx, p, p.atk, sl.x, lerp(sl.y, sl.cy, m * m), seeds[i], t, 1); continue; }
       }
-      if (!paired && t >= T.tH) {
+      if (absd && t >= T.tS) { const f = seg(t, T.tS, T.tS + .25); if (f >= 1) continue; ctx.save(); ctx.globalAlpha = 1 - f; drawIdle(ctx, p, p.atk, sl.x, sl.y, seeds[i], t, 1 - f); ctx.restore(); continue; }   // das Schild fängt dieses Geschoss ab
+      if (!paired && !absd && t >= T.tH) {
         const hpt = { x: hp.x - 40 + (i % 3) * 40, y: hp.y };
         { const f = seg(t, T.tH, T.tH + T.hf); if (f >= 1) continue; if (f > 0) { drawProjectile(ctx, p, p.atk, { x: sl.x, y: sl.y }, hpt, f, seeds[i], t); continue; } }
       }
@@ -184,13 +185,15 @@ function earthFormRaw(ctx, x, by, seed, i, t, tCrack, tRise, endAt, ending) {
   function applyDef(fx) {
     const bb = Math.max(0, Math.min(10, fx.block));
     const e = ex, p = e.p, now = (performance.now() - e.t0) / 1000, tD = Math.max(now, e.tAe + p.hover), pairs = Math.min(e.n, bb);
-    const tDe = bb ? tD + (bb - 1) * p.gap + p.flight : tD, tC = tDe + .12, tK = tC + (pairs ? .3 : 0), left = e.n - pairs;
+    const tDe = bb ? tD + (bb - 1) * p.gap + p.flight : tD, tC = tDe + .12, tK = tC + (pairs ? .3 : 0);
     p.def = fx.defElem || fx.attElem;
     const sh = fx.mirror && !off() ? fx.mirror : null, shD = sh ? MirrorFx.delay(sh) : 0, hf = .8;
-    const tH = tK + Math.max(pairs ? .45 : 0, shD);   // der Schild-Effekt (Start nach dem Aufeinandertreffen) läuft vor dem Schaden auf den HP
-    e.def = { H: handOf(fx.who), hp: hpOf(fx.who), ha: hpOf(fx.to), b: bb, T: { tA: 0, tD, tC, tK, tH, hf, cl: .6, pairs, left, end: (left ? tH + hf + .7 : tK + .6) + .3 + (p.atk === 'E' || p.def === 'E' ? .35 : 0) } };
+    const abs = sh ? Math.min(sh.abs || 0, e.n - pairs) : 0, left = e.n - pairs - abs;   // vom Schild ausgeglichene Geschosse erreichen die HP nicht
+    const tS = tK + (pairs ? .55 : 0);   // erst läuft die normale Grafik (Angriff gegen Verteidigung), danach, nur wenn das Schild wirklich eingreift, der Schild-Effekt
+    const tH = sh ? tS + shD : tK + (pairs ? .45 : 0);   // der Schaden auf den HP kommt nach dem Schild-Effekt
+    e.def = { H: handOf(fx.who), hp: hpOf(fx.who), ha: hpOf(fx.to), b: bb, T: { tA: 0, tD, tC, tK, tS, tH, hf, cl: .6, pairs, left, abs, end: Math.max(left ? tH + hf + .7 : tK + .6, sh ? tS + shD : 0) + .3 + (p.atk === 'E' || p.def === 'E' ? .35 : 0) } };
     fxUntil = Math.max(fxUntil, Date.now() + (e.def.T.end - now) * 1000);
-    if (sh) { hpHold = { until: Date.now() + (tH - now + .35) * 1000, pre: sh.hpPre }; setTimeout(() => { if (G) render(); }, Math.round((tH - now + .4) * 1000)); lateN++; setTimeout(() => { lateN--; MirrorFx.play(sh); }, Math.max(0, Math.round((tK - now) * 1000))); }
+    if (sh) { hpHold = { until: Date.now() + (tH - now + .35) * 1000, pre: sh.hpPre }; setTimeout(() => { if (G) render(); }, Math.round((tH - now + .4) * 1000)); lateN++; setTimeout(() => { lateN--; MirrorFx.play(sh); }, Math.max(0, Math.round((tS - now) * 1000))); }
     if (pairs > 0) Snd.play('block', Math.max(0, tC - now));
     if (left > 0) Snd.play('hit', Math.max(0, tH + hf - now));   // Bruch-Sound beim Einschlag der Funken
   }

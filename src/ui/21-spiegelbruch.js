@@ -16,15 +16,15 @@ const MirrorFx = (() => {
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r * 3, 0, 7); ctx.fill(); ctx.restore();
   }
   const toStage = el => { const r = el.getBoundingClientRect(), sr = stage.getBoundingClientRect(), k = sr.width / stage.offsetWidth; return { x: (r.left + r.width / 2 - sr.left) / k, y: (r.top + r.height / 2 - sr.top) / k, h: r.height / k }; };
-  // Zeitplan: Geschosse treffen, Rückwurf, erster durchgehender Schaden bricht Stufen
+  // Zeitplan. Zwei Fälle: Ausgleich (abs Geschosse des Angreifers schlagen im Schild ein, das dafür Stufen verliert) oder Rückwurf
+  // (die überschüssigen Verteidigungsgeschosse r prallen am Schild ab und fliegen zum Angreifer, das Schild verliert dafür Stufen)
   function plan(fx) {
-    const D = clamp(fx.d || 1, 1, 8), B = clamp(fx.blk || 0, 0, D), F = .55 / P.tempo, G = .14 / P.tempo, t0 = .3 + P.fly, ev = { sparks: [], refl: [] };
-    for (let i = 0; i < D; i++) ev.sparks.push({ tl: t0 + i * G, ta: t0 + i * G + F, blocked: i < B, a: -Math.PI / 2 + (i - (D - 1) / 2) * .09 });
-    const last = B ? ev.sparks[B - 1].ta : null;
-    for (let j = 0; j < fx.r; j++) ev.refl.push({ tl: last + .1 + j * .11 / P.tempo, ta: last + .1 + j * .11 / P.tempo + .6 / P.tempo });
-    ev.tBreak = D > B ? ev.sparks[B].ta : null;
-    ev.tEv = Math.max(ev.sparks[D - 1].ta + .6, ev.refl.length ? ev.refl[ev.refl.length - 1].ta + .5 : 0, ev.tBreak ? ev.tBreak + 1.4 : 0);
-    ev.tOut = ev.tEv + P.hold; ev.n = fx.markers; ev.lost = fx.broken; ev.after = fx.markers - fx.broken; ev.D = D; ev.B = B;
+    const refl = fx.r || 0, N = refl > 0 ? refl : Math.max(1, fx.abs || 1), F = .55 / P.tempo, G = .14 / P.tempo, t0 = .3 + P.fly, ev = { sparks: [], refl: [], mode: refl > 0 ? 'r' : 'a' };
+    for (let i = 0; i < N; i++) ev.sparks.push({ tl: t0 + i * G, ta: t0 + i * G + F, blocked: refl > 0, a: -Math.PI / 2 + (i - (N - 1) / 2) * .09 });
+    if (refl > 0) { const last = ev.sparks[N - 1].ta; for (let j = 0; j < refl; j++) ev.refl.push({ tl: last + .1 + j * .11 / P.tempo, ta: last + .1 + j * .11 / P.tempo + .6 / P.tempo }); }
+    ev.tBreak = refl > 0 ? ev.refl[0].tl + .05 : ev.sparks[0].ta;   // das Schild verliert Stufen: beim Ausgleich im ersten Einschlag, beim Rückwurf, sobald es zurückwirft
+    ev.tEv = Math.max(ev.sparks[N - 1].ta + .6, ev.refl.length ? ev.refl[ev.refl.length - 1].ta + .5 : 0, ev.tBreak + 1.4);
+    ev.tOut = ev.tEv + P.hold; ev.n = fx.markers; ev.lost = fx.broken; ev.after = fx.markers - fx.broken; ev.D = N; ev.B = refl;
     ev.tEnd = ev.tOut + P.back + .3;
     return ev;
   }
@@ -33,11 +33,11 @@ const MirrorFx = (() => {
     ctx.clearRect(0, 0, 1280, 800);
     const u = eo(seg(t, 0, P.fly)), v = eio(seg(t, ev.tOut, ev.tOut + P.back)), m = gone ? u : u * (1 - v), md = u * (1 - v);
     ctx.fillStyle = 'rgba(0,0,0,' + (P.dim * md) + ')'; ctx.fillRect(0, 0, 1280, 800);
-    const hit = ev.sparks.find(s => t >= s.ta && t < s.ta + .15), brk = ev.tBreak !== null && t > ev.tBreak;
+    const hit = ev.sparks.find(s => t >= s.ta && t < s.ta + .15), brk = t > ev.tBreak;
     const amp = (brk ? P.shake * 9 * Math.exp(-(t - ev.tBreak) * 6) : 0) + (hit ? P.shake * 2 : 0);
     const pos = { x: lerp(home.x, Z.x, m) + Math.sin(t * 90) * amp * m, y: lerp(home.y, Z.y, m) + Math.cos(t * 70) * amp * .7 * m }, h = lerp(home.h, P.size, m), w = h * 132 / 180;
     const rEdge = h * .5 + 8, edge = a => ({ x: pos.x + rEdge * Math.cos(a) * .86, y: pos.y + rEdge * Math.sin(a) });
-    const tShat = ev.tBreak !== null ? ev.tBreak + .12 + (n - 1) * .04 + .1 : 1e9, shattered = gone && t > tShat;
+    const tShat = ev.tBreak + .12 + (n - 1) * .04 + .1, shattered = gone && t > tShat;
     if (im && im.complete) {
       if (shattered) {   // alle Stufen verloren: das Schild zerspringt
         const ts = t - tShat, rr = rng(21), GX = 4, GY = 5, iw = im.width, ih = im.height;
@@ -70,16 +70,17 @@ const MirrorFx = (() => {
     });
     if (ev.refl.length) { const tt = ev.refl[ev.refl.length - 1].ta, q = seg(t, tt, tt + .1) * (1 - seg(t, tt + .6, tt + .9)); if (q > 0) { ctx.save(); ctx.font = '700 22px Alegreya, serif'; ctx.textAlign = 'center'; ctx.fillStyle = rgba('#ff6b6b', q); ctx.fillText('−' + fx.r, hpAtt.x, hpAtt.y - 20 - 10 * seg(t, tt, tt + .9)); ctx.restore(); } }
   }
+  const ev0 = fx => (fx.r || 0) > 0 ? 'r' : 'a';   // Rückwurf: die Geschosse kommen von der Seite des Verteidigers, sonst vom Angreifer
   function play(fx) {
     const quiet = FAST || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
     if (quiet) return;
     const side = fx.who === ME ? 's' : 'o', homeEl = stage.querySelector('.mirstack[data-who="' + side + '"] .msh.' + fx.elem);
     const hp = FlowFx.hp(fx.att), home = homeEl ? toStage(homeEl) : { x: fx.who === ME ? 90 : 1190, y: fx.who === ME ? 690 : 110, h: 52 };
-    const ev = plan(fx), from = { x: 640, y: fx.who === ME ? 70 : 730 };
+    const ev = plan(fx), from = { x: 640, y: (fx.who === ME) === (ev0(fx) === 'a') ? 70 : 730 };
     fxUntil = Math.max(fxUntil, Date.now() + ev.tEnd * 1000);
     stage.dataset.shieldfx = side + fx.elem;   // das eigentliche Schild neben der Hand ausblenden, solange es fliegt
     ev.sparks.forEach((s, i) => Snd.play('shield_hit', s.ta, i === 0 ? .9 : .5));   // Aufprall der Geschosse auf dem Schild
-    if (ev.tBreak !== null) Snd.play('break', ev.tBreak + .12, .8);   // Splitter, wenn Stufen zerbrechen
+    Snd.play('break', ev.tBreak + .12, .8);   // Splitter, wenn Stufen zerbrechen
     if (fx.r > 0) Snd.play('mirror_reflect', ev.refl[0].tl);
     const cv = document.createElement('canvas'); cv.width = 1280; cv.height = 800; cv.style.cssText = 'position:absolute;left:0;top:0;width:1280px;height:800px;z-index:288;pointer-events:none'; stage.appendChild(cv);
     const ctx = cv.getContext('2d'), t0 = performance.now();

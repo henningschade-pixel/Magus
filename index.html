@@ -2134,15 +2134,15 @@ const MirrorFx = (() => {
     ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r * 3, 0, 7); ctx.fill(); ctx.restore();
   }
   const toStage = el => { const r = el.getBoundingClientRect(), sr = stage.getBoundingClientRect(), k = sr.width / stage.offsetWidth; return { x: (r.left + r.width / 2 - sr.left) / k, y: (r.top + r.height / 2 - sr.top) / k, h: r.height / k }; };
-  // Zeitplan: Geschosse treffen, Rückwurf, erster durchgehender Schaden bricht Stufen
+  // Zeitplan. Zwei Fälle: Ausgleich (abs Geschosse des Angreifers schlagen im Schild ein, das dafür Stufen verliert) oder Rückwurf
+  // (die überschüssigen Verteidigungsgeschosse r prallen am Schild ab und fliegen zum Angreifer, das Schild verliert dafür Stufen)
   function plan(fx) {
-    const D = clamp(fx.d || 1, 1, 8), B = clamp(fx.blk || 0, 0, D), F = .55 / P.tempo, G = .14 / P.tempo, t0 = .3 + P.fly, ev = { sparks: [], refl: [] };
-    for (let i = 0; i < D; i++) ev.sparks.push({ tl: t0 + i * G, ta: t0 + i * G + F, blocked: i < B, a: -Math.PI / 2 + (i - (D - 1) / 2) * .09 });
-    const last = B ? ev.sparks[B - 1].ta : null;
-    for (let j = 0; j < fx.r; j++) ev.refl.push({ tl: last + .1 + j * .11 / P.tempo, ta: last + .1 + j * .11 / P.tempo + .6 / P.tempo });
-    ev.tBreak = D > B ? ev.sparks[B].ta : null;
-    ev.tEv = Math.max(ev.sparks[D - 1].ta + .6, ev.refl.length ? ev.refl[ev.refl.length - 1].ta + .5 : 0, ev.tBreak ? ev.tBreak + 1.4 : 0);
-    ev.tOut = ev.tEv + P.hold; ev.n = fx.markers; ev.lost = fx.broken; ev.after = fx.markers - fx.broken; ev.D = D; ev.B = B;
+    const refl = fx.r || 0, N = refl > 0 ? refl : Math.max(1, fx.abs || 1), F = .55 / P.tempo, G = .14 / P.tempo, t0 = .3 + P.fly, ev = { sparks: [], refl: [], mode: refl > 0 ? 'r' : 'a' };
+    for (let i = 0; i < N; i++) ev.sparks.push({ tl: t0 + i * G, ta: t0 + i * G + F, blocked: refl > 0, a: -Math.PI / 2 + (i - (N - 1) / 2) * .09 });
+    if (refl > 0) { const last = ev.sparks[N - 1].ta; for (let j = 0; j < refl; j++) ev.refl.push({ tl: last + .1 + j * .11 / P.tempo, ta: last + .1 + j * .11 / P.tempo + .6 / P.tempo }); }
+    ev.tBreak = refl > 0 ? ev.refl[0].tl + .05 : ev.sparks[0].ta;   // das Schild verliert Stufen: beim Ausgleich im ersten Einschlag, beim Rückwurf, sobald es zurückwirft
+    ev.tEv = Math.max(ev.sparks[N - 1].ta + .6, ev.refl.length ? ev.refl[ev.refl.length - 1].ta + .5 : 0, ev.tBreak + 1.4);
+    ev.tOut = ev.tEv + P.hold; ev.n = fx.markers; ev.lost = fx.broken; ev.after = fx.markers - fx.broken; ev.D = N; ev.B = refl;
     ev.tEnd = ev.tOut + P.back + .3;
     return ev;
   }
@@ -2151,11 +2151,11 @@ const MirrorFx = (() => {
     ctx.clearRect(0, 0, 1280, 800);
     const u = eo(seg(t, 0, P.fly)), v = eio(seg(t, ev.tOut, ev.tOut + P.back)), m = gone ? u : u * (1 - v), md = u * (1 - v);
     ctx.fillStyle = 'rgba(0,0,0,' + (P.dim * md) + ')'; ctx.fillRect(0, 0, 1280, 800);
-    const hit = ev.sparks.find(s => t >= s.ta && t < s.ta + .15), brk = ev.tBreak !== null && t > ev.tBreak;
+    const hit = ev.sparks.find(s => t >= s.ta && t < s.ta + .15), brk = t > ev.tBreak;
     const amp = (brk ? P.shake * 9 * Math.exp(-(t - ev.tBreak) * 6) : 0) + (hit ? P.shake * 2 : 0);
     const pos = { x: lerp(home.x, Z.x, m) + Math.sin(t * 90) * amp * m, y: lerp(home.y, Z.y, m) + Math.cos(t * 70) * amp * .7 * m }, h = lerp(home.h, P.size, m), w = h * 132 / 180;
     const rEdge = h * .5 + 8, edge = a => ({ x: pos.x + rEdge * Math.cos(a) * .86, y: pos.y + rEdge * Math.sin(a) });
-    const tShat = ev.tBreak !== null ? ev.tBreak + .12 + (n - 1) * .04 + .1 : 1e9, shattered = gone && t > tShat;
+    const tShat = ev.tBreak + .12 + (n - 1) * .04 + .1, shattered = gone && t > tShat;
     if (im && im.complete) {
       if (shattered) {   // alle Stufen verloren: das Schild zerspringt
         const ts = t - tShat, rr = rng(21), GX = 4, GY = 5, iw = im.width, ih = im.height;
@@ -2188,16 +2188,17 @@ const MirrorFx = (() => {
     });
     if (ev.refl.length) { const tt = ev.refl[ev.refl.length - 1].ta, q = seg(t, tt, tt + .1) * (1 - seg(t, tt + .6, tt + .9)); if (q > 0) { ctx.save(); ctx.font = '700 22px Alegreya, serif'; ctx.textAlign = 'center'; ctx.fillStyle = rgba('#ff6b6b', q); ctx.fillText('−' + fx.r, hpAtt.x, hpAtt.y - 20 - 10 * seg(t, tt, tt + .9)); ctx.restore(); } }
   }
+  const ev0 = fx => (fx.r || 0) > 0 ? 'r' : 'a';   // Rückwurf: die Geschosse kommen von der Seite des Verteidigers, sonst vom Angreifer
   function play(fx) {
     const quiet = FAST || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
     if (quiet) return;
     const side = fx.who === ME ? 's' : 'o', homeEl = stage.querySelector('.mirstack[data-who="' + side + '"] .msh.' + fx.elem);
     const hp = FlowFx.hp(fx.att), home = homeEl ? toStage(homeEl) : { x: fx.who === ME ? 90 : 1190, y: fx.who === ME ? 690 : 110, h: 52 };
-    const ev = plan(fx), from = { x: 640, y: fx.who === ME ? 70 : 730 };
+    const ev = plan(fx), from = { x: 640, y: (fx.who === ME) === (ev0(fx) === 'a') ? 70 : 730 };
     fxUntil = Math.max(fxUntil, Date.now() + ev.tEnd * 1000);
     stage.dataset.shieldfx = side + fx.elem;   // das eigentliche Schild neben der Hand ausblenden, solange es fliegt
     ev.sparks.forEach((s, i) => Snd.play('shield_hit', s.ta, i === 0 ? .9 : .5));   // Aufprall der Geschosse auf dem Schild
-    if (ev.tBreak !== null) Snd.play('break', ev.tBreak + .12, .8);   // Splitter, wenn Stufen zerbrechen
+    Snd.play('break', ev.tBreak + .12, .8);   // Splitter, wenn Stufen zerbrechen
     if (fx.r > 0) Snd.play('mirror_reflect', ev.refl[0].tl);
     const cv = document.createElement('canvas'); cv.width = 1280; cv.height = 800; cv.style.cssText = 'position:absolute;left:0;top:0;width:1280px;height:800px;z-index:288;pointer-events:none'; stage.appendChild(cv);
     const ctx = cv.getContext('2d'), t0 = performance.now();
@@ -2645,16 +2646,17 @@ function earthFormRaw(ctx, x, by, seed, i, t, tCrack, tRise, endAt, ending) {
     };
     const slotA = i => grid(i, n, true), slotD = j => grid(j, b, false);
     for (let i = 0; i < n; i++) {   // Angriffsfunken
-      const s0 = i * p.gap, s = seg(t, s0, s0 + p.flight), sl = slotA(i), paired = i < T.pairs;
+      const s0 = i * p.gap, s = seg(t, s0, s0 + p.flight), sl = slotA(i), paired = i < T.pairs, absd = !paired && i < T.pairs + (T.abs || 0);   // absd: vom Schild ausgeglichen
       if (s <= 0) continue;
       if (p.atk === 'E') {   // Erde bricht am Platz aus dem Boden, zerbirst beim Aufprall; der Rest fliegt als Brocken zu den HP
-        earthForm(ctx, sl.x, sl.y, seeds[i], i, t, s0, s0 + p.flight - EP.rise, paired ? T.tK : T.tH, 'zerbersten');
-        if (paired || t < T.tH) continue;
+        earthForm(ctx, sl.x, sl.y, seeds[i], i, t, s0, s0 + p.flight - EP.rise, paired ? T.tK : absd ? T.tS : T.tH, 'zerbersten');
+        if (paired || absd || t < T.tH) continue;
       } else {
         if (s < 1) { drawProjectile(ctx, p, p.atk, HA, sl, s, seeds[i], t); continue; }
         if (paired && t >= T.tC) { const m = seg(t, T.tC, T.tK); if (m >= 1) continue; drawIdle(ctx, p, p.atk, sl.x, lerp(sl.y, sl.cy, m * m), seeds[i], t, 1); continue; }
       }
-      if (!paired && t >= T.tH) {
+      if (absd && t >= T.tS) { const f = seg(t, T.tS, T.tS + .25); if (f >= 1) continue; ctx.save(); ctx.globalAlpha = 1 - f; drawIdle(ctx, p, p.atk, sl.x, sl.y, seeds[i], t, 1 - f); ctx.restore(); continue; }   // das Schild fängt dieses Geschoss ab
+      if (!paired && !absd && t >= T.tH) {
         const hpt = { x: hp.x - 40 + (i % 3) * 40, y: hp.y };
         { const f = seg(t, T.tH, T.tH + T.hf); if (f >= 1) continue; if (f > 0) { drawProjectile(ctx, p, p.atk, { x: sl.x, y: sl.y }, hpt, f, seeds[i], t); continue; } }
       }
@@ -2695,13 +2697,15 @@ function earthFormRaw(ctx, x, by, seed, i, t, tCrack, tRise, endAt, ending) {
   function applyDef(fx) {
     const bb = Math.max(0, Math.min(10, fx.block));
     const e = ex, p = e.p, now = (performance.now() - e.t0) / 1000, tD = Math.max(now, e.tAe + p.hover), pairs = Math.min(e.n, bb);
-    const tDe = bb ? tD + (bb - 1) * p.gap + p.flight : tD, tC = tDe + .12, tK = tC + (pairs ? .3 : 0), left = e.n - pairs;
+    const tDe = bb ? tD + (bb - 1) * p.gap + p.flight : tD, tC = tDe + .12, tK = tC + (pairs ? .3 : 0);
     p.def = fx.defElem || fx.attElem;
     const sh = fx.mirror && !off() ? fx.mirror : null, shD = sh ? MirrorFx.delay(sh) : 0, hf = .8;
-    const tH = tK + Math.max(pairs ? .45 : 0, shD);   // der Schild-Effekt (Start nach dem Aufeinandertreffen) läuft vor dem Schaden auf den HP
-    e.def = { H: handOf(fx.who), hp: hpOf(fx.who), ha: hpOf(fx.to), b: bb, T: { tA: 0, tD, tC, tK, tH, hf, cl: .6, pairs, left, end: (left ? tH + hf + .7 : tK + .6) + .3 + (p.atk === 'E' || p.def === 'E' ? .35 : 0) } };
+    const abs = sh ? Math.min(sh.abs || 0, e.n - pairs) : 0, left = e.n - pairs - abs;   // vom Schild ausgeglichene Geschosse erreichen die HP nicht
+    const tS = tK + (pairs ? .55 : 0);   // erst läuft die normale Grafik (Angriff gegen Verteidigung), danach, nur wenn das Schild wirklich eingreift, der Schild-Effekt
+    const tH = sh ? tS + shD : tK + (pairs ? .45 : 0);   // der Schaden auf den HP kommt nach dem Schild-Effekt
+    e.def = { H: handOf(fx.who), hp: hpOf(fx.who), ha: hpOf(fx.to), b: bb, T: { tA: 0, tD, tC, tK, tS, tH, hf, cl: .6, pairs, left, abs, end: Math.max(left ? tH + hf + .7 : tK + .6, sh ? tS + shD : 0) + .3 + (p.atk === 'E' || p.def === 'E' ? .35 : 0) } };
     fxUntil = Math.max(fxUntil, Date.now() + (e.def.T.end - now) * 1000);
-    if (sh) { hpHold = { until: Date.now() + (tH - now + .35) * 1000, pre: sh.hpPre }; setTimeout(() => { if (G) render(); }, Math.round((tH - now + .4) * 1000)); lateN++; setTimeout(() => { lateN--; MirrorFx.play(sh); }, Math.max(0, Math.round((tK - now) * 1000))); }
+    if (sh) { hpHold = { until: Date.now() + (tH - now + .35) * 1000, pre: sh.hpPre }; setTimeout(() => { if (G) render(); }, Math.round((tH - now + .4) * 1000)); lateN++; setTimeout(() => { lateN--; MirrorFx.play(sh); }, Math.max(0, Math.round((tS - now) * 1000))); }
     if (pairs > 0) Snd.play('block', Math.max(0, tC - now));
     if (left > 0) Snd.play('hit', Math.max(0, tH + hf - now));   // Bruch-Sound beim Einschlag der Funken
   }
