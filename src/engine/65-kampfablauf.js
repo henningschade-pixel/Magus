@@ -22,7 +22,7 @@ function startCombat(state, attPid, el) {
     sides: { a: playerSide(state, attPid, 'a'), b: { key: 'b', kind: 'monster', ctrl: other(attPid), name: m.name, stats: m.stats, deck: mdeck, monster: m } },
     turn: 'a', action: 'attack', color: null, pending: 0, turns: 0,
   };
-  state.phase = 'combat';
+  state.phase = 'combat'; traceStep(state);
   log(state, A.name + ' greift ' + m.name + ' an. ' + state.players[other(attPid)].name + ' führt das Monster.', attPid);
 }
 function pickShowdownAttacker(state) {
@@ -41,7 +41,7 @@ function startShowdown(state) {
     sides: { a: playerSide(state, att, 'a'), b: playerSide(state, other(att), 'b') },
     turn: 'a', action: 'attack', color: null, pending: 0, turns: 0,
   };
-  state.phase = 'combat';
+  state.phase = 'combat'; traceStep(state);
   log(state, 'Showdown ' + (state.showdown + 1) + ': ' + state.players[att].name + ' greift zuerst an (liegt zurück oder Zufall).', att);
 }
 function evaluateEnd(state) {
@@ -87,7 +87,7 @@ function endCombat(state, end) {
   }
   state.combat = null; state.phase = 'world'; state.lastCombat = res;
   resetPlayers(state, c.mode);
-  sample(state, { type: c.mode, elem: c.elem, stage: state.stage, n: state.showdown + 1, winner: end.winner === 'a' ? c.att : end.winner === 'b' ? c.def : null });
+  sample(state, { type: c.mode, elem: c.elem, stage: state.stage, n: state.showdown + 1, winner: end.winner === 'a' ? c.att : end.winner === 'b' ? c.def : null, trace: c.trace });
   state.turn = c.def;
   regen(state.players[c.def].stats, regenGain(state));
   state.worldTurns = 0;
@@ -117,8 +117,15 @@ function endCombat(state, end) {
   }
   return res;
 }
-function finishStep(state) {
+// Verlauf eines Kampfes für die Statistik: nach jedem Schritt HP und Mana beider Seiten (a = Angreifer, b = Verteidiger bzw. Monster)
+function traceStep(state, info) {
+  const c = state.combat, a = c.sides.a, b = c.sides.b;
+  if (!c.trace) c.trace = { ids: [a.ctrl, b.ctrl], names: [a.name, b.name], monster: c.mode === 'monster', steps: [] };
+  c.trace.steps.push(Object.assign({ t: c.turns, k: 'R', who: 0, v: 0, b: 0, left: 0, hp: [Math.max(0, a.stats.hp), Math.max(0, b.stats.hp)], mana: [Math.max(0, a.stats.mana), Math.max(0, b.stats.mana)] }, info || {}));
+}
+function finishStep(state, info) {
   const c = state.combat; c.turns++; state.combatTurnsTotal++;
+  traceStep(state, Object.assign({}, info, { t: c.turns }));
   const end = evaluateEnd(state);
   if (end) return endCombat(state, end);
   return null;
@@ -213,12 +220,12 @@ function execAttack(state) {
   log(state, side.name + ' greift an' + (ev.prim ? ' (' + NAMES[ev.prim] + ', Schaden ' + dmg + ')' : ' (nur Flüche)') + (texts.length ? ' – ' + texts.join(', ') : '') + '.', side.ctrl, fxs.length ? fxs : undefined);
   if (dmg > 0) { c.color = ev.prim; c.pending = dmg; c.turn = c.turn === 'a' ? 'b' : 'a'; c.action = 'defense'; }
   else passAttackTurn(state);
-  const res = finishStep(state);
+  const res = finishStep(state, { k: 'A', who: side.key === 'a' ? 0 : 1, v: dmg });
   return { ok: true, combatEnd: res };
 }
 function recoverGain(state) { const r = state.rules.recoverByStage; return r ? (r[Math.min(r.length, Math.max(1, state.stage)) - 1] || 1) : 1; }
 function execDefense(state, passOnly) {
-  const c = state.combat, side = c.sides[c.turn];
+  const c = state.combat, side = c.sides[c.turn], c0pending = c.pending;
   const d = side.deck;
   let block = 0, cost = 0, sel = [], defEv = null;
   if (!passOnly) {
@@ -263,7 +270,7 @@ function execDefense(state, passOnly) {
   const attSide = c.sides[c.turn === 'a' ? 'b' : 'a'];   // wer gerade angegriffen hat: seine Angriffsphase endet mit dieser Verteidigung
   c.action = 'attack'; c.color = null; c.pending = 0;
   deathTick(state, attSide);
-  const res = finishStep(state);
+  const res = finishStep(state, { k: 'V', who: side.key === 'a' ? 0 : 1, v: block, b: c0pending, left: leftover });
   return { ok: true, combatEnd: res };
 }
 

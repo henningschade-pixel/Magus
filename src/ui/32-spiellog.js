@@ -27,7 +27,7 @@ async function exportLog(e) {
     toast('Spiellog exportiert (' + d.actions.length + ' Aktionen).');
   } catch (x) { toast('Export nicht möglich.'); }
 }
-window.__magus = { snd: () => Snd.info(), get mp() { return MP && { n: MP.log.length, started: MP.started, seat: MP.seat }; }, get state() { return G; }, act, newGame, pump };
+window.__magus = { stats: () => statsOpen(true), snd: () => Snd.info(), get mp() { return MP && { n: MP.log.length, started: MP.started, seat: MP.seat }; }, get state() { return G; }, act, newGame, pump };
 showStart();
 mpRestore();
 })();

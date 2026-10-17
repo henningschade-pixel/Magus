@@ -7,6 +7,8 @@ function onAct(d) {
     case 'home': homeMenu(); break;
     case 'stopen': statsOpen(true); break;
     case 'sndtoggle': Snd.toggle(); Snd.play('ui_click', 0, .8); setTimeout(homeMenuDraw, 350); homeMenuDraw(); break;
+    case 'stfight': overlay.innerHTML = fightView(+d.i); break;
+    case 'stfightback': overlay.innerHTML = statsView(); break;
     case 'stend': statsOpen(true); stFromMenu = false; stFromEnd = true; break;
     case 'logdl': exportLog({}); break;
     case 'stclose': if (stFromEnd) { stFromEnd = false; showEnd(); } else if (stFromMenu) { stFromMenu = false; homeMenuDraw(); } else { overlay.style.display = 'none'; overlay.innerHTML = ''; pump(); } break;

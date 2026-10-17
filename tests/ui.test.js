@@ -87,3 +87,21 @@ test('Am Partieende lassen sich Statistik und Protokoll öffnen und die Statisti
     assert.deepEqual(errs, []);
   } finally { await b.close(); }
 });
+
+test('Statistik: ein Kampf lässt sich anklicken und zeigt seinen Verlauf', { skip: !chromium && 'Playwright nicht installiert', timeout: 90000 }, async () => {
+  const b = await chromium.launch({ executablePath: exe });
+  try {
+    const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
+    p.on('pageerror', e => errs.push(e.message));
+    await p.goto(url + '?fast'); await p.waitForTimeout(500);
+    await p.click('text=Zwei Computern zuschauen');
+    await p.waitForFunction(() => window.__magus.state.hist.some(h => h.ev && h.ev.trace), null, { timeout: 60000 });
+    await p.evaluate(() => { window.__magus.stats(); });
+    await p.waitForSelector('#overlay [data-act="stfight"]', { timeout: 5000 });
+    await p.click('#overlay [data-act="stfight"]');
+    await p.waitForSelector('#overlay [data-act="stfightback"]', { timeout: 5000 });
+    assert.ok((await p.textContent('#overlay .stkey')).includes('Angriff'), 'Zusammenfassung sichtbar');
+    await p.click('#overlay [data-act="stfightback"]'); await p.waitForSelector('#overlay [data-act="stfight"]', { timeout: 5000 });
+    assert.deepEqual(errs, []);
+  } finally { await b.close(); }
+});
