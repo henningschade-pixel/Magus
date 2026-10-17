@@ -1550,8 +1550,10 @@ function fit() {
 window.addEventListener('resize', fit); fit();
 
 /* ---------- Hilfen ---------- */
-const FAST = /[?&]fast/.test(location.search);
-const sleep = ms => new Promise(r => setTimeout(r, FAST ? 4 : ms));
+const FAST_URL = /[?&]fast/.test(location.search);
+let FAST = FAST_URL;   // ohne Animationen, Töne und Wartezeiten (Testlauf per ?fast, beim Zuschauen ab Tempo ×3)
+const setFast = () => { FAST = FAST_URL || (typeof SPEC !== 'undefined' && SPEC && specSpeed > 1); };
+const sleep = ms => new Promise(r => setTimeout(r, FAST_URL ? 4 : ms));
 function toast(t) { toastEl.textContent = t; toastEl.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2200); }
 function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 function dots(n, max) { max = Math.max(max || 3, n); let s = ''; for (let i = 0; i < max; i++) s += i < n ? '●' : '○'; return s; }
@@ -2871,7 +2873,7 @@ function showEnd() {
 /* ---------- Ablauf ---------- */
 function newGame(spec) {
   if (MP) mpLeave();
-  SPEC = !!spec; clearTimeout(specT); specT = 0; specSpeed = 1;
+  SPEC = !!spec; clearTimeout(specT); specT = 0; specSpeed = 1; setFast();
   ME = 0; OPP = 1;
   clearTimeout(aiTimer);
   els.forEach(r => r.el.remove()); els.clear();
@@ -2956,7 +2958,7 @@ function pump() {
   if (!G || G.over) return;
   const who = M.actor(G);
   if ((who === ME && !SPEC) || MP) return;
-  aiTimer = setTimeout(aiTurn, FAST ? 4 : Math.max(700 / (SPEC ? specSpeed : 1), hold - Date.now()));
+  aiTimer = setTimeout(aiTurn, FAST_URL ? 4 : Math.max(700 / (SPEC ? specSpeed : 1), hold - Date.now()));
 }
 async function execPlan(acts) {
   for (let i = 0; i < acts.length; i++) {
@@ -3156,7 +3158,7 @@ function onAct(d) {
   switch (d.act) {
     case 'newgame': newGame(); break;
     case 'newspec': newGame(true); break;
-    case 'specspeed': specSpeed = specSpeed === 1 ? 3 : specSpeed === 3 ? 8 : 1; homeMenuDraw(); break;
+    case 'specspeed': specSpeed = specSpeed === 1 ? 3 : specSpeed === 3 ? 99 : 1; setFast(); homeMenuDraw(); break;
     case 'home': homeMenu(); break;
     case 'stopen': statsOpen(true); break;
     case 'sndtoggle': Snd.toggle(); Snd.play('ui_click', 0, .8); setTimeout(homeMenuDraw, 350); homeMenuDraw(); break;
@@ -3273,7 +3275,7 @@ function homeMenuDraw() {
     '<button class="btn primary" style="font-size:21px;padding:10px" data-act="resume">Fortsetzen</button>' +
     '<button class="btn" style="font-size:21px;padding:10px" data-act="stopen" title="Verlauf über die Züge">📈 Statistik</button>' +
     '<button class="btn" style="font-size:21px;padding:10px" data-act="sndtoggle" title="Ton an oder aus">' + (si.on ? '🔊 Ton: an' : '🔇 Ton: aus') + (si.on && si.state !== 'nicht gestartet' ? '<small style="display:block;font-size:14px;color:var(--mute)">' + si.loaded + '/' + si.total + ' Sounds geladen · Audio ' + si.state + '</small>' : '') + '</button>' +
-    (SPEC ? '<button class="btn" style="font-size:21px;padding:10px" data-act="specspeed" title="Tempo der Computerzüge beim Zuschauen">⏩ Tempo: ' + (specSpeed === 1 ? 'normal' : '×' + specSpeed) + '</button>' : '') +
+    (SPEC ? '<button class="btn" style="font-size:21px;padding:10px" data-act="specspeed" title="Tempo der Computerzüge beim Zuschauen; ab ×3 ohne Animationen und Töne">⏩ Tempo: ' + (specSpeed === 1 ? 'normal' : specSpeed === 3 ? '×3' : 'maximal') + '</button>' : '') +
     (MP ? '' : '<button class="btn" style="font-size:21px;padding:10px" data-act="restart" title="Beginnt eine neue Partie (gleiche Art)">Neu starten</button>') +
     '<button class="btn" style="font-size:21px;padding:10px" data-act="leave">' + (MP ? 'Partie verlassen' : 'Spiel verlassen') + '</button></div></div>';
   mpChip();

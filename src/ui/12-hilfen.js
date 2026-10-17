@@ -1,6 +1,8 @@
 /* ---------- Hilfen ---------- */
-const FAST = /[?&]fast/.test(location.search);
-const sleep = ms => new Promise(r => setTimeout(r, FAST ? 4 : ms));
+const FAST_URL = /[?&]fast/.test(location.search);
+let FAST = FAST_URL;   // ohne Animationen, Töne und Wartezeiten (Testlauf per ?fast, beim Zuschauen ab Tempo ×3)
+const setFast = () => { FAST = FAST_URL || (typeof SPEC !== 'undefined' && SPEC && specSpeed > 1); };
+const sleep = ms => new Promise(r => setTimeout(r, FAST_URL ? 4 : ms));
 function toast(t) { toastEl.textContent = t; toastEl.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2200); }
 function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 function dots(n, max) { max = Math.max(max || 3, n); let s = ''; for (let i = 0; i < max; i++) s += i < n ? '●' : '○'; return s; }

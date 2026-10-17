@@ -3,7 +3,7 @@ function onAct(d) {
   switch (d.act) {
     case 'newgame': newGame(); break;
     case 'newspec': newGame(true); break;
-    case 'specspeed': specSpeed = specSpeed === 1 ? 3 : specSpeed === 3 ? 8 : 1; homeMenuDraw(); break;
+    case 'specspeed': specSpeed = specSpeed === 1 ? 3 : specSpeed === 3 ? 99 : 1; setFast(); homeMenuDraw(); break;
     case 'home': homeMenu(); break;
     case 'stopen': statsOpen(true); break;
     case 'sndtoggle': Snd.toggle(); Snd.play('ui_click', 0, .8); setTimeout(homeMenuDraw, 350); homeMenuDraw(); break;
@@ -120,7 +120,7 @@ function homeMenuDraw() {
     '<button class="btn primary" style="font-size:21px;padding:10px" data-act="resume">Fortsetzen</button>' +
     '<button class="btn" style="font-size:21px;padding:10px" data-act="stopen" title="Verlauf über die Züge">📈 Statistik</button>' +
     '<button class="btn" style="font-size:21px;padding:10px" data-act="sndtoggle" title="Ton an oder aus">' + (si.on ? '🔊 Ton: an' : '🔇 Ton: aus') + (si.on && si.state !== 'nicht gestartet' ? '<small style="display:block;font-size:14px;color:var(--mute)">' + si.loaded + '/' + si.total + ' Sounds geladen · Audio ' + si.state + '</small>' : '') + '</button>' +
-    (SPEC ? '<button class="btn" style="font-size:21px;padding:10px" data-act="specspeed" title="Tempo der Computerzüge beim Zuschauen">⏩ Tempo: ' + (specSpeed === 1 ? 'normal' : '×' + specSpeed) + '</button>' : '') +
+    (SPEC ? '<button class="btn" style="font-size:21px;padding:10px" data-act="specspeed" title="Tempo der Computerzüge beim Zuschauen; ab ×3 ohne Animationen und Töne">⏩ Tempo: ' + (specSpeed === 1 ? 'normal' : specSpeed === 3 ? '×3' : 'maximal') + '</button>' : '') +
     (MP ? '' : '<button class="btn" style="font-size:21px;padding:10px" data-act="restart" title="Beginnt eine neue Partie (gleiche Art)">Neu starten</button>') +
     '<button class="btn" style="font-size:21px;padding:10px" data-act="leave">' + (MP ? 'Partie verlassen' : 'Spiel verlassen') + '</button></div></div>';
   mpChip();

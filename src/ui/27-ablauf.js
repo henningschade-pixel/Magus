@@ -1,7 +1,7 @@
 /* ---------- Ablauf ---------- */
 function newGame(spec) {
   if (MP) mpLeave();
-  SPEC = !!spec; clearTimeout(specT); specT = 0; specSpeed = 1;
+  SPEC = !!spec; clearTimeout(specT); specT = 0; specSpeed = 1; setFast();
   ME = 0; OPP = 1;
   clearTimeout(aiTimer);
   els.forEach(r => r.el.remove()); els.clear();
@@ -86,7 +86,7 @@ function pump() {
   if (!G || G.over) return;
   const who = M.actor(G);
   if ((who === ME && !SPEC) || MP) return;
-  aiTimer = setTimeout(aiTurn, FAST ? 4 : Math.max(700 / (SPEC ? specSpeed : 1), hold - Date.now()));
+  aiTimer = setTimeout(aiTurn, FAST_URL ? 4 : Math.max(700 / (SPEC ? specSpeed : 1), hold - Date.now()));
 }
 async function execPlan(acts) {
   for (let i = 0; i < acts.length; i++) {
