@@ -19,8 +19,9 @@ function ecoStep(state, pid) {
   if (s.pending > 0) { const w = pickSpend(p, state, pid); if (w) return A({ type: 'spend', what: w }); }
   const allIds = [...p.deck.draw, ...p.deck.discard, ...p.deck.hand.filter(Boolean)].map(c => c.id);
   const countEl = e => allIds.filter(id => id[0] === e).length;
+  const opp = state.players[1 - pid].stats, oppTop = M.ELEMENTS.slice().sort((x, y) => opp.mag[y] - opp.mag[x])[0];   // Aufbau des Gegners: seine stärkste Magie, und welche Farbe ihr überlegen ist
   let best = null;
-  for (const e of M.ELEMENTS) { const cost = M.magicCost(state, s.mag[e]); if (s.mag[e] < M.MAX_MAGIC && s.gold >= cost) { const sc = Q.mBase - cost * Q.mCost + countEl(e) * Q.mCnt + (s.mag[e] === Math.max(s.mag.F, s.mag.E, s.mag.W) ? Q.mTop : 0); if (!best || sc > best.sc) best = { sc, a: A({ type: 'magic', elem: e }) }; } }
+  for (const e of M.ELEMENTS) { const cost = M.magicCost(state, s.mag[e]); if (s.mag[e] < M.MAX_MAGIC && s.gold >= cost) { const sc = Q.mBase - cost * Q.mCost + countEl(e) * Q.mCnt + (s.mag[e] === Math.max(s.mag.F, s.mag.E, s.mag.W) ? Q.mTop : 0) + (e === M.SUPERIOR[oppTop] ? Q.mCounter * opp.mag[oppTop] : 0) + Q.mCatch * Math.max(0, opp.mag[e] - s.mag[e]); if (!best || sc > best.sc) best = { sc, a: A({ type: 'magic', elem: e }) }; } }
   if (best) return best.a;
   if (s.gold >= 2) return A({ type: 'temple', amount: Math.min(s.gold, 3) });
   return null;
@@ -77,7 +78,10 @@ function worldPlan(state, pid) {
       let bestC = null;
       for (const target of alive) {
         const m = state.monsters[target], net = outlook(state, pid, target), hits = net > 0 ? m.stats.hp / net : 99;
-        const score = -Q.oHits * Math.max(0, hits - Q.oFree) + Q.cBase + Q.cHp * (s.hp - 1) + Q.cMana * (s.mana - 2) + state.worldTurns * Q.cWt - m.stats.hp * Q.cMon + R();
+        // Zeitdruck: Monster sind gemeinsam und die Beute geht an den Sieger. Kann der Gegner dieses Monster bald besiegen, lohnt es sich, ihm zuvorzukommen; wenige Monster übrig und hohe Beute erhöhen die Eile.
+        const o = state.players[1 - pid].stats, oNet = o.hp >= Q.minHp && o.mana >= Q.minMana ? outlook(state, 1 - pid, target) : 0, oHits = oNet > 0 ? m.stats.hp / oNet : 99;
+        const press = Q.tRace * Math.max(0, Q.tHorizon - oHits) + Q.tAlive * (3 - alive.length) + Q.tLoot * m.stats.gold;
+        const score = -Q.oHits * Math.max(0, hits - Q.oFree) + Q.cBase + Q.cHp * (s.hp - 1) + Q.cMana * (s.mana - 2) + state.worldTurns * Q.cWt - m.stats.hp * Q.cMon + press + R();
         if (!bestC || score > bestC.score) bestC = { score, acts: [A({ type: 'combat', elem: target })] };
       }
       cands.push(bestC);
