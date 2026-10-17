@@ -53,7 +53,7 @@ textarea{width:100%;min-height:110px;background:#0e0e10;color:var(--bone);border
 <div class="wrap">
 <header>
   <h1>Schild-Werkstatt</h1>
-  <p>Ein Spiegel erscheint als Schildbögen vor den Handkarten: ein Bogen je Stufe, in der Farbe der Magie. Er wirft Schaden zurück (höchstens so viel, wie geblockt wurde) und verliert für jeden ungeblockten Schaden eine Stufe: Der äußerste Bogen bricht. Links siehst du den Fall, rechts stellst du Form, Licht und Bruch ein. Am Ende den Export an Claude schicken.</p>
+  <p>Ein Spiegel erscheint als Schildbögen vor den Handkarten: ein Bogen je Stufe, in der Farbe der Magie. Neue Regel: Fehlt dem Verteidiger Verteidigung, gleicht der Spiegel den fehlenden Schaden aus (höchstens seine Stufe) und verliert dafür je Schaden eine Stufe. Nur wenn mehr verteidigt wird als nötig, wirft er den Überschuss zurück (höchstens seine Stufe und höchstens der eingehende Schaden), auch das kostet Stufen. Bei genau passender Verteidigung greift er nicht ein. Im Spiel läuft vorher die normale Kampfgrafik, der Schild erscheint erst bei Ausgleich oder Rückwurf. Links siehst du den Fall, rechts stellst du Form, Licht und Bruch ein. Am Ende den Export an Claude schicken.</p>
 </header>
 <div class="grid">
   <div class="left">
@@ -98,7 +98,7 @@ const STILE = [['glatt','Glatt: leuchtende Bänder'],['rune','Runen: Bänder mit
 const EL = { F:'#ff7a3d', E:'#93c24f', W:'#52a6f5' }, NAME = { F:'Feuer', E:'Erde', W:'Wasser' };
 const SECTIONS = {
   'c-fall': [['sel','lvl','Stufe des Spiegels (Bögen)',[[1,'1'],[2,'2'],[3,'3']],'C'],['sel','elem','Farbe',[['F','Feuer'],['E','Erde'],['W','Wasser']],'C'],
-    ['rng','dmg','Angriffsschaden',1,8,1,'','C'],['rng','block','Geblockt',0,8,1,'','C'],['sel','side','Schild auf der Seite',[['unten','unten (du)'],['oben','oben (Gegner)']],'C'],['sel','variante','Variante',[['zentrum','Schild fliegt in die Mitte, vergrößert'],['boegen','Bögen vor den Karten']],'C']],
+    ['rng','dmg','Angriffsschaden',1,8,1,'','C'],['rng','block','Verteidigung (Block)',0,8,1,'','C'],['sel','side','Schild auf der Seite',[['unten','unten (du)'],['oben','oben (Gegner)']],'C'],['sel','variante','Variante',[['zentrum','Schild fliegt in die Mitte, vergrößert'],['boegen','Bögen vor den Karten']],'C']],
   'c-form': [['sel','stil','Stil',STILE],['rng','size','Größe',.6,1.4,.02,''],['rng','span','Öffnung des Bogens',90,200,2,' °'],['rng','gap','Abstand zwischen den Bögen',16,70,1,' px'],['rng','width','Dicke',2,16,.5,' px'],['rng','fill','Füllung zwischen den Bögen',0,.4,.01,''],['rng','ticks','Zeichen je Kranz (Runen)',8,80,2,'']],
   'c-licht': [['rng','glow','Leuchten',0,60,1,''],['rng','sheen','Glanzlauf',0,1.5,.05,''],['rng','pulse','Pulsieren',0,1,.05,''],['rng','flash','Aufprall-Blitz',0,1.5,.05,''],['rng','spark','Größe der Geschosse',.5,2,.05,'']],
   'c-bruch': [['rng','cracks','Risse',0,16,1,''],['rng','shards','Scherben je Bogen',4,24,1,''],['rng','shake','Beben',0,1.5,.05,''],['rng','scatter','Streuung der Scherben',.3,2.5,.05,''],['rng','gravity','Schwerkraft der Scherben',0,2.5,.05,'']],
@@ -123,17 +123,18 @@ function build() {
       card.appendChild(d);
     }
   }
-  const cs = [['Abprallen: Block ≥ Schaden', { dmg: 3, block: 3 }], ['Durchbruch: kein Block', { dmg: 4, block: 0 }], ['Teilblock', { dmg: 5, block: 2 }], ['Stufe 1 hält knapp', { lvl: 1, dmg: 2, block: 2 }], ['Stufe 3, schwer getroffen', { lvl: 3, dmg: 6, block: 1 }]];
+  const cs = [['Ausgleich: Block fehlt', { lvl: 3, dmg: 4, block: 2 }], ['Ausgleich reicht nicht (Stufe 1)', { lvl: 1, dmg: 5, block: 1 }], ['Rückwurf: Überverteidigung', { lvl: 3, dmg: 2, block: 4 }], ['Rückwurf gedeckelt durch Schaden', { lvl: 3, dmg: 1, block: 4 }], ['Genau passend: kein Effekt', { lvl: 3, dmg: 3, block: 3 }]];
   for (const [n, v] of cs) { const b = document.createElement('button'); b.className = 'btn'; b.type = 'button'; b.textContent = n; b.addEventListener('click', () => { Object.assign(C, v); syncFall(); changed(true); }); $('cases').appendChild(b); }
 }
 function syncFall() { for (const k of ['lvl', 'elem', 'dmg', 'block', 'side', 'variante']) { const e = $('p_' + k); if (e) { e.value = C[k]; const o = e.parentElement.querySelector('output'); if (o) o.textContent = C[k]; } } }
-function calc() { const n = C.lvl, D = C.dmg, B = Math.min(C.block, D), L = D - B; return { n, D, blocked: B, left: L, r: Math.min(n, B), lost: Math.min(n, L), after: n - Math.min(n, L) }; }
+// Neue Regel: Fehlende Verteidigung gleicht der Schild bis zu seiner Stufe aus (je Schaden eine Stufe). Nur Überverteidigung wirft er zurück: höchstens seine Stufe, höchstens der eingehende Schaden (ebenfalls je Schaden eine Stufe).
+function calc() { const n = C.lvl, D = C.dmg, Bk = C.block, missing = Math.max(0, D - Bk), abs = Math.min(n, missing), excess = Math.max(0, Bk - D), r = Math.min(n, excess, D), lost = abs + r; return { n, D, blocked: Math.min(Bk, D), left: missing - abs, abs, excess, r, lost, after: n - lost, none: lost === 0 }; }
 function changed(replay) {
   try { localStorage.setItem('sw', JSON.stringify({ P, C })); } catch (e) {}
   const out = {}; for (const k of Object.keys(DEF)) out[k] = P[k];
   $('out').value = JSON.stringify({ effekt: 'schild', werte: out });
   const k = calc();
-  $('sum').innerHTML = NAME[C.elem] + '-Spiegel <b>Stufe ' + k.n + '</b> gegen <b>' + k.D + '</b> Schaden, geblockt <b>' + k.blocked + '</b>.<br>Rückwurf: <b>' + k.r + '</b> (min Stufe ' + k.n + ', geblockt ' + k.blocked + ') · ungeblockt ' + k.left + ' → Spiegel verliert <b>' + k.lost + '</b> Stufe' + (k.lost === 1 ? '' : 'n') + ', danach <b>Stufe ' + k.after + '</b>.';
+  $('sum').innerHTML = NAME[C.elem] + '-Spiegel <b>Stufe ' + k.n + '</b> gegen <b>' + k.D + '</b> Schaden, verteidigt mit Block <b>' + C.block + '</b>.<br>' + (k.none ? 'Genau passend: der Spiegel greift <b>nicht ein</b>, kein Effekt.' : k.r > 0 ? 'Überverteidigung ' + k.excess + ' → Rückwurf <b>' + k.r + '</b> (höchstens Stufe ' + k.n + ' und Schaden ' + k.D + '), Spiegel verliert <b>' + k.lost + '</b> Stufe' + (k.lost === 1 ? '' : 'n') + ', danach <b>Stufe ' + k.after + '</b>.' : 'Fehlende Verteidigung ' + (k.D - C.block) + ' → Spiegel gleicht <b>' + k.abs + '</b> aus (höchstens Stufe ' + k.n + '), verliert <b>' + k.lost + '</b> Stufe' + (k.lost === 1 ? '' : 'n') + ', danach <b>Stufe ' + k.after + '</b>; ' + k.left + ' Schaden gehen auf die HP.');
   if (replay) restart();
 }
 /* ---------- Zeichnen ---------- */
@@ -160,11 +161,11 @@ function flipText(ctx, flip, txt, x, y, col, size) { ctx.save(); ctx.translate(x
 // Zeitplan eines Falls (Sekunden)
 function plan() {
   const k = calc(), F = .55 / P.tempo, G = .14 / P.tempo, t0 = .3 + (C.variante === 'zentrum' ? P.cFly : 0), ev = { k, F, G, sparks: [], refl: [], pierce: [] };
-  for (let i = 0; i < k.D; i++) { const tl = t0 + i * G, ta = tl + F, blockedSp = i < k.blocked; ev.sparks.push({ tl, ta, blocked: blockedSp, a: -Math.PI / 2 + (i - (k.D - 1) / 2) * .09 }); }
-  const lastBlk = k.blocked ? ev.sparks[k.blocked - 1].ta : null;
-  for (let j = 0; j < k.r; j++) ev.refl.push({ tl: lastBlk + .1 + j * .11 / P.tempo, ta: lastBlk + .1 + j * .11 / P.tempo + .6 / P.tempo });
-  ev.tBreak = k.left > 0 ? ev.sparks[k.blocked].ta : null;   // erster durchgehender Schaden trifft
-  ev.tEv = Math.max(ev.sparks[ev.sparks.length - 1].ta + .6, ev.refl.length ? ev.refl[ev.refl.length - 1].ta + .5 : 0, ev.tBreak ? ev.tBreak + 1.4 : 0);   // Ende aller Ereignisse
+  const N = k.none ? 0 : k.r > 0 ? k.r : k.abs; ev.mode = k.none ? 'none' : k.r > 0 ? 'r' : 'a';   // a: Geschosse des Angreifers schlagen im Schild ein, r: überschüssige Verteidigungsgeschosse prallen ab
+  for (let i = 0; i < N; i++) { const tl = t0 + i * G, ta = tl + F; ev.sparks.push({ tl, ta, blocked: k.r > 0, a: -Math.PI / 2 + (i - (N - 1) / 2) * .09 }); }
+  if (k.r > 0) { const lastBlk = ev.sparks[N - 1].ta; for (let j = 0; j < k.r; j++) ev.refl.push({ tl: lastBlk + .1 + j * .11 / P.tempo, ta: lastBlk + .1 + j * .11 / P.tempo + .6 / P.tempo }); }
+  ev.tBreak = k.none ? null : k.r > 0 ? ev.refl[0].tl + .05 : ev.sparks[0].ta;   // das Schild verliert Stufen: beim Ausgleich im ersten Einschlag, beim Rückwurf, sobald es zurückwirft
+  ev.tEv = Math.max(ev.sparks.length ? ev.sparks[ev.sparks.length - 1].ta + .6 : 1.2, ev.refl.length ? ev.refl[ev.refl.length - 1].ta + .5 : 0, ev.tBreak ? ev.tBreak + 1.4 : 0);   // Ende aller Ereignisse
   ev.tOut = ev.tEv + P.cHold;
   ev.tEnd = (C.variante === 'zentrum' ? ev.tOut + P.cBack : ev.tEv + .3) + .8;
   return ev;
@@ -215,23 +216,19 @@ function scene(ctx, t, withHud) {
   }
   // Risse am äußersten Bogen
   if (EV.tBreak !== null && t > EV.tBreak && t < EV.tBreak + .3 && P.cracks > 0) {
-    const imp = ptOn(n - 1, EV.sparks[k.blocked].a), cr = rng(77), u = seg(t, EV.tBreak, EV.tBreak + .12), f = 1 - seg(t, EV.tBreak + .12, EV.tBreak + .3);
+    const imp = ptOn(n - 1, EV.sparks[0].a), cr = rng(77), u = seg(t, EV.tBreak, EV.tBreak + .12), f = 1 - seg(t, EV.tBreak + .12, EV.tBreak + .3);
     ctx.save(); ctx.globalAlpha = f; ctx.strokeStyle = '#fff'; ctx.shadowColor = col; ctx.shadowBlur = 8; ctx.lineWidth = 1.5; ctx.lineJoin = 'round';
     for (let q = 0; q < P.cracks; q++) { let a = q / P.cracks * Math.PI * 2 + (cr() - .5) * .9, x = imp.x, y = imp.y; const len = (50 + cr() * 110) * u; ctx.beginPath(); ctx.moveTo(x, y); for (let s = 1; s <= 6; s++) { a += (cr() - .5) * .6; x += Math.cos(a) * len / 6; y += Math.sin(a) * len / 6; ctx.lineTo(x, y); } ctx.stroke(); }
     ctx.restore();
   }
   // Geschosse und Aufprall
-  const from = { x: CX, y: 60 }, hpDef = { x: 1090, y: 700 }, hpAtt = { x: 1090, y: 90 };
+  const from = { x: CX, y: EV.mode === 'r' ? 740 : 60 }, hpDef = { x: 1090, y: 700 }, hpAtt = { x: 1090, y: 90 };
   EV.sparks.forEach((s, i) => {
     const tgt = ptOn(n - (s.blocked || !EV.tBreak ? 1 : 1), s.a);
     if (t >= s.tl && t < s.ta) { const b = (t - s.tl) / (s.ta - s.tl); for (let q = 8; q >= 1; q--) { const bb = clamp(b - q * .02); ctx.save(); ctx.globalAlpha = (1 - q / 9) * .5; orb(ctx, lerp(from.x, tgt.x, bb), lerp(from.y, tgt.y, bb), (7 - q * .4) * P.spark, col); ctx.restore(); } orb(ctx, lerp(from.x, tgt.x, b), lerp(from.y, tgt.y, b), 9 * P.spark, col); }
     if (t >= s.ta && t < s.ta + .4) {   // Aufprall: Ring und Blitz am Bogen
       const g = seg(t, s.ta, s.ta + .4); ctx.save(); ctx.globalCompositeOperation = 'lighter'; const fl = ctx.createRadialGradient(tgt.x, tgt.y, 0, tgt.x, tgt.y, 70 * (1 - g) + 10); fl.addColorStop(0, 'rgba(255,255,255,' + (.9 * (1 - g) * P.flash) + ')'); fl.addColorStop(1, rgba(col, 0)); ctx.fillStyle = fl; ctx.beginPath(); ctx.arc(tgt.x, tgt.y, 80, 0, 7); ctx.fill();
       ctx.strokeStyle = rgba(lighten(col, .5), (1 - g) * P.flash); ctx.lineWidth = 2.5 * (1 - g) + .5; ctx.beginPath(); ctx.ellipse(tgt.x, tgt.y, 8 + g * 46, 4 + g * 20, 0, 0, 7); ctx.stroke(); ctx.restore();
-    }
-    if (!s.blocked && t >= s.ta && t < s.ta + .5) {   // durchgehender Schaden fliegt weiter zu den HP
-      const b = eio((t - s.ta) / .5); orb(ctx, lerp(tgt.x, hpDef.x, b), lerp(tgt.y, hpDef.y, b), 8 * P.spark, col);
-      if (t > s.ta + .45) { }
     }
   });
   // Rückwurf zum Angreifer
@@ -241,7 +238,6 @@ function scene(ctx, t, withHud) {
     if (t >= s.ta && t < s.ta + .45) { const g = seg(t, s.ta, s.ta + .45); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = rgba(lighten(col, .5), 1 - g); ctx.lineWidth = 3 * (1 - g) + .5; ctx.beginPath(); ctx.ellipse(hpAtt.x, hpAtt.y, 14 + g * 40, 6 + g * 16, 0, 0, 7); ctx.stroke(); ctx.restore(); }
   });
   if (EV.refl.length) { const tt = EV.refl[EV.refl.length - 1].ta, q = seg(t, tt, tt + .1) * (1 - seg(t, tt + .6, tt + .9)); if (q > 0) flipText(ctx, flip, '−' + k.r, hpAtt.x, hpAtt.y - 20 - 10 * seg(t, tt, tt + .9), rgba('#ff6b6b', q)); }
-  if (k.left > 0) { const tt = EV.sparks[k.blocked].ta + .5, q = seg(t, tt, tt + .1) * (1 - seg(t, tt + .5, tt + .8)); if (q > 0) flipText(ctx, flip, '−' + k.left, hpDef.x, hpDef.y - 20, rgba('#ff6b6b', q)); }
   // Stufenanzeige: Rauten unter dem Schild
   const lit = EV.tBreak !== null && t > EV.tBreak + .12 ? k.after : n;
   for (let i = 0; i < n; i++) { const on = i < lit; ctx.save(); ctx.translate(CX + (i - (n - 1) / 2) * 30, 585); ctx.rotate(Math.PI / 4); ctx.strokeStyle = on ? col : 'rgba(255,255,255,.25)'; ctx.lineWidth = 2; if (on) { ctx.shadowColor = col; ctx.shadowBlur = 10; ctx.fillStyle = rgba(col, .6); ctx.fillRect(-7, -7, 14, 14); } ctx.strokeRect(-7, -7, 14, 14); ctx.restore(); }
@@ -309,12 +305,11 @@ function sceneCenter(ctx, t) {
   }
   const lit = brk && t > EV.tBreak + .12 ? k.after : n;   // Stufenanzeige unter dem Schild: die gebrochene Stufe erlischt
   for (let i = 0; i < n && !shattered; i++) { const on = i < lit; ctx.save(); ctx.translate(pos.x + (i - (n - 1) / 2) * lerp(18, 34, m), pos.y + h / 2 + lerp(14, 34, m)); ctx.rotate(Math.PI / 4); ctx.strokeStyle = on ? col : 'rgba(255,255,255,.25)'; ctx.lineWidth = 2; const sz = lerp(4, 8, m); if (on) { ctx.shadowColor = col; ctx.shadowBlur = 10; ctx.fillStyle = rgba(col, .6); ctx.fillRect(-sz, -sz, 2 * sz, 2 * sz); } ctx.strokeRect(-sz, -sz, 2 * sz, 2 * sz); ctx.restore(); }
-  const from = { x: 640, y: 60 }, hpDef = { x: 1090, y: 700 }, hpAtt = { x: 1090, y: 90 };   // Geschosse, Aufprall, Durchschlag, Rückwurf
+  const from = { x: 640, y: EV.mode === 'r' ? 740 : 60 }, hpDef = { x: 1090, y: 700 }, hpAtt = { x: 1090, y: 90 };   // Geschosse (beim Rückwurf von der Seite des Verteidigers), Aufprall, Rückwurf
   EV.sparks.forEach(sp => {
     const tgt = ra(n - 1, sp.a);
     if (t >= sp.tl && t < sp.ta) { const b = (t - sp.tl) / (sp.ta - sp.tl); for (let q = 8; q >= 1; q--) { const bb = clamp(b - q * .02); ctx.save(); ctx.globalAlpha = (1 - q / 9) * .5; orb(ctx, lerp(from.x, tgt.x, bb), lerp(from.y, tgt.y, bb), (7 - q * .4) * P.spark, col); ctx.restore(); } orb(ctx, lerp(from.x, tgt.x, b), lerp(from.y, tgt.y, b), 9 * P.spark, col); }
     if (t >= sp.ta && t < sp.ta + .4) { const g = seg(t, sp.ta, sp.ta + .4); ctx.save(); ctx.globalCompositeOperation = 'lighter'; const fl = ctx.createRadialGradient(tgt.x, tgt.y, 0, tgt.x, tgt.y, 80 * (1 - g) + 10); fl.addColorStop(0, 'rgba(255,255,255,' + (.9 * (1 - g) * P.flash) + ')'); fl.addColorStop(1, rgba(col, 0)); ctx.fillStyle = fl; ctx.beginPath(); ctx.arc(tgt.x, tgt.y, 90, 0, 7); ctx.fill(); ctx.strokeStyle = rgba(lighten(col, .5), (1 - g) * P.flash); ctx.lineWidth = 2.5 * (1 - g) + .5; ctx.beginPath(); ctx.ellipse(tgt.x, tgt.y, 8 + g * 54, 4 + g * 24, 0, 0, 7); ctx.stroke(); ctx.restore(); }
-    if (!sp.blocked && t >= sp.ta && t < sp.ta + .55) { const b = eio((t - sp.ta) / .55); orb(ctx, lerp(tgt.x, hpDef.x, b), lerp(tgt.y, hpDef.y, b), 8 * P.spark, col); }
   });
   EV.refl.forEach((sp, j) => {
     const src = { x: pos.x + (j - (EV.refl.length - 1) / 2) * 16, y: pos.y - h * .3 };
@@ -322,7 +317,6 @@ function sceneCenter(ctx, t) {
     if (t >= sp.ta && t < sp.ta + .45) { const g = seg(t, sp.ta, sp.ta + .45); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = rgba(lighten(col, .5), 1 - g); ctx.lineWidth = 3 * (1 - g) + .5; ctx.beginPath(); ctx.ellipse(hpAtt.x, hpAtt.y, 14 + g * 40, 6 + g * 16, 0, 0, 7); ctx.stroke(); ctx.restore(); }
   });
   if (EV.refl.length) { const tt = EV.refl[EV.refl.length - 1].ta, q = seg(t, tt, tt + .1) * (1 - seg(t, tt + .6, tt + .9)); if (q > 0) flipText(ctx, flip, '−' + k.r, hpAtt.x, hpAtt.y - 20 - 10 * seg(t, tt, tt + .9), rgba('#ff6b6b', q)); }
-  if (k.left > 0) { const tt = EV.sparks[k.blocked].ta + .55, q = seg(t, tt, tt + .1) * (1 - seg(t, tt + .5, tt + .8)); if (q > 0) flipText(ctx, flip, '−' + k.left, hpDef.x, hpDef.y - 20, rgba('#ff6b6b', q)); }
   ctx.restore();
 }
 /* ---------- Ton: Explosion beim Aufprall der Geschosse, Splitter beim Zerbrechen ---------- */
