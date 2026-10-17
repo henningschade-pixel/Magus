@@ -170,9 +170,9 @@ test('Kartenvorrat: Startdecks aus gemischten Stufe-1-Karten, getauschte Karten 
   const s = M.newGame({ seed: 9, ai: [false, false], first: 0 });
   const total = () => Object.values(s.supply).reduce((a, b) => a + b, 0);
   const inDecks = () => s.players.reduce((a, p) => a + p.deck.draw.length + p.deck.discard.length + p.deck.hand.filter(Boolean).length, 0);
-  assert.equal(total() + inDecks(), 90, 'Vorrat und Decks zusammen: 9 Karten × 10');
-  s.players.forEach(p => assert.equal(p.deck.draw.length + p.deck.discard.length + p.deck.hand.filter(Boolean).length, 10, 'je Spieler 10 Startkarten'));
-  assert.equal(s.supply.F2, 10);
+  assert.equal(total() + inDecks(), 72, 'Vorrat und Decks zusammen: 9 Karten × 8');
+  s.players.forEach(p => assert.equal(p.deck.draw.length + p.deck.discard.length + p.deck.hand.filter(Boolean).length, 12, 'je Spieler 12 Startkarten (alle 24 Stufe-1-Karten gleich verteilt)'));
+  assert.equal(s.supply.F2, 8); assert.equal(s.supply.F1 + s.supply.E1 + s.supply.W1, 0, 'alle Stufe-1-Karten sind verteilt');
   // zwei F1 gegen F2 tauschen: die beiden F1 kehren in den Vorrat zurück, F2 wird weniger
   const me = s.players[0], d = me.deck; me.stats.limit = 2;
   d.hand[0] = Object.assign({}, d.hand[0], { id: 'F1' }); d.hand[1] = Object.assign({}, d.hand[1], { id: 'F1' });
@@ -180,7 +180,7 @@ test('Kartenvorrat: Startdecks aus gemischten Stufe-1-Karten, getauschte Karten 
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
   assert.ok(M.apply(s, { pid: 0, type: 'vendor', result: 'F2', cost: ['F1', 'F1'] }).ok);
   assert.equal(s.supply.F1, f1 + 2); assert.equal(s.supply.F2, f2 - 1);
-  assert.equal(total() + inDecks(), 90, 'es gehen keine Karten verloren');
+  assert.equal(total() + inDecks(), 72, 'es gehen keine Karten verloren');
   // vergriffen
   s.supply.W2 = 0; s.turn = 0;
   const w = M.vendorPlans(s, 0).filter(o => o.result === 'W2'); assert.equal(w.length, 0, 'die KI sieht vergriffene Karten nicht');
