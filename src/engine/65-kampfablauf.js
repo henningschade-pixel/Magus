@@ -79,7 +79,7 @@ function endCombat(state, end) {
     } else if (end.winner === 'b') {   // Niederlage gegen das Monster: keine Beute, Monster und Spieler bleiben mit ihren Werten auf dem Brett
       log(state, m.name + ' gewinnt den Kampf. Keine Beute.', c.def);
     }
-    else log(state, end.reason === 'exhaustion' ? 'Beide Seiten sind erschöpft. Kein Sieger, keine Beute.' : 'Beide Seiten fallen. Kein Sieger, keine Beute.');
+    else log(state, end.reason === 'flee' ? 'Die Flucht ist geglückt. Kein Sieger, keine Beute; das Monster behält seine Verletzungen.' : end.reason === 'exhaustion' ? 'Beide Seiten sind erschöpft. Kein Sieger, keine Beute.' : 'Beide Seiten fallen. Kein Sieger, keine Beute.');
   } else {
     if (end.winner) { const w = end.winner === 'a' ? A : B; w.sp += 2; log(state, w.name + ' gewinnt den Showdown (+2 Siegpunkte).', end.winner === 'a' ? c.att : c.def);
       const L = w === A ? B : A; const lu = state.showdown === 1 && state.rules.loserUp2 !== undefined ? state.rules.loserUp2 : state.rules.loserUp; if (lu > 0 && state.showdown < 2) { L.stats.pending += lu; L.stats.upGot += lu; log(state, L.name + ' erhält als Trostpreis ' + lu + ' Upgrade-Punkt' + (lu > 1 ? 'e' : '') + '.', w === A ? c.def : c.att); } }
@@ -223,6 +223,11 @@ function execAttack(state) {
   const res = finishStep(state, { k: 'A', who: side.key === 'a' ? 0 : 1, v: dmg });
   return { ok: true, combatEnd: res };
 }
+// Fliehen: Im Monsterkampf darf der Angreifer den Kampf abbrechen, wenn das Monster kein Mana mehr hat, ihm gerade kein Angriff entgegengebracht wird (eigener Angriffszug) und er nicht unter einem Todes-Fluch steht. Kein Sieger, keine Beute; das Monster behält seine HP und sein Mana.
+function canFlee(state, pid) {
+  const c = state.combat;
+  return !!(c && c.mode === 'monster' && !c.forced && c.turn === 'a' && c.action === 'attack' && c.sides.a.ctrl === pid && c.sides.b.stats.mana <= 0 && !(c.sides.a.stats.death > 0));
+}
 function recoverGain(state) { const r = state.rules.recoverByStage; return r ? (r[Math.min(r.length, Math.max(1, state.stage)) - 1] || 1) : 1; }
 function execDefense(state, passOnly) {
   const c = state.combat, side = c.sides[c.turn], c0pending = c.pending;
@@ -301,6 +306,17 @@ function applyCombat(state, a) {
       if (c.action === 'defense') return execDefense(state, true);
       side.deck.marks = []; log(state, side.name + ' passt.', side.ctrl);
       passAttackTurn(state); return { ok: true, combatEnd: finishStep(state) };
+    case 'flee': {
+      if (c.mode !== 'monster') return fail('Fliehen geht nur im Monsterkampf.');
+      if (c.action !== 'attack') return fail('Fliehen geht nur im eigenen Angriffszug, nicht unter Angriff.');
+      if (c.sides.a.ctrl !== pid) return fail('Nur der Angreifer kann fliehen.');
+      if (c.sides.b.stats.mana > 0) return fail('Fliehen geht nur, wenn der Gegner kein Mana mehr hat.');
+      if (side.stats.death > 0) return fail('Unter einem Todes-Fluch kann man nicht fliehen.');
+      side.deck.marks = [];
+      log(state, side.name + ' flieht vor ' + opp.name + '.', side.ctrl);
+      c.turns++; traceStep(state, { t: c.turns });
+      return { ok: true, combatEnd: endCombat(state, { reason: 'flee', winner: null, monsterDefeated: false }) };
+    }
     case 'recover': {
       if (c.action !== 'attack') return fail('Erholen geht nur im Angriffszug.');
       const gain = recoverGain(state);

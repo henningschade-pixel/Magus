@@ -58,6 +58,8 @@ Der aktive Spieler wählt ein lebendes Monster und greift an, der Mitspieler fü
 
 **Statt anzugreifen** darf man: nachziehen (gratis, Hand wird getauscht), **erholen** oder passen. Jede dieser Aktionen beendet den Angriffszug.
 
+**Fliehen (neu):** Im Monsterkampf darf der Angreifer fliehen, wenn das Monster 0 Mana hat, ihm gerade kein Angriff entgegengebracht wird (er ist in seinem Angriffszug) und er nicht unter einem Todes-Fluch steht. Der Kampf endet ohne Sieger und ohne Beute, das Monster behält seine HP und sein Mana, der Mitspieler ist als Nächster dran (mit der üblichen Regeneration). Im Showdown gibt es kein Fliehen. Die KI flieht nicht (`fleeT` 999): Im Selbstspiel verlor sie damit.
+
 **Erholen:** Wer den Angriff auslässt, erhält **Mana in Höhe des Abschnitts** (1 / 2 / 3). In der Verteidigung gilt dasselbe: Wer „Erholen“ wählt, führt keine Verteidigung aus, nimmt den Schaden hin (ein Spiegel dieser Farbe gleicht bis zu seiner Stufe aus und verliert dafür Stufen) und erhält ebenfalls das Mana. Nachziehen, Erholen und Passen beenden den Zug.
 
 **Kampfende:**

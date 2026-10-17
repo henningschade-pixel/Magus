@@ -6,9 +6,9 @@ Gedanken zu Regeln und Balance, über die noch nicht entschieden ist. Neue Eintr
 
 Möglicher Schneeballeffekt (wer vorne liegt, baut den Vorsprung aus). Im Kampf kam nicht ein einziges Mal Überverteidigung mit den Schilden vor, also kein Rückwurf. Die Ultimate wurde nicht erreicht. Zu prüfen: Wie oft kommen Rückwurf und Ultimate in KI-Partien vor, und lohnt sich dafür eine Regel- oder Kostenänderung (siehe Rückwurf-Kosten unten)?
 
-## Fliehen (17.10.)
+## Fliehen (17.10.): umgesetzt
 
-Fliehen als Option im Kampf einbauen, immer dann, wenn der Gegner auf 0 Mana sitzt. Offen: Was kostet das Fliehen (Gold, HP, ein Zug)? Gilt es im Monsterkampf, im Showdown oder in beiden? Wie bewertet die KI die Option?
+Eingebaut als Aktion „Fliehen“ im Monsterkampf (Bedingungen siehe `docs/regelwerk.md`). Offen: Soll es im Showdown ein Fliehen geben (dann als verlorener Showdown)? Soll Fliehen etwas kosten? Die KI nutzt es nicht, weil sie im Selbstspiel damit schlechter abschnitt.
 
 ## Trostpreis (17.10.)
 

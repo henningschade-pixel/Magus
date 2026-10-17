@@ -105,3 +105,22 @@ test('Statistik: ein Kampf lässt sich anklicken und zeigt seinen Verlauf', { sk
     assert.deepEqual(errs, []);
   } finally { await b.close(); }
 });
+
+test('Fliehen: Knopf ist nur bei Monster ohne Mana bedienbar und beendet den Kampf ohne Beute', { skip: !chromium && 'Playwright nicht installiert', timeout: 60000 }, async () => {
+  const b = await chromium.launch({ executablePath: exe });
+  try {
+    const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
+    p.on('pageerror', e => errs.push(e.message));
+    await p.goto(url); await p.waitForTimeout(500);
+    await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
+    await p.evaluate(() => { const G = window.__magus.state; window.Magus.apply(G, { pid: 0, type: 'combat', elem: 'F' }); window.__magus.pump(); });
+    await p.waitForSelector('[data-act="flee"]');
+    assert.equal(await p.getAttribute('[data-act="flee"]', 'disabled') !== null, true, 'mit Monster-Mana gesperrt');
+    await p.evaluate(() => { const G = window.__magus.state; G.combat.sides.b.stats.mana = 0; window.__magus.pump(); });
+    await p.waitForFunction(() => !document.querySelector('[data-act="flee"]').disabled);
+    await p.click('[data-act="flee"]');
+    await p.waitForFunction(() => window.__magus.state.phase === 'world', null, { timeout: 15000 });
+    assert.match(await p.evaluate(() => window.__magus.state.log.slice(-4).map(l => l.txt).join(' | ')), /flieht vor/);
+    assert.deepEqual(errs, []);
+  } finally { await b.close(); }
+});

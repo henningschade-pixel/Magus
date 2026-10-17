@@ -137,3 +137,31 @@ test('Monsterdecks passen zur Magie: zu jeder Magiestufe ab 2 eine Karte dieser 
     }
   }
 });
+
+test('Fliehen: nur im Monsterkampf, im eigenen Angriffszug, bei Monster ohne Mana und ohne Todes-Fluch', () => {
+  const fresh = () => combatSetup(11, ['F1']);
+  let { s, c, me, op } = fresh();
+  assert.equal(M.canFlee(s, 0), false, 'Monster hat noch Mana');
+  assert.equal(M.apply(s, { pid: 0, type: 'flee' }).ok, false);
+  c.sides.b.stats.mana = 0;
+  assert.equal(M.canFlee(s, 0), true);
+  assert.equal(M.canFlee(s, 1), false, 'nur der Angreifer');
+  me.stats.death = 1;
+  assert.equal(M.canFlee(s, 0), false, 'Todes-Fluch');
+  assert.equal(M.apply(s, { pid: 0, type: 'flee' }).ok, false);
+  delete me.stats.death;
+  const hp = c.sides.b.stats.hp, gold = me.stats.gold;
+  const r = M.apply(s, { pid: 0, type: 'flee' });
+  assert.ok(r.ok && r.combatEnd && r.combatEnd.reason === 'flee' && r.combatEnd.winner === null);
+  assert.equal(s.phase, 'world'); assert.equal(me.stats.gold, gold, 'keine Beute'); assert.equal(s.lastCombat.monsterDefeated, false);
+  assert.equal(s.turn, 1, 'der Gegenspieler ist als Nächster dran');
+});
+test('Fliehen geht nicht, während ein Angriff aussteht', () => {
+  const { s, c, me, op } = combatSetup(11, ['F1']);
+  c.sides.b.stats.mana = 0;
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 });
+  assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+  assert.equal(s.combat.action, 'defense');
+  assert.equal(M.canFlee(s, 0), false);
+  assert.equal(M.canFlee(s, 1), false, 'auch der Verteidiger flieht nicht');
+});

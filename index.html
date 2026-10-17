@@ -788,7 +788,7 @@ function endCombat(state, end) {
     } else if (end.winner === 'b') {   // Niederlage gegen das Monster: keine Beute, Monster und Spieler bleiben mit ihren Werten auf dem Brett
       log(state, m.name + ' gewinnt den Kampf. Keine Beute.', c.def);
     }
-    else log(state, end.reason === 'exhaustion' ? 'Beide Seiten sind erschöpft. Kein Sieger, keine Beute.' : 'Beide Seiten fallen. Kein Sieger, keine Beute.');
+    else log(state, end.reason === 'flee' ? 'Die Flucht ist geglückt. Kein Sieger, keine Beute; das Monster behält seine Verletzungen.' : end.reason === 'exhaustion' ? 'Beide Seiten sind erschöpft. Kein Sieger, keine Beute.' : 'Beide Seiten fallen. Kein Sieger, keine Beute.');
   } else {
     if (end.winner) { const w = end.winner === 'a' ? A : B; w.sp += 2; log(state, w.name + ' gewinnt den Showdown (+2 Siegpunkte).', end.winner === 'a' ? c.att : c.def);
       const L = w === A ? B : A; const lu = state.showdown === 1 && state.rules.loserUp2 !== undefined ? state.rules.loserUp2 : state.rules.loserUp; if (lu > 0 && state.showdown < 2) { L.stats.pending += lu; L.stats.upGot += lu; log(state, L.name + ' erhält als Trostpreis ' + lu + ' Upgrade-Punkt' + (lu > 1 ? 'e' : '') + '.', w === A ? c.def : c.att); } }
@@ -932,6 +932,11 @@ function execAttack(state) {
   const res = finishStep(state, { k: 'A', who: side.key === 'a' ? 0 : 1, v: dmg });
   return { ok: true, combatEnd: res };
 }
+// Fliehen: Im Monsterkampf darf der Angreifer den Kampf abbrechen, wenn das Monster kein Mana mehr hat, ihm gerade kein Angriff entgegengebracht wird (eigener Angriffszug) und er nicht unter einem Todes-Fluch steht. Kein Sieger, keine Beute; das Monster behält seine HP und sein Mana.
+function canFlee(state, pid) {
+  const c = state.combat;
+  return !!(c && c.mode === 'monster' && !c.forced && c.turn === 'a' && c.action === 'attack' && c.sides.a.ctrl === pid && c.sides.b.stats.mana <= 0 && !(c.sides.a.stats.death > 0));
+}
 function recoverGain(state) { const r = state.rules.recoverByStage; return r ? (r[Math.min(r.length, Math.max(1, state.stage)) - 1] || 1) : 1; }
 function execDefense(state, passOnly) {
   const c = state.combat, side = c.sides[c.turn], c0pending = c.pending;
@@ -1010,6 +1015,17 @@ function applyCombat(state, a) {
       if (c.action === 'defense') return execDefense(state, true);
       side.deck.marks = []; log(state, side.name + ' passt.', side.ctrl);
       passAttackTurn(state); return { ok: true, combatEnd: finishStep(state) };
+    case 'flee': {
+      if (c.mode !== 'monster') return fail('Fliehen geht nur im Monsterkampf.');
+      if (c.action !== 'attack') return fail('Fliehen geht nur im eigenen Angriffszug, nicht unter Angriff.');
+      if (c.sides.a.ctrl !== pid) return fail('Nur der Angreifer kann fliehen.');
+      if (c.sides.b.stats.mana > 0) return fail('Fliehen geht nur, wenn der Gegner kein Mana mehr hat.');
+      if (side.stats.death > 0) return fail('Unter einem Todes-Fluch kann man nicht fliehen.');
+      side.deck.marks = [];
+      log(state, side.name + ' flieht vor ' + opp.name + '.', side.ctrl);
+      c.turns++; traceStep(state, { t: c.turns });
+      return { ok: true, combatEnd: endCombat(state, { reason: 'flee', winner: null, monsterDefeated: false }) };
+    }
     case 'recover': {
       if (c.action !== 'attack') return fail('Erholen geht nur im Angriffszug.');
       const gain = recoverGain(state);
@@ -1186,7 +1202,7 @@ function handCounts(d) { const c = {}; d.hand.forEach(x => { if (x) c[x.id] = (c
 return { ELEMENTS, SUPERIOR, NAMES, START_DECK, MAX_MAGIC, MAX_SLOTS, MIN_SLOTS, MAX_LIMIT, DEFAULT_RULES, MONSTER,
   makeRng, parseCard, selection, newGame, apply, record, prim, actor, other, regen, handCounts,
   vendorOffers, vendorPlans, previewTemple, pointsForGold, nextLevelCost, limitStepCost, manaStepCost, magicCost,
-  evalAttack, evalDefense, recoverGain, regenGain, comboLevels, levelsFor,
+  evalAttack, evalDefense, canFlee, recoverGain, regenGain, comboLevels, levelsFor,
   mirrorOf, monsterAlive, allMonstersDead, magicProgress, spawnMonsters, spawnForGame };
 }));</script>
 <script>/* Magus – einfacher Computergegner. Wählt nur Aktionen, die auch ein Mensch hätte. */
@@ -1210,6 +1226,7 @@ const DEFAULTS = {
   mPlan: 0, vOff: 0.5,   // Ziel-Farbe: gegen ein Monster zählt die ihm überlegene Magie. mPlan: Bonus beim Magiekauf, vOff: Aufwertungen anderer Farben zählen nur so viel
   vOver: 0.5, vFut: 0,   // Händler: Eine Karte über dem Magielevel ihrer Farbe bringt (noch) nichts: Wert dieser Aufwertung × vOver (1 = wie bisher), vFut: ab so viel Gold zum Magiekauf zählt sie schon
   xPen: 0, xCost: 2, xHp: 1.5, xHor: 3,   // Erschöpfung: Ein überhasteter Angriff, der das Monster nicht schafft, lässt es angeschlagen zurück, und der Gegner (der danach am Zug ist) besiegt es leicht
+  fleeT: 999,   // Fliehen: ab so vielen Kampfschritten ohne brauchbaren Angriff gegen ein Monster ohne Mana (999 = nie; im Selbstspiel verlor die KI mit 14 Schritten 48 %, mit 6 Schritten 42 %)
   strat: 0, fHand: 3, fWeak: 4, sLock: 1,   // Eröffnung (Spielerstrategien): 0 frei, 1 Limit zuerst (Tempel-Gold für Ausspiellimit 2), 2 Fokus (eine Farbe, Handplätze erst nach dem ersten Sieg), 3 zwei Richtungen (zwei Farben auf 2, Handplätze erst nach dem 1. Showdown), 4 wählt je nach Starthand; fHand/fWeak: Farbwahl nach Handkarten bzw. geschwächtem Monster; sLock 0 hebt die Sperre der Handplätze auf
   tRace: 0, tHorizon: 3, tAlive: 0, tLoot: 0, mCounter: 0, mCatch: -1.5,   // Zeitdruck (Gegner nimmt mir ein Monster weg, Beute, wenige Monster übrig) und Reaktion auf den Aufbau des Gegners (überlegene Magie, Rückstand aufholen)                              // Magie kaufen
 };
@@ -1472,6 +1489,7 @@ function combatPlan(state, pid) {
       acts.push(A({ type: 'attack' }));
       return acts;
     }
+    if (M.canFlee(state, pid) && (c.turns || 0) >= Q.fleeT && (!best || best.value <= Q.aThr)) return [A({ type: 'flee' })];   // lange ohne brauchbaren Angriff gegen ein Monster ohne Mana: abbrechen statt endlos nachzuziehen
     if (s.freeDraws > 0 && canDraw(d) && hand.length < d.hand.length) return [A({ type: 'freeDraw' })];
     if (s.freeDraws > 0 && canDraw(d) && (!best || best.value <= Q.aThr)) return [A({ type: 'freeDraw' })];
     if (s.mana <= 0 || !hand.length) { if (hand.length === 0 && canDraw(d)) return [A({ type: 'draw' })]; return [A({ type: 'recover' })]; }
@@ -2075,7 +2093,7 @@ function combatCenter(cx) {
     }
   }
   h += '<div class="preview">' + prev + '</div><div class="btnrow">';
-  if (atk) h += '<button class="btn primary" data-act="attack" ' + (my && canExec ? '' : 'disabled') + '>Angriff ausführen</button><button class="btn" data-act="recover" ' + (my ? '' : 'disabled') + ' title="Nur du erhältst +' + M.recoverGain(G) + ' Mana">Erholen (+' + M.recoverGain(G) + ')</button><button class="btn" data-act="draw" ' + (my ? '' : 'disabled') + ' title="Hand tauschen, ersetzt den Angriff">Nachziehen</button><button class="btn" data-act="pass" ' + (my ? '' : 'disabled') + '>Passen</button>';
+  if (atk) h += '<button class="btn primary" data-act="attack" ' + (my && canExec ? '' : 'disabled') + '>Angriff ausführen</button><button class="btn" data-act="recover" ' + (my ? '' : 'disabled') + ' title="Nur du erhältst +' + M.recoverGain(G) + ' Mana">Erholen (+' + M.recoverGain(G) + ')</button><button class="btn" data-act="draw" ' + (my ? '' : 'disabled') + ' title="Hand tauschen, ersetzt den Angriff">Nachziehen</button><button class="btn" data-act="pass" ' + (my ? '' : 'disabled') + '>Passen</button>' + (c.mode === 'monster' && c.sides.a.ctrl === ME ? '<button class="btn" data-act="flee" ' + (my && M.canFlee(G, ME) ? '' : 'disabled') + ' title="Den Kampf abbrechen: kein Sieger, keine Beute, das Monster behält seine Verletzungen. Geht nur im eigenen Angriffszug, wenn das Monster kein Mana mehr hat und du nicht unter einem Todes-Fluch stehst.">Fliehen</button>' : '');
   else h += '<button class="btn primary" data-act="defend" ' + (my && canExec ? '' : 'disabled') + '>Verteidigung ausführen</button><button class="btn" data-act="pass" ' + (my ? '' : 'disabled') + ' title="Keine Verteidigung ausführen: Schaden hinnehmen, +' + M.recoverGain(G) + ' Mana">Erholen (+' + M.recoverGain(G) + ')</button>';
   h += '</div></div>';
   return '<div class="panel" style="' + box(LAYOUT.combat, 'padding:10px 14px') + '">' + h + '</div>';
@@ -3239,6 +3257,7 @@ function onAct(d) {
     case 'defend': act({ type: 'defend' }); break;
     case 'pass': act({ type: 'pass' }); break;
     case 'recover': act({ type: 'recover' }); break;
+    case 'flee': act({ type: 'flee' }); break;
     case 'lfm': {
       const L = lfCtx(); if (!L) break;
       const k = d.k, e = d.e || '', key = e ? k + ':' + e : k, have = lfHave(L.cx, k, e), n = L.picks.filter(x => x === key).length;
