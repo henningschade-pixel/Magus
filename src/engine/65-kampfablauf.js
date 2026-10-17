@@ -223,10 +223,12 @@ function execAttack(state) {
   const res = finishStep(state, { k: 'A', who: side.key === 'a' ? 0 : 1, v: dmg });
   return { ok: true, combatEnd: res };
 }
-// Fliehen: Im Monsterkampf darf der Angreifer den Kampf abbrechen, wenn das Monster kein Mana mehr hat, ihm gerade kein Angriff entgegengebracht wird (eigener Angriffszug) und er nicht unter einem Todes-Fluch steht. Kein Sieger, keine Beute; das Monster behält seine HP und sein Mana.
+// Fliehen: Im Monsterkampf darf jede Seite (der Angreifer ebenso wie der Spieler, der das Monster führt) den Kampf abbrechen, wenn der Gegner kein Mana mehr hat, ihr gerade kein Angriff entgegengebracht wird (eigener Angriffszug) und sie nicht unter einem Todes-Fluch steht. Kein Sieger, keine Beute; das Monster behält seine HP und sein Mana, und danach ist der Spieler am Zug, der das Monster geführt hat (er kann das angeschlagene Monster jetzt selbst angreifen).
 function canFlee(state, pid) {
   const c = state.combat;
-  return !!(c && c.mode === 'monster' && !c.forced && c.turn === 'a' && c.action === 'attack' && c.sides.a.ctrl === pid && c.sides.b.stats.mana <= 0 && !(c.sides.a.stats.death > 0));
+  if (!c || c.mode !== 'monster' || c.forced || c.action !== 'attack') return false;
+  const me = c.sides[c.turn], opp = c.sides[c.turn === 'a' ? 'b' : 'a'];
+  return me.ctrl === pid && opp.stats.mana <= 0 && !(me.stats.death > 0);
 }
 function recoverGain(state) { const r = state.rules.recoverByStage; return r ? (r[Math.min(r.length, Math.max(1, state.stage)) - 1] || 1) : 1; }
 function execDefense(state, passOnly) {
@@ -309,8 +311,7 @@ function applyCombat(state, a) {
     case 'flee': {
       if (c.mode !== 'monster') return fail('Fliehen geht nur im Monsterkampf.');
       if (c.action !== 'attack') return fail('Fliehen geht nur im eigenen Angriffszug, nicht unter Angriff.');
-      if (c.sides.a.ctrl !== pid) return fail('Nur der Angreifer kann fliehen.');
-      if (c.sides.b.stats.mana > 0) return fail('Fliehen geht nur, wenn der Gegner kein Mana mehr hat.');
+      if (opp.stats.mana > 0) return fail('Fliehen geht nur, wenn der Gegner kein Mana mehr hat.');
       if (side.stats.death > 0) return fail('Unter einem Todes-Fluch kann man nicht fliehen.');
       side.deck.marks = [];
       log(state, side.name + ' flieht vor ' + opp.name + '.', side.ctrl);

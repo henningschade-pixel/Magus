@@ -7,7 +7,7 @@
 
 // Alle Angebote zu einer Kartenmenge ([{slot, id}], ohne Flüche). ‚limit‘ begrenzt, wie viele Karten bezahlt werden können.
 // Jedes Angebot nennt die Handplätze, die dafür markiert sein müssen (slots).
-function vendorChoices(cards, limit) {
+function vendorChoices(cards, limit) {   // (der Vorrat wird in vendorOffers/-Plans/execVendor geprüft)
   const out = [], by = {};
   cards.forEach(c => { (by[c.id] = by[c.id] || []).push(c.slot); });
   ELEMENTS.forEach(e => out.push({ result: e + '1', cost: [], free: true, slots: [] }));
@@ -21,15 +21,17 @@ function vendorChoices(cards, limit) {
 function handCards(d) { const out = []; d.hand.forEach((c, slot) => { if (c && !parseCard(c.id).curse) out.push({ slot, id: c.id }); }); return out; }
 function markedCards(d) { return handCards(d).filter(c => d.marks.includes(c.slot)); }
 
-// Für die Oberfläche: Angebote zur aktuellen Auswahl. ‚available‘: Gratiskarten sind immer verfügbar.
+// Vorrat: Wie viele Karten der Art im Vorrat des Händlers sind (ohne Begrenzung: unendlich).
+function stockOf(state, id) { return state.supply ? (state.supply[id] || 0) : Infinity; }
+// Für die Oberfläche: Angebote zur aktuellen Auswahl. ‚available‘: false, wenn die Karte vergriffen ist; ‚stock‘: Restbestand.
 function vendorOffers(state, pid) {
   const p = state.players[pid], sel = markedCards(p.deck);
-  return vendorChoices(sel, p.stats.limit).map(o => Object.assign(o, { available: true }));
+  return vendorChoices(sel, p.stats.limit).map(o => Object.assign(o, { stock: stockOf(state, o.result), available: stockOf(state, o.result) > 0 }));
 }
 // Für die KI: alle Angebote, die mit beliebigen Handkarten möglich wären (slots sagen, was dafür zu markieren ist).
 function vendorPlans(state, pid) {
   const p = state.players[pid];
-  return vendorChoices(handCards(p.deck), p.stats.limit);
+  return vendorChoices(handCards(p.deck), p.stats.limit).filter(o => stockOf(state, o.result) > 0);
 }
 function execVendor(state, pid, a) {
   const p = state.players[pid], d = p.deck;
@@ -37,8 +39,10 @@ function execVendor(state, pid, a) {
   const want = JSON.stringify(a.cost || []);
   const opt = vendorChoices(sel, p.stats.limit).find(o => o.result === a.result && JSON.stringify(o.cost) === want);
   if (!opt) return fail(sel.length ? 'Mit den markierten Karten ist dieses Angebot nicht möglich.' : 'Markiere zuerst Karten aus deiner Hand.');
+  if (stockOf(state, opt.result) <= 0) return fail(opt.result + ' ist vergriffen.');
   if (!opt.free) opt.slots.forEach(i => { removeFromHand(d, i); });   // bezahlte Karten werden aus dem Deck entfernt; nur die gekaufte Karte kommt auf den Ablagestapel
   if (!opt.free) d.marks = [];
+  if (state.supply) { opt.cost.forEach(id => { state.supply[id]++; }); state.supply[opt.result]--; }   // bezahlte Karten gehen zurück in den Vorrat, die gekaufte kommt heraus
   d.discard.push(mkCard(state, opt.result));
   log(state, p.name + ' tauscht beim Händler' + (opt.cost.length ? ' ' + opt.cost.join(' + ') + ' gegen ' : ' und erhält ') + opt.result + '.', pid);
   endTurn(state, pid, 'vendor');

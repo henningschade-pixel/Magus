@@ -1,12 +1,12 @@
 /* Magus – Regelkern (Teil 8): Spielstart und Schnittstelle nach außen. */
 
 // Regelwerte (Abstimmungs- und Variantenschalter). ‚curses‘: Fluchsystem, siehe 30-curses.js.
-const DEFAULT_RULES = { magicCost: [0, 1, 3], limitCost: 2, limitFirstStepCost: 2, hpPerPoint: 2, stagePoints: [0, 1, 2, 3], stageGold: [0, 1, 2, 3], loserUp: 1, loserUp2: 2, winSp: 4, recoverByStage: [1, 2, 3], regenByStage: [1, 2, 3] };   // Jede gespielte Karte (auch Kombokarten) kostet 1 Mana, nur Verteidigung in der überlegenen Farbe ist gratis. recoverByStage: Mana-Gewinn von „Erholen“ im Kampf je Abschnitt
+const DEFAULT_RULES = { magicCost: [0, 1, 3], limitCost: 2, limitFirstStepCost: 2, hpPerPoint: 2, stagePoints: [0, 1, 2, 3], stageGold: [0, 1, 2, 3], loserUp: 1, loserUp2: 2, winSp: 4, recoverByStage: [1, 2, 3], regenByStage: [1, 2, 3], supply: 10, startCards: 10 };   // Jede gespielte Karte (auch Kombokarten) kostet 1 Mana, nur Verteidigung in der überlegenen Farbe ist gratis. recoverByStage: Mana-Gewinn von „Erholen“ im Kampf je Abschnitt
 
-function newPlayer(state, name, ai) {
+function newPlayer(state, name, ai, startIds) {
   const p = { name, ai: !!ai, stats: newStats(), temple: { points: 0, level: 0 }, sp: 0, slots: MIN_SLOTS };
   p.stats.gold = 0;   // Das Spiel beginnt ohne Gold; Abschnittsboni kommen in newGame
-  p.deck = newDeck(state, START_DECK, MIN_SLOTS);
+  p.deck = newDeck(state, startIds || START_DECK, MIN_SLOTS);
   return p;
 }
 // opts: seed, names, ai [bool, bool], first (Startspieler), rules (überschreibt DEFAULT_RULES)
@@ -15,7 +15,17 @@ function newGame(opts) {
   const seed = (opts.seed === undefined ? (Date.now() & 0x7fffffff) : opts.seed) >>> 0;
   const state = { rules: Object.assign({}, DEFAULT_RULES, opts.rules || {}), seed, rng: makeRng(seed), uid: 1, log: [], logN: 0, stage: 1, showdown: 0, phase: 'world', turn: 0, hist: [], combat: null, over: false, winner: null, worldTurns: 0, combatTurnsTotal: 0 };
   const names = opts.names || ['Du', 'Gegner'];
-  state.players = [newPlayer(state, names[0], opts.ai ? opts.ai[0] : false), newPlayer(state, names[1], opts.ai ? opts.ai[1] : true)];
+  // Begrenzter Kartenvorrat (wie ein Brettspiel): von jeder der neun Karten gibt es ‚supply‘ Stück. Die Stufe-1-Karten werden gemischt, jeder Spieler erhält ‚startCards‘ davon (daher ungleiche Startdecks), der Rest bleibt im Vorrat des Händlers.
+  let deal = [null, null];
+  if (state.rules.supply > 0) {
+    const pool = []; ELEMENTS.forEach(e => { for (let i = 0; i < state.rules.supply; i++) pool.push(e + '1'); });
+    state.rng.shuffle(pool);
+    const n = Math.min(state.rules.startCards || 10, Math.floor(pool.length / 2));
+    deal = [pool.slice(0, n), pool.slice(n, 2 * n)];
+    state.supply = {}; ELEMENTS.forEach(e => [1, 2, 3].forEach(t => { state.supply[e + t] = state.rules.supply; }));
+    pool.slice(0, 2 * n).forEach(id => { state.supply[id]--; });
+  }
+  state.players = [newPlayer(state, names[0], opts.ai ? opts.ai[0] : false, deal[0]), newPlayer(state, names[1], opts.ai ? opts.ai[1] : true, deal[1])];
   state.monsters = spawnForGame(state, 1);
   state.turn = opts.first === undefined ? 0 : opts.first;
   const gp1 = (state.rules.stagePoints || [])[1] || 0, gg1 = (state.rules.stageGold || [])[1] || 0;
@@ -61,6 +71,6 @@ function handCounts(d) { const c = {}; d.hand.forEach(x => { if (x) c[x.id] = (c
 return { ELEMENTS, SUPERIOR, NAMES, START_DECK, MAX_MAGIC, MAX_SLOTS, MIN_SLOTS, MAX_LIMIT, DEFAULT_RULES, MONSTER,
   makeRng, parseCard, selection, newGame, apply, record, prim, actor, other, regen, handCounts,
   vendorOffers, vendorPlans, previewTemple, pointsForGold, nextLevelCost, limitStepCost, manaStepCost, magicCost,
-  evalAttack, evalDefense, canFlee, recoverGain, regenGain, comboLevels, levelsFor,
+  evalAttack, evalDefense, canFlee, stockOf, recoverGain, regenGain, comboLevels, levelsFor,
   mirrorOf, monsterAlive, allMonstersDead, magicProgress, spawnMonsters, spawnForGame };
 }));

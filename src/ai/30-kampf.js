@@ -78,6 +78,10 @@ function combatPlan(state, pid) {
   const d = side.deck, hand = handList(d), A = a => Object.assign({ pid }, a);
   const s = side.stats, Q = P(pid);
   if (c.action === 'attack') {
+    if (Q.fleeHits > 0 && side.kind === 'monster' && M.canFlee(state, pid)) {   // Ich führe das Monster, der Angreifer hat kein Mana mehr: Fliehe ich, bleibt das angeschlagene Monster stehen, und ich bin als Nächster dran, es selbst zu besiegen (die Beute geht an mich)
+      const me = state.players[pid].stats, net = outlook(state, pid, c.elem);
+      if (net > 0 && side.stats.hp / net <= Q.fleeHits && me.hp >= Q.minHp && me.mana >= Q.minMana) return [A({ type: 'flee' })];
+    }
     const best = bestAttack(side, opp, hand, Q, state), gain = M.recoverGain ? M.recoverGain(state) : 1;
     const lowMana = Q.rW * gain * Math.max(0, Q.rRef - s.mana);   // wenig Mana: nur noch starke Angriffe, sonst lieber erholen
     if (best && best.value > Q.aThr + lowMana - Q.stallDec * Math.max(0, Math.floor(((c.turns || 0) - Q.stallFrom) / 2))) {   // lange ohne Angriff: Schwelle sinkt, damit die KI nicht endlos nachzieht
