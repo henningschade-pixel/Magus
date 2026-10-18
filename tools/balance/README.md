@@ -26,3 +26,7 @@ Nachtrag: `vOff` 0,5 (Aufwertungen von Karten außerhalb der Zielfarbe zählen h
 ## Eröffnungsstrategien (17.10.)
 
 `node tools/balance/strat.js 800 '{}' 0,1,2,3,4` spielt die Eröffnungen aus der Spielerbeobachtung gegeneinander (Parameter `strat`: 0 frei, 1 Limit zuerst mit Tempel-Gold für Ausspiellimit 2, 2 Fokus auf eine Farbe, 3 zwei Richtungen auf Stufe 2, 4 Auswahl nach Starthand). Siegquote der Zeile gegen die Spalte (800 Partien je Paar, ±1,8): Zwei Richtungen 51 % gegen frei, 58 % gegen Fokus, 74 % gegen Limit; Fokus 45 % gegen frei; Limit zuerst 26 bis 38 % gegen alle. Mit 3200 Partien: Zwei Richtungen 51,1 % ±0,9 gegen frei und 49 bis 51 % gegen drei früh angreifende Gegner, also kein belastbarer Unterschied zur freien KI (die zweite Farbe auf Stufe 2 ist dort ohnehin billiger als die dritte Stufe). Die Sperre der Handplätze (`sLock`) ändert nichts, weil die KI Handplätze vor dem ersten Showdown sowieso nicht ausbaut. Standard bleibt `strat` 0.
+
+## Nachtraining nach „Passen ohne Mana“ (18.10.)
+
+Nach der Regeländerung (in der Verteidigung gibt Passen kein Mana mehr) stieg der Anteil der Monsterkämpfe ohne Sieger (Erschöpfung) bei Stufe I von etwa 40 auf 52 %, bei Stufe II von 39 auf 55 %. `opt2.js 2 500` übernahm nur `wFW` 1,3 (statt 2; bestätigt mit +2,8 Punkten, 51,3 % gegen die vorherige KI in 1600 Partien). Den Anteil der Erschöpfungsenden senkte das kaum (Stufe I 52 bis 54 %, Stufe II 50 bis 54 %): Die Gewichte der KI reichen dafür nicht, die Ursache liegt in der Regel selbst.
