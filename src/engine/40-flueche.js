@@ -9,16 +9,3 @@ function inflictCurses(state, victim, level) {
   for (let i = 0; i < n; i++) victim.deck.discard.push(mkCard(state, 'C1'));
   return n + ' Fluchkarte' + (n > 1 ? 'n' : '') + ' auf den Ablagestapel von ' + victim.name;
 }
-// Erschöpfung (beide Seiten ohne Mana): nur der Todes-Fluch zehrt weiter; wer zuerst auf 0 HP fällt, verliert.
-// Liefert { winner: 'a' | 'b' | null } oder null, wenn nichts entschieden wird (dann Erschöpfung ohne Sieger).
-function settleExhaustion(state, a, b) {
-  let result = null, step = 0;
-  while (!result && ((a.stats.death || 0) > 0 || (b.stats.death || 0) > 0)) {
-    step++;
-    [a, b].forEach(x => { if ((x.stats.death || 0) > 0) x.stats.hp = Math.max(0, x.stats.hp - x.stats.death); });
-    log(state, 'Erschöpfung, Schritt ' + step + ': Todes-Fluch (' + a.name + ' ' + Math.max(0, a.stats.hp) + ' HP, ' + b.name + ' ' + Math.max(0, b.stats.hp) + ' HP).');
-    const da = a.stats.hp <= 0, db = b.stats.hp <= 0;
-    if (da || db) result = { winner: da && db ? null : da ? 'b' : 'a' };
-  }
-  return result;
-}

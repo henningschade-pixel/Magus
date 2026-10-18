@@ -52,13 +52,7 @@ function evaluateEnd(state) {
     if (ah <= 0 && bh > 0) winner = 'b'; else if (bh <= 0 && ah > 0) winner = 'a';
     return { reason: 'hp', winner, monsterDefeated: bh <= 0 };
   }
-  // Erschöpfung erst prüfen, wenn keine Verteidigung mehr aussteht: Der letzte Angriff darf noch gewinnen.
-  if (a.mana <= 0 && b.mana <= 0 && c.action !== 'defense') {
-    // Erschöpfung: nur der Todes-Fluch zehrt weiter (siehe 40-flueche.js)
-    const r = settleExhaustion(state, c.sides.a, c.sides.b);
-    if (r) return { reason: 'hp', winner: r.winner, monsterDefeated: r.winner === 'a' && c.mode === 'monster' };
-    return { reason: 'exhaustion', winner: null, monsterDefeated: false };
-  }
+  // Kein automatisches Unentschieden mehr bei 0 Mana beider Seiten: Der Kampf geht weiter (Erholen bringt Mana, der Todes-Fluch zehrt am Ende der Angriffsphasen). Beenden lässt er sich durch Fliehen (siehe canFlee); als Sicherung gegen Endlosschleifen gilt MAX_COMBAT_TURNS.
   if (c.turns >= MAX_COMBAT_TURNS) return { reason: 'exhaustion', winner: null, monsterDefeated: false, forced: true };
   return null;
 }

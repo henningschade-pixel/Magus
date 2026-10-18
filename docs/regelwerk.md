@@ -64,7 +64,7 @@ Der aktive Spieler wählt ein lebendes Monster und greift an, der Mitspieler fü
 
 **Kampfende:**
 - Fällt eine Seite auf 0 HP, hat die andere gewonnen; fallen beide gleichzeitig, gibt es keinen Sieger.
-- Haben beide 0 Mana und noch HP, zehrt nur der Todes-Fluch weiter; sonst endet der Kampf durch Erschöpfung ohne Sieger.
+- Haben beide 0 Mana, endet der Kampf **nicht mehr automatisch** ohne Sieger. Er geht weiter: Erholen im Angriffszug bringt Mana, der Todes-Fluch zehrt am Ende der Angriffsphasen. Beenden lässt er sich durch **Fliehen** (möglich, wenn der Gegner 0 Mana hat). Als technische Sicherung endet ein Kampf nach 400 Schritten ohne Sieger.
 - Siegt der Spieler gegen das Monster, erhält er dessen Gold. Siegt das Monster, gibt es keine Beute, das Monster bleibt mit Werten und Gold. Ohne Sieger bleibt es am Leben.
 - In Monsterkämpfen bleiben HP und Mana erhalten und regenerieren in der Weltphase; vor und nach einem Showdown sind sie voll.
 

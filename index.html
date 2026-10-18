@@ -596,19 +596,6 @@ function inflictCurses(state, victim, level) {
   for (let i = 0; i < n; i++) victim.deck.discard.push(mkCard(state, 'C1'));
   return n + ' Fluchkarte' + (n > 1 ? 'n' : '') + ' auf den Ablagestapel von ' + victim.name;
 }
-// Erschöpfung (beide Seiten ohne Mana): nur der Todes-Fluch zehrt weiter; wer zuerst auf 0 HP fällt, verliert.
-// Liefert { winner: 'a' | 'b' | null } oder null, wenn nichts entschieden wird (dann Erschöpfung ohne Sieger).
-function settleExhaustion(state, a, b) {
-  let result = null, step = 0;
-  while (!result && ((a.stats.death || 0) > 0 || (b.stats.death || 0) > 0)) {
-    step++;
-    [a, b].forEach(x => { if ((x.stats.death || 0) > 0) x.stats.hp = Math.max(0, x.stats.hp - x.stats.death); });
-    log(state, 'Erschöpfung, Schritt ' + step + ': Todes-Fluch (' + a.name + ' ' + Math.max(0, a.stats.hp) + ' HP, ' + b.name + ' ' + Math.max(0, b.stats.hp) + ' HP).');
-    const da = a.stats.hp <= 0, db = b.stats.hp <= 0;
-    if (da || db) result = { winner: da && db ? null : da ? 'b' : 'a' };
-  }
-  return result;
-}
 /* Magus – Regelkern (Teil 5): Händler.
    Der Händler arbeitet mit den markierten Handkarten (Auswahl, begrenzt durch das Ausspiellimit):
    - Gratiskarte (F1/E1/W1): immer möglich; sie verlangt keine Markierung und verbraucht weder Karten noch Markierungen.
@@ -773,13 +760,7 @@ function evaluateEnd(state) {
     if (ah <= 0 && bh > 0) winner = 'b'; else if (bh <= 0 && ah > 0) winner = 'a';
     return { reason: 'hp', winner, monsterDefeated: bh <= 0 };
   }
-  // Erschöpfung erst prüfen, wenn keine Verteidigung mehr aussteht: Der letzte Angriff darf noch gewinnen.
-  if (a.mana <= 0 && b.mana <= 0 && c.action !== 'defense') {
-    // Erschöpfung: nur der Todes-Fluch zehrt weiter (siehe 40-flueche.js)
-    const r = settleExhaustion(state, c.sides.a, c.sides.b);
-    if (r) return { reason: 'hp', winner: r.winner, monsterDefeated: r.winner === 'a' && c.mode === 'monster' };
-    return { reason: 'exhaustion', winner: null, monsterDefeated: false };
-  }
+  // Kein automatisches Unentschieden mehr bei 0 Mana beider Seiten: Der Kampf geht weiter (Erholen bringt Mana, der Todes-Fluch zehrt am Ende der Angriffsphasen). Beenden lässt er sich durch Fliehen (siehe canFlee); als Sicherung gegen Endlosschleifen gilt MAX_COMBAT_TURNS.
   if (c.turns >= MAX_COMBAT_TURNS) return { reason: 'exhaustion', winner: null, monsterDefeated: false, forced: true };
   return null;
 }
