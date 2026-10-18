@@ -217,10 +217,10 @@ function execAttack(state) {
   const res = finishStep(state, { k: 'A', who: side.key === 'a' ? 0 : 1, v: dmg });
   return { ok: true, combatEnd: res };
 }
-// Fliehen: Im Monsterkampf darf jede Seite (der Angreifer ebenso wie der Spieler, der das Monster führt) den Kampf abbrechen, wenn der Gegner kein Mana mehr hat, ihr gerade kein Angriff entgegengebracht wird (eigener Angriffszug) und sie nicht unter einem Todes-Fluch steht. Kein Sieger, keine Beute; das Monster behält seine HP und sein Mana, und danach ist der Spieler am Zug, der das Monster geführt hat (er kann das angeschlagene Monster jetzt selbst angreifen).
+// Fliehen: Im Monsterkampf und im Showdown darf jede Seite (im Monsterkampf der Angreifer ebenso wie der Spieler, der das Monster führt) den Kampf abbrechen, wenn der Gegner kein Mana mehr hat, ihr gerade kein Angriff entgegengebracht wird (eigener Angriffszug) und sie nicht unter einem Todes-Fluch steht. Kein Sieger, keine Beute; das Monster behält seine HP und sein Mana, und danach ist der Spieler am Zug, der das Monster geführt hat (er kann das angeschlagene Monster jetzt selbst angreifen).
 function canFlee(state, pid) {
   const c = state.combat;
-  if (!c || c.mode !== 'monster' || c.forced || c.action !== 'attack') return false;
+  if (!c || c.forced || c.action !== 'attack') return false;
   const me = c.sides[c.turn], opp = c.sides[c.turn === 'a' ? 'b' : 'a'];
   return me.ctrl === pid && opp.stats.mana <= 0 && !(me.stats.death > 0);
 }
@@ -303,7 +303,6 @@ function applyCombat(state, a) {
       side.deck.marks = []; log(state, side.name + ' passt.', side.ctrl);
       passAttackTurn(state); return { ok: true, combatEnd: finishStep(state) };
     case 'flee': {
-      if (c.mode !== 'monster') return fail('Fliehen geht nur im Monsterkampf.');
       if (c.action !== 'attack') return fail('Fliehen geht nur im eigenen Angriffszug, nicht unter Angriff.');
       if (opp.stats.mana > 0) return fail('Fliehen geht nur, wenn der Gegner kein Mana mehr hat.');
       if (side.stats.death > 0) return fail('Unter einem Todes-Fluch kann man nicht fliehen.');

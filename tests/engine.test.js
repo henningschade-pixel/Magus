@@ -206,3 +206,17 @@ test('Läuterung kann Todesmarker beider Seiten entfernen (eigene und gegnerisch
     assert.equal(me.stats.freeDraws, 1);
   }
 });
+
+test('Fliehen im Showdown: bei 0 Mana des Gegners möglich, Showdown endet ohne Sieger (je 1 Siegpunkt)', () => {
+  const s = M.newGame({ seed: 4, ai: [true, true], first: 0 });
+  let steps = 0; while (!s.over && !(s.phase === 'combat' && s.combat.mode === 'showdown') && steps++ < 20000) if (!AI.runTurn(s, M.actor(s)).ok) break;
+  assert.ok(s.phase === 'combat' && s.combat.mode === 'showdown', 'Showdown erreicht');
+  const c = s.combat, att = c.sides.a.ctrl, sp = s.players.map(p => p.sp);
+  assert.equal(M.canFlee(s, att), false, 'Gegner hat noch Mana');
+  c.sides.b.stats.mana = 0;
+  assert.equal(M.canFlee(s, att), true);
+  const r = M.apply(s, { pid: att, type: 'flee' });
+  assert.ok(r.ok && r.combatEnd.reason === 'flee' && r.combatEnd.winner === null);
+  assert.deepEqual(s.players.map(p => p.sp), sp.map(x => x + 1), 'je 1 Siegpunkt');
+  assert.equal(s.showdown, 1);
+});
