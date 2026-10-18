@@ -220,3 +220,15 @@ test('Fliehen im Showdown: bei 0 Mana des Gegners möglich, Showdown endet ohne 
   assert.deepEqual(s.players.map(p => p.sp), sp.map(x => x + 1), 'je 1 Siegpunkt');
   assert.equal(s.showdown, 1);
 });
+
+test('Läuterung Stufe 3 entfernt beliebig gemischt eigene und gegnerische Spiegel- und Todesmarker', () => {
+  const { s, me, op } = combatSetup(11, ['E3', 'F3']);
+  me.stats.mirrorEl = { F: 2, E: 0, W: 0 }; me.stats.mirror = 2; me.stats.death = 1;
+  op.stats.mirrorEl = { F: 0, E: 1, W: 0 }; op.stats.mirror = 1; op.stats.death = 2; me.stats.freeDraws = 0;
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
+  assert.ok(M.apply(s, { pid: 0, type: 'lfp', pick: ['sm:F', 'om:E', 'od'] }).ok);
+  assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+  assert.equal(me.stats.mirrorEl && me.stats.mirrorEl.F, 1, 'eigener Spiegel −1'); assert.equal(op.stats.mirror || 0, 0, 'gegnerischer Spiegel weg');
+  assert.equal(op.stats.death, 1, 'gegnerischer Todesmarker −1'); assert.equal(me.stats.death, 1, 'eigener Todesmarker unberührt');
+  assert.equal(me.stats.freeDraws, 3, 'je entferntem Marker ein Gratis-Nachziehen');
+});
