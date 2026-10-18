@@ -188,7 +188,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .vrow{display:flex;align-items:center;gap:6px;padding:4px 6px;border:1px solid #44444c;border-radius:9px;margin-bottom:5px;cursor:var(--cp);background:rgba(0,0,0,.18)}
 .vrow:hover{border-color:var(--gold)}
 .vrow.off{opacity:.4;cursor:var(--cd)}.vrow.off:hover{border-color:#44444c}
-.stock{display:grid;grid-template-columns:repeat(3,1fr);gap:4px 6px;margin:6px 0 8px}.stk{display:flex;align-items:center;gap:5px;padding:2px 4px;border:1px solid #44444c;border-radius:7px;background:rgba(0,0,0,.18)}.stk b{font-size:13px;color:var(--gold)}.stk.buy{border-color:var(--gold);box-shadow:0 0 8px rgba(255,205,90,.65),inset 0 0 6px rgba(255,205,90,.3);cursor:var(--cp)}.stk.buy:hover{background:rgba(255,205,90,.16)}.stk.out{opacity:.35}.stk.out b{color:#d88}
+.stock{display:grid;grid-template-columns:repeat(3,1fr);gap:4px 6px;margin:6px 0 8px}.stk{display:flex;align-items:center;gap:5px;padding:2px 4px;border:1px solid #44444c;border-radius:7px;background:rgba(0,0,0,.18)}.stk b{font-size:13px;color:var(--gold)}.stk.buy{border-color:var(--gold);box-shadow:0 0 8px rgba(255,205,90,.65),inset 0 0 6px rgba(255,205,90,.3);cursor:var(--cp)}.stk.buy:hover{background:rgba(255,205,90,.16)}.stk.lock{opacity:.55}.stk.out{opacity:.35}.stk.out b{color:#d88}
 .thumb{width:30px;height:45px;background-size:100% 100%;border-radius:4px;box-shadow:0 1px 4px rgba(0,0,0,.6)}
 .vrow .plus{color:var(--mute);font-size:16px}
 .vrow img.ar{width:26px}
@@ -622,14 +622,16 @@ function markedCards(d) { return handCards(d).filter(c => d.marks.includes(c.slo
 // Vorrat: Wie viele Karten der Art im Vorrat des Händlers sind (ohne Begrenzung: unendlich).
 function stockOf(state, id) { return state.supply ? (state.supply[id] || 0) : Infinity; }
 // Für die Oberfläche: Angebote zur aktuellen Auswahl. ‚available‘: false, wenn die Karte vergriffen ist; ‚stock‘: Restbestand.
+// Freischaltung: Eine Karte der Stufe t im Element e darf nur erwerben, wer die Magie e auf Stufe t hat.
+function unlocked(p, id) { const c = parseCard(id); return (p.stats.mag[c.el] || 0) >= c.tier; }
 function vendorOffers(state, pid) {
   const p = state.players[pid], sel = markedCards(p.deck);
-  return vendorChoices(sel, p.stats.limit).map(o => Object.assign(o, { stock: stockOf(state, o.result), available: stockOf(state, o.result) > 0 }));
+  return vendorChoices(sel, p.stats.limit).map(o => Object.assign(o, { stock: stockOf(state, o.result), unlocked: unlocked(p, o.result), available: stockOf(state, o.result) > 0 && unlocked(p, o.result) }));
 }
 // Für die KI: alle Angebote, die mit beliebigen Handkarten möglich wären (slots sagen, was dafür zu markieren ist).
 function vendorPlans(state, pid) {
   const p = state.players[pid];
-  return vendorChoices(handCards(p.deck), p.stats.limit).filter(o => stockOf(state, o.result) > 0);
+  return vendorChoices(handCards(p.deck), p.stats.limit).filter(o => stockOf(state, o.result) > 0 && unlocked(p, o.result));
 }
 function execVendor(state, pid, a) {
   const p = state.players[pid], d = p.deck;
@@ -638,6 +640,7 @@ function execVendor(state, pid, a) {
   const opt = vendorChoices(sel, p.stats.limit).find(o => o.result === a.result && JSON.stringify(o.cost) === want);
   if (!opt) return fail(sel.length ? 'Mit den markierten Karten ist dieses Angebot nicht möglich.' : 'Markiere zuerst Karten aus deiner Hand.');
   if (stockOf(state, opt.result) <= 0) return fail(opt.result + ' ist vergriffen.');
+  if (!unlocked(p, opt.result)) return fail(opt.result + ' ist noch nicht freigeschaltet: Du brauchst die Magie ' + NAMES[opt.result[0]] + ' auf Stufe ' + opt.result[1] + '.');
   if (!opt.free) opt.slots.forEach(i => { removeFromHand(d, i); });   // bezahlte Karten werden aus dem Deck entfernt; nur die gekaufte Karte kommt auf den Ablagestapel
   if (!opt.free) d.marks = [];
   if (state.supply) { opt.cost.forEach(id => { state.supply[id]++; }); state.supply[opt.result]--; }   // bezahlte Karten gehen zurück in den Vorrat, die gekaufte kommt heraus
@@ -1136,7 +1139,7 @@ function applyWorld(state, a) {
 /* Magus – Regelkern (Teil 8): Spielstart und Schnittstelle nach außen. */
 
 // Regelwerte (Abstimmungs- und Variantenschalter). ‚curses‘: Fluchsystem, siehe 30-curses.js.
-const DEFAULT_RULES = { magicCost: [0, 1, 3], limitCost: 2, limitFirstStepCost: 2, hpPerPoint: 2, stagePoints: [0, 1, 2, 3], stageGold: [0, 1, 2, 3], loserUp: 1, loserUp2: 2, winSp: 4, recoverByStage: [1, 2, 3], regenByStage: [1, 2, 3], supply: 8, startCards: 0 };   // Jede gespielte Karte (auch Kombokarten) kostet 1 Mana, nur Verteidigung in der überlegenen Farbe ist gratis. recoverByStage: Mana-Gewinn von „Erholen“ im Kampf je Abschnitt
+const DEFAULT_RULES = { magicCost: [0, 1, 3], limitCost: 2, limitFirstStepCost: 2, hpPerPoint: 2, stagePoints: [0, 1, 2, 3], stageGold: [0, 1, 2, 3], loserUp: 1, loserUp2: 2, winSp: 4, recoverByStage: [1, 2, 3], regenByStage: [1, 2, 3], supply: 8, supply2: 6, supply3: 4, startCards: 0 };   // Jede gespielte Karte (auch Kombokarten) kostet 1 Mana, nur Verteidigung in der überlegenen Farbe ist gratis. recoverByStage: Mana-Gewinn von „Erholen“ im Kampf je Abschnitt
 
 function newPlayer(state, name, ai, startIds) {
   const p = { name, ai: !!ai, stats: newStats(), temple: { points: 0, level: 0 }, sp: 0, slots: MIN_SLOTS };
@@ -1157,7 +1160,7 @@ function newGame(opts) {
     state.rng.shuffle(pool);
     const half = Math.floor(pool.length / 2), n = state.rules.startCards > 0 ? Math.min(state.rules.startCards, half) : half;
     deal = [pool.slice(0, n), pool.slice(n, 2 * n)];
-    state.supply = {}; ELEMENTS.forEach(e => [1, 2, 3].forEach(t => { state.supply[e + t] = state.rules.supply; }));
+    state.supply = {}; ELEMENTS.forEach(e => [1, 2, 3].forEach(t => { state.supply[e + t] = [state.rules.supply, state.rules.supply2, state.rules.supply3][t - 1]; }));
     pool.slice(0, 2 * n).forEach(id => { state.supply[id]--; });
   }
   state.players = [newPlayer(state, names[0], opts.ai ? opts.ai[0] : false, deal[0]), newPlayer(state, names[1], opts.ai ? opts.ai[1] : true, deal[1])];
@@ -1994,10 +1997,10 @@ function vendorPanel() {
     h += '<div class="stock">';
     ['F', 'E', 'W'].forEach(e => [1, 2, 3].forEach(t => {
       const id = e + t, n = G.supply ? G.supply[id] : Infinity, freeI = offers.findIndex(o => o.free && o.result === id), buy = offers.filter(o => !o.free && o.available && o.result === id);
-      const canBuy = can && n > 0 && (t === 1 ? freeI >= 0 : buy.length > 0);
-      const tip = n <= 0 ? 'vergriffen' : t === 1 ? 'gratis, noch ' + n : canBuy ? buy.map(o => o.cost.join(' + ') + ' → ' + id).join(' oder ') + ' (noch ' + n + ')' : 'noch ' + n;
+      const canBuy = can && n > 0 && (t === 1 ? freeI >= 0 : buy.length > 0), locked = n > 0 && (G.players[ME].stats.mag[e] || 0) < t;
+      const tip = n <= 0 ? 'vergriffen' : locked ? 'gesperrt: Magie ' + M.NAMES[e] + ' Stufe ' + t + ' nötig (noch ' + n + ')' : t === 1 ? 'gratis, noch ' + n : canBuy ? buy.map(o => o.cost.join(' + ') + ' → ' + id).join(' oder ') + ' (noch ' + n + ')' : 'noch ' + n;
       const act = !canBuy ? '' : t === 1 ? ' data-act="vendor" data-i="' + freeI + '"' : ' data-act="vendorres" data-r="' + id + '"';
-      h += '<div class="stk' + (n > 0 ? '' : ' out') + (canBuy || (t === 1 && n > 0) ? ' buy' : '') + '"' + act + ' title="' + tip + '">' + thumb(id) + '<b>' + (n === Infinity ? '∞' : n > 0 ? '×' + n : 'weg') + '</b></div>';
+      h += '<div class="stk' + (n > 0 ? '' : ' out') + (locked ? ' lock' : '') + (canBuy || (t === 1 && n > 0) ? ' buy' : '') + '"' + act + ' title="' + tip + '">' + thumb(id) + '<b>' + (n === Infinity ? '∞' : n > 0 ? '×' + n : 'weg') + '</b></div>';
     }));
     h += '</div>';
   }

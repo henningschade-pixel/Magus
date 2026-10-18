@@ -8,10 +8,10 @@ function vendorPanel() {
     h += '<div class="stock">';
     ['F', 'E', 'W'].forEach(e => [1, 2, 3].forEach(t => {
       const id = e + t, n = G.supply ? G.supply[id] : Infinity, freeI = offers.findIndex(o => o.free && o.result === id), buy = offers.filter(o => !o.free && o.available && o.result === id);
-      const canBuy = can && n > 0 && (t === 1 ? freeI >= 0 : buy.length > 0);
-      const tip = n <= 0 ? 'vergriffen' : t === 1 ? 'gratis, noch ' + n : canBuy ? buy.map(o => o.cost.join(' + ') + ' → ' + id).join(' oder ') + ' (noch ' + n + ')' : 'noch ' + n;
+      const canBuy = can && n > 0 && (t === 1 ? freeI >= 0 : buy.length > 0), locked = n > 0 && (G.players[ME].stats.mag[e] || 0) < t;
+      const tip = n <= 0 ? 'vergriffen' : locked ? 'gesperrt: Magie ' + M.NAMES[e] + ' Stufe ' + t + ' nötig (noch ' + n + ')' : t === 1 ? 'gratis, noch ' + n : canBuy ? buy.map(o => o.cost.join(' + ') + ' → ' + id).join(' oder ') + ' (noch ' + n + ')' : 'noch ' + n;
       const act = !canBuy ? '' : t === 1 ? ' data-act="vendor" data-i="' + freeI + '"' : ' data-act="vendorres" data-r="' + id + '"';
-      h += '<div class="stk' + (n > 0 ? '' : ' out') + (canBuy || (t === 1 && n > 0) ? ' buy' : '') + '"' + act + ' title="' + tip + '">' + thumb(id) + '<b>' + (n === Infinity ? '∞' : n > 0 ? '×' + n : 'weg') + '</b></div>';
+      h += '<div class="stk' + (n > 0 ? '' : ' out') + (locked ? ' lock' : '') + (canBuy || (t === 1 && n > 0) ? ' buy' : '') + '"' + act + ' title="' + tip + '">' + thumb(id) + '<b>' + (n === Infinity ? '∞' : n > 0 ? '×' + n : 'weg') + '</b></div>';
     }));
     h += '</div>';
   }

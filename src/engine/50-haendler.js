@@ -24,14 +24,16 @@ function markedCards(d) { return handCards(d).filter(c => d.marks.includes(c.slo
 // Vorrat: Wie viele Karten der Art im Vorrat des Händlers sind (ohne Begrenzung: unendlich).
 function stockOf(state, id) { return state.supply ? (state.supply[id] || 0) : Infinity; }
 // Für die Oberfläche: Angebote zur aktuellen Auswahl. ‚available‘: false, wenn die Karte vergriffen ist; ‚stock‘: Restbestand.
+// Freischaltung: Eine Karte der Stufe t im Element e darf nur erwerben, wer die Magie e auf Stufe t hat.
+function unlocked(p, id) { const c = parseCard(id); return (p.stats.mag[c.el] || 0) >= c.tier; }
 function vendorOffers(state, pid) {
   const p = state.players[pid], sel = markedCards(p.deck);
-  return vendorChoices(sel, p.stats.limit).map(o => Object.assign(o, { stock: stockOf(state, o.result), available: stockOf(state, o.result) > 0 }));
+  return vendorChoices(sel, p.stats.limit).map(o => Object.assign(o, { stock: stockOf(state, o.result), unlocked: unlocked(p, o.result), available: stockOf(state, o.result) > 0 && unlocked(p, o.result) }));
 }
 // Für die KI: alle Angebote, die mit beliebigen Handkarten möglich wären (slots sagen, was dafür zu markieren ist).
 function vendorPlans(state, pid) {
   const p = state.players[pid];
-  return vendorChoices(handCards(p.deck), p.stats.limit).filter(o => stockOf(state, o.result) > 0);
+  return vendorChoices(handCards(p.deck), p.stats.limit).filter(o => stockOf(state, o.result) > 0 && unlocked(p, o.result));
 }
 function execVendor(state, pid, a) {
   const p = state.players[pid], d = p.deck;
@@ -40,6 +42,7 @@ function execVendor(state, pid, a) {
   const opt = vendorChoices(sel, p.stats.limit).find(o => o.result === a.result && JSON.stringify(o.cost) === want);
   if (!opt) return fail(sel.length ? 'Mit den markierten Karten ist dieses Angebot nicht möglich.' : 'Markiere zuerst Karten aus deiner Hand.');
   if (stockOf(state, opt.result) <= 0) return fail(opt.result + ' ist vergriffen.');
+  if (!unlocked(p, opt.result)) return fail(opt.result + ' ist noch nicht freigeschaltet: Du brauchst die Magie ' + NAMES[opt.result[0]] + ' auf Stufe ' + opt.result[1] + '.');
   if (!opt.free) opt.slots.forEach(i => { removeFromHand(d, i); });   // bezahlte Karten werden aus dem Deck entfernt; nur die gekaufte Karte kommt auf den Ablagestapel
   if (!opt.free) d.marks = [];
   if (state.supply) { opt.cost.forEach(id => { state.supply[id]++; }); state.supply[opt.result]--; }   // bezahlte Karten gehen zurück in den Vorrat, die gekaufte kommt heraus
