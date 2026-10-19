@@ -44,7 +44,7 @@ function pickSpend(p, state, pid) {
   for (const [w, ok] of order) if (ok && !(w === 'slot' && noSlot)) return w;
   return 'hp';
 }
-// Bonusaktionen: Punkte ausgeben, Magie kaufen, Gold opfern; danach folgt die eigentliche Aktion des Zuges.
+// Wirtschaftsaktion (Punkte ausgeben, Magie kaufen, Gold opfern); sie zählt als Aktion und beendet den Zug.
 function ecoStep(state, pid) {
   const p = state.players[pid], s = p.stats, A = a => Object.assign({ pid }, a), Q = P(pid);
   if (s.pending > 0) { const w = pickSpend(p, state, pid); if (w) return A({ type: 'spend', what: w }); }

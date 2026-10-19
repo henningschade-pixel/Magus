@@ -1,7 +1,6 @@
 /* Magus – Regelkern (Teil 7): Weltphase (Züge außerhalb des Kampfes).
-   Aktionen, die den Zug beenden: Nachziehen, Händler, Kampf.
-   Bonusaktionen im eigenen Zug, beliebig oft und ohne den Zug zu beenden: Gold opfern, Magie kaufen, Upgrade-Punkte ausgeben.
-   Upgrade-Punkte dürfen aufgespart werden. Im Kampf sind keine Bonusaktionen möglich. */
+   Jede Aktion beendet den Zug (Spielerwechsel): Nachziehen, Händler, Kampf, Gold opfern, Magie kaufen, jedes Upgrade (Punkte ausgeben).
+   Upgrade-Punkte dürfen aufgespart werden. */
 
 // Verlauf für die Statistik: ein Messpunkt zu Beginn, nach jedem Zug und nach jedem Kampf (ev = Kampfereignis)
 // avg: durchschnittliche Kartenstufe je Farbe im ganzen Deck (Stapel, Ablage, Hand; ohne Fluchkarten)
@@ -63,6 +62,9 @@ function execMagic(state, pid, e) {
   return { ok: true };
 }
 
+// Erfolgreiche Tempel-, Magie- und Upgrade-Aktionen zählen als Zugaktion: danach wechselt der Spieler.
+function endOnOk(state, pid, kind, r) { if (r.ok) endTurn(state, pid, kind); return r; }
+
 function applyWorld(state, a) {
   const pid = a.pid, p = state.players[pid], d = p.deck, s = p.stats;
   // Markieren und Sperren sind auch außerhalb des eigenen Zuges möglich.
@@ -76,9 +78,9 @@ function applyWorld(state, a) {
       endTurn(state, pid, 'draw'); return { ok: true };
     }
     case 'vendor': return execVendor(state, pid, a);
-    case 'temple': return execTemple(state, pid, a.amount);
-    case 'magic': return execMagic(state, pid, a.elem);
-    case 'spend': return execSpend(state, pid, a.what);
+    case 'temple': return endOnOk(state, pid, 'temple', execTemple(state, pid, a.amount));
+    case 'magic': return endOnOk(state, pid, 'magic', execMagic(state, pid, a.elem));
+    case 'spend': return endOnOk(state, pid, 'spend', execSpend(state, pid, a.what));
     case 'combat': {
       const m = state.monsters[a.elem]; if (!m || !monsterAlive(m)) return fail('Dieses Monster ist besiegt.');
       d.marks = [];

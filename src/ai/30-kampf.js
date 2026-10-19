@@ -144,7 +144,7 @@ function combatPlan(state, pid) {
 }
 
 function plan(state, pid) {
-  if (state.phase === 'world') { const st = ecoStep(state, pid); if (st) return [st]; }   // Bonusaktionen zuerst (Punkte ausgeben, Magie kaufen, Gold opfern), wie in runTurn; ohne das kaufte die KI in der Oberfläche nie Magie
+  if (state.phase === 'world') { const st = ecoStep(state, pid); if (st) return [st]; }   // Wirtschaftsaktion (Punkte ausgeben, Magie kaufen, Gold opfern) hat Vorrang und beendet den Zug; ohne das kaufte die KI in der Oberfläche nie Magie
   return state.phase === 'combat' ? combatPlan(state, pid) : worldPlan(state, pid);
 }
 // Führt einen vollständigen KI-Zug aus; bei Fehlern greift eine sichere Rückfalloption.
@@ -158,7 +158,7 @@ function fallback(state, pid) {
   return [A({ type: 'draw' })];
 }
 function runTurn(state, pid) {
-  if (state.phase === 'world') for (let k = 0; k < 12; k++) { const st = ecoStep(state, pid); if (!st) break; const r = M.apply(state, st); if (!r.ok) break; }
+  if (state.phase === 'world') { const st = ecoStep(state, pid); if (st) { const r = M.apply(state, st); if (r.ok) return { ok: true, acts: [st] }; } }   // Wirtschaftsaktion beendet den Zug
   const tries = [plan(state, pid), ...fallback(state, pid).map(a => [a])];
   for (const acts of tries) {
     const marks0 = state.phase === 'combat' ? state.combat.sides[state.combat.turn].deck.marks.slice() : null;

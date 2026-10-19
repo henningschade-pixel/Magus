@@ -27,7 +27,7 @@ Eine Partie hat drei Abschnitte (1, 2, 3). Je Abschnitt gibt es drei Monster (St
 
 ## Weltphase
 
-Im eigenen Zug genau eine Hauptaktion: Nachziehen, beim Händler tauschen oder einen Kampf beginnen. Beliebig viele Bonusaktionen, die den Zug nicht beenden: im Tempel Gold opfern, Magie kaufen, Upgrade-Punkte ausgeben. Im Kampf gibt es keine Bonusaktionen. Eine Erholungsphase gibt es nicht.
+Im eigenen Zug genau eine Aktion, danach wechselt der Spieler: Nachziehen, beim Händler tauschen, einen Kampf beginnen, im Tempel Gold opfern, Magie kaufen oder einen Upgrade-Punkt ausgeben (Magiestufe, HP, Mana, Limit, Handkarten; jeder Klick ist eine Aktion). Upgrade-Punkte dürfen aufgespart werden. Eine Erholungsphase gibt es nicht.
 
 **Regeneration:** Bei jedem Zugwechsel erhält der Spieler, der dran kommt, **HP und Mana in Höhe des Abschnitts** (Abschnitt 1: +1/+1, Abschnitt 2: +2/+2, Abschnitt 3: +3/+3; nicht über das Maximum). Dasselbe bekommt der Verteidiger nach einem Kampf. Alle lebenden Monster regenerieren am Ende jeder Runde +1 HP und +1 Mana (Regel `regenByStage` gilt nur für Spieler).
 
