@@ -4,7 +4,7 @@ Dies ist die maßgebliche Fassung der Regeln. Sie ersetzt das Claude-Docs-Dokume
 
 ## Spielidee und Ablauf
 
-Duellspiel für zwei Personen: Deck und Magie ausbauen, Monster besiegen und in bis zu drei Showdowns Siegpunkte holen. Wer zuerst 4 Siegpunkte hat, gewinnt sofort, sonst entscheidet nach dem dritten Showdown, wer mehr hat (bei Gleichstand das Gold, danach unentschieden).
+Duellspiel für zwei Personen: Deck und Magie ausbauen, Monster besiegen und in bis zu drei Showdowns Siegpunkte holen. Wer zuerst 4 Siegpunkte hat, gewinnt sofort, sonst entscheidet nach dem dritten Showdown, wer mehr hat (bei Gleichstand die Tempelstufe, danach das Gold, danach unentschieden).
 
 Eine Partie hat drei Abschnitte (1, 2, 3). Je Abschnitt gibt es drei Monster (Stufe I, II, III). Sind alle drei besiegt, beginnt sofort der Showdown; danach erscheinen die Monster der nächsten Stufe.
 
@@ -44,7 +44,7 @@ Im eigenen Zug genau eine Aktion, danach wechselt der Spieler: Nachziehen, beim 
 
 Die bezahlten Karten werden aus dem Deck entfernt, nur die gekaufte kommt auf den Ablagestapel.
 
-**Tempel:** n Gold opfern ergibt n·(n+1)/2 Tempelpunkte; die nächste Tempelstufe kostet (aktuelle Stufe + 1) Punkte, jede erreichte Stufe gibt einen Upgrade-Punkt. Die Vorschau (Gold, Punkte, Bruch) zeigt sich schon beim Einstellen mit den Pfeilen.
+**Tempel:** n Gold opfern ergibt n·(n+1)/2 Tempelpunkte; die nächste Tempelstufe kostet (aktuelle Stufe + 1) Punkte, jede erreichte Stufe gibt einen Upgrade-Punkt. Die Tempelstufe ist die Zahl der durch Opfer erlangten Upgrades (kostet die nächste Stufe 4 Punkte, hat man Stufe 3) und zählt als zweites Kriterium der Siegbedingung. Die Vorschau (Gold, Punkte, Bruch) zeigt sich schon beim Einstellen mit den Pfeilen.
 
 **Magie kaufen:** Stufe 2 kostet 1 Gold, Stufe 3 kostet 3 Gold.
 
