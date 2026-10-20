@@ -83,6 +83,7 @@ function endCombat(state, end) {
   } else {
     if (end.winner) { const w = end.winner === 'a' ? A : B; w.sp += 2; log(state, w.name + ' gewinnt den Showdown (+2 Siegpunkte).', end.winner === 'a' ? c.att : c.def);
       const L = w === A ? B : A; const lu = state.showdown === 1 && state.rules.loserUp2 !== undefined ? state.rules.loserUp2 : state.rules.loserUp; if (lu > 0 && state.showdown < 2) { L.stats.pending += lu; L.stats.upGot += lu; log(state, L.name + ' erhält als Trostpreis ' + lu + ' Upgrade-Punkt' + (lu > 1 ? 'e' : '') + '.', w === A ? c.def : c.att); } }
+    else if (end.reason === 'flee') log(state, 'Die Flucht ist geglückt. Der Showdown endet ohne Sieger, ohne Siegpunkte.');   // Fliehen zählt nie als Sieg oder Niederlage
     else { A.sp += 1; B.sp += 1; log(state, 'Showdown ohne Sieger: je 1 Siegpunkt.'); }
   }
   state.combat = null; state.phase = 'world'; state.lastCombat = res;

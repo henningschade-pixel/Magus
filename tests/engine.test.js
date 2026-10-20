@@ -163,8 +163,9 @@ test('Fliehen: nur im Monsterkampf, im eigenen Angriffszug, bei Monster ohne Man
   assert.equal(M.canFlee(s, 0), false, 'Todes-Fluch');
   assert.equal(M.apply(s, { pid: 0, type: 'flee' }).ok, false);
   delete me.stats.death;
-  const hp = c.sides.b.stats.hp, gold = me.stats.gold;
+  const hp = c.sides.b.stats.hp, gold = me.stats.gold, sp0 = s.players.map(p => p.sp), g1 = s.players[1].stats.gold;
   const r = M.apply(s, { pid: 0, type: 'flee' });
+  assert.deepEqual(s.players.map(p => p.sp), sp0, 'Flucht bringt keine Siegpunkte'); assert.equal(s.players[1].stats.gold, g1, 'kein Gold für den Mitspieler');
   assert.ok(r.ok && r.combatEnd && r.combatEnd.reason === 'flee' && r.combatEnd.winner === null);
   assert.equal(s.phase, 'world'); assert.equal(me.stats.gold, gold, 'keine Beute'); assert.equal(s.lastCombat.monsterDefeated, false);
   assert.equal(s.turn, 1, 'der Gegenspieler ist als Nächster dran');
@@ -230,7 +231,7 @@ test('Fliehen im Showdown: bei 0 Mana des Gegners möglich, Showdown endet ohne 
   assert.equal(M.canFlee(s, att), true);
   const r = M.apply(s, { pid: att, type: 'flee' });
   assert.ok(r.ok && r.combatEnd.reason === 'flee' && r.combatEnd.winner === null);
-  assert.deepEqual(s.players.map(p => p.sp), sp.map(x => x + 1), 'je 1 Siegpunkt');
+  assert.deepEqual(s.players.map(p => p.sp), sp, 'Flucht bringt keine Siegpunkte');
   assert.equal(s.showdown, 1);
 });
 

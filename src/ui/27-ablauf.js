@@ -37,7 +37,7 @@ function endTexts(res, sn, lines) {
     return { cls: 'draw', title: 'Unentschieden', sub: 'Kein Sieger, keine Beute', rest };
   }
   const wc = res.winner ? sn.sides[res.winner].ctrl : null, sp = me.sp + ' : ' + opp.sp + ' Siegpunkte';
-  if (wc === null) return { cls: 'draw', title: 'Showdown unentschieden', sub: 'Kein Sieger: je 1 Siegpunkt', loot: sp, rest };
+  if (wc === null) return { cls: 'draw', title: 'Showdown unentschieden', sub: res.reason === 'flee' ? 'Flucht: kein Sieger, keine Siegpunkte' : 'Kein Sieger: je 1 Siegpunkt', loot: sp, rest };
   return wc === ME ? { cls: 'win', title: 'Showdown gewonnen', sub: '+2 Siegpunkte', loot: sp, rest } : { cls: 'lose', title: 'Showdown verloren', sub: G.players[wc].name + ' erhält 2 Siegpunkte', loot: sp, rest };
 }
 // Ablauf nach dem letzten Zug: Animation zu Ende -> Werte anpassen -> abdunkeln und Ergebnis zeigen -> Klick -> Weltphase

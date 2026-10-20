@@ -6,7 +6,7 @@ Dies ist die maßgebliche Fassung der Regeln. Sie ersetzt das Claude-Docs-Dokume
 
 Duellspiel für zwei Personen: Deck und Magie ausbauen, Monster besiegen und in bis zu drei Showdowns Siegpunkte holen. Wer nach dem zweiten Showdown mindestens 8 Siegpunkte hat, gewinnt sofort (Abschnitt 3 entfällt), sonst entscheidet nach dem dritten Showdown, wer mehr hat (bei Gleichstand das Gold, danach die Tempelstufe, danach unentschieden).
 
-**Siegpunkte im Überblick (seit v8):** Monsterkampf: Sieger +1, Verlierer −1 (nie unter 0), Flucht und Unentschieden zählen nicht. Showdown: Sieger +2, ohne Sieger je +1, kein Trostpreis. Je Abschnitt sind damit höchstens 5 Siegpunkte möglich (drei Monsterkämpfe und der Showdown), nach zwei Abschnitten 10.
+**Siegpunkte im Überblick (seit v8):** Monsterkampf: Sieger +1, Verlierer −1 (nie unter 0), Flucht und Unentschieden zählen nicht. Showdown: Sieger +2, beide fallen je +1, Flucht 0, kein Trostpreis. Je Abschnitt sind damit höchstens 5 Siegpunkte möglich (drei Monsterkämpfe und der Showdown), nach zwei Abschnitten 10.
 
 Eine Partie hat drei Abschnitte (1, 2, 3). Je Abschnitt gibt es drei Monster (Stufe I, II, III). Sind alle drei besiegt, beginnt sofort der Showdown; danach erscheinen die Monster der nächsten Stufe.
 
@@ -62,7 +62,7 @@ Der aktive Spieler wählt ein lebendes Monster und greift an, der Mitspieler fü
 
 **Statt anzugreifen** darf man: nachziehen (gratis, Hand wird getauscht), **erholen** oder passen. Jede dieser Aktionen beendet den Angriffszug.
 
-**Fliehen (neu):** Im Monsterkampf darf jede Seite fliehen, wenn das Monster 0 Mana hat, ihm gerade kein Angriff entgegengebracht wird (er ist in seinem Angriffszug) und er nicht unter einem Todes-Fluch steht. Der Kampf endet ohne Sieger und ohne Beute, das Monster behält seine HP und sein Mana, der Mitspieler ist als Nächster dran (mit der üblichen Regeneration). Im Showdown gilt dasselbe Fliehen: Der Showdown endet dann ohne Sieger, und beide Spieler erhalten 1 Siegpunkt (wie bei jedem Showdown ohne Sieger). Die KI flieht nicht (`fleeT` 999): Im Selbstspiel verlor sie damit.
+**Fliehen (neu):** Im Monsterkampf darf jede Seite fliehen, wenn das Monster 0 Mana hat, ihm gerade kein Angriff entgegengebracht wird (er ist in seinem Angriffszug) und er nicht unter einem Todes-Fluch steht. Der Kampf endet ohne Sieger und ohne Beute, das Monster behält seine HP und sein Mana, der Mitspieler ist als Nächster dran (mit der üblichen Regeneration). Im Showdown gilt dasselbe Fliehen: Der Showdown endet dann ohne Sieger, und es gibt keine Siegpunkte (anders als bei einem Showdown, in dem beide fallen). Die KI flieht nicht (`fleeT` 999): Im Selbstspiel verlor sie damit.
 
 **Erholen:** Wer den Angriff auslässt, erhält **Mana in Höhe des Abschnitts** (1 / 2 / 3). In der Verteidigung gibt es **kein Erholen**: Wer dort passt, führt keine Verteidigung aus und nimmt den Schaden hin (ein Spiegel dieser Farbe gleicht bis zu seiner Stufe aus und verliert dafür Stufen), erhält aber kein Mana. Nachziehen, Erholen und Passen beenden den Zug.
 
@@ -116,7 +116,7 @@ Hauptelement / Nebenelement: Feuermonster Feuer und Erde, Erdmonster Erde und Wa
 
 Beginnt sofort nach dem dritten Monster eines Abschnitts. Vorher erscheint ein Ankündigungsbildschirm („Showdown N von 3“, wer zuerst angreift, was auf dem Spiel steht). Beide Spieler starten mit vollen HP, vollem Mana und frisch gemischtem Deck. Zuerst greift an, wer hinten liegt (Siegpunkte, Tempelpunkte, Magiefortschritt, Gold, sonst Zufall). Der Showdown läuft wie ein Monsterkampf gegen den anderen Spieler.
 
-- Sieger: 2 Siegpunkte, kein Goldraub. Kein Sieger: je 1 Siegpunkt.
+- Sieger: 2 Siegpunkte, kein Goldraub. Kein Sieger (beide fallen): je 1 Siegpunkt. **Fliehen** zählt nie als Sieg oder Niederlage: weder Siegpunkte noch Gold.
 - Nach dem Showdown sind HP und Mana voll. Der Verlierer beginnt die nächste Weltphase. Den **Trostpreis gibt es nicht mehr** (`loserUp` und `loserUp2` stehen auf 0).
 - **Vorzeitiges Ende:** Hat nach dem zweiten Showdown ein Spieler mindestens 8 Siegpunkte (`winSp`, geprüft ab `winSpFromShowdown` 2), gewinnt er sofort und Abschnitt 3 entfällt. Nach Showdown 1 sind höchstens 5 Siegpunkte möglich, die Grenze greift dort nie.
 - Der Ergebnis-Bildschirm nennt Sieger, Siegpunkte und den nächsten Abschnitt.
