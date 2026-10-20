@@ -162,7 +162,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .arr{background:none;border:0;color:var(--gold);font-size:12px;padding:0 1px;cursor:var(--cp)}.arr:disabled{opacity:.3;cursor:var(--cd)}.arr:hover:not(:disabled){color:#fff}
 
 /* Monster */
-.mon{position:absolute;border:1px solid var(--line);border-radius:12px;background:linear-gradient(180deg,#2e2e33,#1f1f23);text-align:center;overflow:hidden;display:flex;flex-direction:column}
+.mon{position:absolute;border:1px solid var(--line);border-radius:12px;background:#000;text-align:center;overflow:hidden;display:flex;flex-direction:column}
 .mon img.pic{object-fit:contain;display:block;margin:0 auto 2px}
 .mon .nm{font-family:'Alegreya SC',serif;font-size:18px}
 .mon .sm{font-size:15px;color:var(--mute);line-height:1.2}
