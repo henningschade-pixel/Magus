@@ -135,7 +135,8 @@ function worldPlan(state, pid) {
         // Erschöpfung: Reicht mein Mana und meine Lebenskraft nicht für das ganze Monster, bleibt es angeschlagen zurück und der Gegner, der danach am Zug ist, kann es leicht besiegen (die Beute ginge an ihn).
         const atk = Math.max(0, Math.min(s.mana / Q.xCost, (s.hp - 1) / Q.xHp)), left = Math.max(0, m.stats.hp - net * atk), oFin = oNet > 0 ? left / oNet : 99;
         const steal = Q.xPen > 0 && left > 0 ? Q.xPen * Math.max(0, Math.min(1, (Q.xHor - oFin) / Q.xHor)) * Math.max(1, m.stats.gold) : 0;
-        const score = -steal - Q.oHits * Math.max(0, hits - Q.oFree) + Q.cBase + Q.cHp * (s.hp - 1) + Q.cMana * (s.mana - 2) + state.worldTurns * Q.cWt - m.stats.hp * Q.cMon + press + R();
+        const risk = p.sp > 0 ? Q.sRisk * Math.min(1, left / Math.max(1, m.stats.hp)) : -Q.sZero;   // Siegpunkt-Risiko: reicht es nicht, verliere ich 1 Siegpunkt (bei 0 nichts)
+        const score = -risk - steal - Q.oHits * Math.max(0, hits - Q.oFree) + Q.cBase + Q.cHp * (s.hp - 1) + Q.cMana * (s.mana - 2) + state.worldTurns * Q.cWt - m.stats.hp * Q.cMon + press + R();
         if (!bestC || score > bestC.score) bestC = { score, acts: [A({ type: 'combat', elem: target })] };
       }
       cands.push(bestC);

@@ -1246,6 +1246,7 @@ const DEFAULTS = {
   fleeT: 999,   // Fliehen: ab so vielen Kampfschritten ohne brauchbaren Angriff gegen ein Monster ohne Mana (999 = nie; im Selbstspiel verlor die KI mit 14 Schritten 48 %, mit 6 Schritten 42 %)
   fleeHits: 20,   // Fliehen als Monsterführer: fliehe, wenn der Angreifer kein Mana mehr hat und ich das Monster danach in höchstens so vielen Angriffen selbst besiege (0 = nie; 20 gewann 50,9 % gegen 0 in 1600 Partien, 1 bis 4 waren wirkungslos, weil der Fall selten vorkommt)
   strat: 0, fHand: 3, fWeak: 4, sLock: 1,   // Eröffnung (Spielerstrategien): 0 frei, 1 Limit zuerst (Tempel-Gold für Ausspiellimit 2), 2 Fokus (eine Farbe, Handplätze erst nach dem ersten Sieg), 3 zwei Richtungen (zwei Farben auf 2, Handplätze erst nach dem 1. Showdown), 4 wählt je nach Starthand; fHand/fWeak: Farbwahl nach Handkarten bzw. geschwächtem Monster; sLock 0 hebt die Sperre der Handplätze auf
+  sRisk: 0, sZero: 0, fleeSafe: 0, fleeHp: 0,   // Siegpunkte: Niederlage gegen ein Monster kostet 1 Siegpunkt. sRisk: Abschlag, wenn Mana und HP voraussichtlich nicht für das ganze Monster reichen (nur mit Siegpunkten auf dem Konto); sZero: Bonus ohne Siegpunkte (nichts zu verlieren); fleeSafe: als Monsterführer fliehen, wenn der Angreifer das Monster in höchstens so vielen Angriffen besiegt (sonst kostet es mich 1 Siegpunkt); fleeHp: als Angreifer fliehen, wenn meine HP höchstens so hoch sind (0 = nie)
   tRace: 0, tHorizon: 3, tAlive: 0, tLoot: 0, mCounter: 0, mCatch: -1.5,   // Zeitdruck (Gegner nimmt mir ein Monster weg, Beute, wenige Monster übrig) und Reaktion auf den Aufbau des Gegners (überlegene Magie, Rückstand aufholen)                              // Magie kaufen
 };
 const PARAMS = {};
@@ -1401,7 +1402,8 @@ function worldPlan(state, pid) {
         // Erschöpfung: Reicht mein Mana und meine Lebenskraft nicht für das ganze Monster, bleibt es angeschlagen zurück und der Gegner, der danach am Zug ist, kann es leicht besiegen (die Beute ginge an ihn).
         const atk = Math.max(0, Math.min(s.mana / Q.xCost, (s.hp - 1) / Q.xHp)), left = Math.max(0, m.stats.hp - net * atk), oFin = oNet > 0 ? left / oNet : 99;
         const steal = Q.xPen > 0 && left > 0 ? Q.xPen * Math.max(0, Math.min(1, (Q.xHor - oFin) / Q.xHor)) * Math.max(1, m.stats.gold) : 0;
-        const score = -steal - Q.oHits * Math.max(0, hits - Q.oFree) + Q.cBase + Q.cHp * (s.hp - 1) + Q.cMana * (s.mana - 2) + state.worldTurns * Q.cWt - m.stats.hp * Q.cMon + press + R();
+        const risk = p.sp > 0 ? Q.sRisk * Math.min(1, left / Math.max(1, m.stats.hp)) : -Q.sZero;   // Siegpunkt-Risiko: reicht es nicht, verliere ich 1 Siegpunkt (bei 0 nichts)
+        const score = -risk - steal - Q.oHits * Math.max(0, hits - Q.oFree) + Q.cBase + Q.cHp * (s.hp - 1) + Q.cMana * (s.mana - 2) + state.worldTurns * Q.cWt - m.stats.hp * Q.cMon + press + R();
         if (!bestC || score > bestC.score) bestC = { score, acts: [A({ type: 'combat', elem: target })] };
       }
       cands.push(bestC);
@@ -1496,6 +1498,11 @@ function combatPlan(state, pid) {
       const me = state.players[pid].stats, net = outlook(state, pid, c.elem);
       if (net > 0 && side.stats.hp / net <= Q.fleeHits && me.hp >= Q.minHp && me.mana >= Q.minMana) return [A({ type: 'flee' })];
     }
+    if (Q.fleeSafe > 0 && side.kind === 'monster' && M.canFlee(state, pid) && state.players[pid].sp > 0) {   // Als Monsterführer: Besiegt der Angreifer das Monster bald, kostet mich das 1 Siegpunkt; die Flucht lässt das angeschlagene Monster stehen, und ich bin als Nächster dran
+      const net = outlook(state, opp.ctrl, c.elem);
+      if (net > 0 && side.stats.hp / net <= Q.fleeSafe) return [A({ type: 'flee' })];
+    }
+    if (Q.fleeHp > 0 && side.kind !== 'monster' && c.mode === 'monster' && M.canFlee(state, pid) && state.players[pid].sp > 0 && s.hp <= Q.fleeHp) return [A({ type: 'flee' })];   // Als Angreifer mit wenig HP: lieber fliehen als 1 Siegpunkt verlieren
     const best = bestAttack(side, opp, hand, Q, state), gain = M.recoverGain ? M.recoverGain(state) : 1;
     const lowMana = Q.rW * gain * Math.max(0, Q.rRef - s.mana);   // wenig Mana: nur noch starke Angriffe, sonst lieber erholen
     if (best && best.value > Q.aThr + lowMana - Q.stallDec * Math.max(0, Math.floor(((c.turns || 0) - Q.stallFrom) / 2))) {   // lange ohne Angriff: Schwelle sinkt, damit die KI nicht endlos nachzieht

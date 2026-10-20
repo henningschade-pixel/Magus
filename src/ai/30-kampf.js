@@ -82,6 +82,11 @@ function combatPlan(state, pid) {
       const me = state.players[pid].stats, net = outlook(state, pid, c.elem);
       if (net > 0 && side.stats.hp / net <= Q.fleeHits && me.hp >= Q.minHp && me.mana >= Q.minMana) return [A({ type: 'flee' })];
     }
+    if (Q.fleeSafe > 0 && side.kind === 'monster' && M.canFlee(state, pid) && state.players[pid].sp > 0) {   // Als Monsterführer: Besiegt der Angreifer das Monster bald, kostet mich das 1 Siegpunkt; die Flucht lässt das angeschlagene Monster stehen, und ich bin als Nächster dran
+      const net = outlook(state, opp.ctrl, c.elem);
+      if (net > 0 && side.stats.hp / net <= Q.fleeSafe) return [A({ type: 'flee' })];
+    }
+    if (Q.fleeHp > 0 && side.kind !== 'monster' && c.mode === 'monster' && M.canFlee(state, pid) && state.players[pid].sp > 0 && s.hp <= Q.fleeHp) return [A({ type: 'flee' })];   // Als Angreifer mit wenig HP: lieber fliehen als 1 Siegpunkt verlieren
     const best = bestAttack(side, opp, hand, Q, state), gain = M.recoverGain ? M.recoverGain(state) : 1;
     const lowMana = Q.rW * gain * Math.max(0, Q.rRef - s.mana);   // wenig Mana: nur noch starke Angriffe, sonst lieber erholen
     if (best && best.value > Q.aThr + lowMana - Q.stallDec * Math.max(0, Math.floor(((c.turns || 0) - Q.stallFrom) / 2))) {   // lange ohne Angriff: Schwelle sinkt, damit die KI nicht endlos nachzieht
