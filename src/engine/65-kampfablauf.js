@@ -69,7 +69,8 @@ function endCombat(state, end) {
     const msp = state.rules.monsterSp || 0;   // Siegpunkte im Monsterkampf: Sieger +msp, Verlierer -msp (nie unter 0); Flucht und Unentschieden bleiben ohne Wertung
     const swing = (W, L, pw, pl) => { if (!msp) return; W.sp += msp; const lost = Math.min(msp, L.sp); L.sp -= lost; res.sp = { winner: msp, loser: -lost }; log(state, W.name + ' erhält ' + msp + ' Siegpunkt' + (msp > 1 ? 'e' : '') + (lost ? ', ' + L.name + ' verliert ' + lost + '.' : '.'), pw); };
     if (end.winner === 'a') {
-      const loot = Math.max(0, m.stats.gold); m.stats.gold = 0; A.stats.gold += loot; A.stats.goldGot += loot;
+      // monsterLoot: feste Beute für jedes Monster, egal welcher Stufe
+      const loot = state.rules.monsterLoot !== undefined ? state.rules.monsterLoot : Math.max(0, m.stats.gold); m.stats.gold = 0; A.stats.gold += loot; A.stats.goldGot += loot;
       log(state, A.name + ' besiegt ' + m.name + ' und erhält ' + loot + ' Gold.', c.att);
       if (state.rules.lootBoth) { B.stats.gold += loot; B.stats.goldGot += loot; log(state, B.name + ' erhält ebenfalls ' + loot + ' Gold (Beute für beide).', c.def); }
       res.monsterDefeated = true; res.loot = loot;
