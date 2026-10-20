@@ -71,6 +71,7 @@ function worldSound(type, gainedUp, magNow, cardLv) {
 }
 function act(a) {
   if (!G || G.over || endView || modal || SPEC) return;   // beim Zuschauen gibt es keine Eingaben
+  if (markerOnWay()) { toast('Der Zugmarker ist noch unterwegs.'); return; }
   const full = Object.assign({ pid: ME }, a), prev = G.logN, up0 = G.players[ME].stats.upGot, r = M.apply(G, full);
   if (!r.ok) { toast(r.error); return; }
   if (a.type === 'temple') upSeen = G.players[ME].stats.upGot;   // Upgrade-Punkte aus dem Tempel haben ihren eigenen Ton (Tempelstufe)

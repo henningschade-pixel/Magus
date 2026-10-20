@@ -14,6 +14,8 @@ function turnSync() {
 }
 // Der Zugwechsel steht aus oder läuft noch: der Computer zieht erst danach
 function turnPending() { return !!(G && !G.over && ((turnAnim && !turnAnim.done) || (turnSide && turnSide !== (myTurn() ? 'me' : 'opp')))); }
+// Eigene Eingaben sind erst erlaubt, wenn der Zugmarker auf der eigenen Seite angekommen ist
+function markerOnWay() { return !!(G && !G.over && myTurn() && turnSide !== 'me'); }
 function startTurn(from, to) {
   if (turnAnim && turnAnim.cv) turnAnim.cv.remove();
   const cv = document.createElement('canvas'); cv.id = 'turncv'; cv.width = 1280; cv.height = 800; stage.appendChild(cv);
