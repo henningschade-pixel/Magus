@@ -35,14 +35,16 @@ function place(card, s) {
       rec.hold = Date.now() + VEND_WAIT; d.style.opacity = '1'; d.style.visibility = 'hidden';
       setTimeout(() => { d.style.visibility = ''; d.style.transform = rec.final; }, VEND_WAIT);
     } else { d.style.opacity = '0'; void d.offsetWidth; d.style.opacity = '1'; }
-    void d.offsetWidth;
+    void d.offsetWidth; cardsUntil = Math.max(cardsUntil, Date.now() + (vs ? VEND_WAIT : 0) + 450);
   }
   const prevZone = rec.zone; rec.zone = s.zone;
   if (s.zone === 'disc' && prevZone !== 'disc') sndQ.place++;
   else if (s.zone === 'hand' && prevZone !== 'hand') sndQ.flip++;
   else if (s.zone === 'draw' && prevZone === 'disc') sndQ.shuf++;
   const d = rec.el; rec.frame = frame;
+  const prevFinal = rec.final;
   rec.final = 'translate(' + s.x + 'px,' + s.y + 'px) rotate(' + (s.rot || 0) + 'deg) scale(' + s.sc + ')';
+  if (rec.final !== prevFinal && prevFinal) cardsUntil = Math.max(cardsUntil, Date.now() + 450);
   const held = rec.hold && Date.now() < rec.hold;   // gekaufte Karte wartet noch auf den Rückflug der bezahlten Karten
   if (!held) d.style.transform = rec.final;
   d.style.zIndex = held ? 400 : s.z;
@@ -73,8 +75,8 @@ function renderCards() {
   layoutDeck(cx.oppDeck, L_OP, false);
   for (const [uid, rec] of els) if (rec.frame !== frame) {
     els.delete(uid); const d = rec.el, back = !M.parseCard(rec.id).curse && stockSpot(rec.id);   // nur Flüche werden zerstört; alle anderen Karten gehen verkleinert zurück auf ihren Stapel beim Händler
-    if (back) { d.style.pointerEvents = 'none'; d.style.zIndex = 400; d.style.transform = 'translate(' + back.x + 'px,' + back.y + 'px) scale(' + back.sc + ')'; setTimeout(() => d.remove(), 520); }
-    else { d.classList.add('fadeout'); setTimeout(() => d.remove(), 1200); }
+    if (back) { d.style.pointerEvents = 'none'; d.style.zIndex = 400; d.style.transform = 'translate(' + back.x + 'px,' + back.y + 'px) scale(' + back.sc + ')'; cardsUntil = Math.max(cardsUntil, Date.now() + 520); setTimeout(() => d.remove(), 520); }
+    else { d.classList.add('fadeout'); cardsUntil = Math.max(cardsUntil, Date.now() + 1200); setTimeout(() => d.remove(), 1200); }
   }
   flushSound(quiet);
   // Platzhalter, Stapel-Beschriftungen, Klickflächen

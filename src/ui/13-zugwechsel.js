@@ -1,15 +1,19 @@
 /* ---------- Zugwechsel (Werte der Zugwechsel-Werkstatt): Der Rand teilt sich in der Mitte, zwei Linien laufen links und rechts zur anderen Seite ---------- */
-let turnSide = null, turnAnim = null;
+let turnSide = null, turnAnim = null, turnWait = 0, cardsUntil = 0;   // cardsUntil: bis wann Karten fliegen oder verbrennen
 const TURN = { dur: 1.1, pause: .15, width: 4, glow: 26, head: 1, tail: .35, comet: .8, inner: 70, pulse: .35 };
 function turnClasses() { const live = !turnAnim || turnAnim.done; stage.classList.toggle('turn-me', turnSide === 'me' && live); stage.classList.toggle('turn-opp', turnSide === 'opp' && live); }
 function turnSync() {
   const want = G && !G.over ? (myTurn() ? 'me' : 'opp') : null;
   if ((!turnAnim || turnAnim.done) && want !== turnSide) {
     const calm = FAST || !turnSide || !want || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
-    if (calm) turnSide = want; else startTurn(turnSide, want);
+    if (calm) turnSide = want;
+    else if (FlowFx.busy() || lateN > 0 || Date.now() < Math.max(fxUntil + 60, cardsUntil)) { if (!turnWait) turnWait = setTimeout(() => { turnWait = 0; render(); }, 80); }   // erst wenn Berechnung, Kampfanimation und Kartenflüge des Zugs fertig sind
+    else startTurn(turnSide, want);
   }
   turnClasses();
 }
+// Der Zugwechsel steht aus oder läuft noch: der Computer zieht erst danach
+function turnPending() { return !!(G && !G.over && ((turnAnim && !turnAnim.done) || (turnSide && turnSide !== (myTurn() ? 'me' : 'opp')))); }
 function startTurn(from, to) {
   if (turnAnim && turnAnim.cv) turnAnim.cv.remove();
   const cv = document.createElement('canvas'); cv.id = 'turncv'; cv.width = 1280; cv.height = 800; stage.appendChild(cv);

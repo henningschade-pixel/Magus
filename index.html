@@ -1681,17 +1681,21 @@ function markCol(s, who) {   // Todesmarker neben dem Limit; im Läuterungs-Angr
   return '<span class="mkcol"><span class="mk" title="Todesmarker: ' + (s.death || 0) + ' HP Verlust am Ende jeder eigenen Angriffsphase bis Kampfende. Nur Läuterung kann Marker entfernen.">' + (who ? markIcons(s.death || 0, who + 'd', L) : marks(s.death || 0)) + '</span></span>';
 }
 /* ---------- Zugwechsel (Werte der Zugwechsel-Werkstatt): Der Rand teilt sich in der Mitte, zwei Linien laufen links und rechts zur anderen Seite ---------- */
-let turnSide = null, turnAnim = null;
+let turnSide = null, turnAnim = null, turnWait = 0, cardsUntil = 0;   // cardsUntil: bis wann Karten fliegen oder verbrennen
 const TURN = { dur: 1.1, pause: .15, width: 4, glow: 26, head: 1, tail: .35, comet: .8, inner: 70, pulse: .35 };
 function turnClasses() { const live = !turnAnim || turnAnim.done; stage.classList.toggle('turn-me', turnSide === 'me' && live); stage.classList.toggle('turn-opp', turnSide === 'opp' && live); }
 function turnSync() {
   const want = G && !G.over ? (myTurn() ? 'me' : 'opp') : null;
   if ((!turnAnim || turnAnim.done) && want !== turnSide) {
     const calm = FAST || !turnSide || !want || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
-    if (calm) turnSide = want; else startTurn(turnSide, want);
+    if (calm) turnSide = want;
+    else if (FlowFx.busy() || lateN > 0 || Date.now() < Math.max(fxUntil + 60, cardsUntil)) { if (!turnWait) turnWait = setTimeout(() => { turnWait = 0; render(); }, 80); }   // erst wenn Berechnung, Kampfanimation und Kartenflüge des Zugs fertig sind
+    else startTurn(turnSide, want);
   }
   turnClasses();
 }
+// Der Zugwechsel steht aus oder läuft noch: der Computer zieht erst danach
+function turnPending() { return !!(G && !G.over && ((turnAnim && !turnAnim.done) || (turnSide && turnSide !== (myTurn() ? 'me' : 'opp')))); }
 function startTurn(from, to) {
   if (turnAnim && turnAnim.cv) turnAnim.cv.remove();
   const cv = document.createElement('canvas'); cv.id = 'turncv'; cv.width = 1280; cv.height = 800; stage.appendChild(cv);
@@ -1819,14 +1823,16 @@ function place(card, s) {
       rec.hold = Date.now() + VEND_WAIT; d.style.opacity = '1'; d.style.visibility = 'hidden';
       setTimeout(() => { d.style.visibility = ''; d.style.transform = rec.final; }, VEND_WAIT);
     } else { d.style.opacity = '0'; void d.offsetWidth; d.style.opacity = '1'; }
-    void d.offsetWidth;
+    void d.offsetWidth; cardsUntil = Math.max(cardsUntil, Date.now() + (vs ? VEND_WAIT : 0) + 450);
   }
   const prevZone = rec.zone; rec.zone = s.zone;
   if (s.zone === 'disc' && prevZone !== 'disc') sndQ.place++;
   else if (s.zone === 'hand' && prevZone !== 'hand') sndQ.flip++;
   else if (s.zone === 'draw' && prevZone === 'disc') sndQ.shuf++;
   const d = rec.el; rec.frame = frame;
+  const prevFinal = rec.final;
   rec.final = 'translate(' + s.x + 'px,' + s.y + 'px) rotate(' + (s.rot || 0) + 'deg) scale(' + s.sc + ')';
+  if (rec.final !== prevFinal && prevFinal) cardsUntil = Math.max(cardsUntil, Date.now() + 450);
   const held = rec.hold && Date.now() < rec.hold;   // gekaufte Karte wartet noch auf den Rückflug der bezahlten Karten
   if (!held) d.style.transform = rec.final;
   d.style.zIndex = held ? 400 : s.z;
@@ -1857,8 +1863,8 @@ function renderCards() {
   layoutDeck(cx.oppDeck, L_OP, false);
   for (const [uid, rec] of els) if (rec.frame !== frame) {
     els.delete(uid); const d = rec.el, back = !M.parseCard(rec.id).curse && stockSpot(rec.id);   // nur Flüche werden zerstört; alle anderen Karten gehen verkleinert zurück auf ihren Stapel beim Händler
-    if (back) { d.style.pointerEvents = 'none'; d.style.zIndex = 400; d.style.transform = 'translate(' + back.x + 'px,' + back.y + 'px) scale(' + back.sc + ')'; setTimeout(() => d.remove(), 520); }
-    else { d.classList.add('fadeout'); setTimeout(() => d.remove(), 1200); }
+    if (back) { d.style.pointerEvents = 'none'; d.style.zIndex = 400; d.style.transform = 'translate(' + back.x + 'px,' + back.y + 'px) scale(' + back.sc + ')'; cardsUntil = Math.max(cardsUntil, Date.now() + 520); setTimeout(() => d.remove(), 520); }
+    else { d.classList.add('fadeout'); cardsUntil = Math.max(cardsUntil, Date.now() + 1200); setTimeout(() => d.remove(), 1200); }
   }
   flushSound(quiet);
   // Platzhalter, Stapel-Beschriftungen, Klickflächen
@@ -2960,9 +2966,9 @@ function renderInner() {
   { const mine = panels.querySelector('.sbody[data-lead]');   // Knopfspalte weich ein- und ausfahren
     if (mine) { const now = mine.classList.contains('hasup'); if (leadPrev !== null && leadPrev !== now) { mine.classList.toggle('hasup', leadPrev); void mine.offsetWidth; mine.classList.toggle('hasup', now); } leadPrev = now; } }
   showFx();
-  turnSync();
   setCursor(cx.combat && cx.mine.kind === 'monster' ? 'monster' : 'human');
   renderCards();
+  turnSync();   // nach den Karten, damit deren Flüge schon bekannt sind
   pvSticky();
   if (G.over && !endView && !modal) { if (endSnd !== G) { endSnd = G; Snd.play(G.winner === ME ? 'win' : G.winner === null ? 'draw' : 'lose'); } showEnd(); }
   endTick(); specAdvance();
@@ -3083,6 +3089,7 @@ async function execPlan(acts) {
 }
 async function aiTurn() {
   if (!G || G.over || (!SPEC && M.actor(G) !== OPP)) return;
+  if (turnPending()) { aiTimer = setTimeout(aiTurn, 100); return; }
   const who = SPEC ? M.actor(G) : OPP;
   let ok = await execPlan(AI.plan(G, who));
   if (!ok) for (const fb of AI.fallback(G, who)) { ok = await execPlan([fb]); if (ok) break; }

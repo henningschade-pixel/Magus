@@ -99,6 +99,7 @@ async function execPlan(acts) {
 }
 async function aiTurn() {
   if (!G || G.over || (!SPEC && M.actor(G) !== OPP)) return;
+  if (turnPending()) { aiTimer = setTimeout(aiTurn, 100); return; }
   const who = SPEC ? M.actor(G) : OPP;
   let ok = await execPlan(AI.plan(G, who));
   if (!ok) for (const fb of AI.fallback(G, who)) { ok = await execPlan([fb]); if (ok) break; }
