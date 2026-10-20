@@ -1786,6 +1786,7 @@ function flushSound(quiet) {
 /* ---------- Karten ---------- */
 const L_MY = LAYOUT.hand.me, L_OP = LAYOUT.hand.opp;
 const els = new Map(); let frame = 0, firstFrame = false;
+const VEND_WAIT = 520, VEND_HAND = 560;   // Händler: Dauer des Rückflugs der bezahlten Karten bzw. Flug der gekauften Karte zur Hand (ms)
 function jit(uid, k) { const x = Math.sin(uid * 12.9898) * 43758.5453; return ((x - Math.floor(x)) - 0.5) * 2 * k; }
 function createCard(card) {
   const d = document.createElement('div'); d.className = 'card';
@@ -1812,19 +1813,26 @@ function place(card, s) {
   let rec = els.get(card.uid);
   if (!rec) {
     const d = createCard(card); layerCards.appendChild(d); rec = { el: d, id: card.id }; els.set(card.uid, rec);
-    const vs = !firstFrame && s.zone === 'disc' && !M.parseCard(card.id).curse ? stockSpot(card.id) : null;   // beim Händler gekauft: die Karte fliegt verkleinert vom Vorrat auf den Ablagestapel
+    const vs = !firstFrame && s.zone === 'disc' && !M.parseCard(card.id).curse ? stockSpot(card.id) : null;   // beim Händler gekauft
     const sp = vs || s.spawn || { x: s.x, y: s.y };
     d.style.transform = 'translate(' + sp.x + 'px,' + sp.y + 'px) scale(' + (vs ? vs.sc : s.sc) + ')';
-    if (!vs) d.style.opacity = '0';
-    void d.offsetWidth; d.style.opacity = '1';
+    if (vs) {   // nacheinander: erst fliegen die bezahlten Karten zum Händler, dann die gekaufte Karte vom Vorrat auf die Hand und von dort auf den Ablagestapel
+      rec.hold = Date.now() + VEND_WAIT + VEND_HAND; d.style.opacity = '1'; d.style.visibility = 'hidden';
+      const ht = 'translate(' + s.hand.x + 'px,' + s.hand.y + 'px) scale(' + s.sc + ')';
+      setTimeout(() => { d.style.visibility = ''; d.style.transform = ht; }, VEND_WAIT);
+      setTimeout(() => { d.style.transform = rec.final; }, VEND_WAIT + VEND_HAND);
+    } else { d.style.opacity = '0'; void d.offsetWidth; d.style.opacity = '1'; }
+    void d.offsetWidth;
   }
   const prevZone = rec.zone; rec.zone = s.zone;
   if (s.zone === 'disc' && prevZone !== 'disc') sndQ.place++;
   else if (s.zone === 'hand' && prevZone !== 'hand') sndQ.flip++;
   else if (s.zone === 'draw' && prevZone === 'disc') sndQ.shuf++;
   const d = rec.el; rec.frame = frame;
-  d.style.transform = 'translate(' + s.x + 'px,' + s.y + 'px) rotate(' + (s.rot || 0) + 'deg) scale(' + s.sc + ')';
-  d.style.zIndex = s.z;
+  rec.final = 'translate(' + s.x + 'px,' + s.y + 'px) rotate(' + (s.rot || 0) + 'deg) scale(' + s.sc + ')';
+  const held = rec.hold && Date.now() < rec.hold;   // gekaufte Karte unterwegs: Ziel erst am Ende des Flugs setzen
+  if (!held) d.style.transform = rec.final;
+  d.style.zIndex = held ? 400 : s.z;
   d.classList.toggle('down', !!s.down); d.classList.toggle('marked', !!s.marked); d.classList.toggle('first', !!s.first); d.classList.toggle('fd', !!s.fd); d.classList.toggle('locked', !!s.locked);
   d.classList.toggle('myhand', !!s.mine); d.dataset.slot = s.slot === undefined ? '' : s.slot;
   d.style.pointerEvents = s.mine ? 'auto' : 'none';
@@ -1835,8 +1843,9 @@ function slotX(i, n, L) {
 }
 function layoutDeck(deck, L, mine) {
   const spawn = { x: L.draw.x, y: L.draw.y };
+  const nh = deck.hand.length, fi = deck.hand.findIndex(c => !c), hand = { x: slotX(fi < 0 ? (nh - 1) / 2 : fi, nh, L), y: L.y };   // Handplatz, den die bezahlten Karten freigemacht haben (sonst Mitte)
   deck.draw.forEach((c, i) => place(c, { x: L.draw.x + Math.min(i, 5) * 0.8, y: L.draw.y - Math.min(i, 5) * 0.8, sc: L.ps, down: true, z: 1 + i, spawn, zone: 'draw' }));
-  deck.discard.forEach((c, i) => place(c, { x: L.disc.x + jit(c.uid, 4), y: L.disc.y + jit(c.uid + 7, 3), rot: jit(c.uid + 3, 6), sc: L.ps, down: false, z: 1 + i, spawn, zone: 'disc' }));
+  deck.discard.forEach((c, i) => place(c, { x: L.disc.x + jit(c.uid, 4), y: L.disc.y + jit(c.uid + 7, 3), rot: jit(c.uid + 3, 6), sc: L.ps, down: false, z: 1 + i, spawn, hand, zone: 'disc' }));
   const n = deck.hand.length;
   deck.hand.forEach((c, i) => {
     if (!c) return;
