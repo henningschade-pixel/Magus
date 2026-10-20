@@ -6,7 +6,7 @@ Dies ist die maßgebliche Fassung der Regeln. Sie ersetzt das Claude-Docs-Dokume
 
 Duellspiel für zwei Personen: Deck und Magie ausbauen, Monster besiegen und in bis zu drei Showdowns Siegpunkte holen. Wer nach dem zweiten Showdown mindestens 8 Siegpunkte hat, gewinnt sofort (Abschnitt 3 entfällt), sonst entscheidet nach dem dritten Showdown, wer mehr hat (bei Gleichstand das Gold, danach die Tempelstufe, danach unentschieden).
 
-**Siegpunkte im Überblick (seit v8):** Monsterkampf: Sieger +1, Verlierer −1 (nie unter 0), Flucht und Unentschieden zählen nicht. Showdown: Sieger +1, Verlierer −1 (nie unter 0), Unentschieden und Flucht 0/0, kein Trostpreis. Je Abschnitt sind damit höchstens 4 Siegpunkte möglich (drei Monsterkämpfe und der Showdown), nach zwei Abschnitten 8 (`showdownSp`).
+**Siegpunkte im Überblick (seit v8):** Monsterkampf: besiegt der Angreifer das Monster, erhält er +1 und der Monsterführer verliert 1; verliert der Angreifer, verliert er 1 und der Monsterführer erhält nichts (jeweils nie unter 0), Flucht und Unentschieden zählen nicht. Showdown: Sieger +1, Verlierer −1 (nie unter 0), Unentschieden und Flucht 0/0, kein Trostpreis. Je Abschnitt sind damit höchstens 4 Siegpunkte möglich (drei Monsterkämpfe und der Showdown), nach zwei Abschnitten 8 (`showdownSp`).
 
 Eine Partie hat drei Abschnitte (1, 2, 3). Je Abschnitt gibt es drei Monster (Stufe I, II, III). Sind alle drei besiegt, beginnt sofort der Showdown; danach erscheinen die Monster der nächsten Stufe.
 
@@ -69,7 +69,7 @@ Der aktive Spieler wählt ein lebendes Monster und greift an, der Mitspieler fü
 **Kampfende:**
 - Fällt eine Seite auf 0 HP, hat die andere gewonnen; fallen beide gleichzeitig, gibt es keinen Sieger.
 - Haben beide 0 Mana, endet der Kampf **nicht mehr automatisch** ohne Sieger. Er geht weiter: Erholen im Angriffszug bringt Mana, der Todes-Fluch zehrt am Ende der Angriffsphasen. Beenden lässt er sich durch **Fliehen** (möglich, wenn der Gegner 0 Mana hat). Als technische Sicherung endet ein Kampf nach 400 Schritten ohne Sieger.
-- Siegt der Spieler gegen das Monster, erhält er **1 Gold** (feste Beute für jedes Monster, egal welcher Stufe, `monsterLoot`) **und der Mitspieler (Monsterführer) bekommt ebenfalls 1 Gold** (`lootBoth`). Der Sieger erhält 1 Siegpunkt, der Verlierer verliert 1 (nie unter 0, `monsterSp`). Siegt das Monster, gibt es keine Beute, das Monster bleibt mit Werten und Gold; sein Führer erhält 1 Siegpunkt, der Angreifer verliert 1. Ohne Sieger (Flucht, beide fallen) gibt es weder Beute noch Siegpunkte, das Monster bleibt am Leben.
+- Siegt der Spieler gegen das Monster, erhält er **1 Gold** (feste Beute für jedes Monster, egal welcher Stufe, `monsterLoot`) **und der Mitspieler (Monsterführer) bekommt ebenfalls 1 Gold** (`lootBoth`). Der Sieger erhält 1 Siegpunkt, der Verlierer verliert 1 (nie unter 0, `monsterSp`). Siegt das Monster, gibt es keine Beute, das Monster bleibt mit Werten und Gold; der Angreifer verliert 1 Siegpunkt (nie unter 0), der Monsterführer erhält **keinen** (sonst ließe sich ein unbesiegtes Monster endlos farmen). Ohne Sieger (Flucht, beide fallen) gibt es weder Beute noch Siegpunkte, das Monster bleibt am Leben.
 - In Monsterkämpfen bleiben HP und Mana erhalten und regenerieren in der Weltphase; vor und nach einem Showdown sind sie voll.
 
 **Ergebnis-Bildschirm:** Nach der letzten Aktion läuft die Animation zu Ende, die Werte passen sich an, der Bildschirm dunkelt ab und zeigt „Sieg“, „Niederlage“ oder „Unentschieden“ (bei Sieg mit Beute). Erst nach einem Klick geht es in die Weltphase zurück.
@@ -127,7 +127,7 @@ Ein goldener Rand zeigt, wer am Zug ist (unten du, oben Gegner). Am Zugende teil
 
 ## Änderungen seit v7 (Siegpunkte)
 
-- Monsterkampf bringt Siegpunkte (+1 / −1, nie unter 0); die Beute geht an beide Spieler; Trostpreis nach Showdown gestrichen; vorzeitiges Ende ab 8 Siegpunkten nach Showdown 2 (vorher 4 Siegpunkte jederzeit). Hintergrund: Ein geschwächtes Monster zu hinterlassen war besser als ein Sieg. Fliehen bleibt ohne Wertung. Im KI-Selbstspiel entfällt Abschnitt 3 dadurch in etwa 32 % der Partien (600 Partien, KI nicht neu abgestimmt).
+- Monsterkampf bringt Siegpunkte (Sieg über das Monster +1, der Verlierer −1, nie unter 0; ein Monstersieg bringt dem Führer nichts); die Beute geht an beide Spieler; Trostpreis nach Showdown gestrichen; vorzeitiges Ende ab 8 Siegpunkten nach Showdown 2 (vorher 4 Siegpunkte jederzeit). Hintergrund: Ein geschwächtes Monster zu hinterlassen war besser als ein Sieg. Fliehen bleibt ohne Wertung. Im KI-Selbstspiel entfällt Abschnitt 3 dadurch in etwa 32 % der Partien (600 Partien, KI nicht neu abgestimmt).
 
 ## Änderungen seit v6
 
