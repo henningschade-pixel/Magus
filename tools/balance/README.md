@@ -30,3 +30,9 @@ Nachtrag: `vOff` 0,5 (Aufwertungen von Karten außerhalb der Zielfarbe zählen h
 ## Nachtraining nach „Passen ohne Mana“ (18.10.)
 
 Nach der Regeländerung (in der Verteidigung gibt Passen kein Mana mehr) stieg der Anteil der Monsterkämpfe ohne Sieger (Erschöpfung) bei Stufe I von etwa 40 auf 52 %, bei Stufe II von 39 auf 55 %. `opt2.js 2 500` übernahm nur `wFW` 1,3 (statt 2; bestätigt mit +2,8 Punkten, 51,3 % gegen die vorherige KI in 1600 Partien). Den Anteil der Erschöpfungsenden senkte das kaum (Stufe I 52 bis 54 %, Stufe II 50 bis 54 %): Die Gewichte der KI reichen dafür nicht, die Ursache liegt in der Regel selbst.
+
+## Nachtraining nach den Monster-Siegpunkten (20.10.)
+
+Neue Regel: Sieg über ein Monster +1 Siegpunkt (Monsterführer −1), Niederlage gegen das Monster −1 (nie unter 0), Showdown ±1, Flucht 0. Neue Stellschrauben (Standard 0): `sRisk`/`sZero` (Siegpunkt-Risiko beim Angriff), `fleeSafe` (als Monsterführer fliehen, bevor der Angreifer das Monster besiegt), `fleeHp` (als Angreifer bei wenig HP fliehen).
+`PARAMS=sRisk,sZero,fleeSafe,fleeHp,cBase,oHits,oFree,minMana,minHp,cMon,cWt,tRace,tAlive,mCounter,xPen node tools/balance/opt2.js 3 600` übernahm `minMana` 4 (erst mit vollem Start-Mana angreifen, +7 Punkte bestätigt) und `oHits` 4 (zähe Monster stärker meiden, +1,9). Die neuen Stellschrauben und `mCounter` brachten nichts Messbares; `minMana` 5 bricht ein (28 %), weil die KI dann vor dem ersten Mana-Ausbau gar nicht angreift.
+Ergebnis: 60 % ±0,9 gegen die vorherige KI (3200 Partien). Niederlagen gegen Monster je Partie 13,5 statt 18 (Monstersiege der Spieler unverändert 9).

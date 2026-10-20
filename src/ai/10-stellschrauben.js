@@ -2,10 +2,10 @@
 // Alle Gewichte der KI an einer Stelle (abgestimmt per Selbstspiel: Änderungen wurden nur übernommen, wenn sie sich in 800 Partien mit getauschten Plätzen klar durchsetzten). Pro Platz überschreibbar (setParams), damit Varianten gegeneinander spielen können.
 const DEFAULTS = {
   limitA: 1, slotA: 3, manaA: 4, hpA: 4, limitB: 3, slotB: 5,          // Ausbaureihenfolge der Upgrade-Punkte
-  cBase: 34, cHp: 3, cMana: 1.5, cWt: 2.8, cMon: 0.8, minHp: 1, minMana: 3,   // Lust, ein Monster anzugreifen
+  cBase: 34, cHp: 3, cMana: 1.5, cWt: 2.8, cMon: 0.8, minHp: 1, minMana: 4,   // Lust, ein Monster anzugreifen
   dBase: 7, dCurse: 4, dEmpty: 12, dSlot: 2, dNorm: 5,                    // Lust, nachzuziehen
   vUp: 8.85, vUpW: 1.4,                                                       // Händler-Aufwertung
-  smart: 1, wMark: 0.5, keepB: 3, keepOn: 0, wDeath: 6, wDraw: 1.6, wFW: 1.3, wFE: 0.9, wEW: 2.8, aDmg: 1.5, aCost: 1.5, aCurse: 1.6, aThr: 0.5, oHits: 2, oFree: 4, stallDec: 0.25, stallFrom: 24,   // Angriffsbewertung
+  smart: 1, wMark: 0.5, keepB: 3, keepOn: 0, wDeath: 6, wDraw: 1.6, wFW: 1.3, wFE: 0.9, wEW: 2.8, aDmg: 1.5, aCost: 1.5, aCurse: 1.6, aThr: 0.5, oHits: 4, oFree: 4, stallDec: 0.25, stallFrom: 24,   // Angriffsbewertung
   rW: 0, rRef: 3, dRec: 0, dU: 2,                                                 // Erholen als Manaquelle: Angriffsschwelle steigt bei wenig Mana, Verzicht auf Verteidigung bringt Mana
   dLeth: 40, dPend: 6, dCost: 1.4, dKeep: 0.9, mirW: 4, mirKeep: 3, mirAvoid: 2, lfOpp: 2, lfOppW: 0.8,                            // Verteidigungsbewertung
   mBase: 14, mCost: 2.1, mCnt: 0.7, mTop: 2,
