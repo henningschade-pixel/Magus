@@ -237,14 +237,14 @@
   "seed": 1018,
   "first": 0,
   "over": true,
-  "winner": 0,
+  "winner": 1,
   "sp": [
-   2,
-   0
+   0,
+   4
   ],
-  "steps": 605,
-  "log": 707,
-  "hash": "f621835bcd92"
+  "steps": 389,
+  "log": 432,
+  "hash": "bca3931acf2e"
  },
  {
   "seed": 1019,

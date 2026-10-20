@@ -310,7 +310,7 @@ function renderInner() {
 function showStart() {
   setCursor('human');
   overlay.style.display = 'flex'; overlay.className = 'overlay';
-  overlay.innerHTML = '<div class="box start"><h1>Magus</h1><p style="flex:none;color:var(--mute)">Ein Duell aus Magie, Monstern und bis zu drei Showdowns. Siege gegen Monster und Showdowns bringen Siegpunkte; wer nach dem zweiten Showdown 8 hat, gewinnt sofort.</p>' +
+  overlay.innerHTML = '<div class="box start"><h1>Magus</h1><p style="flex:none;color:var(--mute)">Ein Duell aus Magie, Monstern und bis zu drei Showdowns. Siege gegen Monster und Showdowns bringen Siegpunkte; wer nach dem zweiten Showdown 4 hat, gewinnt sofort.</p>' +
     '<img class="logo" alt="" src="assets/img/bg-9c4789d6.webp">' +
     (G && !G.over && !MP && started ? '<button class="btn primary" style="font-size:22px;padding:10px 28px;flex:none;align-self:center;margin-bottom:8px" data-act="resume">Spiel fortsetzen</button>' : '') + '<button class="btn' + (G && !G.over && !MP && started ? '' : ' primary') + '" style="font-size:22px;padding:10px 28px;flex:none;align-self:center" data-act="newgame">' + (G && !G.over && !MP && started ? 'Neues Spiel gegen den Computer' : 'Gegen den Computer spielen') + '</button>' +
     '<button class="btn" style="font-size:18px;padding:8px 22px;flex:none;align-self:center;margin-top:8px" data-act="newspec" title="Zwei Computerspieler spielen gegeneinander, du schaust zu (für Spielablauf und Statistik)">Zwei Computern zuschauen</button>' +

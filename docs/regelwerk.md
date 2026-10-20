@@ -4,7 +4,7 @@ Dies ist die maßgebliche Fassung der Regeln. Sie ersetzt das Claude-Docs-Dokume
 
 ## Spielidee und Ablauf
 
-Duellspiel für zwei Personen: Deck und Magie ausbauen, Monster besiegen und in bis zu drei Showdowns Siegpunkte holen. Wer nach dem zweiten Showdown mindestens 8 Siegpunkte hat, gewinnt sofort (Abschnitt 3 entfällt), sonst entscheidet nach dem dritten Showdown, wer mehr hat (bei Gleichstand das Gold, danach die Tempelstufe, danach unentschieden).
+Duellspiel für zwei Personen: Deck und Magie ausbauen, Monster besiegen und in bis zu drei Showdowns Siegpunkte holen. Wer nach dem zweiten Showdown mindestens 4 Siegpunkte hat, gewinnt sofort (Abschnitt 3 entfällt), sonst entscheidet nach dem dritten Showdown, wer mehr hat (bei Gleichstand das Gold, danach die Tempelstufe, danach unentschieden).
 
 **Siegpunkte im Überblick (seit v8):** Monsterkampf: besiegt der Angreifer das Monster, erhält er +1 und der Monsterführer verliert 1; verliert der Angreifer, verliert er 1 und der Monsterführer erhält nichts (jeweils nie unter 0), Flucht und Unentschieden zählen nicht. Showdown: Sieger +1, Verlierer −1 (nie unter 0), Unentschieden und Flucht 0/0, kein Trostpreis. Je Abschnitt sind damit höchstens 4 Siegpunkte möglich (drei Monsterkämpfe und der Showdown), nach zwei Abschnitten 8 (`showdownSp`).
 
@@ -118,7 +118,7 @@ Beginnt sofort nach dem dritten Monster eines Abschnitts. Vorher erscheint ein A
 
 - Sieger: +1 Siegpunkt, Verlierer −1 (nie unter 0), kein Goldraub. Kein Sieger (beide fallen): 0/0. **Fliehen** zählt nie als Sieg oder Niederlage: weder Siegpunkte noch Gold (auch im Showdown).
 - Nach dem Showdown sind HP und Mana voll. Der Verlierer beginnt die nächste Weltphase. Den **Trostpreis gibt es nicht mehr** (`loserUp` und `loserUp2` stehen auf 0).
-- **Vorzeitiges Ende:** Hat nach dem zweiten Showdown ein Spieler mindestens 8 Siegpunkte (`winSp`, geprüft ab `winSpFromShowdown` 2), gewinnt er sofort und Abschnitt 3 entfällt. Nach Showdown 1 sind höchstens 5 Siegpunkte möglich, die Grenze greift dort nie.
+- **Vorzeitiges Ende:** Hat nach dem zweiten Showdown ein Spieler mindestens 4 Siegpunkte (`winSp`, geprüft ab `winSpFromShowdown` 2), gewinnt er sofort und Abschnitt 3 entfällt. Nach Showdown 1 wird noch nicht geprüft (dort wären bis zu 4 Siegpunkte möglich).
 - Der Ergebnis-Bildschirm nennt Sieger, Siegpunkte und den nächsten Abschnitt.
 
 ## Zugwechsel (Oberfläche)
@@ -127,7 +127,7 @@ Ein goldener Rand zeigt, wer am Zug ist (unten du, oben Gegner). Am Zugende teil
 
 ## Änderungen seit v7 (Siegpunkte)
 
-- Monsterkampf bringt Siegpunkte (Sieg über das Monster +1, der Verlierer −1, nie unter 0; ein Monstersieg bringt dem Führer nichts); die Beute geht an beide Spieler; Trostpreis nach Showdown gestrichen; vorzeitiges Ende ab 8 Siegpunkten nach Showdown 2 (vorher 4 Siegpunkte jederzeit). Hintergrund: Ein geschwächtes Monster zu hinterlassen war besser als ein Sieg. Fliehen bleibt ohne Wertung. Im KI-Selbstspiel entfällt Abschnitt 3 dadurch in etwa 32 % der Partien (600 Partien, KI nicht neu abgestimmt).
+- Monsterkampf bringt Siegpunkte (Sieg über das Monster +1, der Verlierer −1, nie unter 0; ein Monstersieg bringt dem Führer nichts); die Beute geht an beide Spieler; Trostpreis nach Showdown gestrichen; vorzeitiges Ende ab 4 Siegpunkten nach Showdown 2 (zuerst 8, am 20.10. auf 4 gesenkt, weil 8 im KI-Spiel nie erreicht wurde). Hintergrund: Ein geschwächtes Monster zu hinterlassen war besser als ein Sieg. Fliehen bleibt ohne Wertung. Im KI-Selbstspiel entfällt Abschnitt 3 dadurch in etwa 32 % der Partien (600 Partien, KI nicht neu abgestimmt).
 
 ## Änderungen seit v6
 
