@@ -776,12 +776,17 @@ function endCombat(state, end) {
   const A = state.players[c.att], B = state.players[c.def];
   if (c.mode === 'monster') {
     const m = c.sides.b.monster;
+    const msp = state.rules.monsterSp || 0;   // Siegpunkte im Monsterkampf: Sieger +msp, Verlierer -msp (nie unter 0); Flucht und Unentschieden bleiben ohne Wertung
+    const swing = (W, L, pw, pl) => { if (!msp) return; W.sp += msp; const lost = Math.min(msp, L.sp); L.sp -= lost; res.sp = { winner: msp, loser: -lost }; log(state, W.name + ' erhält ' + msp + ' Siegpunkt' + (msp > 1 ? 'e' : '') + (lost ? ', ' + L.name + ' verliert ' + lost + '.' : '.'), pw); };
     if (end.winner === 'a') {
       const loot = Math.max(0, m.stats.gold); m.stats.gold = 0; A.stats.gold += loot; A.stats.goldGot += loot;
       log(state, A.name + ' besiegt ' + m.name + ' und erhält ' + loot + ' Gold.', c.att);
+      if (state.rules.lootBoth) { B.stats.gold += loot; B.stats.goldGot += loot; log(state, B.name + ' erhält ebenfalls ' + loot + ' Gold (Beute für beide).', c.def); }
       res.monsterDefeated = true; res.loot = loot;
+      swing(A, B, c.att);
     } else if (end.winner === 'b') {   // Niederlage gegen das Monster: keine Beute, Monster und Spieler bleiben mit ihren Werten auf dem Brett
       log(state, m.name + ' gewinnt den Kampf. Keine Beute.', c.def);
+      swing(B, A, c.def);
     }
     else log(state, end.reason === 'flee' ? 'Die Flucht ist geglückt. Kein Sieger, keine Beute; das Monster behält seine Verletzungen.' : end.reason === 'exhaustion' ? 'Beide Seiten sind erschöpft. Kein Sieger, keine Beute.' : 'Beide Seiten fallen. Kein Sieger, keine Beute.');
   } else {
@@ -802,7 +807,7 @@ function endCombat(state, end) {
     }
   } else {
     state.showdown++;
-    const goal = state.rules.winSp > 0 && Math.max(state.players[0].sp, state.players[1].sp) >= state.rules.winSp;   // Siegbedingung: wer zuerst winSp Siegpunkte hat, gewinnt sofort
+    const goal = state.rules.winSp > 0 && state.showdown >= (state.rules.winSpFromShowdown || 1) && Math.max(state.players[0].sp, state.players[1].sp) >= state.rules.winSp;   // Siegbedingung: wer nach einem Showdown (ab winSpFromShowdown) winSp Siegpunkte hat, gewinnt sofort; die Partie endet dann vor dem nächsten Abschnitt
     if (state.showdown >= 3 || goal) {
       state.over = true; state.phase = 'over';
       const s0 = state.players[0].sp, s1 = state.players[1].sp;
@@ -1143,7 +1148,7 @@ function applyWorld(state, a) {
 /* Magus – Regelkern (Teil 8): Spielstart und Schnittstelle nach außen. */
 
 // Regelwerte (Abstimmungs- und Variantenschalter). ‚curses‘: Fluchsystem, siehe 30-curses.js.
-const DEFAULT_RULES = { magicCost: [0, 1, 3], limitCost: 2, limitFirstStepCost: 2, hpPerPoint: 2, stagePoints: [0, 1, 2, 3], stageGold: [0, 1, 2, 3], loserUp: 1, loserUp2: 2, winSp: 4, recoverByStage: [1, 2, 3], regenByStage: [1, 2, 3], supply: 8, supply2: 6, supply3: 4, startCards: 0 };   // Jede gespielte Karte (auch Kombokarten) kostet 1 Mana, nur Verteidigung in der überlegenen Farbe ist gratis. recoverByStage: Mana-Gewinn von „Erholen“ im Kampf je Abschnitt
+const DEFAULT_RULES = { magicCost: [0, 1, 3], limitCost: 2, limitFirstStepCost: 2, hpPerPoint: 2, stagePoints: [0, 1, 2, 3], stageGold: [0, 1, 2, 3], loserUp: 0, loserUp2: 0, winSp: 8, winSpFromShowdown: 2, monsterSp: 1, lootBoth: true, recoverByStage: [1, 2, 3], regenByStage: [1, 2, 3], supply: 8, supply2: 6, supply3: 4, startCards: 0 };   // Jede gespielte Karte (auch Kombokarten) kostet 1 Mana, nur Verteidigung in der überlegenen Farbe ist gratis. recoverByStage: Mana-Gewinn von „Erholen“ im Kampf je Abschnitt
 
 function newPlayer(state, name, ai, startIds) {
   const p = { name, ai: !!ai, stats: newStats(), temple: { points: 0, level: 0 }, sp: 0, slots: MIN_SLOTS };
@@ -2978,7 +2983,7 @@ function renderInner() {
 function showStart() {
   setCursor('human');
   overlay.style.display = 'flex'; overlay.className = 'overlay';
-  overlay.innerHTML = '<div class="box start"><h1>Magus</h1><p style="flex:none;color:var(--mute)">Ein Duell aus Magie, Monstern und bis zu drei Showdowns. Wer zuerst 4 Siegpunkte hat, gewinnt.</p>' +
+  overlay.innerHTML = '<div class="box start"><h1>Magus</h1><p style="flex:none;color:var(--mute)">Ein Duell aus Magie, Monstern und bis zu drei Showdowns. Siege gegen Monster und Showdowns bringen Siegpunkte; wer nach dem zweiten Showdown 8 hat, gewinnt sofort.</p>' +
     '<img class="logo" alt="" src="assets/img/bg-9c4789d6.webp">' +
     (G && !G.over && !MP && started ? '<button class="btn primary" style="font-size:22px;padding:10px 28px;flex:none;align-self:center;margin-bottom:8px" data-act="resume">Spiel fortsetzen</button>' : '') + '<button class="btn' + (G && !G.over && !MP && started ? '' : ' primary') + '" style="font-size:22px;padding:10px 28px;flex:none;align-self:center" data-act="newgame">' + (G && !G.over && !MP && started ? 'Neues Spiel gegen den Computer' : 'Gegen den Computer spielen') + '</button>' +
     '<button class="btn" style="font-size:18px;padding:8px 22px;flex:none;align-self:center;margin-top:8px" data-act="newspec" title="Zwei Computerspieler spielen gegeneinander, du schaust zu (für Spielablauf und Statistik)">Zwei Computern zuschauen</button>' +
@@ -3021,11 +3026,11 @@ function checkCombatEnd(prevLog) {
 function resultSound(ev) { Snd.play(ev.cls === 'win' ? 'win' : ev.cls === 'lose' ? 'lose' : 'draw'); }
 // Texte des Ergebnis-Bildschirms (aus Sicht von ME)
 function endTexts(res, sn, lines) {
-  const rest = lines.filter(t => /^(Alle drei Monster|Zwei Monster|Erholungsphase|Abschnitt|Jeder Spieler erhält|.* erhält als Trostpreis|.* verlor den Showdown|Spielende|Gleichstand|Die Beute|.* erhält die Beute)/.test(t)), me = G.players[ME], opp = G.players[OPP];
+  const rest = lines.filter(t => /^(Alle drei Monster|Zwei Monster|Erholungsphase|Abschnitt|Jeder Spieler erhält|.* erhält \d+ Siegpunkt|.* verlor den Showdown|Spielende|Gleichstand|Die Beute|.* erhält die Beute|.* erhält ebenfalls)/.test(t)), me = G.players[ME], opp = G.players[OPP];
   if (res.mode === 'monster') {
     const m = sn.sides.b.monster, mine = sn.att === ME;
-    if (res.winner === 'a') return mine ? { cls: 'win', title: 'Sieg', sub: m.name + ' besiegt', loot: res.loot > 0 ? 'Beute: ' + res.loot + ' Gold' : 'Keine Beute', rest } : { cls: 'draw', title: m.name + ' besiegt', sub: G.players[sn.att].name + ' erhält ' + (res.loot || 0) + ' Gold', rest };
-    if (res.winner === 'b') return mine ? { cls: 'lose', title: 'Niederlage', sub: m.name + ' gewinnt den Kampf', loot: 'Keine Beute', rest } : { cls: 'draw', title: m.name + ' siegt', sub: 'Keine Beute', rest };
+    if (res.winner === 'a') return mine ? { cls: 'win', title: 'Sieg', sub: m.name + ' besiegt', loot: (res.loot > 0 ? 'Beute: ' + res.loot + ' Gold (für beide)' : 'Keine Beute') + (res.sp ? ' · +' + res.sp.winner + ' Siegpunkt' : ''), rest } : { cls: 'draw', title: m.name + ' besiegt', sub: 'Beute ' + (res.loot || 0) + ' Gold für beide' + (res.sp ? ' · ' + G.players[sn.att].name + ' +' + res.sp.winner + ' Siegpunkt' : ''), rest };
+    if (res.winner === 'b') return mine ? { cls: 'lose', title: 'Niederlage', sub: m.name + ' gewinnt den Kampf', loot: 'Keine Beute' + (res.sp ? ' · ' + res.sp.loser + ' Siegpunkt' : ''), rest } : { cls: 'draw', title: m.name + ' siegt', sub: 'Keine Beute' + (res.sp ? ' · ' + G.players[sn.att].name + ' ' + res.sp.loser + ' Siegpunkt' : ''), rest };
     return { cls: 'draw', title: 'Unentschieden', sub: 'Kein Sieger, keine Beute', rest };
   }
   const wc = res.winner ? sn.sides[res.winner].ctrl : null, sp = me.sp + ' : ' + opp.sp + ' Siegpunkte';
@@ -3051,7 +3056,7 @@ function checkShowdownIntro() {
   if (FAST || !G || G.over || endView || modal || G.phase !== 'combat' || G.combat.mode !== 'showdown' || introSeen === G.showdown) return;
   introSeen = G.showdown; Snd.play('showdown_start');
   const first = G.log.slice().reverse().find(e => /^Showdown \d/.test(e.txt));
-  modal = { title: 'Showdown ' + (G.showdown + 1) + ' von 3', sub: 'Alle Monster sind besiegt: Duell Spieler gegen Spieler', lines: [first ? first.txt : '', 'Wer gewinnt, erhält 2 Siegpunkte, bei Gleichstand je 1. Es gewinnt, wer zuerst 4 Siegpunkte hat oder nach drei Showdowns vorn liegt.'].filter(Boolean) };
+  modal = { title: 'Showdown ' + (G.showdown + 1) + ' von 3', sub: 'Alle Monster sind besiegt: Duell Spieler gegen Spieler', lines: [first ? first.txt : '', 'Wer gewinnt, erhält 2 Siegpunkte, bei Gleichstand je 1. Es gewinnt, wer nach dem zweiten Showdown 8 Siegpunkte hat oder nach drei Showdowns vorn liegt.'].filter(Boolean) };
 }
 // Töne zu eigenen Weltphasen-Aktionen (Tempel, Upgrades, Magie, Händler)
 function worldSound(type, gainedUp, magNow, cardLv) {

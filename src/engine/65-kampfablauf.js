@@ -66,12 +66,17 @@ function endCombat(state, end) {
   const A = state.players[c.att], B = state.players[c.def];
   if (c.mode === 'monster') {
     const m = c.sides.b.monster;
+    const msp = state.rules.monsterSp || 0;   // Siegpunkte im Monsterkampf: Sieger +msp, Verlierer -msp (nie unter 0); Flucht und Unentschieden bleiben ohne Wertung
+    const swing = (W, L, pw, pl) => { if (!msp) return; W.sp += msp; const lost = Math.min(msp, L.sp); L.sp -= lost; res.sp = { winner: msp, loser: -lost }; log(state, W.name + ' erhält ' + msp + ' Siegpunkt' + (msp > 1 ? 'e' : '') + (lost ? ', ' + L.name + ' verliert ' + lost + '.' : '.'), pw); };
     if (end.winner === 'a') {
       const loot = Math.max(0, m.stats.gold); m.stats.gold = 0; A.stats.gold += loot; A.stats.goldGot += loot;
       log(state, A.name + ' besiegt ' + m.name + ' und erhält ' + loot + ' Gold.', c.att);
+      if (state.rules.lootBoth) { B.stats.gold += loot; B.stats.goldGot += loot; log(state, B.name + ' erhält ebenfalls ' + loot + ' Gold (Beute für beide).', c.def); }
       res.monsterDefeated = true; res.loot = loot;
+      swing(A, B, c.att);
     } else if (end.winner === 'b') {   // Niederlage gegen das Monster: keine Beute, Monster und Spieler bleiben mit ihren Werten auf dem Brett
       log(state, m.name + ' gewinnt den Kampf. Keine Beute.', c.def);
+      swing(B, A, c.def);
     }
     else log(state, end.reason === 'flee' ? 'Die Flucht ist geglückt. Kein Sieger, keine Beute; das Monster behält seine Verletzungen.' : end.reason === 'exhaustion' ? 'Beide Seiten sind erschöpft. Kein Sieger, keine Beute.' : 'Beide Seiten fallen. Kein Sieger, keine Beute.');
   } else {
@@ -92,7 +97,7 @@ function endCombat(state, end) {
     }
   } else {
     state.showdown++;
-    const goal = state.rules.winSp > 0 && Math.max(state.players[0].sp, state.players[1].sp) >= state.rules.winSp;   // Siegbedingung: wer zuerst winSp Siegpunkte hat, gewinnt sofort
+    const goal = state.rules.winSp > 0 && state.showdown >= (state.rules.winSpFromShowdown || 1) && Math.max(state.players[0].sp, state.players[1].sp) >= state.rules.winSp;   // Siegbedingung: wer nach einem Showdown (ab winSpFromShowdown) winSp Siegpunkte hat, gewinnt sofort; die Partie endet dann vor dem nächsten Abschnitt
     if (state.showdown >= 3 || goal) {
       state.over = true; state.phase = 'over';
       const s0 = state.players[0].sp, s1 = state.players[1].sp;

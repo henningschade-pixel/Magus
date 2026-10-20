@@ -6,7 +6,7 @@ test('KI-Partien enden und liefern gültige Ergebnisse', () => {
   const g = all();
   for (const r of g) {
     assert.ok(r.over, 'Partie ' + r.seed + ' ist zu Ende');
-    assert.ok(r.sp.every(x => x >= 0 && x <= 6), 'Siegpunkte im Rahmen');
+    assert.ok(r.sp.every(x => x >= 0 && x <= 15), 'Siegpunkte im Rahmen');
   }
 });
 

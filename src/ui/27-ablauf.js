@@ -29,11 +29,11 @@ function checkCombatEnd(prevLog) {
 function resultSound(ev) { Snd.play(ev.cls === 'win' ? 'win' : ev.cls === 'lose' ? 'lose' : 'draw'); }
 // Texte des Ergebnis-Bildschirms (aus Sicht von ME)
 function endTexts(res, sn, lines) {
-  const rest = lines.filter(t => /^(Alle drei Monster|Zwei Monster|Erholungsphase|Abschnitt|Jeder Spieler erhält|.* erhält als Trostpreis|.* verlor den Showdown|Spielende|Gleichstand|Die Beute|.* erhält die Beute)/.test(t)), me = G.players[ME], opp = G.players[OPP];
+  const rest = lines.filter(t => /^(Alle drei Monster|Zwei Monster|Erholungsphase|Abschnitt|Jeder Spieler erhält|.* erhält \d+ Siegpunkt|.* verlor den Showdown|Spielende|Gleichstand|Die Beute|.* erhält die Beute|.* erhält ebenfalls)/.test(t)), me = G.players[ME], opp = G.players[OPP];
   if (res.mode === 'monster') {
     const m = sn.sides.b.monster, mine = sn.att === ME;
-    if (res.winner === 'a') return mine ? { cls: 'win', title: 'Sieg', sub: m.name + ' besiegt', loot: res.loot > 0 ? 'Beute: ' + res.loot + ' Gold' : 'Keine Beute', rest } : { cls: 'draw', title: m.name + ' besiegt', sub: G.players[sn.att].name + ' erhält ' + (res.loot || 0) + ' Gold', rest };
-    if (res.winner === 'b') return mine ? { cls: 'lose', title: 'Niederlage', sub: m.name + ' gewinnt den Kampf', loot: 'Keine Beute', rest } : { cls: 'draw', title: m.name + ' siegt', sub: 'Keine Beute', rest };
+    if (res.winner === 'a') return mine ? { cls: 'win', title: 'Sieg', sub: m.name + ' besiegt', loot: (res.loot > 0 ? 'Beute: ' + res.loot + ' Gold (für beide)' : 'Keine Beute') + (res.sp ? ' · +' + res.sp.winner + ' Siegpunkt' : ''), rest } : { cls: 'draw', title: m.name + ' besiegt', sub: 'Beute ' + (res.loot || 0) + ' Gold für beide' + (res.sp ? ' · ' + G.players[sn.att].name + ' +' + res.sp.winner + ' Siegpunkt' : ''), rest };
+    if (res.winner === 'b') return mine ? { cls: 'lose', title: 'Niederlage', sub: m.name + ' gewinnt den Kampf', loot: 'Keine Beute' + (res.sp ? ' · ' + res.sp.loser + ' Siegpunkt' : ''), rest } : { cls: 'draw', title: m.name + ' siegt', sub: 'Keine Beute' + (res.sp ? ' · ' + G.players[sn.att].name + ' ' + res.sp.loser + ' Siegpunkt' : ''), rest };
     return { cls: 'draw', title: 'Unentschieden', sub: 'Kein Sieger, keine Beute', rest };
   }
   const wc = res.winner ? sn.sides[res.winner].ctrl : null, sp = me.sp + ' : ' + opp.sp + ' Siegpunkte';
@@ -59,7 +59,7 @@ function checkShowdownIntro() {
   if (FAST || !G || G.over || endView || modal || G.phase !== 'combat' || G.combat.mode !== 'showdown' || introSeen === G.showdown) return;
   introSeen = G.showdown; Snd.play('showdown_start');
   const first = G.log.slice().reverse().find(e => /^Showdown \d/.test(e.txt));
-  modal = { title: 'Showdown ' + (G.showdown + 1) + ' von 3', sub: 'Alle Monster sind besiegt: Duell Spieler gegen Spieler', lines: [first ? first.txt : '', 'Wer gewinnt, erhält 2 Siegpunkte, bei Gleichstand je 1. Es gewinnt, wer zuerst 4 Siegpunkte hat oder nach drei Showdowns vorn liegt.'].filter(Boolean) };
+  modal = { title: 'Showdown ' + (G.showdown + 1) + ' von 3', sub: 'Alle Monster sind besiegt: Duell Spieler gegen Spieler', lines: [first ? first.txt : '', 'Wer gewinnt, erhält 2 Siegpunkte, bei Gleichstand je 1. Es gewinnt, wer nach dem zweiten Showdown 8 Siegpunkte hat oder nach drei Showdowns vorn liegt.'].filter(Boolean) };
 }
 // Töne zu eigenen Weltphasen-Aktionen (Tempel, Upgrades, Magie, Händler)
 function worldSound(type, gainedUp, magNow, cardLv) {

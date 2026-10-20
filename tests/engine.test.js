@@ -104,18 +104,31 @@ test('Monsterwerte je Stufe (Zäh, Limit, Beute)', () => {
   });
 });
 
-test('Trostpreis: nach Showdown 1 ein Upgrade-Punkt, nach Showdown 2 zwei', () => {
-  const found = {};
-  for (let seed = 7000; seed < 7040 && !(found[1] && found[2]); seed++) {
+test('Siegpunkte: Monsterkampf +1 / -1 (nie unter 0), Beute für beide, kein Trostpreis, Ende ab 8 nach Showdown 2', () => {
+  let decided = 0, floored = 0;
+  for (let seed = 7000; seed < 7040; seed++) {
     const s = M.newGame({ seed, ai: [true, true], first: seed & 1 });
-    let steps = 0; while (!s.over && steps++ < 20000) if (!AI.runTurn(s, M.actor(s)).ok) break;
-    let sd = 0;
-    for (const l of s.log) {
-      const m = /^Showdown (\d):/.exec(l.txt); if (m) sd = +m[1];
-      const t = /als Trostpreis (\d) Upgrade-Punkt/.exec(l.txt); if (t) found[sd] = +t[1];
+    let steps = 0, last = null;
+    while (!s.over && steps++ < 20000) {
+      const before = s.players.map(p => ({ sp: p.sp, gold: p.stats.gold }));
+      if (!AI.runTurn(s, M.actor(s)).ok) break;
+      s.players.forEach(p => assert.ok(p.sp >= 0, 'Siegpunkte nie unter 0'));
+      const r = s.lastCombat; if (!r || r === last || r.mode !== 'monster') continue;
+      last = r;
+      const d = s.players.map((p, i) => p.sp - before[i].sp);
+      if (r.winner === null) assert.deepEqual(d, [0, 0], 'Flucht oder Unentschieden ohne Siegpunkte');
+      else {
+        decided++;
+        const w = d.indexOf(1), l = 1 - w; assert.ok(w >= 0, 'der Sieger erhält 1 Siegpunkt');
+        assert.equal(d[l], before[l].sp > 0 ? -1 : 0, 'der Verlierer verliert 1 Siegpunkt, aber nie unter 0');
+        if (before[l].sp === 0) floored++;
+      }
+      if (r.monsterDefeated) { const g = s.players.map((p, i) => p.stats.gold - before[i].gold); assert.ok(g[0] === g[1] && g[0] >= 0, 'Beute für beide Spieler'); }
     }
+    assert.ok(!s.log.some(l => /Trostpreis/.test(l.txt)), 'kein Trostpreis');
+    if (s.over && s.showdown < 3) { assert.equal(s.showdown, 2, 'vorzeitiges Ende nur nach Showdown 2'); assert.ok(Math.max(s.players[0].sp, s.players[1].sp) >= 8, 'vorzeitiges Ende nur ab 8 Siegpunkten'); }
   }
-  assert.equal(found[1], 1); assert.equal(found[2], 2);
+  assert.ok(decided > 0 && floored > 0, 'Monsterkämpfe mit Sieger und Untergrenze 0 kamen vor');
 });
 
 test('Kampfende hält den Endstand für die Oberfläche fest (keepSnap)', () => {
