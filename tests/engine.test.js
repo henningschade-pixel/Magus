@@ -131,6 +131,24 @@ test('Siegpunkte: Monsterkampf +1 / -1 (nie unter 0), Beute für beide, kein Tro
   assert.ok(decided > 0 && floored > 0, 'Monsterkämpfe mit Sieger und Untergrenze 0 kamen vor');
 });
 
+test('Showdown: Sieger +1, Verlierer -1 (nie unter 0), Unentschieden und Flucht 0/0', () => {
+  let won = 0, drawn = 0;
+  for (let seed = 7100; seed < 7140; seed++) {
+    const s = M.newGame({ seed, ai: [true, true], first: seed & 1 });
+    let steps = 0, last = null;
+    while (!s.over && steps++ < 20000) {
+      const before = s.players.map(p => p.sp);
+      if (!AI.runTurn(s, M.actor(s)).ok) break;
+      const r = s.lastCombat; if (!r || r === last || r.mode !== 'showdown') continue;
+      last = r;
+      const d = s.players.map((p, i) => p.sp - before[i]);
+      if (r.winner === null) { drawn++; assert.deepEqual(d, [0, 0], 'Unentschieden ohne Siegpunkte'); }
+      else { won++; const w = d.indexOf(1), l = 1 - w; assert.ok(w >= 0, 'Sieger +1'); assert.equal(d[l], before[l] > 0 ? -1 : 0, 'Verlierer -1, nie unter 0'); }
+    }
+  }
+  assert.ok(won > 0, 'Showdowns mit Sieger kamen vor');
+});
+
 test('Kampfende hält den Endstand für die Oberfläche fest (keepSnap)', () => {
   const s = M.newGame({ seed: 21, ai: [true, true], first: 0 }); s.keepSnap = true;
   let steps = 0; while (!s.lastCombat && steps++ < 5000) if (!AI.runTurn(s, M.actor(s)).ok) break;
@@ -221,7 +239,7 @@ test('Läuterung kann Todesmarker beider Seiten entfernen (eigene und gegnerisch
   }
 });
 
-test('Fliehen im Showdown: bei 0 Mana des Gegners möglich, Showdown endet ohne Sieger (je 1 Siegpunkt)', () => {
+test('Fliehen im Showdown: bei 0 Mana des Gegners möglich, Showdown endet ohne Sieger (0/0)', () => {
   const s = M.newGame({ seed: 4, ai: [true, true], first: 0 });
   let steps = 0; while (!s.over && !(s.phase === 'combat' && s.combat.mode === 'showdown') && steps++ < 20000) if (!AI.runTurn(s, M.actor(s)).ok) break;
   assert.ok(s.phase === 'combat' && s.combat.mode === 'showdown', 'Showdown erreicht');

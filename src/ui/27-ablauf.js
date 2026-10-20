@@ -37,8 +37,8 @@ function endTexts(res, sn, lines) {
     return { cls: 'draw', title: 'Unentschieden', sub: 'Kein Sieger, keine Beute', rest };
   }
   const wc = res.winner ? sn.sides[res.winner].ctrl : null, sp = me.sp + ' : ' + opp.sp + ' Siegpunkte';
-  if (wc === null) return { cls: 'draw', title: 'Showdown unentschieden', sub: res.reason === 'flee' ? 'Flucht: kein Sieger, keine Siegpunkte' : 'Kein Sieger: je 1 Siegpunkt', loot: sp, rest };
-  return wc === ME ? { cls: 'win', title: 'Showdown gewonnen', sub: '+2 Siegpunkte', loot: sp, rest } : { cls: 'lose', title: 'Showdown verloren', sub: G.players[wc].name + ' erhält 2 Siegpunkte', loot: sp, rest };
+  if (wc === null) return { cls: 'draw', title: 'Showdown unentschieden', sub: res.reason === 'flee' ? 'Flucht: kein Sieger, keine Siegpunkte' : 'Kein Sieger: keine Siegpunkte', loot: sp, rest };
+  return wc === ME ? { cls: 'win', title: 'Showdown gewonnen', sub: '+1 Siegpunkt' + (res.sp && res.sp.loser ? ', ' + G.players[OPP].name + ' −1' : ''), loot: sp, rest } : { cls: 'lose', title: 'Showdown verloren', sub: G.players[wc].name + ' erhält 1 Siegpunkt' + (res.sp && res.sp.loser ? ', du verlierst 1' : ''), loot: sp, rest };
 }
 // Ablauf nach dem letzten Zug: Animation zu Ende -> Werte anpassen -> abdunkeln und Ergebnis zeigen -> Klick -> Weltphase
 function endTick() {
@@ -59,7 +59,7 @@ function checkShowdownIntro() {
   if (FAST || !G || G.over || endView || modal || G.phase !== 'combat' || G.combat.mode !== 'showdown' || introSeen === G.showdown) return;
   introSeen = G.showdown; Snd.play('showdown_start');
   const first = G.log.slice().reverse().find(e => /^Showdown \d/.test(e.txt));
-  modal = { title: 'Showdown ' + (G.showdown + 1) + ' von 3', sub: 'Alle Monster sind besiegt: Duell Spieler gegen Spieler', lines: [first ? first.txt : '', 'Wer gewinnt, erhält 2 Siegpunkte, bei Gleichstand je 1. Es gewinnt, wer nach dem zweiten Showdown 8 Siegpunkte hat oder nach drei Showdowns vorn liegt.'].filter(Boolean) };
+  modal = { title: 'Showdown ' + (G.showdown + 1) + ' von 3', sub: 'Alle Monster sind besiegt: Duell Spieler gegen Spieler', lines: [first ? first.txt : '', 'Wer gewinnt, erhält 1 Siegpunkt, der Verlierer verliert 1 (nie unter 0); bei Gleichstand oder Flucht gibt es keine. Es gewinnt, wer nach dem zweiten Showdown 8 Siegpunkte hat oder nach drei Showdowns vorn liegt.'].filter(Boolean) };
 }
 // Töne zu eigenen Weltphasen-Aktionen (Tempel, Upgrades, Magie, Händler)
 function worldSound(type, gainedUp, magNow, cardLv) {
