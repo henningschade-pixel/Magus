@@ -1067,7 +1067,7 @@ function deckAvg(p) {
   return out;
 }
 function sample(state, ev) {
-  state.hist.push({ ev: ev || null, p: state.players.map(p => Object.assign(deckAvg(p), { gold: p.stats.goldGot, up: p.stats.upGot, lvl: p.temple.level, F: p.stats.mag.F, E: p.stats.mag.E, W: p.stats.mag.W, slots: p.slots, limit: p.stats.limit, hp: p.stats.hp, mana: p.stats.mana })) });
+  state.hist.push({ ev: ev || null, p: state.players.map(p => Object.assign(deckAvg(p), { sp: p.sp, up: p.stats.upGot, lvl: p.temple.level, F: p.stats.mag.F, E: p.stats.mag.E, W: p.stats.mag.W, slots: p.slots, limit: p.stats.limit, hp: p.stats.hp, mana: p.stats.mana })) });
 }
 function endTurn(state, pid, kind) {
   const nx = other(pid);
@@ -2109,7 +2109,9 @@ function monLabel(m) {
   return m && m.label ? ' <span class="mlabel" title="' + esc((m.hints || []).join('\n')) + '" style="font-size:15px;color:var(--gold);font-weight:400">' + esc(m.label) + '</span>' : '';
 }
 function sideName(sd, suffix) {
-  return esc(sd.name) + (sd.kind === 'monster' ? monLabel(sd.monster) + esc(suffix) : '');
+  if (sd.kind !== 'monster') return esc(sd.name);
+  const m = sd.monster, tip = m && m.hints && m.hints.length ? ' title="' + esc(m.hints.join('\n')) + '"' : '';   // Besonderheiten nur als Hinweis beim Darüberfahren, nicht im Namen (spart Platz)
+  return '<span' + tip + '>' + esc(sd.name) + '</span>' + esc(suffix);
 }
 function sidePanels(cx) {
   let me, op;
@@ -3521,7 +3523,7 @@ homeBtn.addEventListener('click', e => { e.stopPropagation(); if (G && started) 
 stage.appendChild(homeBtn);
 /* ---------- Statistik: Verlaufskurven über die Züge (Messpunkte kommen aus G.hist der Engine) ---------- */
 const ST_SERIES = [
-  { k: 'gold', name: 'Gold (insgesamt)', col: '#e0b84a' },
+  { k: 'sp', name: 'Siegpunkte', col: '#e0b84a' },
   { k: 'up', name: 'Upgrades (insgesamt)', col: '#c47fe0' },
   { k: 'lvl', name: 'Tempelstufe', col: '#e8e3d0' },
   { k: 'F', name: 'Magie Feuer', col: '#ff7a3d', chip: 'mag' },
@@ -3536,9 +3538,9 @@ const ST_SERIES = [
   { k: 'aW', name: 'Ø Karte Wasser', col: '#9fd0ff', chip: 'avg', thin: true },
 ];
 ST_SERIES.forEach(s => { s.chip = s.chip || s.k; });
-// Filterknöpfe: die drei Magierichtungen bzw. die drei Kartendurchschnitte teilen sich je einen Knopf, jede Farbe bleibt eine eigene Linie
-const ST_CHIPS = [['gold', 'Gold (insgesamt)', '#e0b84a'], ['up', 'Upgrades (insgesamt)', '#c47fe0'], ['lvl', 'Tempelstufe', '#e8e3d0'], ['mag', 'Magie (Feuer, Erde, Wasser)', '#ff7a3d'], ['avg', 'Ø Karten (Feuer, Erde, Wasser)', '#ffb48a'], ['slots', 'Handkarten', '#e58aa0'], ['limit', 'Ausspiellimit', '#5fd0c4'], ['hp', 'HP', '#ff5d6c'], ['mana', 'Mana', '#6ea8ff']];
-const stOn = new Set(['gold', 'up', 'lvl']), stWho = { me: true, opp: true };
+// Filterknöpfe (immer genau ein Merkmal sichtbar): die drei Magierichtungen bzw. die drei Kartendurchschnitte teilen sich je einen Knopf, jede Farbe bleibt eine eigene Linie
+const ST_CHIPS = [['sp', 'Siegpunkte', '#e0b84a'], ['up', 'Upgrades (insgesamt)', '#c47fe0'], ['lvl', 'Tempelstufe', '#e8e3d0'], ['mag', 'Magie (Feuer, Erde, Wasser)', '#ff7a3d'], ['avg', 'Ø Karten (Feuer, Erde, Wasser)', '#ffb48a'], ['slots', 'Handkarten', '#e58aa0'], ['limit', 'Ausspiellimit', '#5fd0c4'], ['hp', 'HP', '#ff5d6c'], ['mana', 'Mana', '#6ea8ff']];
+const stOn = new Set(['sp']), stWho = { me: true, opp: true };
 const stView = { auto: true, x0: 0, x1: 1, y0: 0, y1: 4 };   // sichtbarer Ausschnitt in Daten-Einheiten; auto = Ursprung links unten, Achsen dehnen sich mit dem Spiel
 const ST = { W: 1000, T: 52, B: 40, L: 44, R: 16, PH: 330 };
 function niceStep(span, n) { const raw = span / n, p = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / p; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * p; }
@@ -3621,7 +3623,7 @@ function statsOpen(fromMenu) {
 }
 function statsToggle(act, k) {
   if (act === 'stwho') { stWho[k] = !stWho[k]; if (!stWho.me && !stWho.opp) stWho[k === 'me' ? 'opp' : 'me'] = true; }
-  else if (stOn.has(k)) { if (stOn.size > 1) stOn.delete(k); } else stOn.add(k);
+  else { stOn.clear(); stOn.add(k); }
   overlay.innerHTML = statsView();
 }
 

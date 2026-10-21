@@ -75,7 +75,9 @@ function monLabel(m) {
   return m && m.label ? ' <span class="mlabel" title="' + esc((m.hints || []).join('\n')) + '" style="font-size:15px;color:var(--gold);font-weight:400">' + esc(m.label) + '</span>' : '';
 }
 function sideName(sd, suffix) {
-  return esc(sd.name) + (sd.kind === 'monster' ? monLabel(sd.monster) + esc(suffix) : '');
+  if (sd.kind !== 'monster') return esc(sd.name);
+  const m = sd.monster, tip = m && m.hints && m.hints.length ? ' title="' + esc(m.hints.join('\n')) + '"' : '';   // Besonderheiten nur als Hinweis beim Darüberfahren, nicht im Namen (spart Platz)
+  return '<span' + tip + '>' + esc(sd.name) + '</span>' + esc(suffix);
 }
 function sidePanels(cx) {
   let me, op;
