@@ -1,6 +1,7 @@
 /* ---------- Statistik: Verlaufskurven über die Züge (Messpunkte kommen aus G.hist der Engine) ---------- */
 const ST_SERIES = [
-  { k: 'sp', name: 'Siegpunkte', col: '#e0b84a' },
+  { k: 'gold', name: 'Gold (insgesamt)', col: '#e0b84a' },
+  { k: 'sp', name: 'Siegpunkte', col: '#f2f0e6' },
   { k: 'up', name: 'Upgrades (insgesamt)', col: '#c47fe0' },
   { k: 'lvl', name: 'Tempelstufe', col: '#e8e3d0' },
   { k: 'F', name: 'Magie Feuer', col: '#ff7a3d', chip: 'mag' },
@@ -16,7 +17,7 @@ const ST_SERIES = [
 ];
 ST_SERIES.forEach(s => { s.chip = s.chip || s.k; });
 // Filterknöpfe (immer genau ein Merkmal sichtbar): die drei Magierichtungen bzw. die drei Kartendurchschnitte teilen sich je einen Knopf, jede Farbe bleibt eine eigene Linie
-const ST_CHIPS = [['sp', 'Siegpunkte', '#e0b84a'], ['up', 'Upgrades (insgesamt)', '#c47fe0'], ['lvl', 'Tempelstufe', '#e8e3d0'], ['mag', 'Magie (Feuer, Erde, Wasser)', '#ff7a3d'], ['avg', 'Ø Karten (Feuer, Erde, Wasser)', '#ffb48a'], ['slots', 'Handkarten', '#e58aa0'], ['limit', 'Ausspiellimit', '#5fd0c4'], ['hp', 'HP', '#ff5d6c'], ['mana', 'Mana', '#6ea8ff']];
+const ST_CHIPS = [['gold', 'Gold (insgesamt)', '#e0b84a'], ['sp', 'Siegpunkte', '#f2f0e6'], ['up', 'Upgrades (insgesamt)', '#c47fe0'], ['lvl', 'Tempelstufe', '#e8e3d0'], ['mag', 'Magie (Feuer, Erde, Wasser)', '#ff7a3d'], ['avg', 'Ø Karten (Feuer, Erde, Wasser)', '#ffb48a'], ['slots', 'Handkarten', '#e58aa0'], ['limit', 'Ausspiellimit', '#5fd0c4'], ['hp', 'HP', '#ff5d6c'], ['mana', 'Mana', '#6ea8ff']];
 const stOn = new Set(['sp']), stWho = { me: true, opp: true };
 const stView = { auto: true, x0: 0, x1: 1, y0: 0, y1: 4 };   // sichtbarer Ausschnitt in Daten-Einheiten; auto = Ursprung links unten, Achsen dehnen sich mit dem Spiel
 const ST = { W: 1000, T: 52, B: 40, L: 44, R: 16, PH: 330 };
