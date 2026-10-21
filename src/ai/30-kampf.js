@@ -23,7 +23,7 @@ function ordComboWorth(side, opp, Q, rules, lvs, ev) {
   let wFw = Q.wFW; if (ev.ord && ev.ord.el && pickMirrorEl(side, opp) !== ev.ord.el) wFw *= 0.5;
   return lvs.fw * wFw + lvs.fe * Q.wFE + lvs.ew * wEw + ruinWorth(opp, lvs.rm) + Math.min(lvs.gh * (rules.lifeflowHeal || 1), hurt) * Q.wEW + (lvs.gh > 0 && hurt === 0 ? 0.1 : 0);
 }
-function bestAttack(side, opp, hand, Q, state0) {
+function bestAttack(side, opp, hand, Q, state0, reserve) {
   const stats = side.stats, lim = Math.max(1, stats.limit);
   hand = hand.filter(h => !h.curse);   // Fluchkarten lassen sich nicht ausspielen
   let best = null;
@@ -42,7 +42,10 @@ function bestAttack(side, opp, hand, Q, state0) {
       else combo = lvs.fw * w.fw + lvs.fe * w.fe + lvs.ew * w.ew + ruinWorth(opp, lvs.rm) + Math.min(lvs.gh * 1, hurt) * Q.wEW + (lvs.gh > 0 && hurt === 0 ? 0.1 : 0);
       const dmg = ev.prim ? ev.damage : 0;
       let value = dmg * Q.aDmg + combo - ev.cost * Q.aCost + ev.curses * Q.aCurse;
-      if (dmg >= opp.stats.hp && dmg > 0) value += 100;
+      // Mana-Reserve: ohne Mana darf der unterlegene Gegner fliehen. Übersteht er den Angriff nach dem erwarteten Block, zählt der Angriff nicht als sicher tödlich.
+      const resHit = reserve && stats.mana - ev.cost <= 0 && (() => { const left = opp.stats.hp - Math.max(0, dmg - reserve.blk); return left > 0 && left <= reserve.hp; })();
+      if (dmg >= opp.stats.hp && dmg > 0 && !resHit) value += 100;
+      if (resHit) value -= reserve.v;
       if (dmg > 0 && ev.prim && M.mirrorOf(opp.stats, ev.prim) > 0) value -= Math.min(M.mirrorOf(opp.stats, ev.prim), dmg) * Q.mirAvoid;   // Spiegel des Gegners: gleicht bis zu seiner Stufe von meinem Schaden aus (zurückgeworfen wird nur Überverteidigung)
       if (ord.length > 1 && dmg === 0 && combo === 0 && ev.curses === 0) value -= 5;
       if (!best || value > best.value) best = { value, ord, ev, dmg };
@@ -87,7 +90,12 @@ function combatPlan(state, pid) {
       if (net > 0 && side.stats.hp / net <= Q.fleeSafe) return [A({ type: 'flee' })];
     }
     if (Q.fleeHp > 0 && side.kind !== 'monster' && c.mode === 'monster' && M.canFlee(state, pid) && state.players[pid].sp > 0 && s.hp <= Q.fleeHp) return [A({ type: 'flee' })];   // Als Angreifer mit wenig HP: lieber fliehen als 1 Siegpunkt verlieren
-    const best = bestAttack(side, opp, hand, Q, state), gain = M.recoverGain ? M.recoverGain(state) : 1;
+    // Wer das Rennen anführt, behält 1 Mana: Fliehen darf nur, wessen Gegner kein Mana hat (der unterlegene Angreifer rettet so seinen Siegpunkt, der Monsterführer stiehlt die Beute)
+    // Nur wo die Flucht dem Gegner etwas bringt: Als Angreifer, wenn das Monster nach meinem Angriff höchstens mResHp HP hat (der Führer flieht und besiegt es selbst); als Monster, wenn der Angreifer einen Siegpunkt zu retten hat.
+    let reserve = null;
+    const resV = side.kind === 'monster' ? (state.players[opp.ctrl].sp > 0 ? Q.mResL : 0) : Q.mRes;
+    if (resV > 0 && c.mode === 'monster' && raceTurns(state, side, opp) < raceTurns(state, opp, side)) reserve = { v: resV, hp: side.kind === 'monster' ? 99 : Q.mResHp, blk: Q.mResBlk };
+    const best = bestAttack(side, opp, hand, Q, state, reserve), gain = M.recoverGain ? M.recoverGain(state) : 1;
     if (c.mode === 'monster' && M.canFlee(state, pid) && !(best && best.dmg >= opp.stats.hp)) {   // Kampfprognose: Wer braucht weniger Züge, um den anderen zu besiegen? (ein sofort tödlicher Angriff geht vor)
       const tMe = raceTurns(state, side, opp), tOpp = raceTurns(state, opp, side);
       // Angreifer: Liegt das Monster in der Prognose mindestens fleeA (ohne Siegpunkte fleeA0) Züge vorn, droht eine Niederlage (−1 Siegpunkt, alle HP). Die Flucht behält beides; der bis dahin angerichtete Schaden bleibt am Monster.
@@ -100,6 +108,10 @@ function combatPlan(state, pid) {
         const me = state.players[pid].stats;
         if (me.hp >= Q.minHp && me.mana >= Q.fleeLMana) return [A({ type: 'flee' })];
       }
+    }
+    if (reserve && s.mana < s.maxMana && Q.mResRec) {   // Hält die Reserve einen brauchbaren Angriff zurück, erst Mana sammeln (Erholen), statt nachzuziehen und später doch mit dem letzten Mana anzugreifen
+      const raw = bestAttack(side, opp, hand, Q, state);
+      if (raw && raw.value > Q.aThr && (!best || best.value <= Q.aThr)) return [A({ type: 'recover' })];
     }
     const lowMana = Q.rW * gain * Math.max(0, Q.rRef - s.mana);   // wenig Mana: nur noch starke Angriffe, sonst lieber erholen
     if (best && best.value > Q.aThr + lowMana - Q.stallDec * Math.max(0, Math.floor(((c.turns || 0) - Q.stallFrom) / 2))) {   // lange ohne Angriff: Schwelle sinkt, damit die KI nicht endlos nachzieht

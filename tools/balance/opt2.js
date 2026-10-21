@@ -27,7 +27,7 @@ if (process.argv[2] === '__worker') {
       const seed0 = 40000 + r * 997;
       const base = await Promise.all(OPPS.map(async (o, i) => o ? await run(champ, Object.assign({}, champ, o), seed0 + i * 101) : { share: 0.5, se: Math.sqrt(0.25 / N) }));
       log('Runde', r + 1, 'Champion gegen Pool:', base.map(b => (100 * b.share).toFixed(1) + '%').join(' | '));
-      const cands = []; for (const k of only) for (const dir of [1, -1]) { const v = +(champ[k] + dir * STEP[k]).toFixed(3); if (['limitA', 'slotA', 'manaA', 'hpA', 'limitB', 'slotB', 'minHp', 'minMana', 'oHits', 'stallFrom', 'keepB', 'xPen', 'xCost', 'xHp', 'xHor', 'tHorizon', 'sRisk', 'sZero', 'fleeSafe', 'fleeHp', 'fleeA', 'fleeA0', 'fleeW', 'fleeL', 'fleeLHp', 'fleeLMana', 'fleeHits', 'tRace', 'tAlive', 'tLoot'].includes(k) && v < 0) continue; cands.push({ k, v }); }
+      const cands = []; for (const k of only) for (const dir of [1, -1]) { const v = +(champ[k] + dir * STEP[k]).toFixed(3); if (['limitA', 'slotA', 'manaA', 'hpA', 'limitB', 'slotB', 'minHp', 'minMana', 'oHits', 'stallFrom', 'keepB', 'xPen', 'xCost', 'xHp', 'xHor', 'tHorizon', 'sRisk', 'sZero', 'fleeSafe', 'fleeHp', 'fleeA', 'fleeA0', 'fleeW', 'fleeL', 'fleeLHp', 'fleeLMana', 'fleeHits', 'mRes', 'mResHp', 'mResL', 'mResBlk', 'tRace', 'tAlive', 'tLoot'].includes(k) && v < 0) continue; cands.push({ k, v }); }
       const res = [];
       for (const c of cands) {   // nacheinander in Gruppen, damit der Speicher klein bleibt
         const parts = await score(Object.assign({}, champ, { [c.k]: c.v }), seed0, N);
