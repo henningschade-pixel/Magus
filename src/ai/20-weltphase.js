@@ -120,6 +120,16 @@ function raceTurns(state, att, def) {
   const hits = Math.ceil(def.stats.hp / net), cpa = Math.max(1, att.stats.limit), gain = M.recoverGain(state);
   return hits + Math.ceil(Math.max(0, hits * cpa - att.stats.mana) / gain);
 }
+// Kampfausgang aus der Prognose (logistisch angepasst an KI-Partien, d = Vorsprung in Zügen, positiv = ich bin schneller; ±6 gekappt).
+// Angreifer am Zug gegen ein Monster ohne Mana bzw. Monster am Zug gegen einen Angreifer ohne Mana: { win, lose } aus meiner Sicht.
+const sig = v => 1 / (1 + Math.exp(-v));
+function fightOdds(d, asMonster) {
+  d = Math.max(-6, Math.min(6, d));
+  return asMonster ? { win: sig(0.92 + 0.22 * d), lose: sig(-1.51 - 0.29 * d) } : { win: sig(-0.78 + 0.23 * d), lose: sig(0.56 - 0.20 * d) };
+}
+// Pseudo-Kampfseiten für die Prognose außerhalb des Kampfes
+const playerFighter = p => ({ stats: p.stats, deck: p.deck });
+const monsterFighter = m => ({ stats: m.stats, deck: { draw: (m.deckIds || []).map(id => ({ id })), discard: [], hand: new Array(Math.max(3, m.stats.limit + 2)).fill(null) } });
 function worldPlan(state, pid) {
   const p = state.players[pid], s = p.stats, d = p.deck, Q = P(pid);
   const A = a => Object.assign({ pid }, a);

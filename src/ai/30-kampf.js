@@ -108,6 +108,25 @@ function combatPlan(state, pid) {
         const me = state.players[pid].stats;
         if (me.hp >= Q.minHp && me.mana >= Q.fleeLMana) return [A({ type: 'flee' })];
       }
+      // Bewertung der Ausgänge (Sieg > Flucht > Niederlage), in Siegpunkten gerechnet: Weiterkämpfen bringt P(Sieg) × Wert des Siegs + P(Niederlage) × Wert der Niederlage.
+      if (Q.fleeEV) {
+        const odds = fightOdds(tOpp - tMe, side.kind === 'monster'), mySp = state.players[pid].sp, oppSp = state.players[1 - pid].sp;
+        if (side.kind !== 'monster') {
+          // Gegner des Monsters: Sieg +1 für mich (und −1 für den Monsterführer, wenn er Siegpunkte hat) plus Beute; Niederlage −1 (wenn ich Siegpunkte habe) und alle HP. Die Flucht wendet nur die Niederlage ab.
+          const vWin = 1 + (oppSp > 0 ? 1 : 0) + Q.evLoot, vLose = -(mySp > 0 ? 1 : 0) - Q.evHp * s.hp / Math.max(1, s.maxHp);
+          if (moved && Q.fleeVA > odds.win * vWin + odds.lose * vLose) return [A({ type: 'flee' })];
+        } else {
+          // Monsterführer: Gewinnt der Angreifer, bekommt er +1 und ich verliere 1; gewinnt das Monster, verliert der Angreifer 1. Die Flucht ist lukrativer („Monster sind feige“):
+          // Das angeschlagene Monster bleibt stehen, ich bin als Nächster am Zug und kann es selbst besiegen (Prognose aus meiner Sicht als Angreifer).
+          const me = state.players[pid], mf = monsterFighter(state.monsters[c.elem]), pf = playerFighter(me);
+          mf.stats = side.stats;
+          const ready = me.stats.hp >= Q.minHp && me.stats.mana >= 1;
+          const kill = ready ? fightOdds(raceTurns(state, mf, pf) - raceTurns(state, pf, mf), false) : { win: 0, lose: 0 };
+          const vFlee = Q.fleeVL * (kill.win * (1 + (oppSp > 0 ? 1 : 0) + Q.evLoot) - kill.lose * (mySp > 0 ? 1 : 0));
+          const vStay = odds.win * (oppSp > 0 ? 1 : 0) - odds.lose * ((mySp > 0 ? 1 : 0) + 1 + Q.evLoot);
+          if (vFlee > vStay) return [A({ type: 'flee' })];
+        }
+      }
     }
     if (reserve && s.mana < s.maxMana && Q.mResRec) {   // Hält die Reserve einen brauchbaren Angriff zurück, erst Mana sammeln (Erholen), statt nachzuziehen und später doch mit dem letzten Mana anzugreifen
       const raw = bestAttack(side, opp, hand, Q, state);
