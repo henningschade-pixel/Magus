@@ -69,7 +69,7 @@ function endCombat(state, end) {
     const msp = state.rules.monsterSp || 0;   // Siegpunkte im Monsterkampf: Besiegt der Angreifer das Monster: +msp; verliert er: -msp (nie unter 0), der Monsterführer erhält nichts; Flucht und Unentschieden bleiben ohne Wertung
     const swing = (W, L, pw, pl) => { if (!msp) return; W.sp += msp; const lost = Math.min(msp, L.sp); L.sp -= lost; res.sp = { winner: msp, loser: -lost }; log(state, W.name + ' erhält ' + msp + ' Siegpunkt' + (msp > 1 ? 'e' : '') + (lost ? ', ' + L.name + ' verliert ' + lost + '.' : '.'), pw); };
     if (end.winner === 'a') {
-      // monsterLoot: feste Beute für jedes Monster, egal welcher Stufe
+      // Beute: Gold des Monsters (Stufe I 1, II 2, III 3); Regel monsterLoot würde sie für alle Monster festlegen
       const loot = state.rules.monsterLoot !== undefined ? state.rules.monsterLoot : Math.max(0, m.stats.gold); m.stats.gold = 0; A.stats.gold += loot; A.stats.goldGot += loot;
       log(state, A.name + ' besiegt ' + m.name + ' und erhält ' + loot + ' Gold.', c.att);
       if (state.rules.lootBoth) { B.stats.gold += loot; B.stats.goldGot += loot; log(state, B.name + ' erhält ebenfalls ' + loot + ' Gold (Beute für beide).', c.def); }

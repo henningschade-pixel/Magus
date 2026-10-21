@@ -1,7 +1,7 @@
 /* Magus – Regelkern (Teil 8): Spielstart und Schnittstelle nach außen. */
 
 // Regelwerte (Abstimmungs- und Variantenschalter). ‚curses‘: Fluchsystem, siehe 30-curses.js.
-const DEFAULT_RULES = { magicCost: [0, 1, 3], limitCost: 2, limitFirstStepCost: 2, hpPerPoint: 2, stagePoints: [0, 1, 2, 3], stageGold: [0, 1, 2, 3], loserUp: 0, loserUp2: 0, winSp: 4, winSpFromShowdown: 2, monsterSp: 1, showdownSp: 1, lootBoth: true, monsterLoot: 1, recoverByStage: [1, 2, 3], regenByStage: [1, 2, 3], supply: 8, supply2: 6, supply3: 4, startCards: 0 };   // Jede gespielte Karte (auch Kombokarten) kostet 1 Mana, nur Verteidigung in der überlegenen Farbe ist gratis. recoverByStage: Mana-Gewinn von „Erholen“ im Kampf je Abschnitt
+const DEFAULT_RULES = { magicCost: [0, 1, 3], limitCost: 2, limitFirstStepCost: 2, hpPerPoint: 2, stagePoints: [0, 1, 2, 3], stageGold: [0, 1, 2, 3], loserUp: 0, loserUp2: 0, winSp: 4, winSpFromShowdown: 2, monsterSp: 1, showdownSp: 1, lootBoth: true, recoverByStage: [1, 2, 3], regenByStage: [1, 2, 3], supply: 8, supply2: 6, supply3: 4, startCards: 0 };   // Jede gespielte Karte (auch Kombokarten) kostet 1 Mana, nur Verteidigung in der überlegenen Farbe ist gratis. recoverByStage: Mana-Gewinn von „Erholen“ im Kampf je Abschnitt
 
 function newPlayer(state, name, ai, startIds) {
   const p = { name, ai: !!ai, stats: newStats(), temple: { points: 0, level: 0 }, sp: 0, slots: MIN_SLOTS };
