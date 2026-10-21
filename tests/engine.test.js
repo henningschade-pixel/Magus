@@ -122,7 +122,7 @@ test('Siegpunkte: Monsterkampf +1 / -1 (nie unter 0), Beute für beide, kein Tro
         if (r.winner === 'a') { const w = d.indexOf(1), l = 1 - w; assert.ok(w >= 0, 'der Sieger erhält 1 Siegpunkt'); assert.equal(d[l], before[l].sp > 0 ? -1 : 0, 'der Verlierer verliert 1 Siegpunkt, aber nie unter 0'); if (before[l].sp === 0) floored++; }
         else { assert.ok(d.every(x => x <= 0), 'ein Monstersieg bringt dem Führer keinen Siegpunkt'); assert.ok(d.some(x => x === -1) || before.some(b => b.sp === 0), 'der Angreifer verliert 1 Siegpunkt, aber nie unter 0'); if (d.every(x => x === 0)) floored++; }
       }
-      if (r.monsterDefeated) { const g = s.players.map((p, i) => p.stats.goldGot - before[i].gold); assert.ok(g[0] === g[1] && g[0] === 1, 'Beute für beide Spieler'); }
+      if (r.monsterDefeated) { const g = s.players.map((p, i) => p.stats.goldGot - before[i].gold); assert.ok(g[0] === g[1] && g[0] >= 1 && g[0] <= 3, 'Beute (1 bis 3 Gold je nach Stufe) für beide Spieler'); }
     }
     assert.ok(!s.log.some(l => /Trostpreis/.test(l.txt)), 'kein Trostpreis');
     if (s.over && s.showdown < 3) { assert.equal(s.showdown, 2, 'vorzeitiges Ende nur nach Showdown 2'); assert.ok(Math.max(s.players[0].sp, s.players[1].sp) >= 4, 'vorzeitiges Ende nur ab 4 Siegpunkten'); }
