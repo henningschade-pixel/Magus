@@ -269,6 +269,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .mprow input:focus{outline:none;border-color:var(--gold)}
 #mpmsg{min-height:22px;font-size:15px}
 .mpcode{font-family:'Alegreya SC',serif;font-size:64px;letter-spacing:.2em;color:var(--gold);margin:10px 0}
+#specbtn{position:absolute;left:56px;top:12px;height:36px;border-radius:18px;border:1px solid var(--line);background:rgba(10,8,14,.7);font-size:16px;line-height:1;cursor:var(--cp);z-index:250;padding:0 14px;color:var(--bone)}#specbtn:hover{border-color:var(--gold)}
 #homebtn.off{border-color:var(--bad);color:var(--bad)}
 #mpchip{position:absolute;left:56px;top:16px;z-index:250;font-size:15px;color:var(--mute);background:rgba(10,8,14,.7);border:1px solid var(--line);border-radius:14px;padding:3px 12px;pointer-events:none}
 #mpchip.off{color:var(--bad);border-color:var(--bad)}

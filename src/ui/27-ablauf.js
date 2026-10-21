@@ -1,7 +1,7 @@
 /* ---------- Ablauf ---------- */
 function newGame(spec) {
   if (MP) mpLeave();
-  SPEC = !!spec; clearTimeout(specT); specT = 0; specSpeed = 1; setFast();
+  SPEC = !!spec; clearTimeout(specT); specT = 0; setSpecSpeed(1);
   ME = 0; OPP = 1;
   clearTimeout(aiTimer);
   els.forEach(r => r.el.remove()); els.clear();

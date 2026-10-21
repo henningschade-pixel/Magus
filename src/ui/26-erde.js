@@ -244,6 +244,7 @@ function setCursor(k) { if (k === curKey) return; curKey = k; applyCursor(); }
 document.addEventListener('pointerdown', () => { curDown = true; applyCursor(); }, true);
 document.addEventListener('pointerup', () => { curDown = false; applyCursor(); }, true);
 function render() {   // läuft der Ergebnis-Bildschirm, wird der Endstand des Kampfes gezeigt (die Engine ist schon in der Weltphase)
+  specBtnSync();
   if (!G) return;
   if (!endView && !modal) {   // neue Upgrade-Punkte (Abschnittsbonus, Trostpreis): Ton, sobald sie sichtbar werden
     const up = G.players[ME].stats.upGot;

@@ -279,6 +279,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .mprow input:focus{outline:none;border-color:var(--gold)}
 #mpmsg{min-height:22px;font-size:15px}
 .mpcode{font-family:'Alegreya SC',serif;font-size:64px;letter-spacing:.2em;color:var(--gold);margin:10px 0}
+#specbtn{position:absolute;left:56px;top:12px;height:36px;border-radius:18px;border:1px solid var(--line);background:rgba(10,8,14,.7);font-size:16px;line-height:1;cursor:var(--cp);z-index:250;padding:0 14px;color:var(--bone)}#specbtn:hover{border-color:var(--gold)}
 #homebtn.off{border-color:var(--bad);color:var(--bad)}
 #mpchip{position:absolute;left:56px;top:16px;z-index:250;font-size:15px;color:var(--mute);background:rgba(10,8,14,.7);border:1px solid var(--line);border-radius:14px;padding:3px 12px;pointer-events:none}
 #mpchip.off{color:var(--bad);border-color:var(--bad)}
@@ -1067,7 +1068,7 @@ function deckAvg(p) {
   return out;
 }
 function sample(state, ev) {
-  state.hist.push({ ev: ev || null, p: state.players.map(p => Object.assign(deckAvg(p), { gold: p.stats.goldGot, sp: p.sp, up: p.stats.upGot, lvl: p.temple.level, F: p.stats.mag.F, E: p.stats.mag.E, W: p.stats.mag.W, slots: p.slots, limit: p.stats.limit, hp: p.stats.hp, mana: p.stats.mana })) });
+  state.hist.push({ ev: ev || null, p: state.players.map(p => Object.assign(deckAvg(p), { sp: p.sp, up: p.stats.upGot, lvl: p.temple.level, F: p.stats.mag.F, E: p.stats.mag.E, W: p.stats.mag.W, slots: p.slots, limit: p.stats.limit, hp: p.stats.maxHp, mana: p.stats.maxMana })) });
 }
 function endTurn(state, pid, kind) {
   const nx = other(pid);
@@ -3018,6 +3019,7 @@ function setCursor(k) { if (k === curKey) return; curKey = k; applyCursor(); }
 document.addEventListener('pointerdown', () => { curDown = true; applyCursor(); }, true);
 document.addEventListener('pointerup', () => { curDown = false; applyCursor(); }, true);
 function render() {   // läuft der Ergebnis-Bildschirm, wird der Endstand des Kampfes gezeigt (die Engine ist schon in der Weltphase)
+  specBtnSync();
   if (!G) return;
   if (!endView && !modal) {   // neue Upgrade-Punkte (Abschnittsbonus, Trostpreis): Ton, sobald sie sichtbar werden
     const up = G.players[ME].stats.upGot;
@@ -3099,7 +3101,7 @@ function showEnd() {
 /* ---------- Ablauf ---------- */
 function newGame(spec) {
   if (MP) mpLeave();
-  SPEC = !!spec; clearTimeout(specT); specT = 0; specSpeed = 1; setFast();
+  SPEC = !!spec; clearTimeout(specT); specT = 0; setSpecSpeed(1);
   ME = 0; OPP = 1;
   clearTimeout(aiTimer);
   els.forEach(r => r.el.remove()); els.clear();
@@ -3386,7 +3388,7 @@ function onAct(d) {
   switch (d.act) {
     case 'newgame': newGame(); break;
     case 'newspec': newGame(true); break;
-    case 'specspeed': specSpeed = specSpeed === 1 ? 3 : specSpeed === 3 ? 99 : 1; setFast(); homeMenuDraw(); break;
+    case 'specspeed': setSpecSpeed(specSpeed === 1 ? 3 : specSpeed === 3 ? 99 : 1); break;
     case 'home': homeMenu(); break;
     case 'stopen': statsOpen(true); break;
     case 'sndtoggle': Snd.toggle(); Snd.play('ui_click', 0, .8); setTimeout(homeMenuDraw, 350); homeMenuDraw(); break;
@@ -3399,7 +3401,7 @@ function onAct(d) {
     case 'stwho': case 'stser': statsToggle(d.act, d.k); break;
     case 'resume': overlay.style.display = 'none'; overlay.innerHTML = ''; pump(); break;
     case 'restart': if (!MP) newGame(SPEC); break;
-    case 'leave': clearTimeout(aiTimer); if (MP) { mpLeave(); G = null; started = false; } showStart(); break;
+    case 'leave': clearTimeout(aiTimer); setSpecSpeed(1); if (MP) { mpLeave(); G = null; started = false; } showStart(); specBtn.style.display = 'none'; break;
     case 'mphost': mpHost(); break;
     case 'mpjoin': mpJoin(); break;
     case 'mpexit': mpLeave(); showStart(); break;
@@ -3509,7 +3511,6 @@ function homeMenuDraw() {
     '<button class="btn primary" style="font-size:21px;padding:10px" data-act="resume">Fortsetzen</button>' +
     '<button class="btn" style="font-size:21px;padding:10px" data-act="stopen" title="Verlauf über die Züge">📈 Statistik</button>' +
     '<button class="btn" style="font-size:21px;padding:10px" data-act="sndtoggle" title="Ton an oder aus">' + (si.on ? '🔊 Ton: an' : '🔇 Ton: aus') + (si.on && si.state !== 'nicht gestartet' ? '<small style="display:block;font-size:14px;color:var(--mute)">' + si.loaded + '/' + si.total + ' Sounds geladen · Audio ' + si.state + '</small>' : '') + '</button>' +
-    (SPEC ? '<button class="btn" style="font-size:21px;padding:10px" data-act="specspeed" title="Tempo der Computerzüge beim Zuschauen; ab ×3 ohne Animationen und Töne">⏩ Tempo: ' + (specSpeed === 1 ? 'normal' : specSpeed === 3 ? '×3' : 'maximal') + '</button>' : '') +
     (MP ? '' : '<button class="btn" style="font-size:21px;padding:10px" data-act="restart" title="Beginnt eine neue Partie (gleiche Art)">Neu starten</button>') +
     '<button class="btn" style="font-size:21px;padding:10px" data-act="leave">' + (MP ? 'Partie verlassen' : 'Spiel verlassen') + '</button></div></div>';
   mpChip();
@@ -3521,10 +3522,21 @@ const homeBtn = document.createElement('button');
 homeBtn.id = 'homebtn'; homeBtn.title = 'Menü: fortsetzen, neu starten, verlassen'; homeBtn.textContent = '⌂';
 homeBtn.addEventListener('click', e => { e.stopPropagation(); if (G && started) homeMenu(); });
 stage.appendChild(homeBtn);
+// Tempo-Knopf auf dem Spielfeld, nur beim Zuschauen einer Computerpartie; bei „maximal“ wird der Ton selbst ausgeschaltet und danach wiederhergestellt
+const specBtn = document.createElement('button');
+specBtn.id = 'specbtn'; specBtn.dataset.act = 'specspeed'; specBtn.title = 'Tempo der Computerzüge; ab ×3 ohne Animationen und Töne, bei maximal zusätzlich ohne Ton';
+stage.appendChild(specBtn);
+let specMuted = false;
+function specBtnSync() { specBtn.style.display = SPEC && started && G && !G.over ? '' : 'none'; specBtn.textContent = '⏩ ' + (specSpeed === 1 ? 'normal' : specSpeed === 3 ? '×3' : 'maximal'); }
+function setSpecSpeed(v) {
+  specSpeed = v; setFast();
+  if (v === 99 && Snd.on) { Snd.toggle(); specMuted = true; }
+  else if (v !== 99 && specMuted) { specMuted = false; if (!Snd.on) Snd.toggle(); }
+  specBtnSync(); if (overlay.style.display === 'flex' && overlay.querySelector('[data-act="resume"]')) homeMenuDraw();
+}
 /* ---------- Statistik: Verlaufskurven über die Züge (Messpunkte kommen aus G.hist der Engine) ---------- */
 const ST_SERIES = [
-  { k: 'gold', name: 'Gold (insgesamt)', col: '#e0b84a' },
-  { k: 'sp', name: 'Siegpunkte', col: '#f2f0e6' },
+  { k: 'sp', name: 'Siegpunkte', col: '#e0b84a' },
   { k: 'up', name: 'Upgrades (insgesamt)', col: '#c47fe0' },
   { k: 'lvl', name: 'Tempelstufe', col: '#e8e3d0' },
   { k: 'F', name: 'Magie Feuer', col: '#ff7a3d', chip: 'mag' },
@@ -3532,15 +3544,15 @@ const ST_SERIES = [
   { k: 'W', name: 'Magie Wasser', col: '#52a6f5', chip: 'mag' },
   { k: 'slots', name: 'Handkarten', col: '#e58aa0' },
   { k: 'limit', name: 'Ausspiellimit', col: '#5fd0c4' },
-  { k: 'hp', name: 'HP', col: '#ff5d6c' },
-  { k: 'mana', name: 'Mana', col: '#6ea8ff' },
+  { k: 'hp', name: 'Max. HP', col: '#ff5d6c' },
+  { k: 'mana', name: 'Max. Mana', col: '#6ea8ff' },
   { k: 'aF', name: 'Ø Karte Feuer', col: '#ffb48a', chip: 'avg', thin: true },
   { k: 'aE', name: 'Ø Karte Erde', col: '#c6e48f', chip: 'avg', thin: true },
   { k: 'aW', name: 'Ø Karte Wasser', col: '#9fd0ff', chip: 'avg', thin: true },
 ];
 ST_SERIES.forEach(s => { s.chip = s.chip || s.k; });
 // Filterknöpfe (immer genau ein Merkmal sichtbar): die drei Magierichtungen bzw. die drei Kartendurchschnitte teilen sich je einen Knopf, jede Farbe bleibt eine eigene Linie
-const ST_CHIPS = [['gold', 'Gold (insgesamt)', '#e0b84a'], ['sp', 'Siegpunkte', '#f2f0e6'], ['up', 'Upgrades (insgesamt)', '#c47fe0'], ['lvl', 'Tempelstufe', '#e8e3d0'], ['mag', 'Magie (Feuer, Erde, Wasser)', '#ff7a3d'], ['avg', 'Ø Karten (Feuer, Erde, Wasser)', '#ffb48a'], ['slots', 'Handkarten', '#e58aa0'], ['limit', 'Ausspiellimit', '#5fd0c4'], ['hp', 'HP', '#ff5d6c'], ['mana', 'Mana', '#6ea8ff']];
+const ST_CHIPS = [['sp', 'Siegpunkte', '#e0b84a'], ['up', 'Upgrades (insgesamt)', '#c47fe0'], ['lvl', 'Tempelstufe', '#e8e3d0'], ['mag', 'Magie (Feuer, Erde, Wasser)', '#ff7a3d'], ['avg', 'Ø Karten (Feuer, Erde, Wasser)', '#ffb48a'], ['slots', 'Handkarten', '#e58aa0'], ['limit', 'Ausspiellimit', '#5fd0c4'], ['hp', 'Max. HP', '#ff5d6c'], ['mana', 'Max. Mana', '#6ea8ff']];
 const stOn = new Set(['sp']), stWho = { me: true, opp: true };
 const stView = { auto: true, x0: 0, x1: 1, y0: 0, y1: 4 };   // sichtbarer Ausschnitt in Daten-Einheiten; auto = Ursprung links unten, Achsen dehnen sich mit dem Spiel
 const ST = { W: 1000, T: 52, B: 40, L: 44, R: 16, PH: 330 };
