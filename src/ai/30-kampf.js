@@ -88,6 +88,19 @@ function combatPlan(state, pid) {
     }
     if (Q.fleeHp > 0 && side.kind !== 'monster' && c.mode === 'monster' && M.canFlee(state, pid) && state.players[pid].sp > 0 && s.hp <= Q.fleeHp) return [A({ type: 'flee' })];   // Als Angreifer mit wenig HP: lieber fliehen als 1 Siegpunkt verlieren
     const best = bestAttack(side, opp, hand, Q, state), gain = M.recoverGain ? M.recoverGain(state) : 1;
+    if (c.mode === 'monster' && M.canFlee(state, pid) && !(best && best.dmg >= opp.stats.hp)) {   // Kampfprognose: Wer braucht weniger Züge, um den anderen zu besiegen? (ein sofort tödlicher Angriff geht vor)
+      const tMe = raceTurns(state, side, opp), tOpp = raceTurns(state, opp, side);
+      // Angreifer: Liegt das Monster in der Prognose mindestens fleeA (ohne Siegpunkte fleeA0) Züge vorn, droht eine Niederlage (−1 Siegpunkt, alle HP). Die Flucht behält beides; der bis dahin angerichtete Schaden bleibt am Monster.
+      // Erst fliehen, wenn sich im Kampf schon etwas getan hat: Sonst greift dieselbe Lage gleich wieder an, und die Partie tritt auf der Stelle.
+      const hp0 = c.trace && c.trace.steps[0] ? c.trace.steps[0].hp : null, moved = !hp0 || hp0[0] !== c.sides.a.stats.hp || hp0[1] !== c.sides.b.stats.hp;
+      const thr = state.players[pid].sp > 0 ? Q.fleeA : Q.fleeA0;   // ohne Siegpunkte kostet die Niederlage nur HP: dann nur bei klarer Lage fliehen (die Siegchance ist zwei Punkte wert)
+      if (thr > 0 && side.kind !== 'monster' && moved && tMe - tOpp >= thr) return [A({ type: 'flee' })];
+      // Monsterführer: Gewinnt der Angreifer das Rennen oder ist das Monster fast besiegt, bekommt er bald +1 und ich verliere 1. Die Flucht lässt das angeschlagene Monster stehen, und ich bin als Nächster am Zug, um es selbst zu besiegen.
+      if (side.kind === 'monster' && ((Q.fleeL > 0 && tOpp < tMe * Q.fleeL) || s.hp <= Q.fleeLHp)) {
+        const me = state.players[pid].stats;
+        if (me.hp >= Q.minHp && me.mana >= Q.fleeLMana) return [A({ type: 'flee' })];
+      }
+    }
     const lowMana = Q.rW * gain * Math.max(0, Q.rRef - s.mana);   // wenig Mana: nur noch starke Angriffe, sonst lieber erholen
     if (best && best.value > Q.aThr + lowMana - Q.stallDec * Math.max(0, Math.floor(((c.turns || 0) - Q.stallFrom) / 2))) {   // lange ohne Angriff: Schwelle sinkt, damit die KI nicht endlos nachzieht
       const acts = best.ord.map(h => A({ type: 'mark', slot: h.slot }));
@@ -177,5 +190,5 @@ function runTurn(state, pid) {
   return { ok: false };
 }
 
-return { plan, runTurn, fallback, ecoStep, setParams, DEFAULTS };
+return { plan, runTurn, fallback, ecoStep, setParams, DEFAULTS, _race: raceTurns };
 }));

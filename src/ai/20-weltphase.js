@@ -96,6 +96,30 @@ function outlook(state, pid, el) {
   }
   return Math.max(0, best);
 }
+// Kampfprognose im Monsterkampf: Wie viele eigene Angriffszüge braucht jede Seite noch, bis die andere fällt? Nettoschaden je Angriff aus dem ganzen Kampfdeck
+// (beste Farbe, abzüglich des erwarteten Blocks aus der Hand des Gegners); fehlendes Mana kostet zusätzliche Züge zum Erholen.
+function netHit(as, ad, ds, dd) {
+  const parse = d => [].concat(d.draw, d.discard, d.hand.filter(Boolean)).map(c => M.parseCard(c.id)).filter(c => !c.curse);
+  const mine = parse(ad), theirs = parse(dd), dlim = Math.max(1, ds.limit), r = theirs.length ? Math.min(1, dd.hand.length / theirs.length) : 0;
+  let best = 0;
+  for (const e of M.ELEMENTS) {
+    const dmg = mine.filter(c => c.el === e).map(c => Math.min(c.tier, as.mag[e])).sort((a, b) => b - a).slice(0, Math.max(1, as.limit)).reduce((a, b) => a + b, 0);
+    let blk = 0;
+    for (const col of [e, M.SUPERIOR[e]]) {
+      const bv = theirs.filter(c => c.el === col).map(c => Math.min(c.tier, ds.mag[col])).sort((a, b) => b - a);
+      let eb = 0; for (let i = 0; i < Math.min(dlim, bv.length); i++) eb += bv[i] * Math.min(1, (bv.length - i) * r);
+      blk = Math.max(blk, eb);
+    }
+    best = Math.max(best, dmg - blk);
+  }
+  return Math.max(0, best);
+}
+function raceTurns(state, att, def) {
+  const net = netHit(att.stats, att.deck, def.stats, def.deck);
+  if (net <= 0) return 99;
+  const hits = Math.ceil(def.stats.hp / net), cpa = Math.max(1, att.stats.limit), gain = M.recoverGain(state);
+  return hits + Math.ceil(Math.max(0, hits * cpa - att.stats.mana) / gain);
+}
 function worldPlan(state, pid) {
   const p = state.players[pid], s = p.stats, d = p.deck, Q = P(pid);
   const A = a => Object.assign({ pid }, a);
@@ -136,7 +160,10 @@ function worldPlan(state, pid) {
         const atk = Math.max(0, Math.min(s.mana / Q.xCost, (s.hp - 1) / Q.xHp)), left = Math.max(0, m.stats.hp - net * atk), oFin = oNet > 0 ? left / oNet : 99;
         const steal = Q.xPen > 0 && left > 0 ? Q.xPen * Math.max(0, Math.min(1, (Q.xHor - oFin) / Q.xHor)) * Math.max(1, m.stats.gold) : 0;
         const risk = p.sp > 0 ? Q.sRisk * Math.min(1, left / Math.max(1, m.stats.hp)) : -Q.sZero;   // Siegpunkt-Risiko: reicht es nicht, verliere ich 1 Siegpunkt (bei 0 nichts)
-        const score = -risk - steal - Q.oHits * Math.max(0, hits - Q.oFree) + Q.cBase + Q.cHp * (s.hp - 1) + Q.cMana * (s.mana - 2) + state.worldTurns * Q.cWt - m.stats.hp * Q.cMon + press + R();
+        // Kampfprognose wie im Kampf: Gewinnt das Monster das Rennen, verliere ich (oder muss fliehen); Abschlag je Zug Rückstand
+        let doom = 0;
+        if (Q.fleeW > 0) { const me = { stats: s, deck: d }, mo = { stats: m.stats, deck: { draw: (m.deckIds || []).map(id => ({ id })), discard: [], hand: new Array(Math.max(3, m.stats.limit + 2)).fill(null) } }; doom = Math.max(0, raceTurns(state, me, mo) - raceTurns(state, mo, me)) * Q.fleeW; }
+        const score = -doom - risk - steal - Q.oHits * Math.max(0, hits - Q.oFree) + Q.cBase + Q.cHp * (s.hp - 1) + Q.cMana * (s.mana - 2) + state.worldTurns * Q.cWt - m.stats.hp * Q.cMon + press + R();
         if (!bestC || score > bestC.score) bestC = { score, acts: [A({ type: 'combat', elem: target })] };
       }
       cands.push(bestC);

@@ -1247,6 +1247,7 @@ const DEFAULTS = {
   fleeHits: 20,   // Fliehen als Monsterführer: fliehe, wenn der Angreifer kein Mana mehr hat und ich das Monster danach in höchstens so vielen Angriffen selbst besiege (0 = nie; 20 gewann 50,9 % gegen 0 in 1600 Partien, 1 bis 4 waren wirkungslos, weil der Fall selten vorkommt)
   strat: 0, fHand: 3, fWeak: 4, sLock: 1,   // Eröffnung (Spielerstrategien): 0 frei, 1 Limit zuerst (Tempel-Gold für Ausspiellimit 2), 2 Fokus (eine Farbe, Handplätze erst nach dem ersten Sieg), 3 zwei Richtungen (zwei Farben auf 2, Handplätze erst nach dem 1. Showdown), 4 wählt je nach Starthand; fHand/fWeak: Farbwahl nach Handkarten bzw. geschwächtem Monster; sLock 0 hebt die Sperre der Handplätze auf
   sRisk: 0, sZero: 0, fleeSafe: 0, fleeHp: 0,   // Siegpunkte: Niederlage gegen ein Monster kostet 1 Siegpunkt. sRisk: Abschlag, wenn Mana und HP voraussichtlich nicht für das ganze Monster reichen (nur mit Siegpunkten auf dem Konto); sZero: Bonus ohne Siegpunkte (nichts zu verlieren); fleeSafe: als Monsterführer fliehen, wenn der Angreifer das Monster in höchstens so vielen Angriffen besiegt (sonst kostet es mich 1 Siegpunkt); fleeHp: als Angreifer fliehen, wenn meine HP höchstens so hoch sind (0 = nie)
+  fleeA: 0, fleeA0: 0, fleeW: 0, fleeL: 0, fleeLHp: 0, fleeLMana: 0,   // Fliehen nach Kampfprognose (Züge bis zum Sieg je Seite, siehe raceTurns), nur möglich, wenn der Gegner kein Mana hat. fleeA: Angreifer mit Siegpunkten flieht, wenn das Monster in der Prognose mindestens so viele Züge vorn liegt (0 = nie); fleeA0: dasselbe ohne Siegpunkte. Monsterführer flieht, wenn der Angreifer weniger als fleeL × so viele Züge braucht wie das Monster oder das Monster höchstens fleeLHp HP hat, und er selbst mindestens fleeLMana Mana hat. fleeW: Abschlag beim Angriffswunsch je Zug, den das Monster in der Prognose vorn liegt
   tRace: 0, tHorizon: 3, tAlive: 0, tLoot: 0, mCounter: 0, mCatch: -1.5,   // Zeitdruck (Gegner nimmt mir ein Monster weg, Beute, wenige Monster übrig) und Reaktion auf den Aufbau des Gegners (überlegene Magie, Rückstand aufholen)                              // Magie kaufen
 };
 const PARAMS = {};
@@ -1363,6 +1364,30 @@ function outlook(state, pid, el) {
   }
   return Math.max(0, best);
 }
+// Kampfprognose im Monsterkampf: Wie viele eigene Angriffszüge braucht jede Seite noch, bis die andere fällt? Nettoschaden je Angriff aus dem ganzen Kampfdeck
+// (beste Farbe, abzüglich des erwarteten Blocks aus der Hand des Gegners); fehlendes Mana kostet zusätzliche Züge zum Erholen.
+function netHit(as, ad, ds, dd) {
+  const parse = d => [].concat(d.draw, d.discard, d.hand.filter(Boolean)).map(c => M.parseCard(c.id)).filter(c => !c.curse);
+  const mine = parse(ad), theirs = parse(dd), dlim = Math.max(1, ds.limit), r = theirs.length ? Math.min(1, dd.hand.length / theirs.length) : 0;
+  let best = 0;
+  for (const e of M.ELEMENTS) {
+    const dmg = mine.filter(c => c.el === e).map(c => Math.min(c.tier, as.mag[e])).sort((a, b) => b - a).slice(0, Math.max(1, as.limit)).reduce((a, b) => a + b, 0);
+    let blk = 0;
+    for (const col of [e, M.SUPERIOR[e]]) {
+      const bv = theirs.filter(c => c.el === col).map(c => Math.min(c.tier, ds.mag[col])).sort((a, b) => b - a);
+      let eb = 0; for (let i = 0; i < Math.min(dlim, bv.length); i++) eb += bv[i] * Math.min(1, (bv.length - i) * r);
+      blk = Math.max(blk, eb);
+    }
+    best = Math.max(best, dmg - blk);
+  }
+  return Math.max(0, best);
+}
+function raceTurns(state, att, def) {
+  const net = netHit(att.stats, att.deck, def.stats, def.deck);
+  if (net <= 0) return 99;
+  const hits = Math.ceil(def.stats.hp / net), cpa = Math.max(1, att.stats.limit), gain = M.recoverGain(state);
+  return hits + Math.ceil(Math.max(0, hits * cpa - att.stats.mana) / gain);
+}
 function worldPlan(state, pid) {
   const p = state.players[pid], s = p.stats, d = p.deck, Q = P(pid);
   const A = a => Object.assign({ pid }, a);
@@ -1403,7 +1428,10 @@ function worldPlan(state, pid) {
         const atk = Math.max(0, Math.min(s.mana / Q.xCost, (s.hp - 1) / Q.xHp)), left = Math.max(0, m.stats.hp - net * atk), oFin = oNet > 0 ? left / oNet : 99;
         const steal = Q.xPen > 0 && left > 0 ? Q.xPen * Math.max(0, Math.min(1, (Q.xHor - oFin) / Q.xHor)) * Math.max(1, m.stats.gold) : 0;
         const risk = p.sp > 0 ? Q.sRisk * Math.min(1, left / Math.max(1, m.stats.hp)) : -Q.sZero;   // Siegpunkt-Risiko: reicht es nicht, verliere ich 1 Siegpunkt (bei 0 nichts)
-        const score = -risk - steal - Q.oHits * Math.max(0, hits - Q.oFree) + Q.cBase + Q.cHp * (s.hp - 1) + Q.cMana * (s.mana - 2) + state.worldTurns * Q.cWt - m.stats.hp * Q.cMon + press + R();
+        // Kampfprognose wie im Kampf: Gewinnt das Monster das Rennen, verliere ich (oder muss fliehen); Abschlag je Zug Rückstand
+        let doom = 0;
+        if (Q.fleeW > 0) { const me = { stats: s, deck: d }, mo = { stats: m.stats, deck: { draw: (m.deckIds || []).map(id => ({ id })), discard: [], hand: new Array(Math.max(3, m.stats.limit + 2)).fill(null) } }; doom = Math.max(0, raceTurns(state, me, mo) - raceTurns(state, mo, me)) * Q.fleeW; }
+        const score = -doom - risk - steal - Q.oHits * Math.max(0, hits - Q.oFree) + Q.cBase + Q.cHp * (s.hp - 1) + Q.cMana * (s.mana - 2) + state.worldTurns * Q.cWt - m.stats.hp * Q.cMon + press + R();
         if (!bestC || score > bestC.score) bestC = { score, acts: [A({ type: 'combat', elem: target })] };
       }
       cands.push(bestC);
@@ -1504,6 +1532,19 @@ function combatPlan(state, pid) {
     }
     if (Q.fleeHp > 0 && side.kind !== 'monster' && c.mode === 'monster' && M.canFlee(state, pid) && state.players[pid].sp > 0 && s.hp <= Q.fleeHp) return [A({ type: 'flee' })];   // Als Angreifer mit wenig HP: lieber fliehen als 1 Siegpunkt verlieren
     const best = bestAttack(side, opp, hand, Q, state), gain = M.recoverGain ? M.recoverGain(state) : 1;
+    if (c.mode === 'monster' && M.canFlee(state, pid) && !(best && best.dmg >= opp.stats.hp)) {   // Kampfprognose: Wer braucht weniger Züge, um den anderen zu besiegen? (ein sofort tödlicher Angriff geht vor)
+      const tMe = raceTurns(state, side, opp), tOpp = raceTurns(state, opp, side);
+      // Angreifer: Liegt das Monster in der Prognose mindestens fleeA (ohne Siegpunkte fleeA0) Züge vorn, droht eine Niederlage (−1 Siegpunkt, alle HP). Die Flucht behält beides; der bis dahin angerichtete Schaden bleibt am Monster.
+      // Erst fliehen, wenn sich im Kampf schon etwas getan hat: Sonst greift dieselbe Lage gleich wieder an, und die Partie tritt auf der Stelle.
+      const hp0 = c.trace && c.trace.steps[0] ? c.trace.steps[0].hp : null, moved = !hp0 || hp0[0] !== c.sides.a.stats.hp || hp0[1] !== c.sides.b.stats.hp;
+      const thr = state.players[pid].sp > 0 ? Q.fleeA : Q.fleeA0;   // ohne Siegpunkte kostet die Niederlage nur HP: dann nur bei klarer Lage fliehen (die Siegchance ist zwei Punkte wert)
+      if (thr > 0 && side.kind !== 'monster' && moved && tMe - tOpp >= thr) return [A({ type: 'flee' })];
+      // Monsterführer: Gewinnt der Angreifer das Rennen oder ist das Monster fast besiegt, bekommt er bald +1 und ich verliere 1. Die Flucht lässt das angeschlagene Monster stehen, und ich bin als Nächster am Zug, um es selbst zu besiegen.
+      if (side.kind === 'monster' && ((Q.fleeL > 0 && tOpp < tMe * Q.fleeL) || s.hp <= Q.fleeLHp)) {
+        const me = state.players[pid].stats;
+        if (me.hp >= Q.minHp && me.mana >= Q.fleeLMana) return [A({ type: 'flee' })];
+      }
+    }
     const lowMana = Q.rW * gain * Math.max(0, Q.rRef - s.mana);   // wenig Mana: nur noch starke Angriffe, sonst lieber erholen
     if (best && best.value > Q.aThr + lowMana - Q.stallDec * Math.max(0, Math.floor(((c.turns || 0) - Q.stallFrom) / 2))) {   // lange ohne Angriff: Schwelle sinkt, damit die KI nicht endlos nachzieht
       const acts = best.ord.map(h => A({ type: 'mark', slot: h.slot }));
@@ -1593,7 +1634,7 @@ function runTurn(state, pid) {
   return { ok: false };
 }
 
-return { plan, runTurn, fallback, ecoStep, setParams, DEFAULTS };
+return { plan, runTurn, fallback, ecoStep, setParams, DEFAULTS, _race: raceTurns };
 }));</script>
 <script>Object.values(IMG).forEach(u => { const im = new Image(); im.src = u; });   // Bilder vorladen, damit Karten nicht nachflackern
 document.documentElement.style.setProperty('--plus','url('+IMG.plus+')');document.documentElement.style.setProperty('--plush','url('+IMG.plush+')');document.documentElement.style.setProperty('--plusg','url('+IMG.plusg+')');document.documentElement.style.setProperty('--plushg','url('+IMG.plushg+')');
