@@ -77,9 +77,9 @@ function endCombat(state, end) {
       gain(A, c.att);
     } else if (end.winner === 'b') {   // Niederlage gegen das Monster: keine Beute, Monster und Spieler bleiben mit ihren Werten auf dem Brett
       log(state, m.name + ' gewinnt den Kampf. Keine Beute.', c.def);
-      const hf = state.rules.lossHelp || 0;   // Hilfe: Gewinnt das Monster, erhalten beide Spieler die Boni des Abschnittsbeginns (Gold und Upgrade-Punkte), mal lossHelp; höchstens lossHelpMax-mal je Abschnitt (sonst lässt sich Hilfe durch absichtliche Niederlagen farmen)
-      if (hf > 0 && (state.helpN || 0) < (state.rules.lossHelpMax || 1)) {
-        state.helpN = (state.helpN || 0) + 1;
+      const hf = state.rules.lossHelp || 0;   // Hilfe: Gewinnt das Monster, erhalten beide Spieler die Boni des Abschnittsbeginns (Gold und Upgrade-Punkte), mal lossHelp; das Monster verschwindet danach (sonst ließe sich die Hilfe durch absichtliche Niederlagen farmen)
+      m.stats.hp = 0; m.stats.gold = 0; res.monsterGone = true; log(state, m.name + ' zieht sich zurück.', c.def);
+      if (hf > 0) {
         const hp = Math.round(((state.rules.stagePoints || [])[state.stage] || 0) * hf), hg = Math.round(((state.rules.stageGold || [])[state.stage] || 0) * hf);
         if (hp > 0 || hg > 0) { state.players.forEach(p => { p.stats.pending += hp; p.stats.gold += hg; p.stats.upGot += hp; p.stats.goldGot += hg; }); res.help = { points: hp, gold: hg }; log(state, 'Hilfe: Jeder Spieler erhält ' + [hp ? hp + ' Upgrade-Punkt' + (hp > 1 ? 'e' : '') : '', hg ? hg + ' Gold' : ''].filter(Boolean).join(' und ') + '.'); }
       }
@@ -116,7 +116,7 @@ function endCombat(state, end) {
       }
       log(state, state.winner === null ? 'Spielende: Gleichstand, kein Sieger.' : 'Spielende: ' + state.players[state.winner].name + (goal && state.showdown < 3 ? ' erreicht ' + state.rules.winSp + ' Siegpunkte und' : '') + ' gewinnt.');
     } else {
-      state.stage = state.showdown + 1; state.helpN = 0;
+      state.stage = state.showdown + 1;
       if (end.winner) { state.turn = end.winner === 'a' ? c.def : c.att; log(state, state.players[state.turn].name + ' verlor den Showdown und beginnt die nächste Runde.'); }   // der Verlierer beginnt
       const gp = (state.rules.stagePoints || [])[state.stage] || 0;
       const gg = (state.rules.stageGold || [])[state.stage] || 0;

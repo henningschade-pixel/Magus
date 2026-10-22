@@ -788,9 +788,9 @@ function endCombat(state, end) {
       gain(A, c.att);
     } else if (end.winner === 'b') {   // Niederlage gegen das Monster: keine Beute, Monster und Spieler bleiben mit ihren Werten auf dem Brett
       log(state, m.name + ' gewinnt den Kampf. Keine Beute.', c.def);
-      const hf = state.rules.lossHelp || 0;   // Hilfe: Gewinnt das Monster, erhalten beide Spieler die Boni des Abschnittsbeginns (Gold und Upgrade-Punkte), mal lossHelp; höchstens lossHelpMax-mal je Abschnitt (sonst lässt sich Hilfe durch absichtliche Niederlagen farmen)
-      if (hf > 0 && (state.helpN || 0) < (state.rules.lossHelpMax || 1)) {
-        state.helpN = (state.helpN || 0) + 1;
+      const hf = state.rules.lossHelp || 0;   // Hilfe: Gewinnt das Monster, erhalten beide Spieler die Boni des Abschnittsbeginns (Gold und Upgrade-Punkte), mal lossHelp; das Monster verschwindet danach (sonst ließe sich die Hilfe durch absichtliche Niederlagen farmen)
+      m.stats.hp = 0; m.stats.gold = 0; res.monsterGone = true; log(state, m.name + ' zieht sich zurück.', c.def);
+      if (hf > 0) {
         const hp = Math.round(((state.rules.stagePoints || [])[state.stage] || 0) * hf), hg = Math.round(((state.rules.stageGold || [])[state.stage] || 0) * hf);
         if (hp > 0 || hg > 0) { state.players.forEach(p => { p.stats.pending += hp; p.stats.gold += hg; p.stats.upGot += hp; p.stats.goldGot += hg; }); res.help = { points: hp, gold: hg }; log(state, 'Hilfe: Jeder Spieler erhält ' + [hp ? hp + ' Upgrade-Punkt' + (hp > 1 ? 'e' : '') : '', hg ? hg + ' Gold' : ''].filter(Boolean).join(' und ') + '.'); }
       }
@@ -827,7 +827,7 @@ function endCombat(state, end) {
       }
       log(state, state.winner === null ? 'Spielende: Gleichstand, kein Sieger.' : 'Spielende: ' + state.players[state.winner].name + (goal && state.showdown < 3 ? ' erreicht ' + state.rules.winSp + ' Siegpunkte und' : '') + ' gewinnt.');
     } else {
-      state.stage = state.showdown + 1; state.helpN = 0;
+      state.stage = state.showdown + 1;
       if (end.winner) { state.turn = end.winner === 'a' ? c.def : c.att; log(state, state.players[state.turn].name + ' verlor den Showdown und beginnt die nächste Runde.'); }   // der Verlierer beginnt
       const gp = (state.rules.stagePoints || [])[state.stage] || 0;
       const gg = (state.rules.stageGold || [])[state.stage] || 0;
@@ -1156,7 +1156,7 @@ function applyWorld(state, a) {
 /* Magus – Regelkern (Teil 8): Spielstart und Schnittstelle nach außen. */
 
 // Regelwerte (Abstimmungs- und Variantenschalter). ‚curses‘: Fluchsystem, siehe 30-curses.js.
-const DEFAULT_RULES = { magicCost: [0, 1, 3], limitCost: 2, limitFirstStepCost: 2, hpPerPoint: 2, stagePoints: [0, 1, 2, 3], stageGold: [0, 1, 2, 3], loserUp: 0, loserUp2: 0, winSp: 4, winSpFromShowdown: 2, monsterSp: 1, lossHelp: 1, lossHelpMax: 1, showdownSp: 1, lootBoth: true, recoverByStage: [1, 2, 3], regenByStage: [1, 2, 3], supply: 8, supply2: 6, supply3: 4, startCards: 0 };   // Jede gespielte Karte (auch Kombokarten) kostet 1 Mana, nur Verteidigung in der überlegenen Farbe ist gratis. recoverByStage: Mana-Gewinn von „Erholen“ im Kampf je Abschnitt
+const DEFAULT_RULES = { magicCost: [0, 1, 3], limitCost: 2, limitFirstStepCost: 2, hpPerPoint: 2, stagePoints: [0, 1, 2, 3], stageGold: [0, 1, 2, 3], loserUp: 0, loserUp2: 0, winSp: 4, winSpFromShowdown: 2, monsterSp: 1, lossHelp: 1, showdownSp: 1, lootBoth: true, recoverByStage: [1, 2, 3], regenByStage: [1, 2, 3], supply: 8, supply2: 6, supply3: 4, startCards: 0 };   // Jede gespielte Karte (auch Kombokarten) kostet 1 Mana, nur Verteidigung in der überlegenen Farbe ist gratis. recoverByStage: Mana-Gewinn von „Erholen“ im Kampf je Abschnitt
 
 function newPlayer(state, name, ai, startIds) {
   const p = { name, ai: !!ai, stats: newStats(), temple: { points: 0, level: 0 }, sp: 0, slots: MIN_SLOTS };
@@ -3141,7 +3141,7 @@ function endTexts(res, sn, lines) {
   if (res.mode === 'monster') {
     const m = sn.sides.b.monster, mine = sn.att === ME;
     if (res.winner === 'a') return mine ? { cls: 'win', title: 'Sieg', sub: m.name + ' besiegt', loot: (res.loot > 0 ? 'Beute: ' + res.loot + ' Gold (für beide)' : 'Keine Beute') + (res.sp ? ' · +' + res.sp.winner + ' Siegpunkt' : ''), rest } : { cls: 'draw', title: m.name + ' besiegt', sub: 'Beute ' + (res.loot || 0) + ' Gold für beide' + (res.sp ? ' · ' + G.players[sn.att].name + ' +' + res.sp.winner + ' Siegpunkt' : ''), rest };
-    if (res.winner === 'b') return mine ? { cls: 'lose', title: 'Niederlage', sub: m.name + ' gewinnt den Kampf', loot: 'Keine Beute' + (res.sp && res.sp.loser ? ' · ' + res.sp.loser + ' Siegpunkt' : '') + helpTxt(res), rest } : { cls: 'draw', title: m.name + ' siegt', sub: 'Keine Beute' + (res.sp && res.sp.loser ? ' · ' + G.players[sn.att].name + ' ' + res.sp.loser + ' Siegpunkt' : '') + helpTxt(res), rest };
+    if (res.winner === 'b') return mine ? { cls: 'lose', title: 'Niederlage', sub: m.name + ' gewinnt den Kampf und zieht sich zurück', loot: 'Keine Beute' + (res.sp && res.sp.loser ? ' · ' + res.sp.loser + ' Siegpunkt' : '') + helpTxt(res), rest } : { cls: 'draw', title: m.name + ' siegt', sub: 'Keine Beute, Monster zieht sich zurück' + (res.sp && res.sp.loser ? ' · ' + G.players[sn.att].name + ' ' + res.sp.loser + ' Siegpunkt' : '') + helpTxt(res), rest };
     return { cls: 'draw', title: 'Unentschieden', sub: 'Kein Sieger, keine Beute', rest };
   }
   const wc = res.winner ? sn.sides[res.winner].ctrl : null, sp = me.sp + ' : ' + opp.sp + ' Siegpunkte';
