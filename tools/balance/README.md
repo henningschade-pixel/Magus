@@ -71,3 +71,7 @@ Nebenwirkung: Die Partien werden länger (P90 876 statt 1615 Aktionen, Maximum 1
 
 Neue Regel `drawMarker` (siehe Regelwerk). Neue Stellschrauben `dRed` (Abschlag aufs Nachziehen in der Weltphase bei rotem Marker) und `cRed` (im Kampf lieber erholen als nachziehen); beide brachten nichts Messbares (50,3 % und 49,6 % gegen die KI ohne sie) und stehen auf 0. `PARAMS=dRed,dBase,cWt,cBase,oHits,oFree,minMana,slotA,fleeA,fleeLHp,stallDec node tools/balance/opt2.js 2 500` übernahm `slotA` 4 (zurück von 5; +5,7, 54,4 % ±2,4 gegen slotA 5 in 1600 Partien).
 Ergebnis (1000 Partien): P90 657, Maximum 4050 Aktionen (vorher 1615 und 12940); Beginner 46,1 %, Zweiter 50,5 %, Unentschieden 3,4 %.
+
+## Monster bleiben nach ihrem Sieg stehen (22.10., Version 0.2)
+
+Der Rückzug des siegreichen Monsters entfällt. Damit sich die Hilfe nicht durch absichtliche Niederlagen farmen lässt, gibt es sie höchstens einmal je Abschnitt (`lossHelpMax` 1, Zähler `helpN`). KI unverändert; 1000 Partien: P90 719, Maximum 4050 Aktionen, Unentschieden 1,0 %, Beginner 46,4 % : Zweiter 52,6 %.

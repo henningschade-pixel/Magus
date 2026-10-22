@@ -34,7 +34,7 @@ function endTexts(res, sn, lines) {
   if (res.mode === 'monster') {
     const m = sn.sides.b.monster, mine = sn.att === ME;
     if (res.winner === 'a') return mine ? { cls: 'win', title: 'Sieg', sub: m.name + ' besiegt', loot: (res.loot > 0 ? 'Beute: ' + res.loot + ' Gold (für beide)' : 'Keine Beute') + (res.sp ? ' · +' + res.sp.winner + ' Siegpunkt' : ''), rest } : { cls: 'draw', title: m.name + ' besiegt', sub: 'Beute ' + (res.loot || 0) + ' Gold für beide' + (res.sp ? ' · ' + G.players[sn.att].name + ' +' + res.sp.winner + ' Siegpunkt' : ''), rest };
-    if (res.winner === 'b') return mine ? { cls: 'lose', title: 'Niederlage', sub: m.name + ' gewinnt den Kampf und zieht sich zurück', loot: 'Keine Beute' + (res.sp && res.sp.loser ? ' · ' + res.sp.loser + ' Siegpunkt' : '') + helpTxt(res), rest } : { cls: 'draw', title: m.name + ' siegt', sub: 'Keine Beute, Monster zieht sich zurück' + (res.sp && res.sp.loser ? ' · ' + G.players[sn.att].name + ' ' + res.sp.loser + ' Siegpunkt' : '') + helpTxt(res), rest };
+    if (res.winner === 'b') return mine ? { cls: 'lose', title: 'Niederlage', sub: m.name + ' gewinnt den Kampf', loot: 'Keine Beute' + (res.sp && res.sp.loser ? ' · ' + res.sp.loser + ' Siegpunkt' : '') + helpTxt(res), rest } : { cls: 'draw', title: m.name + ' siegt', sub: 'Keine Beute' + (res.sp && res.sp.loser ? ' · ' + G.players[sn.att].name + ' ' + res.sp.loser + ' Siegpunkt' : '') + helpTxt(res), rest };
     return { cls: 'draw', title: 'Unentschieden', sub: 'Kein Sieger, keine Beute', rest };
   }
   const wc = res.winner ? sn.sides[res.winner].ctrl : null, sp = me.sp + ' : ' + opp.sp + ' Siegpunkte';
