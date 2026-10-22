@@ -74,4 +74,4 @@ Ergebnis (1000 Partien): P90 657, Maximum 4050 Aktionen (vorher 1615 und 12940);
 
 ## Monster bleiben nach ihrem Sieg stehen (22.10., Version 0.2)
 
-Der Rückzug des siegreichen Monsters entfällt. Damit sich die Hilfe nicht durch absichtliche Niederlagen farmen lässt, gibt es sie höchstens einmal je Abschnitt (`lossHelpMax` 1, Zähler `helpN`). KI unverändert; 1000 Partien: P90 719, Maximum 4050 Aktionen, Unentschieden 1,0 %, Beginner 46,4 % : Zweiter 52,6 %.
+Der Rückzug des siegreichen Monsters entfällt. Die Hilfe bleibt unbegrenzt. KI unverändert.
