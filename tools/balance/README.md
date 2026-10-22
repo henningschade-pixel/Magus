@@ -55,3 +55,8 @@ Geprüft und verworfen: Fliehen nach Bewertung der Ausgänge (`fleeEV`, Sieg > F
 
 Regeln wieder auf dem alten Stand (Beute je Monsterstufe 1/2/3 Gold, Abschnittsbeginn 1/2/3 Gold und Upgrade-Punkte, Limit startet bei 1). `PARAMS=sRisk,sZero,fleeSafe,fleeHp,fleeA,fleeLHp,mRes,tLoot,tRace,tAlive,cBase,oHits,oFree,minMana,minHp,cMon,cWt,limitA,slotA,manaA,hpA node tools/balance/opt2.js 3 600` übernahm `slotA` 4 (+7,6 Punkte), `fleeLHp` 2 (+2,6) und `oHits` 2 (+1,8). Die Siegpunkt-Risiko-Stellschrauben (`sRisk`, `sZero`, `fleeSafe`, `fleeHp`) brachten auch mit der neuen Beute nichts Messbares und bleiben auf 0.
 Ergebnis: 58,2 % ±1,1 gegen die vorherige KI (2000 Partien), 58,0 % ±1,6 gegen die vorherige KI bei früh angreifenden Gegnern (1000 Partien).
+
+## Nachtraining nach der Regelkorrektur Monsterführer (22.10.)
+
+Der Monsterführer verliert im Monsterkampf keine Siegpunkte mehr. `PARAMS=cWt,cBase,oHits,oFree,cMon,minMana,minHp,mRes,fleeA,fleeLHp,limitA,slotA,manaA,hpA,vOver,vOff,fleeSafe,sRisk,sZero,fleeHp node tools/balance/opt2.js 4 500` fand in den ersten beiden Runden keine bestätigte Verbesserung (beste Kandidaten +0,2 bis +2,0 Punkte, unter der Übernahmeschwelle); die Standardwerte bleiben.
+Spieldauer: Im Selbstspiel steht beim Angriff oft keine Seite besser (Monster zäher als jede Hand), beide ziehen dann bis zu etwa 70 Züge Karten nach, bis `cWt` den Angriff freigibt (90-%-Quantil 4123 Aktionen je Partie). Ein größeres `cWt` verkürzt das (8: 2068, 20: 1360, 50: 737), kostet aber Spielstärke (Siegquote gegen die Standard-KI 43 %, 41 %, 35 %). Gegen Menschen entsteht das Warten nicht, weil dort einer angreift. Gelöst werden sollte es über die Balance von Monstern und Kosten.
