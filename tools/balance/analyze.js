@@ -44,7 +44,7 @@ function runBatch(N,rules,opts){
      if(w===first)S.firstWin++;else S.secondWin++;}
    if(/Showdown ohne Sieger/.test(t)){const S=out.sh[sd];S.n++;S.draw++;}
    if((m=/^(.+) greift (.+) an\./.exec(t))&&!/Showdown/.test(t)){lastAtk={att:names.indexOf(m[1]),mon:m[2]};}
-   if(lastAtk&&(m=/^(.+) besiegt (.+) und erhält (\d+) Gold/.exec(t))){const k=m[2];const M2=out.mon[k]||(out.mon[k]={att:0,win:0,lose:0,none:0});M2.att++;M2.win++;lastAtk=null;out.monsterKills[names.indexOf(m[1])]++;}
+   if(lastAtk&&(m=/^(.+) besiegt (.+?)(?: und erhält (\d+) Gold)?\.$/.exec(t))){const k=m[2];const M2=out.mon[k]||(out.mon[k]={att:0,win:0,lose:0,none:0});M2.att++;M2.win++;lastAtk=null;out.monsterKills[names.indexOf(m[1])]++;}
    else if(lastAtk&&/ gewinnt den Kampf\. /.test(t)){const k=lastAtk.mon;const M2=out.mon[k]||(out.mon[k]={att:0,win:0,lose:0,none:0});M2.att++;M2.lose++;lastAtk=null;}
    else if(lastAtk&&/Kein Sieger/.test(t)){const k=lastAtk.mon;const M2=out.mon[k]||(out.mon[k]={att:0,win:0,lose:0,none:0});M2.att++;M2.none++;lastAtk=null;}
   });
