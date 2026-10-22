@@ -3,27 +3,27 @@
   "seed": 1000,
   "first": 0,
   "over": true,
-  "winner": 1,
+  "winner": 0,
   "sp": [
-   1,
-   4
+   4,
+   1
   ],
-  "steps": 1530,
-  "log": 1587,
-  "hash": "65e54f6d6ebd"
+  "steps": 373,
+  "log": 446,
+  "hash": "06dc5beffbb2"
  },
  {
   "seed": 1001,
   "first": 1,
   "over": true,
-  "winner": 0,
+  "winner": 1,
   "sp": [
-   4,
-   0
+   2,
+   4
   ],
-  "steps": 1301,
-  "log": 1385,
-  "hash": "6c4b35304b9d"
+  "steps": 299,
+  "log": 336,
+  "hash": "b6b0e31c486a"
  },
  {
   "seed": 1002,
@@ -42,27 +42,27 @@
   "seed": 1003,
   "first": 1,
   "over": true,
-  "winner": 0,
+  "winner": 1,
   "sp": [
-   4,
-   2
+   3,
+   4
   ],
-  "steps": 2674,
-  "log": 2791,
-  "hash": "f6250df7d7b9"
+  "steps": 1637,
+  "log": 1736,
+  "hash": "4985a52ded5f"
  },
  {
   "seed": 1004,
   "first": 0,
   "over": true,
-  "winner": 1,
+  "winner": 0,
   "sp": [
-   2,
-   4
+   5,
+   0
   ],
-  "steps": 437,
-  "log": 480,
-  "hash": "2c613a90100d"
+  "steps": 318,
+  "log": 395,
+  "hash": "60e43891d1d6"
  },
  {
   "seed": 1005,
@@ -70,12 +70,12 @@
   "over": true,
   "winner": 1,
   "sp": [
-   1,
-   4
+   0,
+   5
   ],
-  "steps": 378,
-  "log": 427,
-  "hash": "4cbb4b4b42b9"
+  "steps": 799,
+  "log": 910,
+  "hash": "f1bc222d5724"
  },
  {
   "seed": 1006,
@@ -86,22 +86,22 @@
    1,
    4
   ],
-  "steps": 353,
-  "log": 399,
-  "hash": "7d9c6f03230b"
+  "steps": 305,
+  "log": 359,
+  "hash": "b319e5680cef"
  },
  {
   "seed": 1007,
   "first": 1,
   "over": true,
-  "winner": 1,
+  "winner": 0,
   "sp": [
-   0,
-   2
+   4,
+   1
   ],
-  "steps": 3494,
-  "log": 3650,
-  "hash": "ee1c299ada41"
+  "steps": 377,
+  "log": 436,
+  "hash": "2cd65e0ad5da"
  },
  {
   "seed": 1008,
@@ -109,12 +109,12 @@
   "over": true,
   "winner": 0,
   "sp": [
-   4,
-   1
+   6,
+   0
   ],
-  "steps": 372,
-  "log": 417,
-  "hash": "eba91fa9a836"
+  "steps": 356,
+  "log": 423,
+  "hash": "6a1563bc6888"
  },
  {
   "seed": 1009,
@@ -133,27 +133,27 @@
   "seed": 1010,
   "first": 0,
   "over": true,
-  "winner": 1,
+  "winner": 0,
   "sp": [
-   1,
-   5
+   4,
+   1
   ],
-  "steps": 361,
-  "log": 403,
-  "hash": "ef5406124ac9"
+  "steps": 321,
+  "log": 396,
+  "hash": "453b3dd0c028"
  },
  {
   "seed": 1011,
   "first": 1,
   "over": true,
-  "winner": 0,
+  "winner": 1,
   "sp": [
-   5,
-   0
+   0,
+   4
   ],
-  "steps": 329,
-  "log": 371,
-  "hash": "6f933bee8717"
+  "steps": 627,
+  "log": 860,
+  "hash": "ecc0591934a6"
  },
  {
   "seed": 1012,
@@ -162,14 +162,40 @@
   "winner": 1,
   "sp": [
    0,
-   3
+   5
   ],
-  "steps": 3894,
-  "log": 4066,
-  "hash": "2caa821cb3b1"
+  "steps": 436,
+  "log": 519,
+  "hash": "655858a4c7b4"
  },
  {
   "seed": 1013,
+  "first": 1,
+  "over": true,
+  "winner": 0,
+  "sp": [
+   3,
+   2
+  ],
+  "steps": 550,
+  "log": 725,
+  "hash": "63c0ed287369"
+ },
+ {
+  "seed": 1014,
+  "first": 0,
+  "over": true,
+  "winner": 0,
+  "sp": [
+   4,
+   3
+  ],
+  "steps": 672,
+  "log": 837,
+  "hash": "f27dc273d941"
+ },
+ {
+  "seed": 1015,
   "first": 1,
   "over": true,
   "winner": 1,
@@ -177,35 +203,9 @@
    2,
    4
   ],
-  "steps": 391,
-  "log": 433,
-  "hash": "1fc55c88ea8d"
- },
- {
-  "seed": 1014,
-  "first": 0,
-  "over": true,
-  "winner": 1,
-  "sp": [
-   0,
-   5
-  ],
-  "steps": 466,
-  "log": 514,
-  "hash": "0a5257af324b"
- },
- {
-  "seed": 1015,
-  "first": 1,
-  "over": true,
-  "winner": 0,
-  "sp": [
-   4,
-   0
-  ],
-  "steps": 415,
-  "log": 461,
-  "hash": "38dbaded1f6b"
+  "steps": 336,
+  "log": 400,
+  "hash": "5b8fd075692d"
  },
  {
   "seed": 1016,
@@ -213,51 +213,51 @@
   "over": true,
   "winner": 1,
   "sp": [
-   1,
-   4
+   3,
+   5
   ],
-  "steps": 375,
-  "log": 415,
-  "hash": "6e76267b8421"
+  "steps": 612,
+  "log": 796,
+  "hash": "5b0a20ddb296"
  },
  {
   "seed": 1017,
   "first": 1,
   "over": true,
-  "winner": null,
+  "winner": 1,
   "sp": [
-   2,
-   2
+   0,
+   4
   ],
-  "steps": 472,
-  "log": 568,
-  "hash": "a160489b0caf"
+  "steps": 651,
+  "log": 882,
+  "hash": "ec25e3ad54bc"
  },
  {
   "seed": 1018,
   "first": 0,
   "over": true,
-  "winner": null,
+  "winner": 1,
   "sp": [
-   2,
-   2
+   1,
+   4
   ],
-  "steps": 1239,
-  "log": 1347,
-  "hash": "095db96b4d66"
+  "steps": 416,
+  "log": 488,
+  "hash": "9b850a004672"
  },
  {
   "seed": 1019,
   "first": 1,
   "over": true,
-  "winner": 1,
+  "winner": 0,
   "sp": [
-   0,
-   6
+   5,
+   0
   ],
-  "steps": 333,
-  "log": 375,
-  "hash": "21d4b8c26bbd"
+  "steps": 446,
+  "log": 522,
+  "hash": "070e9f2a59bb"
  },
  {
   "seed": 1020,
@@ -266,11 +266,11 @@
   "winner": 1,
   "sp": [
    0,
-   4
+   7
   ],
-  "steps": 465,
-  "log": 568,
-  "hash": "5a4eb26d5812"
+  "steps": 804,
+  "log": 971,
+  "hash": "464bb7d3d137"
  },
  {
   "seed": 1021,
@@ -278,12 +278,12 @@
   "over": true,
   "winner": 1,
   "sp": [
-   2,
-   4
+   0,
+   6
   ],
-  "steps": 2197,
-  "log": 2272,
-  "hash": "3b85174ba7b7"
+  "steps": 333,
+  "log": 397,
+  "hash": "fac9d1c92b25"
  },
  {
   "seed": 1022,
@@ -291,24 +291,24 @@
   "over": true,
   "winner": 0,
   "sp": [
-   3,
+   6,
    0
   ],
-  "steps": 4146,
-  "log": 4302,
-  "hash": "79ff21adbace"
+  "steps": 352,
+  "log": 391,
+  "hash": "6c2999b502a7"
  },
  {
   "seed": 1023,
   "first": 1,
   "over": true,
-  "winner": 1,
+  "winner": 0,
   "sp": [
-   0,
-   6
+   6,
+   0
   ],
-  "steps": 487,
-  "log": 577,
-  "hash": "f547a5d567b0"
+  "steps": 382,
+  "log": 449,
+  "hash": "3ed9eb29b4fd"
  }
 ]

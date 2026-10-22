@@ -1,4 +1,5 @@
 /* ---------- Ablauf ---------- */
+function helpTxt(res) { return res.help ? ' · Hilfe für beide: ' + [res.help.points ? res.help.points + ' Upgrade-Punkt' + (res.help.points > 1 ? 'e' : '') : '', res.help.gold ? res.help.gold + ' Gold' : ''].filter(Boolean).join(' und ') : ''; }
 function newGame(spec) {
   if (MP) mpLeave();
   SPEC = !!spec; clearTimeout(specT); specT = 0; setSpecSpeed(1);
@@ -33,7 +34,7 @@ function endTexts(res, sn, lines) {
   if (res.mode === 'monster') {
     const m = sn.sides.b.monster, mine = sn.att === ME;
     if (res.winner === 'a') return mine ? { cls: 'win', title: 'Sieg', sub: m.name + ' besiegt', loot: (res.loot > 0 ? 'Beute: ' + res.loot + ' Gold (für beide)' : 'Keine Beute') + (res.sp ? ' · +' + res.sp.winner + ' Siegpunkt' : ''), rest } : { cls: 'draw', title: m.name + ' besiegt', sub: 'Beute ' + (res.loot || 0) + ' Gold für beide' + (res.sp ? ' · ' + G.players[sn.att].name + ' +' + res.sp.winner + ' Siegpunkt' : ''), rest };
-    if (res.winner === 'b') return mine ? { cls: 'lose', title: 'Niederlage', sub: m.name + ' gewinnt den Kampf', loot: 'Keine Beute' + (res.sp && res.sp.loser ? ' · ' + res.sp.loser + ' Siegpunkt' : ''), rest } : { cls: 'draw', title: m.name + ' siegt', sub: 'Keine Beute' + (res.sp && res.sp.loser ? ' · ' + G.players[sn.att].name + ' ' + res.sp.loser + ' Siegpunkt' : ''), rest };
+    if (res.winner === 'b') return mine ? { cls: 'lose', title: 'Niederlage', sub: m.name + ' gewinnt den Kampf', loot: 'Keine Beute' + (res.sp && res.sp.loser ? ' · ' + res.sp.loser + ' Siegpunkt' : '') + helpTxt(res), rest } : { cls: 'draw', title: m.name + ' siegt', sub: 'Keine Beute' + (res.sp && res.sp.loser ? ' · ' + G.players[sn.att].name + ' ' + res.sp.loser + ' Siegpunkt' : '') + helpTxt(res), rest };
     return { cls: 'draw', title: 'Unentschieden', sub: 'Kein Sieger, keine Beute', rest };
   }
   const wc = res.winner ? sn.sides[res.winner].ctrl : null, sp = me.sp + ' : ' + opp.sp + ' Siegpunkte';
