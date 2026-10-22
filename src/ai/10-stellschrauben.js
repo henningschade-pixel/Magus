@@ -3,7 +3,7 @@
 const DEFAULTS = {
   limitA: 1, slotA: 4, manaA: 4, hpA: 4, limitB: 3, slotB: 5,          // Ausbaureihenfolge der Upgrade-Punkte
   cBase: 34, cHp: 3, cMana: 1.5, cWt: 2.8, cMon: 0.8, minHp: 1, minMana: 4,   // Lust, ein Monster anzugreifen
-  dRed: 0, cRed: 0,   // Nachziehmarker rot: Abschlag auf das Nachziehen in der Weltphase (Strafe: Gegner erhält Gold); cRed 1: im Kampf lieber erholen als nachziehen (Strafe: Gegner erhält ein Nachziehtoken)
+  dRed: 10, dTmp: 10, cRed: 1, cRedA: 0,   // Nachziehmarker rot (Nachziehen schenkt dem Gegner Gold bzw. ein Nachziehtoken): dRed Abschlag auf das Nachziehen in der Weltphase, dTmp Lust, stattdessen 1 Gold im Tempel zu opfern; im Kampf cRed 1: erholen statt nachziehen (auch bei vollem Mana), cRedA: Angriffsschwelle sinkt um so viel
   dBase: 7, dCurse: 4, dEmpty: 12, dSlot: 2, dNorm: 5,                    // Lust, nachzuziehen
   vUp: 8.85, vUpW: 1.4,                                                       // Händler-Aufwertung
   smart: 1, wMark: 0.5, keepB: 3, keepOn: 0, wDeath: 6, wDraw: 1.6, wFW: 1.3, wFE: 0.9, wEW: 2.8, aDmg: 1.5, aCost: 1.5, aCurse: 1.6, aThr: 0.5, oHits: 4, oFree: 4, stallDec: 0.25, stallFrom: 24,   // Angriffsbewertung
@@ -13,6 +13,7 @@ const DEFAULTS = {
   mPlan: 0, vOff: 0.5,   // Ziel-Farbe: gegen ein Monster zählt die ihm überlegene Magie. mPlan: Bonus beim Magiekauf, vOff: Aufwertungen anderer Farben zählen nur so viel
   vOver: 0.5, vFut: 0,   // Händler: Eine Karte über dem Magielevel ihrer Farbe bringt (noch) nichts: Wert dieser Aufwertung × vOver (1 = wie bisher), vFut: ab so viel Gold zum Magiekauf zählt sie schon
   xPen: 0, xCost: 2, xHp: 1.5, xHor: 3,   // Erschöpfung: Ein überhasteter Angriff, der das Monster nicht schafft, lässt es angeschlagen zurück, und der Gegner (der danach am Zug ist) besiegt es leicht
+  fleeIdle: 120,   // Patt-Sicherung: Nach so vielen Weltphasen-Zügen ohne entschiedenen Kampf flieht die KI nicht mehr (sonst konnte ein Spieler, der Gold aus roten Nachziehmarkern des Gegners in HP umsetzt, endlos angreifen und fliehen)
   fleeT: 999,   // Fliehen: ab so vielen Kampfschritten ohne brauchbaren Angriff gegen ein Monster ohne Mana (999 = nie; im Selbstspiel verlor die KI mit 14 Schritten 48 %, mit 6 Schritten 42 %)
   fleeHits: 20,   // Fliehen als Monsterführer: fliehe, wenn der Angreifer kein Mana mehr hat und ich das Monster danach in höchstens so vielen Angriffen selbst besiege (0 = nie; 20 gewann 50,9 % gegen 0 in 1600 Partien, 1 bis 4 waren wirkungslos, weil der Fall selten vorkommt)
   strat: 0, fHand: 3, fWeak: 4, sLock: 1,   // Eröffnung (Spielerstrategien): 0 frei, 1 Limit zuerst (Tempel-Gold für Ausspiellimit 2), 2 Fokus (eine Farbe, Handplätze erst nach dem ersten Sieg), 3 zwei Richtungen (zwei Farben auf 2, Handplätze erst nach dem 1. Showdown), 4 wählt je nach Starthand; fHand/fWeak: Farbwahl nach Handkarten bzw. geschwächtem Monster; sLock 0 hebt die Sperre der Handplätze auf

@@ -292,3 +292,16 @@ test('Nachziehmarker Kampf: Nachziehen bei rotem Marker gibt dem Gegner ein Nach
   assert.ok(M.apply(s, { pid: 0, type: 'draw' }).ok);
   assert.equal(op.stats.freeDraws, 1);
 });
+
+test('KI meidet Nachziehen bei rotem Nachziehmarker (Weltphase: Gold opfern statt dem Gegner Gold schenken; Kampf: kein Nachziehen)', () => {
+  const s = M.newGame({ seed: 5, ai: [true, true], first: 0 }), p = s.players[0];
+  p.stats.pending = 0; p.stats.gold = 1; p.stats.mana = 0; p.drawRed = true;
+  const acts = AI.plan(s, 0).map(a => a.type);
+  assert.ok(!acts.includes('draw'), 'Weltphase bei Rot: ' + acts.join(','));
+  for (let k = 0; k < 6; k++) {
+    const { s: t } = combatSetup(11 + k, ['F1', 'F1', 'F1']);
+    t.players[0].drawRed = true;
+    const ca = AI.plan(t, 0).map(a => a.type);
+    assert.ok(!ca.includes('draw'), 'Kampf bei Rot: ' + ca.join(','));
+  }
+});

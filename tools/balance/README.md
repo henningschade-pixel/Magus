@@ -75,3 +75,11 @@ Ergebnis (1000 Partien): P90 657, Maximum 4050 Aktionen (vorher 1615 und 12940);
 ## Monster bleiben nach ihrem Sieg stehen (22.10., Version 0.2)
 
 Der Rückzug des siegreichen Monsters entfällt. Die Hilfe bleibt unbegrenzt. KI unverändert.
+
+## KI auf den Nachziehmarker trainiert (22.10., Version 0.2)
+
+Bestandsaufnahme: Die bisherige KI zog je Partie im Mittel 27,6-mal in der Weltphase und 11,6-mal im Kampf bei rotem Marker nach, schenkte dem Gegner also rund 28 Gold und 12 Nachziehtokens. Im reinen Selbstspiel hob sich das auf (darum waren `dRed`/`cRed` dort „nicht messbar“), gegen einen Gegner, der den Marker beachtet, ist es ein großer Vorteil für diesen.
+Neu: `dTmp` (bei Rot 1 Gold im Tempel opfern statt nachziehen; die Wirtschaftsaktion opfert erst ab 2 Gold), `cRed` jetzt auch bei vollem Mana (im Kampf erholen statt nachziehen), `cRedA` (Angriffsschwelle bei Rot senken). `dRed` allein wirkte nicht, weil der KI dann eine Ausweichaktion fehlte.
+Raster (1600 Partien gegen die bisherige KI): `dTmp` 10 55,5 %, `cRed` 1 51,1 %, beides 57,8 %, `cRedA` 1 bis 2 48,7 % (schadet, bleibt 0). `opt2.js 2 600` ab `dTmp` 10, `dRed` 10, `cRed` 1 fand keine weitere bestätigte Verbesserung.
+Patt-Sicherung `fleeIdle` 120: Im Selbstspiel blieben 3 von 1000 Partien hängen (ein Spieler ohne Gold muss bei Rot nachziehen, der andere setzt das Gold im Tempel in HP um, kann das letzte Monster aber nicht besiegen und flieht jedes Mal). Nach 120 Weltphasen-Zügen ohne entschiedenen Kampf flieht die KI nicht mehr; neutral für die Spielstärke (49,7 % gegen die KI ohne Sicherung).
+Ergebnis: 58,7 % ±0,9 gegen die bisherige KI (3200 Partien); gegen drei früh angreifende Gegner 54 bis 57 % (bisherige KI 50 bis 51 %). Selbstspiel (1000 Partien): im Kampf kein Nachziehen bei Rot mehr, in der Weltphase 31 statt 18 je Partie (meist ohne Gold, also ohne Ausweichaktion); P90 rund 960 statt 780, Maximum 2131 statt 3390 Aktionen.
