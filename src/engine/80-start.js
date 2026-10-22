@@ -1,7 +1,7 @@
 /* Magus – Regelkern (Teil 8): Spielstart und Schnittstelle nach außen. */
 
 // Regelwerte (Abstimmungs- und Variantenschalter). ‚curses‘: Fluchsystem, siehe 30-curses.js.
-const DEFAULT_RULES = { magicCost: [0, 1, 3], limitCost: 2, limitFirstStepCost: 2, hpPerPoint: 2, stagePoints: [0, 1, 2, 3], stageGold: [0, 1, 2, 3], loserUp: 0, loserUp2: 0, winSp: 4, winSpFromShowdown: 2, monsterSp: 1, monsterLoot: 0, lossHelp: 1, showdownSp: 1, lootBoth: true, recoverByStage: [1, 2, 3], regenByStage: [1, 2, 3], supply: 8, supply2: 6, supply3: 4, startCards: 0 };   // Jede gespielte Karte (auch Kombokarten) kostet 1 Mana, nur Verteidigung in der überlegenen Farbe ist gratis. recoverByStage: Mana-Gewinn von „Erholen“ im Kampf je Abschnitt
+const DEFAULT_RULES = { magicCost: [0, 1, 3], limitCost: 2, limitFirstStepCost: 2, hpPerPoint: 2, stagePoints: [0, 1, 2, 3], stageGold: [0, 1, 2, 3], loserUp: 0, loserUp2: 0, winSp: 4, winSpFromShowdown: 2, monsterSp: 1, monsterLoot: 0, idleLimit: 0, lossHelp: 1, showdownSp: 1, lootBoth: true, recoverByStage: [1, 2, 3], regenByStage: [1, 2, 3], supply: 8, supply2: 6, supply3: 4, startCards: 0 };   // Jede gespielte Karte (auch Kombokarten) kostet 1 Mana, nur Verteidigung in der überlegenen Farbe ist gratis. recoverByStage: Mana-Gewinn von „Erholen“ im Kampf je Abschnitt
 
 function newPlayer(state, name, ai, startIds) {
   const p = { name, ai: !!ai, stats: newStats(), temple: { points: 0, level: 0 }, sp: 0, slots: MIN_SLOTS };
@@ -13,7 +13,7 @@ function newPlayer(state, name, ai, startIds) {
 function newGame(opts) {
   opts = opts || {};
   const seed = (opts.seed === undefined ? (Date.now() & 0x7fffffff) : opts.seed) >>> 0;
-  const state = { rules: Object.assign({}, DEFAULT_RULES, opts.rules || {}), seed, rng: makeRng(seed), uid: 1, log: [], logN: 0, stage: 1, showdown: 0, phase: 'world', turn: 0, hist: [], combat: null, over: false, winner: null, worldTurns: 0, combatTurnsTotal: 0 };
+  const state = { rules: Object.assign({}, DEFAULT_RULES, opts.rules || {}), seed, rng: makeRng(seed), uid: 1, log: [], logN: 0, stage: 1, showdown: 0, phase: 'world', turn: 0, hist: [], combat: null, over: false, winner: null, worldTurns: 0, idleTurns: 0, combatTurnsTotal: 0 };
   const names = opts.names || ['Du', 'Gegner'];
   // Begrenzter Kartenvorrat (wie ein Brettspiel): von jeder der neun Karten gibt es ‚supply‘ Stück. Die Stufe-1-Karten werden gemischt, jeder Spieler erhält ‚startCards‘ davon (0 = alle, gleich viele je Spieler; daher ungleiche Startdecks), ein etwaiger Rest bleibt im Vorrat des Händlers.
   let deal = [null, null];

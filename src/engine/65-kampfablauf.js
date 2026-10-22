@@ -97,6 +97,7 @@ function endCombat(state, end) {
   state.turn = c.def;
   regen(state.players[c.def].stats, regenGain(state));
   state.worldTurns = 0;
+  if (end.winner || c.mode !== 'monster') state.idleTurns = 0;   // Stillstandszähler: nur ein entschiedener Kampf (Sieg oder Niederlage) setzt ihn zurück, Flucht und Erschöpfung nicht
   if (c.mode === 'monster') {
     if (allMonstersDead(state)) {   // auch wenn das letzte Monster ohne Beute fiel (beide Seiten gleichzeitig auf 0 HP)
       log(state, 'Alle drei Monster sind besiegt.');

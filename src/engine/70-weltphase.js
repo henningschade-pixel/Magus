@@ -15,9 +15,13 @@ function sample(state, ev) {
 function endTurn(state, pid, kind) {
   const nx = other(pid);
   regen(state.players[nx].stats, regenGain(state));
-  state.turn = nx; state.worldTurns++;
+  state.turn = nx; state.worldTurns++; state.idleTurns++;
   sample(state);
   if (state.worldTurns % 2 === 0) regenMonsters(state);   // Monster erholen sich am Ende jeder Runde (nach den Zügen beider Spieler)
+  if (state.rules.idleLimit > 0 && state.idleTurns >= state.rules.idleLimit && state.phase === 'world') {   // Stillstand: Seit dem letzten entschiedenen Kampf sind idleLimit Züge vergangen, ohne dass ein Monster fiel (Fluchten zählen nicht): der Showdown beginnt sofort
+    log(state, 'Stillstand: Seit ' + state.rules.idleLimit + ' Zügen fiel kein Monster. Der Showdown beginnt.');
+    startShowdown(state);
+  }
 }
 
 function execSpend(state, pid, what) {
