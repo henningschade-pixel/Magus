@@ -215,7 +215,7 @@ function fxSound(f) {
   else if (f.kind === 'aggro') Snd.play('aggro');
   else if (f.kind === 'ruin') Snd.play('ruin');
   else if (f.kind === 'lifeflow') Snd.play(f.removed > 0 || !(f.heal > 0) ? 'purify' : 'heal');
-  else if (f.kind === 'mirrorcast') Snd.play('mirror_cast');
+  else if (f.kind === 'mirrorcast') Snd.play('shield_hit');   // Spiegelmarker wird gelegt: Schildsound
   else if (f.kind === 'recover') Snd.play('recover');
 }
 function showFx() {
