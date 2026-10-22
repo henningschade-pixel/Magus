@@ -167,6 +167,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .mon img.pic{object-fit:contain;display:block;margin:0 auto 2px}
 .mon .nm{font-family:'Alegreya SC',serif;font-size:18px}
 .mon .sm{font-size:15px;color:var(--mute);line-height:1.2}
+.mon.gone img.pic{opacity:.3}
 .mon .loot{color:var(--gold);font-size:16px}
 .mon .btn{margin-top:auto;width:100%;padding:3px 10px;flex:none}
 .mon>*{flex:none}

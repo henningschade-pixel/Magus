@@ -177,6 +177,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .mon img.pic{object-fit:contain;display:block;margin:0 auto 2px}
 .mon .nm{font-family:'Alegreya SC',serif;font-size:18px}
 .mon .sm{font-size:15px;color:var(--mute);line-height:1.2}
+.mon.gone img.pic{opacity:.3}
 .mon .loot{color:var(--gold);font-size:16px}
 .mon .btn{margin-top:auto;width:100%;padding:3px 10px;flex:none}
 .mon>*{flex:none}
@@ -784,20 +785,20 @@ function endCombat(state, end) {
       // Beute: Regel monsterLoot legt sie für alle Monster fest (0 = keine Beute); ohne die Regel zählt das Gold des Monsters (Stufe I 1, II 2, III 3)
       const loot = state.rules.monsterLoot !== undefined ? state.rules.monsterLoot : Math.max(0, m.stats.gold); m.stats.gold = 0; A.stats.gold += loot; A.stats.goldGot += loot;
       log(state, A.name + ' besiegt ' + m.name + (loot > 0 ? ' und erhält ' + loot + ' Gold.' : '.'), c.att);
-      if (state.rules.lootBoth && loot > 0) { B.stats.gold += loot; B.stats.goldGot += loot; log(state, B.name + ' erhält ebenfalls ' + loot + ' Gold (Beute für beide).', c.def); }
+      if (state.rules.lootBoth && loot > 0) { B.stats.gold += loot; B.stats.goldGot += loot; log(state, B.name + ' erhält ebenfalls ' + loot + ' Gold.', c.def); }
       res.monsterDefeated = true; res.loot = loot;
       gain(A, c.att);
-    } else if (end.winner === 'b') {   // Niederlage gegen das Monster: keine Beute, das Monster zieht sich zurück
-      log(state, m.name + ' gewinnt den Kampf. Keine Beute.', c.def);
+    } else if (end.winner === 'b') {   // Niederlage gegen das Monster: kein Gold, das Monster zieht sich zurück
+      log(state, m.name + ' gewinnt den Kampf.', c.def);
       const hf = state.rules.lossHelp || 0;   // Hilfe: Gewinnt das Monster, erhalten beide Spieler die Boni des Abschnittsbeginns (Gold und Upgrade-Punkte), mal lossHelp; das Monster verschwindet danach (sonst ließe sich die Hilfe durch absichtliche Niederlagen farmen)
-      m.stats.hp = 0; m.stats.gold = 0; res.monsterGone = true; log(state, m.name + ' zieht sich zurück.', c.def);
+      m.stats.hp = 0; m.stats.gold = 0; m.retreated = true; res.monsterGone = true; log(state, m.name + ' zieht sich zurück.', c.def);
       if (hf > 0) {
         const hp = Math.round(((state.rules.stagePoints || [])[state.stage] || 0) * hf), hg = Math.round(((state.rules.stageGold || [])[state.stage] || 0) * hf);
         if (hp > 0 || hg > 0) { state.players.forEach(p => { p.stats.pending += hp; p.stats.gold += hg; p.stats.upGot += hp; p.stats.goldGot += hg; }); res.help = { points: hp, gold: hg }; log(state, 'Hilfe: Jeder Spieler erhält ' + [hp ? hp + ' Upgrade-Punkt' + (hp > 1 ? 'e' : '') : '', hg ? hg + ' Gold' : ''].filter(Boolean).join(' und ') + '.'); }
       }
       if (msp) { const lost = Math.min(msp, A.sp); A.sp -= lost; res.sp = { winner: 0, loser: -lost }; if (lost) log(state, A.name + ' verliert ' + lost + ' Siegpunkt' + (lost > 1 ? 'e' : '') + '; das Monster bringt seinem Führer keine.', c.att); }   // Niederlage kostet den Angreifer, bringt dem Monsterführer aber nichts (sonst lässt sich ein unbesiegtes Monster endlos farmen)
     }
-    else log(state, end.reason === 'flee' ? 'Die Flucht ist geglückt. Kein Sieger, keine Beute; das Monster behält seine Verletzungen.' : end.reason === 'exhaustion' ? 'Beide Seiten sind erschöpft. Kein Sieger, keine Beute.' : 'Beide Seiten fallen. Kein Sieger, keine Beute.');
+    else log(state, end.reason === 'flee' ? 'Die Flucht ist geglückt. Kein Sieger; das Monster behält seine Verletzungen.' : end.reason === 'exhaustion' ? 'Beide Seiten sind erschöpft. Kein Sieger.' : 'Beide Seiten fallen. Kein Sieger.');
   } else {
     if (end.winner) { const w = end.winner === 'a' ? A : B, wl = w === A ? B : A, ssp = state.rules.showdownSp || 0, lost = Math.min(ssp, wl.sp); w.sp += ssp; wl.sp -= lost; res.sp = { winner: ssp, loser: -lost }; log(state, w.name + ' gewinnt den Showdown (+' + ssp + ' Siegpunkt' + (ssp > 1 ? 'e' : '') + (lost ? ', ' + wl.name + ' verliert ' + lost : '') + ').', end.winner === 'a' ? c.att : c.def);
       const L = w === A ? B : A; const lu = state.showdown === 1 && state.rules.loserUp2 !== undefined ? state.rules.loserUp2 : state.rules.loserUp; if (lu > 0 && state.showdown < 2) { L.stats.pending += lu; L.stats.upGot += lu; log(state, L.name + ' erhält als Trostpreis ' + lu + ' Upgrade-Punkt' + (lu > 1 ? 'e' : '') + '.', w === A ? c.def : c.att); } }
@@ -1152,7 +1153,7 @@ function applyWorld(state, a) {
     case 'magic': return endOnOk(state, pid, 'magic', execMagic(state, pid, a.elem));
     case 'spend': return endOnOk(state, pid, 'spend', execSpend(state, pid, a.what));
     case 'combat': {
-      const m = state.monsters[a.elem]; if (!m || !monsterAlive(m)) return fail('Dieses Monster ist besiegt.');
+      const m = state.monsters[a.elem]; if (!m || !monsterAlive(m)) return fail(m && m.retreated ? 'Dieses Monster hat sich zurückgezogen.' : 'Dieses Monster ist besiegt.');
       d.marks = [];
       startCombat(state, pid, a.elem); return { ok: true };
     }
@@ -2200,15 +2201,15 @@ function monsterCards() {
   const my = myTurn(), R = LAYOUT.monsters;
   M.ELEMENTS.forEach((e, i) => {
     const m = G.monsters[e], alive = M.monsterAlive(m), st = m.stats;
-    const img = alive ? IMG['m_' + e.toLowerCase() + m.stage] : IMG['d_' + e.toLowerCase()];
-    h += '<div class="mon ' + (alive ? '' : 'dead') + '" style="left:' + (R.left + i * R.step) + 'px;top:' + R.top + 'px;width:' + R.w + 'px;height:' + R.h + 'px;padding:10px 8px"><img class="pic" src="' + img + '" style="width:172px;height:196px">' +
+    const gone = !alive && m.retreated, img = alive || gone ? IMG['m_' + e.toLowerCase() + m.stage] : IMG['d_' + e.toLowerCase()];   // zurückgezogenes Monster: eigenes Bild, durchscheinend
+    h += '<div class="mon ' + (alive ? '' : gone ? 'dead gone' : 'dead') + '" style="left:' + (R.left + i * R.step) + 'px;top:' + R.top + 'px;width:' + R.w + 'px;height:' + R.h + 'px;padding:10px 8px"><img class="pic" src="' + img + '" style="width:172px;height:196px">' +
       '<div class="nm ' + e + '">' + esc(m.name) + '</div>' + (alive ? '<div class="sm mlabel" ' + (m.label ? 'title="' + esc((m.hints || []).join('\n')) + '" ' : '') + 'style="color:var(--gold);margin-top:-2px;height:18px;line-height:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (m.label ? esc(m.label) : '&nbsp;') + '</div>' : '');
     if (alive) {
       h += '<div class="sm">HP ' + st.hp + '/' + st.maxHp + '</div><div class="bar"><i style="width:' + st.hp / st.maxHp * 100 + '%"></i></div>' +
         '<div class="sm">Mana ' + st.mana + '/' + st.maxMana + ' · Limit ' + st.limit + '</div><div class="bar mana"><i style="width:' + st.mana / st.maxMana * 100 + '%"></i></div>' +
         '<div class="sm"><span class="dots F">' + dots(st.mag.F) + '</span> <span class="dots E">' + dots(st.mag.E) + '</span> <span class="dots W">' + dots(st.mag.W) + '</span></div>' +
         '<button class="btn small" data-act="combat" data-e="' + e + '" ' + (my ? '' : 'disabled') + '>Kämpfen</button>';
-    } else h += '<div class="sm" style="margin-top:12px">' + 'besiegt' + '</div>';
+    } else h += '<div class="sm" style="margin-top:12px">' + (gone ? 'hat gewonnen und sich zurückgezogen' : 'besiegt') + '</div>';
     h += '</div>';
   });
   return h;
@@ -2299,12 +2300,12 @@ function combatCenter(cx) {
   h += '<div class="preview">' + prev + '</div><div class="btnrow">';
   const canFlee = my && M.canFlee(G, ME), rg = M.recoverGain(G);
   if (!canFlee) fleeAsk = false;
-  if (atk) h += '<button class="btn danger" data-act="attack" ' + (my && canExec ? '' : 'disabled') + ' title="Angriff ausführen: Schaden der markierten Karten">Angriff (' + val + ')</button><button class="btn blue" data-act="recover" ' + (my ? '' : 'disabled') + ' title="Nur du erhältst +' + rg + ' Mana">Erholen (+' + rg + ')</button><button class="btn" data-act="draw" ' + (my ? '' : 'disabled') + ' title="Hand tauschen, ersetzt den Angriff">Nachziehen</button><button class="btn" data-act="pass" ' + (my ? '' : 'disabled') + '>Passen</button>' + '<button class="btn" data-act="fleeask" ' + (canFlee ? '' : 'disabled') + ' title="Den Kampf abbrechen: kein Sieger, keine Siegpunkte, keine Beute. Geht nur im eigenen Angriffszug, wenn der Gegner kein Mana mehr hat und du nicht unter einem Todes-Fluch stehst.">Fliehen</button>';
+  if (atk) h += '<button class="btn danger" data-act="attack" ' + (my && canExec ? '' : 'disabled') + ' title="Angriff ausführen: Schaden der markierten Karten">Angriff (' + val + ')</button><button class="btn blue" data-act="recover" ' + (my ? '' : 'disabled') + ' title="Nur du erhältst +' + rg + ' Mana">Erholen (+' + rg + ')</button><button class="btn" data-act="draw" ' + (my ? '' : 'disabled') + ' title="Hand tauschen, ersetzt den Angriff">Nachziehen</button><button class="btn" data-act="pass" ' + (my ? '' : 'disabled') + '>Passen</button>' + '<button class="btn" data-act="fleeask" ' + (canFlee ? '' : 'disabled') + ' title="Den Kampf abbrechen: kein Sieger, keine Siegpunkte. Geht nur im eigenen Angriffszug, wenn der Gegner kein Mana mehr hat und du nicht unter einem Todes-Fluch stehst.">Fliehen</button>';
   else if (my) h += '<button class="btn primary" data-act="defend" ' + (canExec ? '' : 'disabled') + ' title="Verteidigung ausführen: Block der markierten Karten">Verteidigen (' + val + ')</button><button class="btn" data-act="pass" title="Passen: keine Verteidigung, den Schaden hinnehmen (kein Mana)">Passen</button>';   // Verteidigung ist rein reaktiv: nur bei eingehendem Schaden, nur Verteidigen und Passen
   h += '</div>';
   if (fleeAsk && canFlee) {   // Warnung: Fliehen muss bestätigt werden
     const nextMe = c.def === ME;
-    h += '<div class="fleewarn"><b>Wirklich fliehen?</b> ' + (c.mode === 'showdown' ? 'Der Showdown endet ohne Sieger und ohne Siegpunkte.' : 'Der Kampf endet ohne Sieger und ohne Beute. ' + esc(c.sides.b.name) + ' behält seine Verletzungen. ' + (nextMe ? 'Du bist danach am Zug und kannst das Monster selbst angreifen.' : esc(G.players[c.def].name) + ' ist danach am Zug und kann das Monster angreifen und die Beute holen.')) + '<div class="btnrow" style="margin-top:6px"><button class="btn danger" data-act="flee">Fliehen</button><button class="btn" data-act="fleeno">Bleiben</button></div></div>';
+    h += '<div class="fleewarn"><b>Wirklich fliehen?</b> ' + (c.mode === 'showdown' ? 'Der Showdown endet ohne Sieger und ohne Siegpunkte.' : 'Der Kampf endet ohne Sieger. ' + esc(c.sides.b.name) + ' behält seine Verletzungen. ' + (nextMe ? 'Du bist danach am Zug und kannst das Monster selbst angreifen.' : esc(G.players[c.def].name) + ' ist danach am Zug und kann das Monster angreifen.')) + '<div class="btnrow" style="margin-top:6px"><button class="btn danger" data-act="flee">Fliehen</button><button class="btn" data-act="fleeno">Bleiben</button></div></div>';
   }
   h += '</div>';
   return '<div class="panel" style="' + box(LAYOUT.combat, 'padding:10px 14px') + '">' + h + '</div>';
@@ -3149,7 +3150,7 @@ function showEnd() {
   overlay.innerHTML = '<div class="box"><h1>' + (SPEC ? (w === null ? 'Unentschieden' : esc(G.players[w].name) + ' gewinnt') : w === ME ? 'Gewonnen' : w === null ? 'Unentschieden' : 'Verloren') + '</h1><p style="font-size:26px">' + a + ' : ' + b + ' Siegpunkte</p><p>' + (w === null ? 'Bei Gleichstand an Siegpunkten, Gold und Tempelstufe gibt es keinen Sieger.' : esc(G.players[w].name) + (G.templeWin ? ' hat bei gleichem Gold die höhere Tempelstufe (' + G.players[ME].temple.level + ' : ' + G.players[OPP].temple.level + ').' : G.goldWin ? ' hat bei Punktgleichstand das meiste Gold (' + G.players[ME].stats.gold + ' : ' + G.players[OPP].stats.gold + ').' : ' hat die meisten Siegpunkte.')) + '</p><div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button class="btn" style="font-size:19px;padding:8px 18px" data-act="stend" title="Verlauf der Partie">📈 Statistik</button><button class="btn" style="font-size:19px;padding:8px 18px" data-act="logdl" title="Protokoll der Partie als Datei speichern">⬇ Protokoll</button></div><button class="btn primary" style="font-size:22px;padding:10px 28px" data-act="' + (MP ? 'mpexit' : SPEC ? 'leave' : 'newgame') + '">' + (MP ? 'Zum Startbildschirm' : SPEC ? 'Zum Hauptmenü' : 'Neues Spiel') + '</button></div>';
 }
 /* ---------- Ablauf ---------- */
-function helpTxt(res) { return res.help ? ' · Hilfe für beide: ' + [res.help.points ? res.help.points + ' Upgrade-Punkt' + (res.help.points > 1 ? 'e' : '') : '', res.help.gold ? res.help.gold + ' Gold' : ''].filter(Boolean).join(' und ') : ''; }
+function helpTxt(res) { return res.help ? 'Hilfe für beide: ' + [res.help.points ? res.help.points + ' Upgrade-Punkt' + (res.help.points > 1 ? 'e' : '') : '', res.help.gold ? res.help.gold + ' Gold' : ''].filter(Boolean).join(' und ') : ''; }
 function newGame(spec) {
   if (MP) mpLeave();
   SPEC = !!spec; clearTimeout(specT); specT = 0; setSpecSpeed(1);
@@ -3180,12 +3181,13 @@ function checkCombatEnd(prevLog) {
 function resultSound(ev) { Snd.play(ev.cls === 'win' ? 'win' : ev.cls === 'lose' ? 'lose' : 'draw'); }
 // Texte des Ergebnis-Bildschirms (aus Sicht von ME)
 function endTexts(res, sn, lines) {
-  const rest = lines.filter(t => /^(Alle drei Monster|Zwei Monster|Erholungsphase|Abschnitt|Jeder Spieler erhält|.* erhält \d+ Siegpunkt|.* verlor den Showdown|Spielende|Gleichstand|Die Beute|.* erhält die Beute|.* erhält ebenfalls)/.test(t)), me = G.players[ME], opp = G.players[OPP];
+  const rest = lines.filter(t => /^(Alle drei Monster|Zwei Monster|Erholungsphase|Abschnitt|Jeder Spieler erhält|.* erhält \d+ Siegpunkt|.* verlor den Showdown|Spielende|Gleichstand|.* erhält ebenfalls)/.test(t)), me = G.players[ME], opp = G.players[OPP];
   if (res.mode === 'monster') {
     const m = sn.sides.b.monster, mine = sn.att === ME;
-    if (res.winner === 'a') return mine ? { cls: 'win', title: 'Sieg', sub: m.name + ' besiegt', loot: (res.loot > 0 ? 'Beute: ' + res.loot + ' Gold (für beide)' : 'Keine Beute') + (res.sp ? ' · +' + res.sp.winner + ' Siegpunkt' : ''), rest } : { cls: 'draw', title: m.name + ' besiegt', sub: 'Beute ' + (res.loot || 0) + ' Gold für beide' + (res.sp ? ' · ' + G.players[sn.att].name + ' +' + res.sp.winner + ' Siegpunkt' : ''), rest };
-    if (res.winner === 'b') return mine ? { cls: 'lose', title: 'Niederlage', sub: m.name + ' gewinnt den Kampf und zieht sich zurück', loot: 'Keine Beute' + (res.sp && res.sp.loser ? ' · ' + res.sp.loser + ' Siegpunkt' : '') + helpTxt(res), rest } : { cls: 'draw', title: m.name + ' siegt', sub: 'Keine Beute, Monster zieht sich zurück' + (res.sp && res.sp.loser ? ' · ' + G.players[sn.att].name + ' ' + res.sp.loser + ' Siegpunkt' : '') + helpTxt(res), rest };
-    return { cls: 'draw', title: 'Unentschieden', sub: 'Kein Sieger, keine Beute', rest };
+    const gold = res.loot > 0 ? res.loot + ' Gold für beide' : '', join = (...t) => t.filter(Boolean).join(' · ');
+    if (res.winner === 'a') return mine ? { cls: 'win', title: 'Sieg', sub: m.name + ' besiegt', loot: join(gold, res.sp ? '+' + res.sp.winner + ' Siegpunkt' : ''), rest } : { cls: 'draw', title: m.name + ' besiegt', sub: join(gold, res.sp ? G.players[sn.att].name + ' +' + res.sp.winner + ' Siegpunkt' : ''), rest };
+    if (res.winner === 'b') return mine ? { cls: 'lose', title: 'Niederlage', sub: m.name + ' gewinnt den Kampf und zieht sich zurück', loot: join(res.sp && res.sp.loser ? res.sp.loser + ' Siegpunkt' : '', helpTxt(res)), rest } : { cls: 'draw', title: m.name + ' siegt', sub: join('Das Monster zieht sich zurück', res.sp && res.sp.loser ? G.players[sn.att].name + ' ' + res.sp.loser + ' Siegpunkt' : '', helpTxt(res)), rest };
+    return { cls: 'draw', title: 'Unentschieden', sub: 'Kein Sieger', rest };
   }
   const wc = res.winner ? sn.sides[res.winner].ctrl : null, sp = me.sp + ' : ' + opp.sp + ' Siegpunkte';
   if (wc === null) return { cls: 'draw', title: 'Showdown unentschieden', sub: res.reason === 'flee' ? 'Flucht: kein Sieger, keine Siegpunkte' : 'Kein Sieger: keine Siegpunkte', loot: sp, rest };

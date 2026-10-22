@@ -86,7 +86,7 @@ function applyWorld(state, a) {
     case 'magic': return endOnOk(state, pid, 'magic', execMagic(state, pid, a.elem));
     case 'spend': return endOnOk(state, pid, 'spend', execSpend(state, pid, a.what));
     case 'combat': {
-      const m = state.monsters[a.elem]; if (!m || !monsterAlive(m)) return fail('Dieses Monster ist besiegt.');
+      const m = state.monsters[a.elem]; if (!m || !monsterAlive(m)) return fail(m && m.retreated ? 'Dieses Monster hat sich zurückgezogen.' : 'Dieses Monster ist besiegt.');
       d.marks = [];
       startCombat(state, pid, a.elem); return { ok: true };
     }
