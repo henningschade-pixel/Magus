@@ -263,3 +263,32 @@ test('Läuterung Stufe 3 entfernt beliebig gemischt eigene und gegnerische Spieg
   assert.equal(op.stats.death, 1, 'gegnerischer Todesmarker −1'); assert.equal(me.stats.death, 1, 'eigener Todesmarker unberührt');
   assert.equal(me.stats.freeDraws, 3, 'je entferntem Marker ein Gratis-Nachziehen');
 });
+
+test('Nachziehmarker Weltphase: Nachziehen bei rotem Marker gibt dem Gegner 1 Gold, jede andere Aktion stellt auf grün zurück', () => {
+  const s = M.newGame({ seed: 5, ai: [false, false], first: 0 }), g1 = () => s.players[1].stats.gold;
+  const base = g1();
+  assert.ok(M.apply(s, { pid: 0, type: 'draw' }).ok);          // grün -> rot, keine Strafe
+  assert.equal(s.players[0].drawRed, true); assert.equal(g1(), base);
+  assert.ok(M.apply(s, { pid: 1, type: 'draw' }).ok);
+  assert.ok(M.apply(s, { pid: 0, type: 'draw' }).ok);          // rot: Strafe
+  assert.equal(g1(), base + 1);
+  assert.ok(M.apply(s, { pid: 1, type: 'temple', amount: 1 }).ok);   // andere Aktion: Marker von Spieler 1 wieder grün
+  assert.equal(s.players[1].drawRed, false);
+  const g0 = s.players[0].stats.gold;
+  assert.ok(M.apply(s, { pid: 0, type: 'temple', amount: 1 }).ok);
+  assert.equal(s.players[0].drawRed, false);
+  assert.ok(M.apply(s, { pid: 1, type: 'draw' }).ok);
+  assert.ok(M.apply(s, { pid: 0, type: 'draw' }).ok);          // wieder grün -> rot ohne Strafe
+  assert.equal(s.players[1].drawRed, true);
+  assert.equal(s.players[0].stats.gold <= g0, true);
+});
+
+test('Nachziehmarker Kampf: Nachziehen bei rotem Marker gibt dem Gegner ein Nachziehtoken', () => {
+  const { s, op } = combatSetup(11, ['F1']);
+  assert.equal(op.stats.freeDraws || 0, 0);
+  assert.ok(M.apply(s, { pid: 0, type: 'draw' }).ok);
+  assert.ok(M.apply(s, { pid: 1, type: 'draw' }).ok);
+  assert.equal(op.stats.freeDraws || 0, 0);
+  assert.ok(M.apply(s, { pid: 0, type: 'draw' }).ok);
+  assert.equal(op.stats.freeDraws, 1);
+});

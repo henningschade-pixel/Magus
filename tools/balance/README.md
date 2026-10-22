@@ -66,3 +66,8 @@ Spieldauer: Im Selbstspiel steht beim Angriff oft keine Seite besser (Monster z�
 Die Regeln `lossHelp` 1 (Hilfe für beide, Monster zieht sich zurück) und `monsterLoot` 0 (keine Beute) kamen nach dem letzten Training. Außerdem zählte `analyze.js` keinen Monstersieg mehr (erkannte ihn an „und erhält N Gold“): Siegquoten je Monster standen auf 0 %. Behoben, der Regex erkennt „besiegt X.“ mit und ohne Gold.
 `PARAMS=sRisk,sZero,fleeSafe,fleeHp,fleeA,fleeA0,fleeLHp,mRes,mResL,cBase,oHits,oFree,minMana,minHp,cMon,cWt,limitA,slotA,manaA,hpA,vOver,vOff,tRace,tAlive,tLoot node tools/balance/opt2.js 3 600` übernahm `slotA` 5 (+1,8) und `oHits` 4 (+3,2); Runde 2 fand nichts Bestätigtes. Gegen die bisherige KI 53,4 % ±2,4 (1600 Partien); `oHits` 4 allein gegen 2: 55,2 %.
 Nebenwirkung: Die Partien werden länger (P90 876 statt 1615 Aktionen, Maximum 12940), weil die KI zähe Monster länger meidet. Der Vorteil des Beginners verschwindet (46,4 % : 45,8 %). Etwa die Hälfte der Partien endet mit einem Verlierer auf 0 Siegpunkten (4:0 13 %, 0:4 13 %, 5:0 11 %, 0:5 8 %).
+
+## Nachziehmarker (22.10.)
+
+Neue Regel `drawMarker` (siehe Regelwerk). Neue Stellschrauben `dRed` (Abschlag aufs Nachziehen in der Weltphase bei rotem Marker) und `cRed` (im Kampf lieber erholen als nachziehen); beide brachten nichts Messbares (50,3 % und 49,6 % gegen die KI ohne sie) und stehen auf 0. `PARAMS=dRed,dBase,cWt,cBase,oHits,oFree,minMana,slotA,fleeA,fleeLHp,stallDec node tools/balance/opt2.js 2 500` übernahm `slotA` 4 (zurück von 5; +5,7, 54,4 % ±2,4 gegen slotA 5 in 1600 Partien).
+Ergebnis (1000 Partien): P90 657, Maximum 4050 Aktionen (vorher 1615 und 12940); Beginner 46,1 %, Zweiter 50,5 %, Unentschieden 3,4 %.

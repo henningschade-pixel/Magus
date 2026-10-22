@@ -76,6 +76,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
  100%{translate:0 -70px;opacity:0;filter:grayscale(.8) brightness(.28) blur(2px);-webkit-mask-position:0 100%;mask-position:0 100%}}
 .pile-ph{position:absolute;border:2px dashed rgba(169,159,189,.28);border-radius:12px;pointer-events:none}
 .slot-ph{position:absolute;width:128px;height:194px;border:2px dashed rgba(169,159,189,.28);border-radius:12px}
+.dmark{position:absolute;z-index:62;width:22px;height:22px;border-radius:50%;border:2px solid rgba(0,0,0,.65);box-shadow:0 2px 4px rgba(0,0,0,.65);pointer-events:none}.dmark.green{background:#3f9d5c}.dmark.red{background:#c4412a}
 .pilelabel{position:absolute;font-size:15px;color:var(--mute);text-align:center;width:110px}
 .pilehit{position:absolute;border-radius:12px;cursor:var(--cp);z-index:60}
 .pilehit:hover{box-shadow:0 0 0 2px var(--gold)}
@@ -1161,10 +1162,10 @@ function applyWorld(state, a) {
 /* Magus – Regelkern (Teil 8): Spielstart und Schnittstelle nach außen. */
 
 // Regelwerte (Abstimmungs- und Variantenschalter). ‚curses‘: Fluchsystem, siehe 30-curses.js.
-const DEFAULT_RULES = { magicCost: [0, 1, 3], limitCost: 2, limitFirstStepCost: 2, hpPerPoint: 2, stagePoints: [0, 1, 2, 3], stageGold: [0, 1, 2, 3], loserUp: 0, loserUp2: 0, winSp: 4, winSpFromShowdown: 2, monsterSp: 1, monsterLoot: 0, idleLimit: 0, lossHelp: 1, showdownSp: 1, lootBoth: true, recoverByStage: [1, 2, 3], regenByStage: [1, 2, 3], supply: 8, supply2: 6, supply3: 4, startCards: 0 };   // Jede gespielte Karte (auch Kombokarten) kostet 1 Mana, nur Verteidigung in der überlegenen Farbe ist gratis. recoverByStage: Mana-Gewinn von „Erholen“ im Kampf je Abschnitt
+const DEFAULT_RULES = { magicCost: [0, 1, 3], limitCost: 2, limitFirstStepCost: 2, hpPerPoint: 2, stagePoints: [0, 1, 2, 3], stageGold: [0, 1, 2, 3], loserUp: 0, loserUp2: 0, winSp: 4, winSpFromShowdown: 2, monsterSp: 1, monsterLoot: 0, idleLimit: 0, drawMarker: 1, drawPenaltyGold: 1, lossHelp: 1, showdownSp: 1, lootBoth: true, recoverByStage: [1, 2, 3], regenByStage: [1, 2, 3], supply: 8, supply2: 6, supply3: 4, startCards: 0 };   // Jede gespielte Karte (auch Kombokarten) kostet 1 Mana, nur Verteidigung in der überlegenen Farbe ist gratis. recoverByStage: Mana-Gewinn von „Erholen“ im Kampf je Abschnitt
 
 function newPlayer(state, name, ai, startIds) {
-  const p = { name, ai: !!ai, stats: newStats(), temple: { points: 0, level: 0 }, sp: 0, slots: MIN_SLOTS };
+  const p = { name, ai: !!ai, stats: newStats(), temple: { points: 0, level: 0 }, sp: 0, slots: MIN_SLOTS, drawRed: false };
   p.stats.gold = 0;   // Das Spiel beginnt ohne Gold; Abschnittsboni kommen in newGame
   p.deck = newDeck(state, startIds || START_DECK, MIN_SLOTS);
   return p;
@@ -1216,9 +1217,38 @@ function apply(state, a) {
 }
 function applyInner(state, a) {
   if (state.over) return fail('Das Spiel ist beendet.');
+  if (!state.rules.drawMarker) return dispatch(state, a);
+  const kind = markerKind(state, a), pid = a.pid !== undefined ? a.pid : actor(state), wasRed = kind === 'draw' && !!state.players[pid].drawRed;
+  const r = dispatch(state, a);
+  if (r.ok && kind) drawMarkerAfter(state, pid, kind, wasRed);
+  return r;
+}
+function dispatch(state, a) {
   if (state.phase === 'world') return applyWorld(state, a);
   if (state.phase === 'combat') return applyCombat(state, a);
   return fail('Keine Aktion möglich.');
+}
+// Nachziehmarker (je Spieler, grün/rot): Nachziehen dreht ihn auf rot, jede andere Zugaktion zurück auf grün; wer bei rotem Marker nachzieht, gibt dem Gegner eine Strafe (Weltphase: drawPenaltyGold Gold, Kampf: ein Nachziehtoken). Markieren, Sperren, Läuterungswahl und das Gratis-Nachziehen (Token) zählen nicht als Aktion.
+function markerKind(state, a) {
+  if (state.phase === 'world') return a.type === 'draw' ? 'draw' : ['vendor', 'temple', 'magic', 'spend', 'combat'].includes(a.type) ? 'other' : null;
+  if (state.phase === 'combat') return a.type === 'draw' ? 'draw' : ['attack', 'defend', 'pass', 'recover', 'flee'].includes(a.type) ? 'other' : null;
+  return null;
+}
+function drawMarkerAfter(state, pid, kind, wasRed) {
+  const p = state.players[pid];
+  if (kind === 'other') { p.drawRed = false; return; }
+  p.drawRed = true;
+  if (!wasRed) return;
+  const q = state.players[other(pid)];
+  if (state.phase === 'combat' && state.combat) {
+    const c = state.combat, opp = c.sides.a.ctrl === pid ? c.sides.b : c.sides.a;
+    opp.stats.freeDraws = (opp.stats.freeDraws || 0) + 1;
+    log(state, p.name + ' zog bei rotem Nachziehmarker nach: ' + opp.name + ' erhält ein Nachziehtoken.', pid);
+  } else {
+    const g = state.rules.drawPenaltyGold || 0;
+    q.stats.gold += g; q.stats.goldGot += g;
+    log(state, p.name + ' zog bei rotem Nachziehmarker nach: ' + q.name + ' erhält ' + g + ' Gold.', pid);
+  }
 }
 // Wer ist gerade am Zug (Spieler-Index) oder null, wenn das Spiel vorbei ist.
 function actor(state) {
@@ -1244,8 +1274,9 @@ return { ELEMENTS, SUPERIOR, NAMES, START_DECK, MAX_MAGIC, MAX_SLOTS, MIN_SLOTS,
 /* ---------- Stellschrauben ---------- */
 // Alle Gewichte der KI an einer Stelle (abgestimmt per Selbstspiel: Änderungen wurden nur übernommen, wenn sie sich in 800 Partien mit getauschten Plätzen klar durchsetzten). Pro Platz überschreibbar (setParams), damit Varianten gegeneinander spielen können.
 const DEFAULTS = {
-  limitA: 1, slotA: 5, manaA: 4, hpA: 4, limitB: 3, slotB: 5,          // Ausbaureihenfolge der Upgrade-Punkte
+  limitA: 1, slotA: 4, manaA: 4, hpA: 4, limitB: 3, slotB: 5,          // Ausbaureihenfolge der Upgrade-Punkte
   cBase: 34, cHp: 3, cMana: 1.5, cWt: 2.8, cMon: 0.8, minHp: 1, minMana: 4,   // Lust, ein Monster anzugreifen
+  dRed: 0, cRed: 0,   // Nachziehmarker rot: Abschlag auf das Nachziehen in der Weltphase (Strafe: Gegner erhält Gold); cRed 1: im Kampf lieber erholen als nachziehen (Strafe: Gegner erhält ein Nachziehtoken)
   dBase: 7, dCurse: 4, dEmpty: 12, dSlot: 2, dNorm: 5,                    // Lust, nachzuziehen
   vUp: 8.85, vUpW: 1.4,                                                       // Händler-Aufwertung
   smart: 1, wMark: 0.5, keepB: 3, keepOn: 0, wDeath: 6, wDraw: 1.6, wFW: 1.3, wFE: 0.9, wEW: 2.8, aDmg: 1.5, aCost: 1.5, aCurse: 1.6, aThr: 0.5, oHits: 4, oFree: 4, stallDec: 0.25, stallFrom: 24,   // Angriffsbewertung
@@ -1426,7 +1457,7 @@ function worldPlan(state, pid) {
   const allIds = [...d.draw, ...d.discard, ...d.hand.filter(Boolean)].map(c => c.id);
   const countEl = e => allIds.filter(id => id[0] === e).length;
 
-  if (canDraw(d)) cands.push({ score: Q.dBase + Q.dCurse * curses.length + (normals.length === 0 ? Q.dEmpty : 0) + emptySlots * Q.dSlot - (normals.length >= 3 ? Q.dNorm : 0) + R(), acts: [A({ type: 'draw' })] });
+  if (canDraw(d)) cands.push({ score: Q.dBase + Q.dCurse * curses.length + (normals.length === 0 ? Q.dEmpty : 0) + emptySlots * Q.dSlot - (normals.length >= 3 ? Q.dNorm : 0) - (state.players[pid].drawRed ? Q.dRed : 0) + R(), acts: [A({ type: 'draw' })] });
   {
     const plans = M.vendorPlans(state, pid), mk = o => o.slots.map(sl => A({ type: 'mark', slot: sl }));
     // Wirksamer Wert einer Aufwertung: Eine Karte zählt höchstens mit dem Magielevel ihrer Farbe. Darüber (ohne bald erschwingliche Magie) kostet die Aufwertung nur Zeit.
@@ -1622,6 +1653,7 @@ function combatPlan(state, pid) {
     if (s.mana <= 0 || !hand.length) { if (hand.length === 0 && canDraw(d)) return [A({ type: 'draw' })]; return [A({ type: 'recover' })]; }
     if (Q.rW > 0 && s.mana < Q.rRef && s.mana < s.maxMana) return [A({ type: 'recover' })];
     if (canDraw(d)) {
+      if (Q.cRed && state.players[pid].drawRed && s.mana < s.maxMana) return [A({ type: 'recover' })];
       const acts = [];
       if (Q.keepOn) {   // (bei schwachem Angriff) Kombo-Bausteine behalten
         const keep = keepLocks(state, side, opp, hand, Q);
@@ -1992,7 +2024,9 @@ function renderCards() {
   for (let i = 0; i < n; i++) if (!cx.myDeck.hand[i]) ph += '<div class="slot-ph" style="left:' + slotX(i, n, L_MY) + 'px;top:' + L_MY.y + 'px"></div>';
   const lab = (L, d, mine) => {
     const w = CW * L.ps, y = L.draw.y + CH * L.ps + 3;
-    return '<div class="pilelabel" style="left:' + (L.draw.x - 8) + 'px;top:' + y + 'px;width:' + (w + 16) + 'px">Stapel ' + d.draw.length + '</div>' +
+    const red = G.rules.drawMarker && G.players[mine ? ME : 1 - ME] && G.players[mine ? ME : 1 - ME].drawRed;   // Nachziehmarker: grün = Nachziehen frei, rot = ein weiteres Nachziehen kostet Strafe
+    const mk = G.rules.drawMarker ? '<div class="dmark ' + (red ? 'red' : 'green') + '" title="Nachziehmarker ' + (red ? 'rot: Nachziehen ohne andere Aktion dazwischen gibt dem Gegner ' + (G.phase === 'combat' ? 'ein Nachziehtoken' : G.rules.drawPenaltyGold + ' Gold') : 'grün: Nachziehen ist frei') + '" style="left:' + (L.draw.x + w - 10) + 'px;top:' + (L.draw.y - 10) + 'px"></div>' : '';
+    return mk + '<div class="pilelabel" style="left:' + (L.draw.x - 8) + 'px;top:' + y + 'px;width:' + (w + 16) + 'px">Stapel ' + d.draw.length + '</div>' +
       '<div class="pilelabel" style="left:' + (L.disc.x - 8) + 'px;top:' + y + 'px;width:' + (w + 16) + 'px">Ablage ' + d.discard.length + '</div>';
   };
   const emp = (L, d) => ['draw', 'disc'].map(k => (k === 'draw' ? d.draw : d.discard).length ? '' : '<div class="pile-ph" style="left:' + L[k].x + 'px;top:' + L[k].y + 'px;width:' + CW * L.ps + 'px;height:' + CH * L.ps + 'px"></div>').join('');   // leere Stapel: dezent gestrichelt

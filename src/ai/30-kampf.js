@@ -154,6 +154,7 @@ function combatPlan(state, pid) {
     if (s.mana <= 0 || !hand.length) { if (hand.length === 0 && canDraw(d)) return [A({ type: 'draw' })]; return [A({ type: 'recover' })]; }
     if (Q.rW > 0 && s.mana < Q.rRef && s.mana < s.maxMana) return [A({ type: 'recover' })];
     if (canDraw(d)) {
+      if (Q.cRed && state.players[pid].drawRed && s.mana < s.maxMana) return [A({ type: 'recover' })];
       const acts = [];
       if (Q.keepOn) {   // (bei schwachem Angriff) Kombo-Bausteine behalten
         const keep = keepLocks(state, side, opp, hand, Q);

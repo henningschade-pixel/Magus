@@ -85,7 +85,9 @@ function renderCards() {
   for (let i = 0; i < n; i++) if (!cx.myDeck.hand[i]) ph += '<div class="slot-ph" style="left:' + slotX(i, n, L_MY) + 'px;top:' + L_MY.y + 'px"></div>';
   const lab = (L, d, mine) => {
     const w = CW * L.ps, y = L.draw.y + CH * L.ps + 3;
-    return '<div class="pilelabel" style="left:' + (L.draw.x - 8) + 'px;top:' + y + 'px;width:' + (w + 16) + 'px">Stapel ' + d.draw.length + '</div>' +
+    const red = G.rules.drawMarker && G.players[mine ? ME : 1 - ME] && G.players[mine ? ME : 1 - ME].drawRed;   // Nachziehmarker: grün = Nachziehen frei, rot = ein weiteres Nachziehen kostet Strafe
+    const mk = G.rules.drawMarker ? '<div class="dmark ' + (red ? 'red' : 'green') + '" title="Nachziehmarker ' + (red ? 'rot: Nachziehen ohne andere Aktion dazwischen gibt dem Gegner ' + (G.phase === 'combat' ? 'ein Nachziehtoken' : G.rules.drawPenaltyGold + ' Gold') : 'grün: Nachziehen ist frei') + '" style="left:' + (L.draw.x + w - 10) + 'px;top:' + (L.draw.y - 10) + 'px"></div>' : '';
+    return mk + '<div class="pilelabel" style="left:' + (L.draw.x - 8) + 'px;top:' + y + 'px;width:' + (w + 16) + 'px">Stapel ' + d.draw.length + '</div>' +
       '<div class="pilelabel" style="left:' + (L.disc.x - 8) + 'px;top:' + y + 'px;width:' + (w + 16) + 'px">Ablage ' + d.discard.length + '</div>';
   };
   const emp = (L, d) => ['draw', 'disc'].map(k => (k === 'draw' ? d.draw : d.discard).length ? '' : '<div class="pile-ph" style="left:' + L[k].x + 'px;top:' + L[k].y + 'px;width:' + CW * L.ps + 'px;height:' + CH * L.ps + 'px"></div>').join('');   // leere Stapel: dezent gestrichelt

@@ -1,10 +1,10 @@
 /* Magus – Regelkern (Teil 8): Spielstart und Schnittstelle nach außen. */
 
 // Regelwerte (Abstimmungs- und Variantenschalter). ‚curses‘: Fluchsystem, siehe 30-curses.js.
-const DEFAULT_RULES = { magicCost: [0, 1, 3], limitCost: 2, limitFirstStepCost: 2, hpPerPoint: 2, stagePoints: [0, 1, 2, 3], stageGold: [0, 1, 2, 3], loserUp: 0, loserUp2: 0, winSp: 4, winSpFromShowdown: 2, monsterSp: 1, monsterLoot: 0, idleLimit: 0, lossHelp: 1, showdownSp: 1, lootBoth: true, recoverByStage: [1, 2, 3], regenByStage: [1, 2, 3], supply: 8, supply2: 6, supply3: 4, startCards: 0 };   // Jede gespielte Karte (auch Kombokarten) kostet 1 Mana, nur Verteidigung in der überlegenen Farbe ist gratis. recoverByStage: Mana-Gewinn von „Erholen“ im Kampf je Abschnitt
+const DEFAULT_RULES = { magicCost: [0, 1, 3], limitCost: 2, limitFirstStepCost: 2, hpPerPoint: 2, stagePoints: [0, 1, 2, 3], stageGold: [0, 1, 2, 3], loserUp: 0, loserUp2: 0, winSp: 4, winSpFromShowdown: 2, monsterSp: 1, monsterLoot: 0, idleLimit: 0, drawMarker: 1, drawPenaltyGold: 1, lossHelp: 1, showdownSp: 1, lootBoth: true, recoverByStage: [1, 2, 3], regenByStage: [1, 2, 3], supply: 8, supply2: 6, supply3: 4, startCards: 0 };   // Jede gespielte Karte (auch Kombokarten) kostet 1 Mana, nur Verteidigung in der überlegenen Farbe ist gratis. recoverByStage: Mana-Gewinn von „Erholen“ im Kampf je Abschnitt
 
 function newPlayer(state, name, ai, startIds) {
-  const p = { name, ai: !!ai, stats: newStats(), temple: { points: 0, level: 0 }, sp: 0, slots: MIN_SLOTS };
+  const p = { name, ai: !!ai, stats: newStats(), temple: { points: 0, level: 0 }, sp: 0, slots: MIN_SLOTS, drawRed: false };
   p.stats.gold = 0;   // Das Spiel beginnt ohne Gold; Abschnittsboni kommen in newGame
   p.deck = newDeck(state, startIds || START_DECK, MIN_SLOTS);
   return p;
@@ -56,9 +56,38 @@ function apply(state, a) {
 }
 function applyInner(state, a) {
   if (state.over) return fail('Das Spiel ist beendet.');
+  if (!state.rules.drawMarker) return dispatch(state, a);
+  const kind = markerKind(state, a), pid = a.pid !== undefined ? a.pid : actor(state), wasRed = kind === 'draw' && !!state.players[pid].drawRed;
+  const r = dispatch(state, a);
+  if (r.ok && kind) drawMarkerAfter(state, pid, kind, wasRed);
+  return r;
+}
+function dispatch(state, a) {
   if (state.phase === 'world') return applyWorld(state, a);
   if (state.phase === 'combat') return applyCombat(state, a);
   return fail('Keine Aktion möglich.');
+}
+// Nachziehmarker (je Spieler, grün/rot): Nachziehen dreht ihn auf rot, jede andere Zugaktion zurück auf grün; wer bei rotem Marker nachzieht, gibt dem Gegner eine Strafe (Weltphase: drawPenaltyGold Gold, Kampf: ein Nachziehtoken). Markieren, Sperren, Läuterungswahl und das Gratis-Nachziehen (Token) zählen nicht als Aktion.
+function markerKind(state, a) {
+  if (state.phase === 'world') return a.type === 'draw' ? 'draw' : ['vendor', 'temple', 'magic', 'spend', 'combat'].includes(a.type) ? 'other' : null;
+  if (state.phase === 'combat') return a.type === 'draw' ? 'draw' : ['attack', 'defend', 'pass', 'recover', 'flee'].includes(a.type) ? 'other' : null;
+  return null;
+}
+function drawMarkerAfter(state, pid, kind, wasRed) {
+  const p = state.players[pid];
+  if (kind === 'other') { p.drawRed = false; return; }
+  p.drawRed = true;
+  if (!wasRed) return;
+  const q = state.players[other(pid)];
+  if (state.phase === 'combat' && state.combat) {
+    const c = state.combat, opp = c.sides.a.ctrl === pid ? c.sides.b : c.sides.a;
+    opp.stats.freeDraws = (opp.stats.freeDraws || 0) + 1;
+    log(state, p.name + ' zog bei rotem Nachziehmarker nach: ' + opp.name + ' erhält ein Nachziehtoken.', pid);
+  } else {
+    const g = state.rules.drawPenaltyGold || 0;
+    q.stats.gold += g; q.stats.goldGot += g;
+    log(state, p.name + ' zog bei rotem Nachziehmarker nach: ' + q.name + ' erhält ' + g + ' Gold.', pid);
+  }
 }
 // Wer ist gerade am Zug (Spieler-Index) oder null, wenn das Spiel vorbei ist.
 function actor(state) {

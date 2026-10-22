@@ -1,8 +1,9 @@
 /* ---------- Stellschrauben ---------- */
 // Alle Gewichte der KI an einer Stelle (abgestimmt per Selbstspiel: Änderungen wurden nur übernommen, wenn sie sich in 800 Partien mit getauschten Plätzen klar durchsetzten). Pro Platz überschreibbar (setParams), damit Varianten gegeneinander spielen können.
 const DEFAULTS = {
-  limitA: 1, slotA: 5, manaA: 4, hpA: 4, limitB: 3, slotB: 5,          // Ausbaureihenfolge der Upgrade-Punkte
+  limitA: 1, slotA: 4, manaA: 4, hpA: 4, limitB: 3, slotB: 5,          // Ausbaureihenfolge der Upgrade-Punkte
   cBase: 34, cHp: 3, cMana: 1.5, cWt: 2.8, cMon: 0.8, minHp: 1, minMana: 4,   // Lust, ein Monster anzugreifen
+  dRed: 0, cRed: 0,   // Nachziehmarker rot: Abschlag auf das Nachziehen in der Weltphase (Strafe: Gegner erhält Gold); cRed 1: im Kampf lieber erholen als nachziehen (Strafe: Gegner erhält ein Nachziehtoken)
   dBase: 7, dCurse: 4, dEmpty: 12, dSlot: 2, dNorm: 5,                    // Lust, nachzuziehen
   vUp: 8.85, vUpW: 1.4,                                                       // Händler-Aufwertung
   smart: 1, wMark: 0.5, keepB: 3, keepOn: 0, wDeath: 6, wDraw: 1.6, wFW: 1.3, wFE: 0.9, wEW: 2.8, aDmg: 1.5, aCost: 1.5, aCurse: 1.6, aThr: 0.5, oHits: 4, oFree: 4, stallDec: 0.25, stallFrom: 24,   // Angriffsbewertung
