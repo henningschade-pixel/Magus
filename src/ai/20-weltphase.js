@@ -36,18 +36,21 @@ function pickSpend(p, state, pid) {
   const pl = stratPlan(state, pid);
   if (pl.st === 1 && s.limit < 2) return canL ? 'limit' : null;   // auf Ausspiellimit 2 sparen
   const noSlot = stratSlotLock(state, p, pid);
+  const canD = !!state.rules.drawMarker && s.drawLimit < Math.min(Q.dlMax, M.MAX_DRAW_LIMIT) && M.drawLimitCost(state, s) <= s.pending;   // Nachziehlimit (Upgrade-Punkte) bis Stufe dlMax, an Stelle dlPos der Reihenfolge
   const order = [
     ['limit', s.limit < Q.limitA && canL], ['slot', p.slots < Q.slotA], ['mana', s.maxMana < Q.manaA && canM], ['hp', s.maxHp < Q.hpA],
     ['limit', s.limit < Q.limitB && canL], ['slot', p.slots < Q.slotB], ['hp', true], ['mana', canM], ['limit', s.limit < M.MAX_LIMIT && canL],
   ];
+  order.splice(Math.max(0, Math.min(order.length, Q.dlPos)), 0, ['drawlimit', canD]);
   if (s.limit < Q.limitA && !canL && s.pending < lc) return null;   // auf den Limit-Schritt sparen
   for (const [w, ok] of order) if (ok && !(w === 'slot' && noSlot)) return w;
   return 'hp';
 }
+const spendAct = (A, w) => w === 'drawlimit' ? A({ type: 'drawlimit' }) : A({ type: 'spend', what: w });   // Nachziehlimit ist eine eigene Aktion, die übrigen Punkte gehen über 'spend'
 // Wirtschaftsaktion (Punkte ausgeben, Magie kaufen, Gold opfern); sie zählt als Aktion und beendet den Zug.
 function ecoStep(state, pid) {
   const p = state.players[pid], s = p.stats, A = a => Object.assign({ pid }, a), Q = P(pid);
-  if (s.pending > 0) { const w = pickSpend(p, state, pid); if (w) return A({ type: 'spend', what: w }); }
+  if (s.pending > 0) { const w = pickSpend(p, state, pid); if (w) return spendAct(A, w); }
   const pl = stratPlan(state, pid);
   if (pl.st === 1 && s.limit < 2 && s.pending < M.limitStepCost(state, s)) {   // Tempel-Gold opfern, damit das Ausspiellimit sofort auf 2 geht
     const need = M.limitStepCost(state, s) - s.pending;
@@ -66,14 +69,11 @@ function ecoStep(state, pid) {
     if (s.gold >= 2) return A({ type: 'temple', amount: Math.min(s.gold, 3) });
     return null;
   }
-  const dlBuy = () => Q.dlMax > s.drawLimit && s.drawLimit < M.MAX_DRAW_LIMIT && state.rules.drawMarker && s.gold >= M.drawLimitCost(state, s) + Q.dlRes ? A({ type: 'drawlimit' }) : null;
-  if (Q.dlFirst) { const b = dlBuy(); if (b) return b; }
   const opp = state.players[1 - pid].stats, oppTop = M.ELEMENTS.slice().sort((x, y) => opp.mag[y] - opp.mag[x])[0];   // Aufbau des Gegners: seine stärkste Magie, und welche Farbe ihr überlegen ist
   const planEl = planElement(state, pid);
   let best = null;
   for (const e of M.ELEMENTS) { const cost = M.magicCost(state, s.mag[e]); if (s.mag[e] < M.MAX_MAGIC && s.gold >= cost) { const sc = Q.mBase - cost * Q.mCost + countEl(e) * Q.mCnt + (s.mag[e] === Math.max(s.mag.F, s.mag.E, s.mag.W) ? Q.mTop : 0) + (e === M.SUPERIOR[oppTop] ? Q.mCounter * opp.mag[oppTop] : 0) + (e === planEl ? Q.mPlan : 0) + Q.mCatch * Math.max(0, opp.mag[e] - s.mag[e]); if (!best || sc > best.sc) best = { sc, a: A({ type: 'magic', elem: e }) }; } }
   if (best) return best.a;
-  const b = dlBuy(); if (b) return b;
   if (s.gold - Q.tKeep >= 2) return A({ type: 'temple', amount: Math.min(s.gold - Q.tKeep, 3) });
   return null;
 }
@@ -138,7 +138,7 @@ function worldPlan(state, pid) {
   const A = a => Object.assign({ pid }, a);
   if (s.pending > 0) {
     const w = pickSpend(p, state, pid);
-    if (w) return [A({ type: 'spend', what: w })];
+    if (w) return [spendAct(A, w)];
   }
   const hand = handList(d), normals = hand.filter(h => !h.curse), curses = hand.filter(h => h.curse);
   const R = () => state.rng.random() * 0.6;

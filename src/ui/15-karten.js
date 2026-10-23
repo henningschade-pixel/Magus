@@ -68,7 +68,7 @@ function layoutDeck(deck, L, mine) {
     place(c, { x: slotX(i, n, L), y: L.y + (marked ? L.raise : 0), sc: L.s, down: !mine, z: 20 + i + (marked ? 30 : 0), marked, fd: fdm, locked: mine && c.locked, mine, slot: i, spawn, zone: 'hand', first: mine && marked && !fdm && isFirstAtk(deck, i)});
   });
 }
-// Nachziehlimit: drei Kreise unter dem Nachziehstapel (beide Spieler), der rot/grüne Marker liegt auf der Stufe des nächsten freien Nachziehens; Stufen über dem Limit sind abgedunkelt, auf der nächsten sitzt der Kauf-Knopf (Gold)
+// Nachziehlimit: drei Kreise unter dem Nachziehstapel (beide Spieler), der rot/grüne Marker liegt auf der Stufe des nächsten freien Nachziehens; Stufen über dem Limit sind abgedunkelt, auf der nächsten sitzt der Plus-Knopf (Upgrade-Punkte)
 function drawTrack(L, mine) {
   if (!G.rules.drawMarker) return '';
   const pl = G.players[mine ? ME : 1 - ME], st = pl.stats, n = M.MAX_DRAW_LIMIT, lim = st.drawLimit || 1;
@@ -81,9 +81,9 @@ function drawTrack(L, mine) {
   for (let i = 1; i <= n; i++) h += '<div class="dlc' + (i <= lim ? '' : ' off') + '" title="' + tip + '" style="left:' + (x0 + (i - 1) * (sz + gap)) + 'px;top:' + y + 'px;width:' + sz + 'px;height:' + sz + 'px"></div>';
   h += '<div class="dmark ' + (red ? 'red' : 'green') + '" title="Nachziehmarker ' + (red ? 'rot: Nachziehen gibt dem Gegner ' + pen : 'grün: noch ' + (lim - (pl.drawN || 0)) + 'x Nachziehen frei') + '" style="width:' + tk + 'px;height:' + tk + 'px;left:' + (x0 + (at - 1) * (sz + gap) + (sz - tk) / 2) + 'px;top:' + (y + (sz - tk) / 2) + 'px"></div>';
   const cost = M.drawLimitCost(G, st);
-  if (mine && lim < n && G.phase === 'world' && !G.over && myTurn() && st.gold >= cost) {   // wie die Magie-Knöpfe: nur im eigenen Zug der Weltphase und nur, wenn das Gold reicht
-    const bz = Math.round(sz * 32 / 26), off = (bz - sz) / 2;   // wie die Magie-Knöpfe: Knopffläche größer als die Scheibe (Platz für die Funken)
-    h += '<button class="up mg gd' + (cost > 1 ? ' costly' : '') + '"' + (cost > 1 ? ' data-c="' + cost + '"' : '') + ' data-act="drawlimit" title="Nachziehlimit auf ' + (lim + 1) + ' steigern (' + cost + ' Gold)" style="left:' + (x0 + lim * (sz + gap) - off) + 'px;top:' + (y - off) + 'px;width:' + bz + 'px;height:' + bz + 'px;margin:0;z-index:63"></button>';
+  if (mine && lim < n && G.phase === 'world' && !G.over && myTurn() && st.pending >= cost) {   // wie die anderen Plus-Knöpfe: nur im eigenen Zug der Weltphase und nur, wenn die Upgrade-Punkte reichen
+    const bz = sz, bh = Math.round(sz * 71 / 64);   // Plus-Grafik 64 × 71
+    h += '<button class="up pt' + (cost > 1 ? ' costly' : '') + '"' + (cost > 1 ? ' data-c="' + cost + '"' : '') + ' data-act="drawlimit" title="Nachziehlimit auf ' + (lim + 1) + ' steigern (' + cost + ' Upgrade-Punkt' + (cost > 1 ? 'e' : '') + ')" style="left:' + (x0 + lim * (sz + gap)) + 'px;top:' + (y - (bh - sz) / 2) + 'px;width:' + bz + 'px;height:' + bh + 'px;margin:0;z-index:63"></button>';
   }
   return h;
 }

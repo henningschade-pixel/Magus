@@ -100,3 +100,8 @@ Neue Stellschrauben: `dlMax` (bis zu welcher Stufe die KI das Nachziehlimit kauf
 Befund vor dem Strafnachziehen-Training (siehe oben): Alle Strafzüge in der Weltphase geschahen mit 0 Gold, vollem Mana und Monstern auf dem Feld, die KI nutzte das Nachziehen als „Passen“. Dort brachten `dlMax` 2 (51,2 %) und `rAtk` 80 (54,4 %, Strafen 13 statt 27 je Partie) etwas; `dlMax` 3 (43,6 %) und `dlFirst` 1 (9,5 %) schadeten.
 Auf dem Stand mit `dVen`/`rBroke` (Strafgold 0,2 je Partie) bringt das Limit der KI nichts mehr (2400 Partien gegen den Stand ohne Kauf): `dlMax` 2 46,3 %, `dlMax` 3 35,3 %, `dlMax` 2 mit `rAtk` 80 46,9 %, `rAtk` 80 allein 49,8 %; mit Reserve `dlRes` 2 49,1 %, ab `dlRes` 4 kauft sie nie (50,0 %); `dFree` 3, `cRedE` 1, `dTmp` 0 neutral bis schlechter. Jeder Kauf kostet einen Zug und Gold, und es gibt kaum noch Strafen zu vermeiden. Die Standardwerte bleiben bei `dlMax` 0 und `rAtk` 0; die Stellschrauben bleiben für spätere Regeländerungen (etwa ein anderer Preis) im Code.
 Hinweis: Im Selbstspiel schenken sich beide KIs gegenseitig Gold; gegen Menschen, die das Limit kaufen, ändert sich an der KI nichts.
+
+## Nachziehlimit für Upgrade-Punkte (23.10.)
+
+Regeländerung: Das Nachziehlimit kostet jetzt 1 Upgrade-Punkt je Stufe statt 1 Gold. Die KI kauft es über die Ausbaureihenfolge (`pickSpend`): `dlMax` bis zu welcher Stufe (0 = nie), `dlPos` an welcher Stelle (0 = zuerst; ab 7 nie erreicht, weil davor „max. HP“ immer greift). Die Gold-Stellschrauben `dlRes` und `dlFirst` sind entfallen.
+Ergebnis (1200 Partien je Variante gegen die KI ohne Kauf): dlMax 2 an Stelle 0/2/4/6: 34,7 / 36,1 / 38,9 / 43,3 %; dlMax 3 an Stelle 0/2/4/6: 22,9 / 30,8 / 32,0 / 36,5 %. Standard bleibt `dlMax` 0.

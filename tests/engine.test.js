@@ -306,18 +306,18 @@ test('KI meidet Nachziehen bei rotem Nachziehmarker (Weltphase: Gold opfern stat
   }
 });
 
-test('Nachziehlimit: Kauf kostet 1 Gold, beendet den Zug, höchstens Stufe 3', () => {
+test('Nachziehlimit: Kauf kostet 1 Upgrade-Punkt (kein Gold), beendet den Zug, höchstens Stufe 3', () => {
   const s = M.newGame({ seed: 5, ai: [false, false], first: 0 }), me = s.players[0].stats;
   assert.equal(me.drawLimit, 1);
-  me.gold = 0; assert.equal(M.apply(s, { pid: 0, type: 'drawlimit' }).ok, false, 'ohne Gold nicht möglich');
-  me.gold = 5;
+  me.pending = 0; me.gold = 5; assert.equal(M.apply(s, { pid: 0, type: 'drawlimit' }).ok, false, 'ohne Upgrade-Punkte nicht möglich, auch mit Gold');
+  me.pending = 5;
   assert.ok(M.apply(s, { pid: 0, type: 'drawlimit' }).ok);
-  assert.equal(me.drawLimit, 2); assert.equal(me.gold, 4); assert.equal(s.turn, 1, 'Zug beendet');
+  assert.equal(me.drawLimit, 2); assert.equal(me.pending, 4); assert.equal(me.gold, 5, 'Gold bleibt'); assert.equal(s.turn, 1, 'Zug beendet');
   assert.ok(M.apply(s, { pid: 1, type: 'draw' }).ok);
   assert.ok(M.apply(s, { pid: 0, type: 'drawlimit' }).ok);
-  assert.equal(me.drawLimit, 3); assert.equal(me.gold, 3);
+  assert.equal(me.drawLimit, 3); assert.equal(me.pending, 3);
   s.players[1].stats.gold = 5; assert.ok(M.apply(s, { pid: 1, type: 'temple', amount: 1 }).ok);   // (zweimal hintereinander nachziehen würde dem Spieler 0 Gold schenken)
-  assert.equal(M.apply(s, { pid: 0, type: 'drawlimit' }).ok, false, 'Maximum 3'); assert.equal(me.gold, 3);
+  assert.equal(M.apply(s, { pid: 0, type: 'drawlimit' }).ok, false, 'Maximum 3'); assert.equal(me.pending, 3);
 });
 
 test('Nachziehlimit Weltphase: so viele Nachziehvorgänge hintereinander sind frei, danach wird der Marker rot und das nächste Nachziehen kostet Gold', () => {
@@ -345,11 +345,12 @@ test('Nachziehlimit Kampf: erst das Nachziehen über dem Limit gibt dem Gegner e
   assert.equal(op.stats.freeDraws, 1);
 });
 
-test('KI: Stellschraube dlMax kauft das Nachziehlimit bis zur gewählten Stufe, nicht weiter', () => {
+test('KI: Stellschraube dlMax kauft das Nachziehlimit mit Upgrade-Punkten bis zur gewählten Stufe, nicht weiter', () => {
   const s = M.newGame({ seed: 5, ai: [true, true], first: 0 }), p = s.players[0];
-  p.stats.gold = 3; p.stats.pending = 0; p.stats.mag = { F: 3, E: 3, W: 3 };   // Magie ausgereizt: das Gold bleibt für Limit und Tempel
-  assert.notEqual(AI.ecoStep(s, 0).type, 'drawlimit', 'Standard: kauft nicht');
-  AI.setParams(0, { dlMax: 2 });
+  p.stats.gold = 0; p.stats.pending = 1;
+  AI.setParams(0, { dlMax: 0, dlPos: 0 });
+  try { assert.notEqual(AI.ecoStep(s, 0).type, 'drawlimit', 'dlMax 0: kauft nicht'); } finally { AI.setParams(0, null); }
+  AI.setParams(0, { dlMax: 2, dlPos: 0 });
   try {
     assert.equal(AI.ecoStep(s, 0).type, 'drawlimit');
     p.stats.drawLimit = 2;

@@ -46,16 +46,16 @@ function execSpend(state, pid, what) {
   log(state, p.name + ' verbessert ' + { hp: 'max. HP', mana: 'max. Mana', limit: 'das Ausspiellimit', slot: 'die Handplätze' }[what] + '.', pid);
   return { ok: true };
 }
-// Nachziehlimit steigern (kostet Gold, drawLimitCost je Schritt): so oft darf man hintereinander nachziehen, bevor der Nachziehmarker auf Rot springt.
+// Nachziehlimit steigern (kostet Upgrade-Punkte aus dem Tempel, drawLimitCost je Schritt): so oft darf man hintereinander nachziehen, bevor der Nachziehmarker auf Rot springt.
 function drawLimitCost(state, s) { const c = state.rules.drawLimitCost; return Array.isArray(c) ? (c[s.drawLimit - 1] != null ? c[s.drawLimit - 1] : c[c.length - 1]) : (c == null ? 1 : c); }
 function execDrawLimit(state, pid) {
   const p = state.players[pid], s = p.stats;
   if (!state.rules.drawMarker) return fail('Ohne Nachziehmarker gibt es kein Nachziehlimit.');
   if (s.drawLimit >= MAX_DRAW_LIMIT) return fail('Das Nachziehlimit ist am Maximum (' + MAX_DRAW_LIMIT + ').');
   const cost = drawLimitCost(state, s);
-  if (s.gold < cost) return fail('Du brauchst ' + cost + ' Gold.');
-  s.gold -= cost; s.drawLimit++;
-  log(state, p.name + ' steigert das Nachziehlimit auf ' + s.drawLimit + ' (' + cost + ' Gold).', pid);
+  if (s.pending < cost) return fail('Du brauchst ' + cost + ' Upgrade-Punkt' + (cost > 1 ? 'e' : '') + '.');
+  s.pending -= cost; s.drawLimit++;
+  log(state, p.name + ' steigert das Nachziehlimit auf ' + s.drawLimit + ' (' + cost + ' Upgrade-Punkt' + (cost > 1 ? 'e' : '') + ').', pid);
   return { ok: true };
 }
 function execTemple(state, pid, amount) {

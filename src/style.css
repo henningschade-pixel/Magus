@@ -124,7 +124,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .sbody .statrow .plcol{margin-left:auto;display:flex}
 .pendhdr{float:right;color:var(--gold);font-size:15px;font-weight:400}.pendhdr b{font-size:19px;font-weight:700}
 
-/* Plus-Knöpfe (Upgrade-Punkte ausgeben); was Gold kostet (Magie, Nachziehlimit), zeigt die goldene Münz-Scheibe (.mg.gd) */
+/* Plus-Knöpfe (Upgrade-Punkte ausgeben); auch fürs Nachziehlimit; was Gold kostet (Magie), zeigt die goldene Münz-Scheibe (.mg.gd) */
 .up{width:24px;height:26px;padding:0;border:0;background:var(--plus) center/contain no-repeat;cursor:var(--cp);margin-left:4px;flex:none}
 .up:hover{background-image:var(--plush)}
 .up.mg{background-image:var(--plusg)}.up.mg:hover{background-image:var(--plushg)}
