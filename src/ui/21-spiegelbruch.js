@@ -71,11 +71,19 @@ const MirrorFx = (() => {
     if (ev.refl.length) { const tt = ev.refl[ev.refl.length - 1].ta, q = seg(t, tt, tt + .1) * (1 - seg(t, tt + .6, tt + .9)); if (q > 0) { ctx.save(); ctx.font = '700 22px Alegreya, serif'; ctx.textAlign = 'center'; ctx.fillStyle = rgba('#ff6b6b', q); ctx.fillText('−' + fx.r, hpAtt.x, hpAtt.y - 20 - 10 * seg(t, tt, tt + .9)); ctx.restore(); } }
   }
   const ev0 = fx => (fx.r || 0) > 0 ? 'r' : 'a';   // Rückwurf: die Geschosse kommen von der Seite des Verteidigers, sonst vom Angreifer
+  // Angezeigte Schildposition je Seite und Farbe, nach jedem Zeichnen gemerkt: Verbraucht der Rückwurf alle Stufen, ist das Schild beim Start des Effekts schon aus der Anzeige verschwunden. Dann fliegt der Effekt trotzdem von dort, wo es stand (früher fiel er auf eine Ecke unten links, beim Nachziehstapel, zurück).
+  const shown = {};
+  function track() {
+    const seen = {};
+    stage.querySelectorAll('.mirstack .msh').forEach(el => { const w = el.parentElement.dataset.who, e = ['F', 'E', 'W'].find(k => el.classList.contains(k)); if (w && e) { shown[w + e] = toStage(el); seen[w + e] = 1; } });
+    if (!G || G.phase !== 'combat') for (const k in shown) if (!seen[k] && !stage.dataset.shieldfx) delete shown[k];   // außerhalb eines Kampfes ist nichts mehr zu merken
+  }
   function play(fx) {
     const quiet = FAST || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
     if (quiet) return;
     const side = fx.who === ME ? 's' : 'o', homeEl = stage.querySelector('.mirstack[data-who="' + side + '"] .msh.' + fx.elem);
-    const hp = FlowFx.hp(fx.att), home = homeEl ? toStage(homeEl) : { x: fx.who === ME ? 90 : 1190, y: fx.who === ME ? 690 : 110, h: 52 };
+    const hp = FlowFx.hp(fx.att), home = homeEl ? toStage(homeEl) : shown[side + fx.elem] || { x: fx.who === ME ? 90 : 1190, y: fx.who === ME ? 690 : 110, h: 52 };   // das Schild bleibt, wo es angezeigt wurde
+    stage.dataset.shieldhome = Math.round(home.x) + ',' + Math.round(home.y);
     const ev = plan(fx), from = ev0(fx) === 'r' ? { x: 640, y: 400 } : { x: 640, y: fx.who === ME ? 70 : 730 };   // Rückwurf: der Überschuss liegt in der Mitte
     fxUntil = Math.max(fxUntil, Date.now() + ev.tEnd * 1000);
     stage.dataset.shieldfx = side + fx.elem;   // das eigentliche Schild neben der Hand ausblenden, solange es fliegt
@@ -95,5 +103,5 @@ const MirrorFx = (() => {
   const delay = fx => { const ev = plan(fx); return ev.tEv + .1; };
   // Zeit (ab Start des Effekts), zu der der letzte zurückgeworfene Schaden beim Angreifer einschlägt (0, wenn nichts zurückgeworfen wird)
   const landing = fx => { const ev = plan(fx); return ev.refl.length ? ev.refl[ev.refl.length - 1].ta : 0; };
-  return { play, delay, landing };
+  return { play, delay, landing, track };
 })();

@@ -302,7 +302,7 @@ function renderInner() {
     if (mine) { const now = mine.classList.contains('hasup'); if (leadPrev !== null && leadPrev !== now) { mine.classList.toggle('hasup', leadPrev); void mine.offsetWidth; mine.classList.toggle('hasup', now); } leadPrev = now; } }
   showFx();
   setCursor(cx.combat && cx.mine.kind === 'monster' ? 'monster' : 'human');
-  renderCards();
+  renderCards(); MirrorFx.track();
   turnSync();   // nach den Karten, damit deren Flüge schon bekannt sind
   pvSticky();
   if (G.over && !endView && !modal) { if (endSnd !== G) { endSnd = G; Snd.play(G.winner === ME ? 'win' : G.winner === null ? 'draw' : 'lose'); } showEnd(); }

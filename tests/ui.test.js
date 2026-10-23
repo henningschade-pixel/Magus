@@ -212,3 +212,28 @@ test('Magie-Knöpfe: zu teure Stufen durchscheinend und gesperrt, ohne Upgrade-P
     assert.deepEqual(errs, []);
   } finally { await b.close(); }
 });
+
+test('Schild-Effekt: Der Rückwurf startet dort, wo das Schild angezeigt wurde, auch wenn es dabei verbraucht ist (nicht in der Ecke beim Nachziehstapel)', { skip: !chromium && 'Playwright nicht installiert', timeout: 60000 }, async () => {
+  const b = await chromium.launch({ executablePath: exe });
+  try {
+    const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
+    p.on('pageerror', e => errs.push(e.message));
+    await p.goto(url); await p.waitForTimeout(500);
+    await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
+    const r = await p.evaluate(async () => {
+      const mg = window.__magus, G = mg.state, M = window.Magus, out = {}, wait = ms => new Promise(r => setTimeout(r, ms));
+      M.apply(G, { pid: 0, type: 'combat', elem: 'F' });
+      const me = G.combat.sides.a.stats; me.mirrorEl = { F: 1 }; me.mirror = 1; mg.pump(); await wait(400);
+      const stg = document.querySelector('#stage') || document.querySelector('[data-shieldfx], .stage') || document.body, sh = document.querySelector('.mirstack[data-who="s"] .msh.F').getBoundingClientRect(), sr = (document.getElementById('stage') || stg).getBoundingClientRect(), k = sr.width / (document.getElementById('stage') || stg).offsetWidth;
+      out.soll = [(sh.left + sh.width / 2 - sr.left) / k, (sh.top + sh.height / 2 - sr.top) / k];
+      delete me.mirrorEl; delete me.mirror; mg.pump(); await wait(300);   // Schild aufgebraucht, nicht mehr in der Anzeige
+      out.weg = !document.querySelector('.mirstack[data-who="s"] .msh.F');
+      mg.MirrorFx.play({ who: 0, att: 1, to: 1, elem: 'F', r: 1, markers: 1, broken: 1, abs: 0 });
+      out.ist = (document.getElementById('stage') || stg).dataset.shieldhome.split(',').map(Number);
+      return out;
+    });
+    assert.ok(r.weg, 'das Schild ist aus der Anzeige verschwunden');
+    assert.ok(Math.abs(r.ist[0] - r.soll[0]) < 3 && Math.abs(r.ist[1] - r.soll[1]) < 3, 'Effekt startet bei ' + r.ist + ', Schild stand bei ' + r.soll.map(Math.round));
+    assert.deepEqual(errs, []);
+  } finally { await b.close(); }
+});
