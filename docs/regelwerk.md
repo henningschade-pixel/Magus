@@ -184,7 +184,7 @@ Nur die **Bezahlung** ist vertauscht, nicht was man wann bekommt. Gold und Upgra
 
 Die Knöpfe tauschen mit: Die goldene Münz-Scheibe sitzt jetzt an den Verbesserungen (HP, Mana, Limit, Handplatz, Nachziehlimit), das grüne Plus der Upgrade-Punkte rund um das Magiebrett. `swapCosts` 0 stellt die alte Zuordnung wieder her.
 Folge: Der Tempel ist jetzt der Weg zur Magie (Gold opfern, Punkte sammeln), Gold kauft die Werte im Kampf direkt. Die Siegbedingung ändert sich nicht (Gold bleibt das zweite, die Tempelstufe das dritte Kriterium).
-KI: Sie kauft zuerst Magie mit Punkten, dann Verbesserungen mit dem Gold und opfert nur noch, wenn ihr Plan es verlangt; sie ist **nicht neu abgestimmt**. Selbstspiel (300 Partien): keine festgefahrenen Partien, Median 463 Aktionen, Beginner 45 % / Zweiter 48 % / Unentschieden 7 %; die Tempelstufe am Ende ist 0, weil die KI nicht opfert (Magie kommt nur aus den Abschnittsboni).
+KI: Auf 0.3 nachtrainiert (siehe `tools/balance/README.md`): Eröffnung mit zwei Farben auf Stufe 2, Gold in max. HP und Handplätze, kein Opfern für Magie (Magie kommt aus den Abschnittsboni und der Hilfe); 64,6 % Siegquote gegen die KI vor dem Nachtraining.
 
 ## Startsiegpunkte (Version 0.3, Schalter `startSp`, Standard 2)
 

@@ -79,7 +79,14 @@ function ecoStep(state, pid) {
   let best = null;
   for (const e of M.ELEMENTS) { const cost = M.magicCost(state, s.mag[e]); if (s.mag[e] < M.MAX_MAGIC && mgv(state, s) >= cost) { const sc = Q.mBase - cost * Q.mCost + countEl(e) * Q.mCnt + (s.mag[e] === Math.max(s.mag.F, s.mag.E, s.mag.W) ? Q.mTop : 0) + (e === M.SUPERIOR[oppTop] ? Q.mCounter * opp.mag[oppTop] : 0) + (e === planEl ? Q.mPlan : 0) + Q.mCatch * Math.max(0, opp.mag[e] - s.mag[e]); if (!best || sc > best.sc) best = { sc, a: A({ type: 'magic', elem: e }) }; } }
   if (best) return best.a;
-  if (sw) return spendStep();   // Gold geht in Verbesserungen (oder wird fürs Limit gespart), geopfert wird nicht
+  if (sw) {   // swapCosts: Magie kostet Punkte, die nur der Tempel liefert (Gold opfern); Verbesserungen kosten Gold
+    if (Q.sacG && M.magicProgress(p) < Q.mgGoal) {
+      let tgt = null;
+      for (const e of M.ELEMENTS) if (s.mag[e] < M.MAX_MAGIC) { const cost = M.magicCost(state, s.mag[e]), sc = -cost * Q.mCost + countEl(e) * Q.mCnt + (e === planEl ? Q.mPlan : 0) + (e === M.SUPERIOR[oppTop] ? Q.mCounter * opp.mag[oppTop] : 0); if (!tgt || sc > tgt.sc) tgt = { sc, cost }; }
+      if (tgt) { const need = tgt.cost - s.pending; for (let n = 1; n <= s.gold - Q.sacRes; n++) if (M.previewTemple(p, n).gained >= need) return A({ type: 'temple', amount: n }); }
+    }
+    return spendStep();   // Gold geht in Verbesserungen (oder wird fürs Limit gespart)
+  }
   if (s.gold - Q.tKeep >= 2) return A({ type: 'temple', amount: Math.min(s.gold - Q.tKeep, 3) });
   return null;
 }
