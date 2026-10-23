@@ -84,7 +84,7 @@ function pvShow(b) {
   pvClear();
   const st = G && G.players[ME].stats, w = b.dataset.w, act = b.dataset.act;
   if (!st) return;
-  const undos = [], redo = (key, cost) => {   // sinkende Werte (Gold, Upgrade-Punkte) gleichzeitig rot markieren
+  const UK = M.upField(G) === 'gold' ? 'gold' : 'pts', undos = [], redo = (key, cost) => {   // sinkende Werte (Gold, Upgrade-Punkte) gleichzeitig rot markieren
     const el = stage.querySelector('[data-pv="' + key + '"]'); if (!el || !(cost > 0)) return;
     const old = el.innerHTML, cur = key === 'gold' ? st.gold : st.pending;
     el.innerHTML = '<span class="pvdn">' + Math.max(0, cur - cost) + '</span>'; undos.push(() => { el.innerHTML = old; });
@@ -96,9 +96,9 @@ function pvShow(b) {
     if (el && pv.gained > 0) { const old = el.innerHTML; el.innerHTML = '<span class="pvnew">' + (st.pending + pv.gained) + '</span>'; undos.push(() => { el.innerHTML = old; }); }
     const fr = stage.querySelector('[data-pv="frac"]');
     if (fr) { const old = fr.innerHTML; fr.innerHTML = '<span class="pvnew">' + fracHTML(pv.pool, pv.level) + '</span>'; undos.push(() => { fr.innerHTML = old; }); }
-  } else if (act === 'magic') redo('gold', M.magicCost(G, st.mag[b.dataset.e]));
-  else if (act === 'drawlimit') redo('pts', M.drawLimitCost(G, st));
-  else if (act === 'spend') redo('pts', w === 'limit' ? M.limitStepCost(G, st) : w === 'mana' ? M.manaStepCost(G, st) : 1);
+  } else if (act === 'magic') redo(M.magicField(G) === 'gold' ? 'gold' : 'pts', M.magicCost(G, st.mag[b.dataset.e]));
+  else if (act === 'drawlimit') redo(UK, M.drawLimitCost(G, st));
+  else if (act === 'spend') redo(UK, w === 'limit' ? M.limitStepCost(G, st) : w === 'mana' ? M.manaStepCost(G, st) : 1);
   if (act === 'magic') {
     const el = b.dataset.e, dot = b.parentElement.querySelector('.rg[data-e="' + el + '"][data-lv="' + (st.mag[el] + 1) + '"]');
     if (dot) { dot.classList.add('pv'); undos.push(() => dot.classList.remove('pv')); }

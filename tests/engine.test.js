@@ -306,18 +306,18 @@ test('KI meidet Nachziehen bei rotem Nachziehmarker (Weltphase: Gold opfern stat
   }
 });
 
-test('Nachziehlimit: Kauf kostet 1 Upgrade-Punkt (kein Gold), beendet den Zug, höchstens Stufe 3', () => {
+test('Nachziehlimit: Kauf kostet 1 Gold (keine Upgrade-Punkte), beendet den Zug, höchstens Stufe 3', () => {
   const s = M.newGame({ seed: 5, ai: [false, false], first: 0 }), me = s.players[0].stats;
   assert.equal(me.drawLimit, 1);
-  me.pending = 0; me.gold = 5; assert.equal(M.apply(s, { pid: 0, type: 'drawlimit' }).ok, false, 'ohne Upgrade-Punkte nicht möglich, auch mit Gold');
-  me.pending = 5;
+  me.gold = 0; me.pending = 5; assert.equal(M.apply(s, { pid: 0, type: 'drawlimit' }).ok, false, 'ohne Gold nicht möglich, auch mit Upgrade-Punkten');
+  me.gold = 5;
   assert.ok(M.apply(s, { pid: 0, type: 'drawlimit' }).ok);
-  assert.equal(me.drawLimit, 2); assert.equal(me.pending, 4); assert.equal(me.gold, 5, 'Gold bleibt'); assert.equal(s.turn, 1, 'Zug beendet');
+  assert.equal(me.drawLimit, 2); assert.equal(me.gold, 4); assert.equal(me.pending, 5, 'Upgrade-Punkte bleiben'); assert.equal(s.turn, 1, 'Zug beendet');
   assert.ok(M.apply(s, { pid: 1, type: 'draw' }).ok);
   assert.ok(M.apply(s, { pid: 0, type: 'drawlimit' }).ok);
-  assert.equal(me.drawLimit, 3); assert.equal(me.pending, 3);
+  assert.equal(me.drawLimit, 3); assert.equal(me.gold, 3);
   s.players[1].stats.gold = 5; assert.ok(M.apply(s, { pid: 1, type: 'temple', amount: 1 }).ok);   // (zweimal hintereinander nachziehen würde dem Spieler 0 Gold schenken)
-  assert.equal(M.apply(s, { pid: 0, type: 'drawlimit' }).ok, false, 'Maximum 3'); assert.equal(me.pending, 3);
+  assert.equal(M.apply(s, { pid: 0, type: 'drawlimit' }).ok, false, 'Maximum 3'); assert.equal(me.gold, 3);
 });
 
 test('Nachziehlimit Weltphase: so viele Nachziehvorgänge hintereinander sind frei, danach wird der Marker rot und das nächste Nachziehen kostet Gold', () => {
@@ -345,9 +345,9 @@ test('Nachziehlimit Kampf: erst das Nachziehen über dem Limit gibt dem Gegner e
   assert.equal(op.stats.freeDraws, 1);
 });
 
-test('KI: Stellschraube dlMax kauft das Nachziehlimit mit Upgrade-Punkten bis zur gewählten Stufe, nicht weiter', () => {
+test('KI: Stellschraube dlMax kauft das Nachziehlimit mit Gold bis zur gewählten Stufe, nicht weiter', () => {
   const s = M.newGame({ seed: 5, ai: [true, true], first: 0 }), p = s.players[0];
-  p.stats.gold = 0; p.stats.pending = 1;
+  p.stats.gold = 1; p.stats.pending = 0;
   AI.setParams(0, { dlMax: 0, dlPos: 0 });
   try { assert.notEqual(AI.ecoStep(s, 0).type, 'drawlimit', 'dlMax 0: kauft nicht'); } finally { AI.setParams(0, null); }
   AI.setParams(0, { dlMax: 2, dlPos: 0 });
@@ -375,4 +375,21 @@ test('KI: Passt der Gegner im Showdown immer, greift sie sofort an und gewinnt, 
   }
   assert.ok(firstAttack > 0 && firstAttack <= 3, 'erster Angriff nach höchstens 3 Zügen, war ' + firstAttack);
   assert.ok(s.log.some(e => /^Gegner gewinnt den Showdown/.test(e.txt)), 'der Computer gewinnt gegen den Dauerpasser');
+});
+
+test('Kosten getauscht (swapCosts): Magie kostet Upgrade-Punkte, alle anderen Verbesserungen kosten Gold; ohne die Regel wie früher', () => {
+  const mk = rules => { const s = M.newGame({ seed: 5, ai: [false, false], first: 0, rules }), st = s.players[0].stats; st.gold = 4; st.pending = 4; return { s, st }; };
+  const go = (g, a) => M.apply(g.s, Object.assign({ pid: 0 }, a)), nxt = g => { g.s.turn = 0; };
+  let g = mk({});   // Standard seit 0.3: getauscht
+  assert.equal(M.DEFAULT_RULES.swapCosts, 1);
+  assert.ok(go(g, { type: 'magic', elem: 'F' }).ok); assert.deepEqual([g.st.gold, g.st.pending, g.st.mag.F], [4, 3, 2], 'Magie Stufe 2: 1 Upgrade-Punkt');
+  nxt(g); assert.ok(go(g, { type: 'magic', elem: 'F' }).ok); assert.deepEqual([g.st.gold, g.st.pending, g.st.mag.F], [4, 0, 3], 'Magie Stufe 3: 3 Upgrade-Punkte');
+  nxt(g); assert.ok(go(g, { type: 'spend', what: 'hp' }).ok); assert.deepEqual([g.st.gold, g.st.pending, g.st.maxHp], [3, 0, 5], 'HP: 1 Gold');
+  nxt(g); assert.ok(go(g, { type: 'spend', what: 'limit' }).ok); assert.deepEqual([g.st.gold, g.st.limit], [1, 2], 'Limit: 2 Gold');
+  nxt(g); assert.equal(go(g, { type: 'spend', what: 'limit' }).ok, false, 'Limit 3 braucht 2 Gold, es ist nur noch 1 da'); assert.equal(g.st.limit, 2);
+  nxt(g); assert.ok(go(g, { type: 'spend', what: 'slot' }).ok); assert.deepEqual([g.st.gold, g.s.players[0].slots], [0, 4], 'Handplatz: 1 Gold');
+  nxt(g); assert.equal(go(g, { type: 'spend', what: 'mana' }).ok, false, 'ohne Gold kein Upgrade, auch wenn Upgrade-Punkte da wären');
+  g = mk({ swapCosts: 0 });   // alte Zuordnung
+  assert.ok(go(g, { type: 'magic', elem: 'F' }).ok); assert.deepEqual([g.st.gold, g.st.pending], [3, 4], 'Magie kostet Gold');
+  nxt(g); assert.ok(go(g, { type: 'spend', what: 'hp' }).ok); assert.deepEqual([g.st.gold, g.st.pending], [3, 3], 'HP kostet einen Upgrade-Punkt');
 });

@@ -12,6 +12,11 @@ function regenGain(state) { const r = state.rules.regenByStage; return r ? (r[Ma
 // Kosten (in Upgrade-Punkten) für jeden Schritt des Ausspiellimits: limitCost (Standard 2). Ohne limitCost gilt die ältere Staffelung (erster Schritt limitFirstStepCost, danach 1).
 function limitStepCost(state, s) { return state.rules.limitCost > 0 ? state.rules.limitCost : (s.limit <= 1 ? state.rules.limitFirstStepCost : 1); }
 function manaStepCost() { return 1; }
+// Bezahlung (Regel swapCosts, seit 0.3 Standard): Magie kostet Upgrade-Punkte (Feld pending), alle übrigen Verbesserungen kosten Gold. Ohne swapCosts umgekehrt (Magie Gold, Verbesserungen Upgrade-Punkte). Tempel und Einnahmen bleiben unverändert.
+function upField(state) { return state.rules.swapCosts ? 'gold' : 'pending'; }
+function magicField(state) { return state.rules.swapCosts ? 'pending' : 'gold'; }
+function payTxt(state, field, n) { return field === 'gold' ? n + ' Gold' : n + ' Upgrade-Punkt' + (n > 1 ? 'e' : ''); }
+// Preis der nächsten Magiestufe (in Gold, mit swapCosts in Upgrade-Punkten): Index = aktuelle Stufe (Stufe 1 → 2 kostet 1, Stufe 2 → 3 kostet 3).
 // Gold für die nächste Magiestufe: Index = aktuelle Stufe (Stufe 1 → 2 kostet 1 Gold, Stufe 2 → 3 kostet 3 Gold).
 function magicCost(state, lv) { const t = state.rules.magicCost || [0, 1, 2]; return t[lv] === undefined ? lv : t[lv]; }
 // Tempel: n Gold ergeben n(n+1)/2 Punkte; die Stufe k+1 kostet k+1 Punkte und gibt einen Upgrade-Punkt.

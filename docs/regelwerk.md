@@ -1,4 +1,4 @@
-# Magus – Regelwerk (Stand v8, 20.10.2026)
+# Magus – Regelwerk (Stand v8, 20.10.2026; Version 0.3: getauschte Kosten)
 
 Dies ist die maßgebliche Fassung der Regeln. Sie ersetzt das Claude-Docs-Dokument „Magus – Regelwerk (bereinigte Fassung)“, dessen Export als Archiv in `docs/regelwerk-v6-aus-claude-docs.md` liegt (Regelstand v6, dort steht auch die gesamte Änderungsgeschichte bis v6). Die Zahlen stehen als Regelflags in `DEFAULT_RULES` und als Abstimmungsdaten (`MONSTER`) in `index.html`.
 
@@ -29,7 +29,7 @@ Eine Partie hat drei Abschnitte (1, 2, 3). Je Abschnitt gibt es drei Monster (St
 
 ## Weltphase
 
-Im eigenen Zug genau eine Aktion, danach wechselt der Spieler: Nachziehen, beim Händler tauschen, einen Kampf beginnen, im Tempel Gold opfern, Magie kaufen oder einen Upgrade-Punkt ausgeben (Magiestufe, HP, Mana, Limit, Handkarten; jeder Klick ist eine Aktion). Upgrade-Punkte dürfen aufgespart werden. Eine Erholungsphase gibt es nicht.
+Im eigenen Zug genau eine Aktion, danach wechselt der Spieler: Nachziehen, beim Händler tauschen, einen Kampf beginnen, im Tempel Gold opfern, Magie kaufen oder ein Upgrade kaufen (Magiestufe mit Upgrade-Punkten; HP, Mana, Limit, Handkarten, Nachziehlimit mit Gold; jeder Klick ist eine Aktion). Upgrade-Punkte und Gold dürfen aufgespart werden. Eine Erholungsphase gibt es nicht.
 
 **Regeneration:** Bei jedem Zugwechsel erhält der Spieler, der dran kommt, **HP und Mana in Höhe des Abschnitts** (Abschnitt 1: +1/+1, Abschnitt 2: +2/+2, Abschnitt 3: +3/+3; nicht über das Maximum). Dasselbe bekommt der Verteidiger nach einem Kampf. Alle lebenden Monster regenerieren am Ende jeder Runde +1 HP und +1 Mana (Regel `regenByStage` gilt nur für Spieler).
 
@@ -48,7 +48,7 @@ Die bezahlten Karten werden aus dem Deck entfernt, nur die gekaufte kommt auf de
 
 **Tempel:** n Gold opfern ergibt n·(n+1)/2 Tempelpunkte; die nächste Tempelstufe kostet (aktuelle Stufe + 1) Punkte, jede erreichte Stufe gibt einen Upgrade-Punkt. Die Tempelstufe ist die Zahl der durch Opfer erlangten Upgrades (kostet die nächste Stufe 4 Punkte, hat man Stufe 3) und zählt als drittes Kriterium der Siegbedingung (nach Siegpunkten und Gold). Die Vorschau (Gold, Punkte, Bruch) zeigt sich schon beim Einstellen mit den Pfeilen.
 
-**Magie kaufen:** Stufe 2 kostet 1 Gold, Stufe 3 kostet 3 Gold.
+**Magie kaufen:** Stufe 2 kostet 1, Stufe 3 kostet 3 **Upgrade-Punkte** (seit 0.3, vorher Gold; siehe „Getauschte Kosten“).
 
 ## Monsterkampf
 
@@ -169,3 +169,18 @@ KI: kauft das Nachziehlimit nicht. Nachtraining mit dem Preis in Upgrade-Punkten
 ## KI gegen Dauerpasser (23.10.)
 
 Wer im Angriffszug immer passt, setzt die KI nicht unter Druck. Früher wartete sie dann mit schwachen Karten (ein Angriff mit einer Stufe-1-Karte ist für sie 0 Punkte wert, die Schwelle liegt bei 0,5): Sie wechselte rund 15 eigene Züge lang zwischen Nachziehen und Erholen, bis die Anti-Stillstands-Schwelle (`stallFrom` 24, `stallDec`) sank. Neu: Jeder Passen-Zug des Gegners in Folge senkt die Angriffsschwelle um `pasDec` (1); die Engine zählt ihn je Seite in `passed`, ein Angriff setzt ihn zurück. Die KI greift damit nach dem ersten Passen an. KI gegen KI ändert sich nicht (die KI passt nie im Angriffszug, `golden.json` unverändert).
+
+## Getauschte Kosten (Version 0.3, Schalter `swapCosts`, Standard 1)
+
+Nur die **Bezahlung** ist vertauscht, nicht was man wann bekommt. Gold und Upgrade-Punkte kommen weiter aus denselben Quellen (Abschnittsbonus 1/2/3 Gold und Punkte, Hilfe nach einer Niederlage gegen ein Monster, Strafgold, Tempel: n Gold ergeben n(n+1)/2 Tempelpunkte, jede Tempelstufe einen Upgrade-Punkt).
+
+| Verbesserung | früher | seit 0.3 |
+|---|---|---|
+| Magie Stufe 2 / 3 | 1 / 3 Gold | 1 / 3 Upgrade-Punkte |
+| max. HP (+2), max. Mana (+1), Handplatz | 1 Upgrade-Punkt | 1 Gold |
+| Ausspiellimit | 2 Upgrade-Punkte je Schritt | 2 Gold je Schritt |
+| Nachziehlimit | 1 Upgrade-Punkt je Schritt | 1 Gold je Schritt |
+
+Die Knöpfe tauschen mit: Die goldene Münz-Scheibe sitzt jetzt an den Verbesserungen (HP, Mana, Limit, Handplatz, Nachziehlimit), das grüne Plus der Upgrade-Punkte rund um das Magiebrett. `swapCosts` 0 stellt die alte Zuordnung wieder her.
+Folge: Der Tempel ist jetzt der Weg zur Magie (Gold opfern, Punkte sammeln), Gold kauft die Werte im Kampf direkt. Die Siegbedingung ändert sich nicht (Gold bleibt das zweite, die Tempelstufe das dritte Kriterium).
+KI: Sie kauft zuerst Magie mit Punkten, dann Verbesserungen mit dem Gold und opfert nur noch, wenn ihr Plan es verlangt; sie ist **nicht neu abgestimmt**. Selbstspiel (300 Partien): keine festgefahrenen Partien, Median 463 Aktionen, Beginner 45 % / Zweiter 48 % / Unentschieden 7 %; die Tempelstufe am Ende ist 0, weil die KI nicht opfert (Magie kommt nur aus den Abschnittsboni).
