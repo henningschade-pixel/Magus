@@ -2205,11 +2205,11 @@ function statsBlock(name, s, p, size, up, full) {
   const bsz = size || 140;
   let bd = boardHTML(s.mag, bsz);
   if (up && my) {
-    const dir = { F: -90, E: 30, W: 150 }, diam = 26;   // Richtung wie die Ringe auf dem Brett (Linie von der Mitte durch die Magie); die Scheibe misst 26 px und sitzt mit ihrer Mitte genau auf dem Rand des Bretts (Rand bei 0,475 der Bildgröße)
+    const dir = { F: -90, E: 30, W: 150 }, diam = 26;   // Richtung wie die Ringe auf dem Brett (Linie von der Mitte durch die Magie); die Scheibe misst 26 px und liegt ganz auf dem äußeren Randband des Bretts (Band von 0,431 bis 0,475 der Bildgröße)
     let btn = '';
     for (const e of M.ELEMENTS) {
       const MF = M.magicField(G), lv = s.mag[e], mc = M.magicCost(G, lv), ok = s[MF] >= mc; if (lv >= M.MAX_MAGIC || s[MF] <= 0) continue;   // wie die Upgrade-Knöpfe: sichtbar, sobald die Währung (Gold, mit swapCosts Upgrade-Punkte) da ist; zu teure Stufen durchscheinend und gesperrt
-      const ang = dir[e] * Math.PI / 180, r = bsz * 0.475;
+      const ang = dir[e] * Math.PI / 180, r = bsz * 0.431 + diam / 2;   // innere Kante der Scheibe liegt auf der inneren Kante des Randbands (0,431 der Bildgröße): sie berührt nur den äußeren Rand, nicht das Innere
       const x = bsz / 2 + Math.cos(ang) * r, y = bsz / 2 + Math.sin(ang) * r;
       btn += '<button class="up mg ' + (MF === 'gold' ? 'gd' : 'pt') + (mc > 1 ? ' costly' : '') + (ok ? '' : ' off') + '"' + (mc > 1 ? ' data-c="' + mc + '"' : '') + (ok ? '' : ' disabled') + ' style="' + discBox(MF === 'gold', x, y, diam) + '" data-act="magic" data-e="' + e + '" title="' + NAMES[e] + ' Stufe ' + (lv + 1) + ' kaufen (' + M.payTxt(G, MF, mc) + (ok ? '' : ', du hast ' + s[MF]) + ')"></button>';
     }
