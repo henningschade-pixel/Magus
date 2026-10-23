@@ -107,7 +107,7 @@ test('Monsterwerte je Stufe (Zäh, Limit, Beute)', () => {
 test('Siegpunkte: Monsterkampf +1 / -1 (nie unter 0), keine Beute, kein Trostpreis, Ende ab 4 nach Showdown 2', () => {
   let decided = 0, floored = 0;
   for (let seed = 7000; seed < 7040; seed++) {
-    const s = M.newGame({ seed, ai: [true, true], first: seed & 1 });
+    const s = M.newGame({ seed, ai: [true, true], first: seed & 1, rules: { surplusSp: 0 } });   // ohne Überschusspunkte, damit nur der Kampf Siegpunkte bewegt
     let steps = 0, last = null;
     while (!s.over && steps++ < 20000) {
       const before = s.players.map(p => ({ sp: p.sp, gold: p.stats.goldGot }));
@@ -399,4 +399,15 @@ test('Startsiegpunkte: jeder Spieler beginnt mit 2 Siegpunkten (startSp), eine f
   const s = M.newGame({ seed: 5, ai: [false, false], first: 0 });
   assert.deepEqual(s.players.map(p => p.sp), [2, 2]);
   assert.deepEqual(M.newGame({ seed: 5, rules: { startSp: 0 } }).players.map(p => p.sp), [0, 0]);
+});
+
+test('Überschusspunkte: Sind alle Magien auf Stufe 3, werden Upgrade-Punkte (nicht Gold) sofort zu Siegpunkten', () => {
+  const s = M.newGame({ seed: 5, ai: [false, false], first: 0 }), p = s.players[0], me = p.stats;
+  me.mag = { F: 3, E: 3, W: 2 }; me.pending = 4; me.gold = 5;
+  assert.ok(M.apply(s, { pid: 0, type: 'magic', elem: 'W' }).ok);   // kostet 3 Punkte, 1 bleibt übrig, nun ist alles auf Stufe 3
+  assert.deepEqual([me.pending, p.sp, me.gold], [0, 3, 5], '1 Überschusspunkt = 1 Siegpunkt (2 Start), Gold bleibt');
+  s.turn = 1; s.players[1].stats.gold = 3; assert.ok(M.apply(s, { pid: 1, type: 'temple', amount: 2 }).ok);   // Gegner ohne volle Magie behält seine Punkte
+  assert.equal(s.players[1].stats.pending, 3, '1 Bonuspunkt + 2 aus dem Tempel'); assert.equal(s.players[1].sp, 2);
+  const t = M.newGame({ seed: 5, ai: [false, false], first: 0, rules: { surplusSp: 0 } }); t.players[0].stats.mag = { F: 3, E: 3, W: 3 }; t.players[0].stats.pending = 2; t.players[0].stats.gold = 0;
+  assert.ok(M.apply(t, { pid: 0, type: 'draw' }).ok); assert.deepEqual([t.players[0].stats.pending, t.players[0].sp], [2, 2], 'ohne Regel bleibt es');
 });

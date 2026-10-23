@@ -57,12 +57,12 @@
   "over": true,
   "winner": 0,
   "sp": [
-   3,
-   2
+   5,
+   4
   ],
   "steps": 815,
-  "log": 980,
-  "hash": "8d980a407e7d"
+  "log": 982,
+  "hash": "ac51c1e9629d"
  },
  {
   "seed": 1005,
@@ -109,12 +109,12 @@
   "over": true,
   "winner": 1,
   "sp": [
-   1,
-   2
+   6,
+   7
   ],
   "steps": 1176,
-  "log": 1338,
-  "hash": "559e0d69f8da"
+  "log": 1342,
+  "hash": "33bf7a5f7228"
  },
  {
   "seed": 1009,
@@ -304,11 +304,11 @@
   "over": true,
   "winner": 0,
   "sp": [
-   3,
-   2
+   6,
+   5
   ],
   "steps": 605,
-  "log": 692,
-  "hash": "cc3811305aea"
+  "log": 694,
+  "hash": "da9726a116f2"
  }
 ]

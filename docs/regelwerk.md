@@ -189,3 +189,8 @@ KI: Auf 0.3 nachtrainiert (siehe `tools/balance/README.md`): Eröffnung mit zwei
 ## Startsiegpunkte (Version 0.3, Schalter `startSp`, Standard 2)
 
 Jeder Spieler beginnt mit 2 Siegpunkten (vorher 0), damit schon die ersten Kämpfe ein Risiko sind: Eine Niederlage gegen ein Monster oder im Showdown kostet einen Siegpunkt, der vorher „nie unter 0“ wegfiel. Die Schwelle für das vorzeitige Ende (`winSp` 4 nach Showdown 2) und die übrigen Siegpunktregeln bleiben, die 4 sind also mit 2 Punkten Vorsprung schneller erreicht. KI-Selbstspiel (400 Partien): keine festgefahrenen Partien, Unentschieden 4,8 % statt 7,5 %, Beginner 46 % / Zweiter 49 %; die KI ist nicht darauf abgestimmt.
+
+## Überschusspunkte werden Siegpunkte (Version 0.3, Schalter `surplusSp`, Standard 1)
+
+Mit den getauschten Kosten kaufen Upgrade-Punkte nur noch Magie. Stehen **alle drei Magien auf Stufe 3**, wandeln sich offene und neu erhaltene Upgrade-Punkte (Abschnittsbonus, Hilfe, Tempel) sofort in Siegpunkte um, `surplusSp` Siegpunkte je Punkt (1; 0 = aus). Das Protokoll nennt die Umwandlung. **Überschüssiges Gold wird nicht umgewandelt**, es bleibt Gold (Gleichstand-Kriterium, Verbesserungen). Die Umwandlung gibt es nur mit `swapCosts`, weil die Punkte sonst Verbesserungen kaufen.
+KI-Selbstspiel (400 Partien): In rund 24 % der Partien erreicht mindestens ein Spieler die volle Magie und wandelt Punkte um. Die KI plant das nicht ein (Opfern für Magie bleibt neutral, 50,0 bis 50,5 %).

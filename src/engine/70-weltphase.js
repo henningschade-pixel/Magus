@@ -79,6 +79,19 @@ function execMagic(state, pid, e) {
   return { ok: true };
 }
 
+// Überschusspunkte (Regel surplusSp, nur mit swapCosts): Mit swapCosts kaufen Upgrade-Punkte nur noch Magie. Stehen alle drei Magien auf der Höchststufe, wandeln sich offene und neu erhaltene Upgrade-Punkte sofort in Siegpunkte um (surplusSp je Punkt, 0 = aus). Überschüssiges Gold bleibt Gold.
+function convertSurplus(state) {
+  const k = state.rules.surplusSp;
+  if (!k || !state.rules.swapCosts) return;
+  state.players.forEach((p, pid) => {
+    const s = p.stats;
+    if (s.pending > 0 && ELEMENTS.every(e => s.mag[e] >= MAX_MAGIC)) {
+      const n = s.pending, sp = n * k; s.pending = 0; p.sp += sp;
+      log(state, p.name + ' wandelt ' + n + ' überschüssige Upgrade-Punkt' + (n > 1 ? 'e' : '') + ' in ' + sp + ' Siegpunkt' + (sp > 1 ? 'e' : '') + ' um.', pid);
+    }
+  });
+}
+
 // Erfolgreiche Tempel-, Magie- und Upgrade-Aktionen zählen als Zugaktion: danach wechselt der Spieler.
 function endOnOk(state, pid, kind, r) { if (r.ok) endTurn(state, pid, kind); return r; }
 
