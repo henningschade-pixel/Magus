@@ -196,3 +196,19 @@ test('Nachziehlimit: drei Kreise am Stapel, Plus-Knopf erscheint erst mit Upgrad
     assert.deepEqual(errs, []);
   } finally { await b.close(); }
 });
+
+test('Magie-Knöpfe: zu teure Stufen durchscheinend und gesperrt, ohne Gold keine Knöpfe', { skip: !chromium && 'Playwright nicht installiert', timeout: 60000 }, async () => {
+  const b = await chromium.launch({ executablePath: exe });
+  try {
+    const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
+    p.on('pageerror', e => errs.push(e.message));
+    await p.goto(url); await p.waitForTimeout(500);
+    await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
+    await p.evaluate(() => { const s = window.__magus.state.players[0].stats; s.gold = 2; s.mag = { F: 2, E: 1, W: 1 }; window.__magus.pump(); });
+    assert.equal(await p.locator('[data-act="magic"][data-e="F"].off[disabled]').count(), 1, 'Feuer Stufe 3 (3 Gold) gesperrt');
+    assert.equal(await p.locator('[data-act="magic"]:not(.off)').count(), 2, 'Erde und Wasser Stufe 2 (1 Gold) kaufbar');
+    await p.evaluate(() => { window.__magus.state.players[0].stats.gold = 0; window.__magus.pump(); });
+    assert.equal(await p.locator('[data-act="magic"]').count(), 0);
+    assert.deepEqual(errs, []);
+  } finally { await b.close(); }
+});
