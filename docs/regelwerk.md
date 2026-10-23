@@ -157,3 +157,11 @@ Jeder Spieler hat einen beidseitigen Marker (grün/rot) beim Nachziehstapel. Er 
 **Strafe:** Wer nachzieht, obwohl sein Marker rot ist, gibt dem Gegner in der Weltphase `drawPenaltyGold` (1) Gold, im Kampf ein Nachziehtoken (Gegenseite; im Monsterkampf bekommt das Monster das Token). Der Marker bleibt danach rot. Die Strafe ist ein Geschenk an den Gegner, der Nachziehende zahlt nichts selbst.
 KI: Sie zieht bei rotem Marker nur noch nach, wenn sie keine andere Aktion hat (Weltphase: lieber 1 Gold im Tempel opfern, ohne Gold gratis beim Händler tauschen oder ein Monster angreifen; Kampf: lieber erholen), siehe `tools/balance/README.md`.
 Messung (KI gegen KI, 1000 Partien, KI nachtrainiert): P90 657 statt 1615, Maximum 4050 statt 12940 Aktionen, Unentschieden 3,4 % statt 7,8 %. Die Schleife verschwindet nicht ganz: Beim Warten wandert Gold hin und her und wird im Tempel angelegt; die Stillstandsregel (`idleLimit`) bleibt als zweite Sicherung möglich.
+
+## Nachziehlimit (neu in 0.2.1)
+
+Neuer Wert je Spieler, **Nachziehlimit** 1 bis 3 (Start 1, höchstens `MAX_DRAW_LIMIT` 3). Er sagt, wie oft ein Spieler hintereinander nachziehen darf, bevor sein Nachziehmarker auf Rot springt (Limit 1 = bisherige Regel: das erste Nachziehen dreht den Marker auf Rot).
+**Steigern:** In der Weltphase im eigenen Zug für `drawLimitCost` Gold je Schritt (vorläufig `[1, 1]`: 1 Gold für Stufe 2, 1 Gold für Stufe 3). Das ist eine Zugaktion wie Magie kaufen und dreht den Marker auf Grün zurück.
+**Ablauf:** Jedes Nachziehen zählt hoch; sobald die Zahl das Limit erreicht, ist der Marker rot. Nachziehen bei rotem Marker kostet wie bisher (Weltphase 1 Gold für den Gegner, Kampf ein Nachziehtoken für den Gegner). Jede andere Zugaktion setzt die Zahl auf 0 und den Marker auf Grün. Das Gratis-Nachziehen mit einem Token zählt nicht.
+**Anzeige:** Drei Kreise am Nachziehstapel (eigener Stapel darüber, Gegner darunter); Stufen über dem Limit sind abgedunkelt, auf der nächsten sitzt der Kauf-Knopf. Der Marker liegt auf der Stufe des nächsten freien Nachziehens (Limit 3, noch nichts nachgezogen: Stufe 1; zwei Mal nachgezogen: Stufe 3, noch grün; drei Mal: Stufe 3, rot). In der Statistik gibt es die Kurve „Nachziehlimit“.
+KI: kauft das Nachziehlimit noch nicht (Training folgt); ihr Verhalten ist unverändert (`golden.json` unverändert).

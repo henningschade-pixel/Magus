@@ -176,3 +176,20 @@ test('Läuterung: eigene und gegnerische Spiegelmarker sind im Kampfbildschirm a
     assert.deepEqual(errs, []);
   } finally { await b.close(); }
 });
+
+test('Nachziehlimit: drei Kreise am Stapel, Knopf kauft die nächste Stufe', { skip: !chromium && 'Playwright nicht installiert', timeout: 60000 }, async () => {
+  const b = await chromium.launch({ executablePath: exe });
+  try {
+    const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
+    p.on('pageerror', e => errs.push(e.message));
+    await p.goto(url); await p.waitForTimeout(500);
+    await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
+    await p.evaluate(() => { window.__magus.state.players[0].stats.gold = 3; window.__magus.pump(); });
+    assert.equal(await p.locator('.dlc').count(), 6, 'drei Kreise je Spieler');
+    assert.equal(await p.locator('.dlc.off').count(), 4, 'Stufen über dem Limit sind abgedunkelt');
+    await p.click('[data-act="drawlimit"]'); await p.waitForTimeout(2500);
+    assert.equal(await p.evaluate(() => window.__magus.state.players[0].stats.drawLimit), 2);
+    assert.equal(await p.evaluate(() => window.__magus.state.players[0].stats.gold), 2);
+    assert.deepEqual(errs, []);
+  } finally { await b.close(); }
+});

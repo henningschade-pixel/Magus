@@ -76,7 +76,8 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
  100%{translate:0 -70px;opacity:0;filter:grayscale(.8) brightness(.28) blur(2px);-webkit-mask-position:0 100%;mask-position:0 100%}}
 .pile-ph{position:absolute;border:2px dashed rgba(169,159,189,.28);border-radius:12px;pointer-events:none}
 .slot-ph{position:absolute;width:128px;height:194px;border:2px dashed rgba(169,159,189,.28);border-radius:12px}
-.dmark{position:absolute;z-index:62;width:22px;height:22px;border-radius:50%;border:2px solid rgba(0,0,0,.65);box-shadow:0 2px 4px rgba(0,0,0,.65);pointer-events:none}.dmark.green{background:#3f9d5c}.dmark.red{background:#c4412a}
+.dlc{position:absolute;z-index:61;box-sizing:border-box;border-radius:50%;border:2px solid var(--gold);background:rgba(0,0,0,.5);box-shadow:inset 0 0 5px rgba(0,0,0,.8);pointer-events:auto}.dlc.off{border:2px dashed rgba(169,159,189,.4);background:rgba(0,0,0,.18);box-shadow:none}
+.dmark{position:absolute;z-index:62;box-sizing:border-box;width:22px;height:22px;border-radius:50%;border:2px solid rgba(0,0,0,.65);box-shadow:0 2px 4px rgba(0,0,0,.65);pointer-events:none;transition:left .25s,background .2s}.dmark.green{background:#3f9d5c}.dmark.red{background:#c4412a}
 .pilelabel{position:absolute;font-size:15px;color:var(--mute);text-align:center;width:110px}
 .pilehit{position:absolute;border-radius:12px;cursor:var(--cp);z-index:60}
 .pilehit:hover{box-shadow:0 0 0 2px var(--gold)}
@@ -345,7 +346,7 @@ const ELEMENTS = ['F', 'E', 'W'];
 const SUPERIOR = { F: 'W', W: 'E', E: 'F' };     // überlegenes Element gegen X
 const NAMES = { F: 'Feuer', E: 'Erde', W: 'Wasser' };
 const START_DECK = ['F1','F1','F1','E1','E1','E1','W1','W1','W1'];
-const MAX_MAGIC = 3, MAX_SLOTS = 5, MIN_SLOTS = 3, MAX_LIMIT = 5;
+const MAX_MAGIC = 3, MAX_SLOTS = 5, MIN_SLOTS = 3, MAX_LIMIT = 5, MAX_DRAW_LIMIT = 3;
 const MAX_COMBAT_TURNS = 400;                      // Sicherung gegen Endlosschleifen, keine Spielregel
 
 /* ---------- Zufall (deterministisch über den Seed) ---------- */
@@ -459,7 +460,7 @@ function toggleLock(d, slot) {
 /* Magus – Regelkern (Teil 2): Werte, Upgrade-Kosten, Tempel. */
 
 function newStats() {
-  return { gold: 3, hp: 3, maxHp: 3, mana: 4, maxMana: 4, limit: 1, mag: { F: 1, E: 1, W: 1 }, pending: 0, freeDraws: 0, goldGot: 0, upGot: 0 };   // goldGot/upGot: insgesamt erhaltenes Gold und Upgrade-Punkte (für die Statistik)
+  return { gold: 3, hp: 3, maxHp: 3, mana: 4, maxMana: 4, limit: 1, drawLimit: 1, mag: { F: 1, E: 1, W: 1 }, pending: 0, freeDraws: 0, goldGot: 0, upGot: 0 };   // goldGot/upGot: insgesamt erhaltenes Gold und Upgrade-Punkte (für die Statistik)
 }
 function regen(stats, n) {   // n = Gewinn an HP und Mana (Regel regenByStage: je Abschnitt 1/2/3)
   n = n || 1;
@@ -1077,7 +1078,7 @@ function deckAvg(p) {
   return out;
 }
 function sample(state, ev) {
-  state.hist.push({ ev: ev || null, p: state.players.map(p => Object.assign(deckAvg(p), { sp: p.sp, up: p.stats.upGot, lvl: p.temple.level, F: p.stats.mag.F, E: p.stats.mag.E, W: p.stats.mag.W, slots: p.slots, limit: p.stats.limit, hp: p.stats.maxHp, mana: p.stats.maxMana })) });
+  state.hist.push({ ev: ev || null, p: state.players.map(p => Object.assign(deckAvg(p), { sp: p.sp, up: p.stats.upGot, lvl: p.temple.level, F: p.stats.mag.F, E: p.stats.mag.E, W: p.stats.mag.W, slots: p.slots, limit: p.stats.limit, dl: p.stats.drawLimit, hp: p.stats.maxHp, mana: p.stats.maxMana })) });
 }
 function endTurn(state, pid, kind) {
   const nx = other(pid);
@@ -1111,6 +1112,18 @@ function execSpend(state, pid, what) {
   } else return fail('Unbekanntes Upgrade.');
   s.pending -= cost;
   log(state, p.name + ' verbessert ' + { hp: 'max. HP', mana: 'max. Mana', limit: 'das Ausspiellimit', slot: 'die Handplätze' }[what] + '.', pid);
+  return { ok: true };
+}
+// Nachziehlimit steigern (kostet Gold, drawLimitCost je Schritt): so oft darf man hintereinander nachziehen, bevor der Nachziehmarker auf Rot springt.
+function drawLimitCost(state, s) { const c = state.rules.drawLimitCost; return Array.isArray(c) ? (c[s.drawLimit - 1] != null ? c[s.drawLimit - 1] : c[c.length - 1]) : (c == null ? 1 : c); }
+function execDrawLimit(state, pid) {
+  const p = state.players[pid], s = p.stats;
+  if (!state.rules.drawMarker) return fail('Ohne Nachziehmarker gibt es kein Nachziehlimit.');
+  if (s.drawLimit >= MAX_DRAW_LIMIT) return fail('Das Nachziehlimit ist am Maximum (' + MAX_DRAW_LIMIT + ').');
+  const cost = drawLimitCost(state, s);
+  if (s.gold < cost) return fail('Du brauchst ' + cost + ' Gold.');
+  s.gold -= cost; s.drawLimit++;
+  log(state, p.name + ' steigert das Nachziehlimit auf ' + s.drawLimit + ' (' + cost + ' Gold).', pid);
   return { ok: true };
 }
 function execTemple(state, pid, amount) {
@@ -1151,6 +1164,7 @@ function applyWorld(state, a) {
     case 'vendor': return execVendor(state, pid, a);
     case 'temple': return endOnOk(state, pid, 'temple', execTemple(state, pid, a.amount));
     case 'magic': return endOnOk(state, pid, 'magic', execMagic(state, pid, a.elem));
+    case 'drawlimit': return endOnOk(state, pid, 'drawlimit', execDrawLimit(state, pid));
     case 'spend': return endOnOk(state, pid, 'spend', execSpend(state, pid, a.what));
     case 'combat': {
       const m = state.monsters[a.elem]; if (!m || !monsterAlive(m)) return fail(m && m.retreated ? 'Dieses Monster hat sich zurückgezogen.' : 'Dieses Monster ist besiegt.');
@@ -1163,10 +1177,10 @@ function applyWorld(state, a) {
 /* Magus – Regelkern (Teil 8): Spielstart und Schnittstelle nach außen. */
 
 // Regelwerte (Abstimmungs- und Variantenschalter). ‚curses‘: Fluchsystem, siehe 30-curses.js.
-const DEFAULT_RULES = { magicCost: [0, 1, 3], limitCost: 2, limitFirstStepCost: 2, hpPerPoint: 2, stagePoints: [0, 1, 2, 3], stageGold: [0, 1, 2, 3], loserUp: 0, loserUp2: 0, winSp: 4, winSpFromShowdown: 2, monsterSp: 1, monsterLoot: 0, idleLimit: 0, drawMarker: 1, drawPenaltyGold: 1, lossHelp: 1, showdownSp: 1, lootBoth: true, recoverByStage: [1, 2, 3], regenByStage: [1, 2, 3], supply: 8, supply2: 6, supply3: 4, startCards: 0 };   // Jede gespielte Karte (auch Kombokarten) kostet 1 Mana, nur Verteidigung in der überlegenen Farbe ist gratis. recoverByStage: Mana-Gewinn von „Erholen“ im Kampf je Abschnitt
+const DEFAULT_RULES = { magicCost: [0, 1, 3], limitCost: 2, limitFirstStepCost: 2, hpPerPoint: 2, stagePoints: [0, 1, 2, 3], stageGold: [0, 1, 2, 3], loserUp: 0, loserUp2: 0, winSp: 4, winSpFromShowdown: 2, monsterSp: 1, monsterLoot: 0, idleLimit: 0, drawMarker: 1, drawPenaltyGold: 1, drawLimitCost: [1, 1], lossHelp: 1, showdownSp: 1, lootBoth: true, recoverByStage: [1, 2, 3], regenByStage: [1, 2, 3], supply: 8, supply2: 6, supply3: 4, startCards: 0 };   // Jede gespielte Karte (auch Kombokarten) kostet 1 Mana, nur Verteidigung in der überlegenen Farbe ist gratis. recoverByStage: Mana-Gewinn von „Erholen“ im Kampf je Abschnitt
 
 function newPlayer(state, name, ai, startIds) {
-  const p = { name, ai: !!ai, stats: newStats(), temple: { points: 0, level: 0 }, sp: 0, slots: MIN_SLOTS, drawRed: false };
+  const p = { name, ai: !!ai, stats: newStats(), temple: { points: 0, level: 0 }, sp: 0, slots: MIN_SLOTS, drawRed: false, drawN: 0 };   // drawN: Nachziehvorgänge seit der letzten anderen Aktion (höchstens Nachziehlimit), drawRed: Marker rot
   p.stats.gold = 0;   // Das Spiel beginnt ohne Gold; Abschnittsboni kommen in newGame
   p.deck = newDeck(state, startIds || START_DECK, MIN_SLOTS);
   return p;
@@ -1231,14 +1245,14 @@ function dispatch(state, a) {
 }
 // Nachziehmarker (je Spieler, grün/rot): Nachziehen dreht ihn auf rot, jede andere Zugaktion zurück auf grün; wer bei rotem Marker nachzieht, gibt dem Gegner eine Strafe (Weltphase: drawPenaltyGold Gold, Kampf: ein Nachziehtoken). Markieren, Sperren, Läuterungswahl und das Gratis-Nachziehen (Token) zählen nicht als Aktion.
 function markerKind(state, a) {
-  if (state.phase === 'world') return a.type === 'draw' ? 'draw' : ['vendor', 'temple', 'magic', 'spend', 'combat'].includes(a.type) ? 'other' : null;
+  if (state.phase === 'world') return a.type === 'draw' ? 'draw' : ['vendor', 'temple', 'magic', 'spend', 'drawlimit', 'combat'].includes(a.type) ? 'other' : null;
   if (state.phase === 'combat') return a.type === 'draw' ? 'draw' : ['attack', 'defend', 'pass', 'recover', 'flee'].includes(a.type) ? 'other' : null;
   return null;
 }
 function drawMarkerAfter(state, pid, kind, wasRed) {
   const p = state.players[pid];
-  if (kind === 'other') { p.drawRed = false; return; }
-  p.drawRed = true;
+  if (kind === 'other') { p.drawRed = false; p.drawN = 0; return; }
+  p.drawN = Math.min((p.drawN || 0) + 1, p.stats.drawLimit || 1); p.drawRed = p.drawN >= (p.stats.drawLimit || 1);   // Nachziehlimit: so viele Nachziehvorgänge hintereinander sind frei, danach springt der Marker auf Rot
   if (!wasRed) return;
   const q = state.players[other(pid)];
   if (state.phase === 'combat' && state.combat) {
@@ -1259,9 +1273,9 @@ function actor(state) {
 }
 function handCounts(d) { const c = {}; d.hand.forEach(x => { if (x) c[x.id] = (c[x.id] || 0) + 1; }); return c; }
 
-return { ELEMENTS, SUPERIOR, NAMES, START_DECK, MAX_MAGIC, MAX_SLOTS, MIN_SLOTS, MAX_LIMIT, DEFAULT_RULES, MONSTER,
+return { ELEMENTS, SUPERIOR, NAMES, START_DECK, MAX_MAGIC, MAX_SLOTS, MIN_SLOTS, MAX_LIMIT, MAX_DRAW_LIMIT, DEFAULT_RULES, MONSTER,
   makeRng, parseCard, selection, newGame, apply, record, prim, actor, other, regen, handCounts,
-  vendorOffers, vendorPlans, previewTemple, pointsForGold, nextLevelCost, limitStepCost, manaStepCost, magicCost,
+  vendorOffers, vendorPlans, previewTemple, pointsForGold, nextLevelCost, limitStepCost, manaStepCost, magicCost, drawLimitCost,
   evalAttack, evalDefense, canFlee, stockOf, recoverGain, regenGain, comboLevels, levelsFor,
   mirrorOf, monsterAlive, allMonstersDead, magicProgress, spawnMonsters, spawnForGame };
 }));</script>
@@ -2017,6 +2031,24 @@ function layoutDeck(deck, L, mine) {
     place(c, { x: slotX(i, n, L), y: L.y + (marked ? L.raise : 0), sc: L.s, down: !mine, z: 20 + i + (marked ? 30 : 0), marked, fd: fdm, locked: mine && c.locked, mine, slot: i, spawn, zone: 'hand', first: mine && marked && !fdm && isFirstAtk(deck, i)});
   });
 }
+// Nachziehlimit: drei Kreise am Nachziehstapel (eigener Stapel: darüber, Gegner: darunter), der rot/grüne Marker liegt auf der Stufe des nächsten freien Nachziehens; Stufen über dem Limit sind abgedunkelt, auf der nächsten sitzt der Kauf-Knopf (Gold)
+function drawTrack(L, mine) {
+  if (!G.rules.drawMarker) return '';
+  const pl = G.players[mine ? ME : 1 - ME], st = pl.stats, n = M.MAX_DRAW_LIMIT, lim = st.drawLimit || 1;
+  const sz = mine ? 26 : 19, gap = mine ? 6 : 4, tk = mine ? 20 : 15, w = CW * L.ps;
+  const x0 = L.draw.x + (w - (n * sz + (n - 1) * gap)) / 2, y = mine ? L.draw.y - sz - 8 : L.draw.y + CH * L.ps + 24;
+  const red = !!pl.drawRed, at = Math.min((pl.drawN || 0) + 1, lim);   // Stufe des Markers: das wievielte Nachziehen als Nächstes frei wäre
+  const pen = G.phase === 'combat' ? 'ein Nachziehtoken' : G.rules.drawPenaltyGold + ' Gold';
+  const tip = (mine ? 'Dein' : 'Gegnerisches') + ' Nachziehlimit ' + lim + ' von ' + n + ': So oft ' + (mine ? 'darfst du' : 'darf er') + ' hintereinander nachziehen (ohne andere Aktion dazwischen), bevor der Marker auf Rot springt. Nachziehen bei rotem Marker gibt dem Gegner ' + pen + '.';
+  let h = '';
+  for (let i = 1; i <= n; i++) h += '<div class="dlc' + (i <= lim ? '' : ' off') + '" title="' + tip + '" style="left:' + (x0 + (i - 1) * (sz + gap)) + 'px;top:' + y + 'px;width:' + sz + 'px;height:' + sz + 'px"></div>';
+  h += '<div class="dmark ' + (red ? 'red' : 'green') + '" title="Nachziehmarker ' + (red ? 'rot: Nachziehen gibt dem Gegner ' + pen : 'grün: noch ' + (lim - (pl.drawN || 0)) + 'x Nachziehen frei') + '" style="width:' + tk + 'px;height:' + tk + 'px;left:' + (x0 + (at - 1) * (sz + gap) + (sz - tk) / 2) + 'px;top:' + (y + (sz - tk) / 2) + 'px"></div>';
+  if (mine && lim < n && G.phase === 'world' && !G.over) {
+    const cost = M.drawLimitCost(G, st), can = myTurn() && st.gold >= cost;
+    h += '<button class="up mg' + (can ? '' : ' off') + '" data-act="drawlimit"' + (can ? '' : ' disabled') + ' title="Nachziehlimit auf ' + (lim + 1) + ' steigern (' + cost + ' Gold)" style="left:' + (x0 + lim * (sz + gap)) + 'px;top:' + y + 'px;width:' + sz + 'px;height:' + sz + 'px;margin:0;z-index:63"></button>';
+  }
+  return h;
+}
 function renderCards() {
   frame++; const quiet = els.size === 0; firstFrame = quiet;
   const cx = ctx();
@@ -2034,8 +2066,7 @@ function renderCards() {
   for (let i = 0; i < n; i++) if (!cx.myDeck.hand[i]) ph += '<div class="slot-ph" style="left:' + slotX(i, n, L_MY) + 'px;top:' + L_MY.y + 'px"></div>';
   const lab = (L, d, mine) => {
     const w = CW * L.ps, y = L.draw.y + CH * L.ps + 3;
-    const red = G.rules.drawMarker && G.players[mine ? ME : 1 - ME] && G.players[mine ? ME : 1 - ME].drawRed;   // Nachziehmarker: grün = Nachziehen frei, rot = ein weiteres Nachziehen kostet Strafe
-    const mk = G.rules.drawMarker ? '<div class="dmark ' + (red ? 'red' : 'green') + '" title="Nachziehmarker ' + (red ? 'rot: Nachziehen ohne andere Aktion dazwischen gibt dem Gegner ' + (G.phase === 'combat' ? 'ein Nachziehtoken' : G.rules.drawPenaltyGold + ' Gold') : 'grün: Nachziehen ist frei') + '" style="left:' + (L.draw.x + w - 10) + 'px;top:' + (L.draw.y - 10) + 'px"></div>' : '';
+    const mk = drawTrack(L, mine);
     return mk + '<div class="pilelabel" style="left:' + (L.draw.x - 8) + 'px;top:' + y + 'px;width:' + (w + 16) + 'px">Stapel ' + d.draw.length + '</div>' +
       '<div class="pilelabel" style="left:' + (L.disc.x - 8) + 'px;top:' + y + 'px;width:' + (w + 16) + 'px">Ablage ' + d.discard.length + '</div>';
   };
@@ -2047,9 +2078,9 @@ function renderCards() {
   ph += '<div class="pilehit" data-act="deckview" title="Dein Deck als Balkendiagramm (Stufen der Karten)" style="left:' + L_MY.disc.x + 'px;top:' + L_MY.disc.y + 'px;width:' + CW * L_MY.ps + 'px;height:' + CH * L_MY.ps + 'px"></div>';
   $('dimdeck').classList.toggle('on', !!deckView);   // Deckübersicht: Spielfeld dahinter sanft abdunkeln
   if (deckView) ph += deckPopHTML(cx.myDeck);
-  if (cx.combat && cx.myStats.freeDraws > 0) ph += '<div class="freedraw" data-act="freedraw" title="Gratis-Nachziehen: ' + cx.myStats.freeDraws + 'x (Klick)" style="left:' + L_MY.draw.x + 'px;top:' + (L_MY.draw.y - 52) + 'px"><img src="' + IMG.gratis + '">' + (cx.myStats.freeDraws > 1 ? '<b class="mul">×' + cx.myStats.freeDraws + '</b>' : '') + '</div>';
+  if (cx.combat && cx.myStats.freeDraws > 0) ph += '<div class="freedraw" data-act="freedraw" title="Gratis-Nachziehen: ' + cx.myStats.freeDraws + 'x (Klick)" style="left:' + L_MY.draw.x + 'px;top:' + (L_MY.draw.y - (G.rules.drawMarker ? 86 : 52)) + 'px"><img src="' + IMG.gratis + '">' + (cx.myStats.freeDraws > 1 ? '<b class="mul">×' + cx.myStats.freeDraws + '</b>' : '') + '</div>';
   if (cx.combat && cx.oppStats.freeDraws > 0) {   // gegnerische Nachziehtokens; im Läuterungs-Angriff anklickbar (werden zerstört, nicht gutgeschrieben)
-    const lf = lfCtx(), sel = lf ? lf.picks.filter(p => p === 'ot').length : 0, pos = 'left:' + L_OP.draw.x + 'px;top:' + (L_OP.draw.y + CH * L_OP.ps + 22) + 'px', inner = '<img src="' + IMG.gratis + '">' + (cx.oppStats.freeDraws > 1 ? '<b class="mul">×' + cx.oppStats.freeDraws + '</b>' : '') + (sel ? '<i class="lfb">✓' + sel + '</i>' : '');
+    const lf = lfCtx(), sel = lf ? lf.picks.filter(p => p === 'ot').length : 0, pos = 'left:' + L_OP.draw.x + 'px;top:' + (L_OP.draw.y + CH * L_OP.ps + (G.rules.drawMarker ? 48 : 22)) + 'px', inner = '<img src="' + IMG.gratis + '">' + (cx.oppStats.freeDraws > 1 ? '<b class="mul">×' + cx.oppStats.freeDraws + '</b>' : '') + (sel ? '<i class="lfb">✓' + sel + '</i>' : '');
     ph += lf ? '<button class="freedraw opp lf' + (sel ? ' sel' : '') + '" data-act="lfm" data-k="ot" title="Läuterung: gegnerische Nachziehtokens zerstören (Klick: einen mehr, nach dem Maximum wieder alle weg). Sie werden nicht gutgeschrieben." style="' + pos + '">' + inner + '</button>' : '<div class="freedraw opp" title="Gratis-Nachziehen des Gegners: ' + cx.oppStats.freeDraws + 'x" style="' + pos + '">' + inner + '</div>';
   }
   const pnd = G.players[ME].stats.pending;
@@ -3142,7 +3173,7 @@ function showStart() {
   setCursor('human');
   overlay.style.display = 'flex'; overlay.className = 'overlay';
   overlay.innerHTML = '<div class="box start"><h1>Magus</h1>' +
-    '<p class="note" style="flex:none;margin-top:-2px"><b>Schwerpunkt dieses Stands:</b> Siegpunkte aus Monsterkämpfen (Sieg über ein Monster +1, Niederlage −1, nie unter 0; der Monsterführer bleibt unberührt; Flucht zählt nicht), Showdown mit Siegpunkten, ein klügerer Computer (Fliehen, Mana-Reserve) und eine Statistik mit Siegpunktverlauf. <b>Nachziehmarker:</b> Wer nachzieht, dreht seinen Marker auf Rot, jede andere Aktion dreht ihn zurück auf Grün. Wer bei rotem Marker nachzieht, gibt dem Gegner in der Weltphase 1 Gold und im Kampf ein Nachziehtoken (ein Gratis-Nachziehen).</p>' +
+    '<p class="note" style="flex:none;margin-top:-2px"><b>Schwerpunkt dieses Stands:</b> Siegpunkte aus Monsterkämpfen und Showdowns, ein klügerer Computer und eine Statistik mit Siegpunktverlauf. <b>Nachziehmarker:</b> Wer nachzieht, dreht seinen Marker auf Rot, jede andere Aktion zurück auf Grün; wer bei Rot nachzieht, gibt dem Gegner 1 Gold (Weltphase) bzw. ein Nachziehtoken (Kampf). <b>Neu, Nachziehlimit:</b> Für je 1 Gold (bis Stufe 3) darfst du öfter hintereinander nachziehen, bevor der Marker auf Rot springt. Der Computer nutzt das noch nicht.</p>' +
     '<img class="logo" alt="" src="assets/img/bg-9c4789d6.webp">' +
     (G && !G.over && !MP && started ? '<button class="btn primary" style="font-size:22px;padding:10px 28px;flex:none;align-self:center;margin-bottom:8px" data-act="resume">Spiel fortsetzen</button>' : '') + '<button class="btn' + (G && !G.over && !MP && started ? '' : ' primary') + '" style="font-size:22px;padding:10px 28px;flex:none;align-self:center" data-act="newgame">' + (G && !G.over && !MP && started ? 'Neues Spiel gegen den Computer' : 'Gegen den Computer spielen') + '</button>' +
     '<button class="btn" style="font-size:18px;padding:8px 22px;flex:none;align-self:center;margin-top:8px" data-act="newspec" title="Zwei Computerspieler spielen gegeneinander, du schaust zu (für Spielablauf und Statistik)">Zwei Computern zuschauen</button>' +
@@ -3223,7 +3254,7 @@ function checkShowdownIntro() {
 function worldSound(type, gainedUp, magNow, cardLv) {
   if (FAST) return;
   if (type === 'temple') { Snd.play('coin_sacrifice'); if (gainedUp) Snd.play('temple_level', .45); }
-  else if (type === 'spend') Snd.play('spend_upgrade');
+  else if (type === 'spend' || type === 'drawlimit') Snd.play('spend_upgrade');
   else if (type === 'magic') { if (magNow === 2) Snd.play('magic_lv2'); else if (magNow === 3) Snd.play('magic_lv3'); }   // Magie auf Stufe 2 bzw. 3 (höher geht es nicht)
   else if (type === 'vendor' && cardLv >= 2) Snd.play('card_lv' + cardLv);   // Karte auf Stufe 2 bzw. 3 aufgewertet
 }
@@ -3474,6 +3505,7 @@ function onAct(d) {
     case 'temple': sacN = 0; act({ type: 'temple', amount: +d.n }); break;
     case 'spend': act({ type: 'spend', what: d.w }); break;
     case 'magic': act({ type: 'magic', elem: d.e }); break;
+    case 'drawlimit': act({ type: 'drawlimit' }); break;
     case 'fd': act({ type: 'fd', slots: [...fdSel] }); fdSel.clear(); break;
     case 'draw': if (canDrawNow()) act({ type: 'draw' }); else if (myTurn()) toast('Jetzt ist kein Nachziehen möglich.'); break;
     case 'freedraw': act({ type: 'freeDraw' }); break;
@@ -3539,6 +3571,7 @@ function pvShow(b) {
     const fr = stage.querySelector('[data-pv="frac"]');
     if (fr) { const old = fr.innerHTML; fr.innerHTML = '<span class="pvnew">' + fracHTML(pv.pool, pv.level) + '</span>'; undos.push(() => { fr.innerHTML = old; }); }
   } else if (act === 'magic') redo('gold', M.magicCost(G, st.mag[b.dataset.e]));
+  else if (act === 'drawlimit') redo('gold', M.drawLimitCost(G, st));
   else if (act === 'spend') redo('pts', w === 'limit' ? M.limitStepCost(G, st) : w === 'mana' ? M.manaStepCost(G, st) : 1);
   if (act === 'magic') {
     const el = b.dataset.e, dot = b.parentElement.querySelector('.rg[data-e="' + el + '"][data-lv="' + (st.mag[el] + 1) + '"]');
@@ -3602,6 +3635,7 @@ const ST_SERIES = [
   { k: 'W', name: 'Magie Wasser', col: '#52a6f5', chip: 'mag' },
   { k: 'slots', name: 'Handkarten', col: '#e58aa0' },
   { k: 'limit', name: 'Ausspiellimit', col: '#5fd0c4' },
+  { k: 'dl', name: 'Nachziehlimit', col: '#f2d27a' },
   { k: 'hp', name: 'Max. HP', col: '#ff5d6c' },
   { k: 'mana', name: 'Max. Mana', col: '#6ea8ff' },
   { k: 'aF', name: 'Ø Karte Feuer', col: '#ffb48a', chip: 'avg', thin: true },
@@ -3610,7 +3644,7 @@ const ST_SERIES = [
 ];
 ST_SERIES.forEach(s => { s.chip = s.chip || s.k; });
 // Filterknöpfe (immer genau ein Merkmal sichtbar): die drei Magierichtungen bzw. die drei Kartendurchschnitte teilen sich je einen Knopf, jede Farbe bleibt eine eigene Linie
-const ST_CHIPS = [['sp', 'Siegpunkte', '#e0b84a'], ['up', 'Upgrades (insgesamt)', '#c47fe0'], ['lvl', 'Tempelstufe', '#e8e3d0'], ['mag', 'Magie (Feuer, Erde, Wasser)', '#ff7a3d'], ['avg', 'Ø Karten (Feuer, Erde, Wasser)', '#ffb48a'], ['slots', 'Handkarten', '#e58aa0'], ['limit', 'Ausspiellimit', '#5fd0c4'], ['hp', 'Max. HP', '#ff5d6c'], ['mana', 'Max. Mana', '#6ea8ff']];
+const ST_CHIPS = [['sp', 'Siegpunkte', '#e0b84a'], ['up', 'Upgrades (insgesamt)', '#c47fe0'], ['lvl', 'Tempelstufe', '#e8e3d0'], ['mag', 'Magie (Feuer, Erde, Wasser)', '#ff7a3d'], ['avg', 'Ø Karten (Feuer, Erde, Wasser)', '#ffb48a'], ['slots', 'Handkarten', '#e58aa0'], ['limit', 'Ausspiellimit', '#5fd0c4'], ['dl', 'Nachziehlimit', '#f2d27a'], ['hp', 'Max. HP', '#ff5d6c'], ['mana', 'Max. Mana', '#6ea8ff']];
 const stOn = new Set(['sp']), stWho = { me: true, opp: true };
 const stView = { auto: true, x0: 0, x1: 1, y0: 0, y1: 4 };   // sichtbarer Ausschnitt in Daten-Einheiten; auto = Ursprung links unten, Achsen dehnen sich mit dem Spiel
 const ST = { W: 1000, T: 52, B: 40, L: 44, R: 16, PH: 330 };

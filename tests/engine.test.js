@@ -305,3 +305,42 @@ test('KI meidet Nachziehen bei rotem Nachziehmarker (Weltphase: Gold opfern stat
     assert.ok(!ca.includes('draw'), 'Kampf bei Rot: ' + ca.join(','));
   }
 });
+
+test('Nachziehlimit: Kauf kostet 1 Gold, beendet den Zug, höchstens Stufe 3', () => {
+  const s = M.newGame({ seed: 5, ai: [false, false], first: 0 }), me = s.players[0].stats;
+  assert.equal(me.drawLimit, 1);
+  me.gold = 0; assert.equal(M.apply(s, { pid: 0, type: 'drawlimit' }).ok, false, 'ohne Gold nicht möglich');
+  me.gold = 5;
+  assert.ok(M.apply(s, { pid: 0, type: 'drawlimit' }).ok);
+  assert.equal(me.drawLimit, 2); assert.equal(me.gold, 4); assert.equal(s.turn, 1, 'Zug beendet');
+  assert.ok(M.apply(s, { pid: 1, type: 'draw' }).ok);
+  assert.ok(M.apply(s, { pid: 0, type: 'drawlimit' }).ok);
+  assert.equal(me.drawLimit, 3); assert.equal(me.gold, 3);
+  s.players[1].stats.gold = 5; assert.ok(M.apply(s, { pid: 1, type: 'temple', amount: 1 }).ok);   // (zweimal hintereinander nachziehen würde dem Spieler 0 Gold schenken)
+  assert.equal(M.apply(s, { pid: 0, type: 'drawlimit' }).ok, false, 'Maximum 3'); assert.equal(me.gold, 3);
+});
+
+test('Nachziehlimit Weltphase: so viele Nachziehvorgänge hintereinander sind frei, danach wird der Marker rot und das nächste Nachziehen kostet Gold', () => {
+  const s = M.newGame({ seed: 5, ai: [false, false], first: 0 }), p0 = s.players[0], g1 = () => s.players[1].stats.gold;
+  p0.stats.drawLimit = 3;
+  const base = g1(), other = () => assert.ok(M.apply(s, { pid: 1, type: 'draw' }).ok);
+  for (let i = 1; i <= 3; i++) {
+    assert.ok(M.apply(s, { pid: 0, type: 'draw' }).ok); other();
+    assert.equal(p0.drawN, i); assert.equal(p0.drawRed, i === 3, 'rot erst nach dem dritten Nachziehen');
+  }
+  assert.equal(g1(), base, 'bisher keine Strafe');
+  assert.ok(M.apply(s, { pid: 0, type: 'draw' }).ok);   // viertes Mal: Strafe
+  assert.equal(g1(), base + 1); assert.equal(p0.drawN, 3);
+  other();
+  assert.ok(M.apply(s, { pid: 0, type: 'temple', amount: 1 }).ok);   // andere Aktion: zurück auf Grün, Zähler 0
+  assert.equal(p0.drawRed, false); assert.equal(p0.drawN, 0);
+});
+
+test('Nachziehlimit Kampf: erst das Nachziehen über dem Limit gibt dem Gegner ein Nachziehtoken', () => {
+  const { s, op } = combatSetup(11, ['F1']);
+  s.players[0].stats.drawLimit = 2;
+  for (let i = 0; i < 2; i++) { assert.ok(M.apply(s, { pid: 0, type: 'draw' }).ok); assert.ok(M.apply(s, { pid: 1, type: 'draw' }).ok); }
+  assert.equal(op.stats.freeDraws || 0, 0); assert.equal(s.players[0].drawRed, true);
+  assert.ok(M.apply(s, { pid: 0, type: 'draw' }).ok);
+  assert.equal(op.stats.freeDraws, 1);
+});

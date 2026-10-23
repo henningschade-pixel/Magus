@@ -10,7 +10,7 @@ function deckAvg(p) {
   return out;
 }
 function sample(state, ev) {
-  state.hist.push({ ev: ev || null, p: state.players.map(p => Object.assign(deckAvg(p), { sp: p.sp, up: p.stats.upGot, lvl: p.temple.level, F: p.stats.mag.F, E: p.stats.mag.E, W: p.stats.mag.W, slots: p.slots, limit: p.stats.limit, hp: p.stats.maxHp, mana: p.stats.maxMana })) });
+  state.hist.push({ ev: ev || null, p: state.players.map(p => Object.assign(deckAvg(p), { sp: p.sp, up: p.stats.upGot, lvl: p.temple.level, F: p.stats.mag.F, E: p.stats.mag.E, W: p.stats.mag.W, slots: p.slots, limit: p.stats.limit, dl: p.stats.drawLimit, hp: p.stats.maxHp, mana: p.stats.maxMana })) });
 }
 function endTurn(state, pid, kind) {
   const nx = other(pid);
@@ -44,6 +44,18 @@ function execSpend(state, pid, what) {
   } else return fail('Unbekanntes Upgrade.');
   s.pending -= cost;
   log(state, p.name + ' verbessert ' + { hp: 'max. HP', mana: 'max. Mana', limit: 'das Ausspiellimit', slot: 'die Handplätze' }[what] + '.', pid);
+  return { ok: true };
+}
+// Nachziehlimit steigern (kostet Gold, drawLimitCost je Schritt): so oft darf man hintereinander nachziehen, bevor der Nachziehmarker auf Rot springt.
+function drawLimitCost(state, s) { const c = state.rules.drawLimitCost; return Array.isArray(c) ? (c[s.drawLimit - 1] != null ? c[s.drawLimit - 1] : c[c.length - 1]) : (c == null ? 1 : c); }
+function execDrawLimit(state, pid) {
+  const p = state.players[pid], s = p.stats;
+  if (!state.rules.drawMarker) return fail('Ohne Nachziehmarker gibt es kein Nachziehlimit.');
+  if (s.drawLimit >= MAX_DRAW_LIMIT) return fail('Das Nachziehlimit ist am Maximum (' + MAX_DRAW_LIMIT + ').');
+  const cost = drawLimitCost(state, s);
+  if (s.gold < cost) return fail('Du brauchst ' + cost + ' Gold.');
+  s.gold -= cost; s.drawLimit++;
+  log(state, p.name + ' steigert das Nachziehlimit auf ' + s.drawLimit + ' (' + cost + ' Gold).', pid);
   return { ok: true };
 }
 function execTemple(state, pid, amount) {
@@ -84,6 +96,7 @@ function applyWorld(state, a) {
     case 'vendor': return execVendor(state, pid, a);
     case 'temple': return endOnOk(state, pid, 'temple', execTemple(state, pid, a.amount));
     case 'magic': return endOnOk(state, pid, 'magic', execMagic(state, pid, a.elem));
+    case 'drawlimit': return endOnOk(state, pid, 'drawlimit', execDrawLimit(state, pid));
     case 'spend': return endOnOk(state, pid, 'spend', execSpend(state, pid, a.what));
     case 'combat': {
       const m = state.monsters[a.elem]; if (!m || !monsterAlive(m)) return fail(m && m.retreated ? 'Dieses Monster hat sich zurückgezogen.' : 'Dieses Monster ist besiegt.');
