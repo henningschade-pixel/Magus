@@ -80,9 +80,10 @@ function drawTrack(L, mine) {
   let h = '';
   for (let i = 1; i <= n; i++) h += '<div class="dlc' + (i <= lim ? '' : ' off') + '" title="' + tip + '" style="left:' + (x0 + (i - 1) * (sz + gap)) + 'px;top:' + y + 'px;width:' + sz + 'px;height:' + sz + 'px"></div>';
   h += '<div class="dmark ' + (red ? 'red' : 'green') + '" title="Nachziehmarker ' + (red ? 'rot: Nachziehen gibt dem Gegner ' + pen : 'grün: noch ' + (lim - (pl.drawN || 0)) + 'x Nachziehen frei') + '" style="width:' + tk + 'px;height:' + tk + 'px;left:' + (x0 + (at - 1) * (sz + gap) + (sz - tk) / 2) + 'px;top:' + (y + (sz - tk) / 2) + 'px"></div>';
-  if (mine && lim < n && G.phase === 'world' && !G.over) {
-    const cost = M.drawLimitCost(G, st), can = myTurn() && st.gold >= cost, bz = Math.round(sz * 32 / 26), off = (bz - sz) / 2;   // wie die Magie-Knöpfe: Knopffläche größer als die Scheibe (Platz für die Funken)
-    h += '<button class="up mg gd' + (cost > 1 ? ' costly' : '') + (can ? '' : ' off') + '"' + (cost > 1 ? ' data-c="' + cost + '"' : '') + (can ? '' : ' disabled') + ' data-act="drawlimit" title="Nachziehlimit auf ' + (lim + 1) + ' steigern (' + cost + ' Gold)" style="left:' + (x0 + lim * (sz + gap) - off) + 'px;top:' + (y - off) + 'px;width:' + bz + 'px;height:' + bz + 'px;margin:0;z-index:63"></button>';
+  const cost = M.drawLimitCost(G, st);
+  if (mine && lim < n && G.phase === 'world' && !G.over && myTurn() && st.gold >= cost) {   // wie die Magie-Knöpfe: nur im eigenen Zug der Weltphase und nur, wenn das Gold reicht
+    const bz = Math.round(sz * 32 / 26), off = (bz - sz) / 2;   // wie die Magie-Knöpfe: Knopffläche größer als die Scheibe (Platz für die Funken)
+    h += '<button class="up mg gd' + (cost > 1 ? ' costly' : '') + '"' + (cost > 1 ? ' data-c="' + cost + '"' : '') + ' data-act="drawlimit" title="Nachziehlimit auf ' + (lim + 1) + ' steigern (' + cost + ' Gold)" style="left:' + (x0 + lim * (sz + gap) - off) + 'px;top:' + (y - off) + 'px;width:' + bz + 'px;height:' + bz + 'px;margin:0;z-index:63"></button>';
   }
   return h;
 }

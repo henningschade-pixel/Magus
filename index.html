@@ -134,9 +134,9 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .sbody .statrow .plcol{margin-left:auto;display:flex}
 .pendhdr{float:right;color:var(--gold);font-size:15px;font-weight:400}.pendhdr b{font-size:19px;font-weight:700}
 
-/* Plus-Knöpfe (Upgrade-Punkte ausgeben) */
-.up{width:24px;height:26px;padding:0;border:0;background:var(--plusg) center/contain no-repeat;cursor:var(--cp);margin-left:4px;flex:none}
-.up:hover{background-image:var(--plushg)}
+/* Plus-Knöpfe (Upgrade-Punkte ausgeben); was Gold kostet (Magie, Nachziehlimit), zeigt die goldene Münz-Scheibe (.mg.gd) */
+.up{width:24px;height:26px;padding:0;border:0;background:var(--plus) center/contain no-repeat;cursor:var(--cp);margin-left:4px;flex:none}
+.up:hover{background-image:var(--plush)}
 .up.mg{background-image:var(--plusg)}.up.mg:hover{background-image:var(--plushg)}
 .up.costly{position:relative}
 .up{position:relative}
@@ -159,7 +159,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .lfsum{margin-top:6px}.lfsum .note{font-size:15px}.lfsum b{color:#f2d27a}
 .up.costly::after{content:attr(data-c);position:absolute;right:-5px;top:-6px;min-width:15px;height:15px;border-radius:8px;background:#e8c35a;color:#2a1a05;font:700 12px/15px Alegreya,serif;text-align:center;box-shadow:0 0 0 1px #2a1a05}
 .up.off{opacity:.38;cursor:var(--cd);pointer-events:auto}
-.up.off:hover{background-image:var(--plusg)}
+.up.off:hover{background-image:var(--plus)}
 .up.mg.off:hover{background-image:var(--plusg)}
 .up.mg.gd,.up.mg.gd:hover{background-image:var(--gup)}.up.mg.gd:hover{background-image:var(--gupH)}.up.mg.gd.off:hover{background-image:var(--gup)}   /* Magie kaufen: goldene Scheibe rund um das Magiebrett (Knopffläche 32 px, die Scheibe darin 26 px, Platz für die Funken beim Überfahren) */
 .up.mg{position:absolute;margin:0;z-index:2}
@@ -2048,9 +2048,10 @@ function drawTrack(L, mine) {
   let h = '';
   for (let i = 1; i <= n; i++) h += '<div class="dlc' + (i <= lim ? '' : ' off') + '" title="' + tip + '" style="left:' + (x0 + (i - 1) * (sz + gap)) + 'px;top:' + y + 'px;width:' + sz + 'px;height:' + sz + 'px"></div>';
   h += '<div class="dmark ' + (red ? 'red' : 'green') + '" title="Nachziehmarker ' + (red ? 'rot: Nachziehen gibt dem Gegner ' + pen : 'grün: noch ' + (lim - (pl.drawN || 0)) + 'x Nachziehen frei') + '" style="width:' + tk + 'px;height:' + tk + 'px;left:' + (x0 + (at - 1) * (sz + gap) + (sz - tk) / 2) + 'px;top:' + (y + (sz - tk) / 2) + 'px"></div>';
-  if (mine && lim < n && G.phase === 'world' && !G.over) {
-    const cost = M.drawLimitCost(G, st), can = myTurn() && st.gold >= cost, bz = Math.round(sz * 32 / 26), off = (bz - sz) / 2;   // wie die Magie-Knöpfe: Knopffläche größer als die Scheibe (Platz für die Funken)
-    h += '<button class="up mg gd' + (cost > 1 ? ' costly' : '') + (can ? '' : ' off') + '"' + (cost > 1 ? ' data-c="' + cost + '"' : '') + (can ? '' : ' disabled') + ' data-act="drawlimit" title="Nachziehlimit auf ' + (lim + 1) + ' steigern (' + cost + ' Gold)" style="left:' + (x0 + lim * (sz + gap) - off) + 'px;top:' + (y - off) + 'px;width:' + bz + 'px;height:' + bz + 'px;margin:0;z-index:63"></button>';
+  const cost = M.drawLimitCost(G, st);
+  if (mine && lim < n && G.phase === 'world' && !G.over && myTurn() && st.gold >= cost) {   // wie die Magie-Knöpfe: nur im eigenen Zug der Weltphase und nur, wenn das Gold reicht
+    const bz = Math.round(sz * 32 / 26), off = (bz - sz) / 2;   // wie die Magie-Knöpfe: Knopffläche größer als die Scheibe (Platz für die Funken)
+    h += '<button class="up mg gd' + (cost > 1 ? ' costly' : '') + '"' + (cost > 1 ? ' data-c="' + cost + '"' : '') + ' data-act="drawlimit" title="Nachziehlimit auf ' + (lim + 1) + ' steigern (' + cost + ' Gold)" style="left:' + (x0 + lim * (sz + gap) - off) + 'px;top:' + (y - off) + 'px;width:' + bz + 'px;height:' + bz + 'px;margin:0;z-index:63"></button>';
   }
   return h;
 }
