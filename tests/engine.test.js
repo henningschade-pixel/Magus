@@ -417,3 +417,18 @@ test('Ausspiellimit startet bei 2 (startLimit), mit startLimit 0 wie früher bei
   assert.deepEqual(M.newGame({ seed: 5 }).players.map(p => p.stats.limit), [2, 2]);
   assert.deepEqual(M.newGame({ seed: 5, rules: { startLimit: 0 } }).players.map(p => p.stats.limit), [1, 1]);
 });
+
+test('Monster-Beschriftung Stufe I: „Mana+“ nur, wenn das Monster mehr Mana hat als seine Grundform (Erde 6, Feuer/Wasser 5)', () => {
+  const base = { F: 5, E: 6, W: 5 };
+  let plus = 0;
+  for (let seed = 1; seed <= 80; seed++) {
+    const r = M.spawnMonsters(1, M.newGame({ seed }).rng);
+    for (const el of Object.keys(r)) {
+      const m = r[el], extra = m.stats.maxMana - base[el];
+      assert.ok(extra === 0 || extra === 1, el + ' Mana ' + m.stats.maxMana);
+      assert.equal(/Mana\+/.test(m.label), extra === 1, el + ': ' + m.label + ' bei Mana ' + m.stats.maxMana); plus += extra;
+      assert.ok(!/Mana\+Mana/.test(m.label));
+    }
+  }
+  assert.ok(plus > 0, 'die Variante kam vor');
+});

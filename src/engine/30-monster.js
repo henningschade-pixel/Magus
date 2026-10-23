@@ -67,7 +67,10 @@ function spawnOne(el, stage, rng, v) {
   rng.shuffle(finalDeck);
   const tags = [], hints = [];
   const FHINT = { hp: 'Zäh: zusätzliche maximale HP.', mana: 'Mana: zusätzliches maximales Mana.', limit: 'Limit: darf mehr Karten gleichzeitig spielen (höheres Ausspiellimit).' };
-  if (stage === 1 && v.t && V.temple1[el][v.t]) { const fs = V.temple1[el][v.t]; tags.push(fs.map(f => ({ hp: 'Zäh', mana: 'Mana', limit: 'Limit' }[f])).join('+')); fs.filter((f, i) => fs.indexOf(f) === i).forEach(f => hints.push(FHINT[f])); }
+  if (stage === 1 && v.t && V.temple1[el][v.t]) {   // Stufe I: nur der Unterschied zur Grundform des Monsters wird genannt (das Erdmonster hat schon in der Grundform Mana 6)
+    const cm = l => l.filter(x => x === 'mana').length, dm = cm(V.temple1[el][v.t]) - cm(V.temple1[el][0]);
+    if (dm > 0) { tags.push('Mana+'); hints.push('Mana+: ein Mana mehr als die Grundform dieses Monsters, es kann länger angreifen.'); }
+  }
   if (stage >= 2 && v.t && V.temple[stage] && V.temple[stage][el] && V.temple[stage][el][v.t]) {
     const cnt = (l, f) => l.filter(x => x === f).length, tv = V.temple[stage][el][v.t], bs = M.temple[stage][el], dm = cnt(tv, 'mana') - cnt(bs, 'mana');
     if (dm < 0) { tags.push('ohne Extra-Mana'); hints.push('Ohne Extra-Mana: in diesem Abschnitt ein Mana weniger, dafür 1 maximale HP mehr (weniger Dauerdruck, zäher).'); }
