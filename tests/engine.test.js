@@ -385,8 +385,8 @@ test('Kosten getauscht (swapCosts): Magie kostet Upgrade-Punkte, alle anderen Ve
   assert.ok(go(g, { type: 'magic', elem: 'F' }).ok); assert.deepEqual([g.st.gold, g.st.pending, g.st.mag.F], [4, 3, 2], 'Magie Stufe 2: 1 Upgrade-Punkt');
   nxt(g); assert.ok(go(g, { type: 'magic', elem: 'F' }).ok); assert.deepEqual([g.st.gold, g.st.pending, g.st.mag.F], [4, 0, 3], 'Magie Stufe 3: 3 Upgrade-Punkte');
   nxt(g); assert.ok(go(g, { type: 'spend', what: 'hp' }).ok); assert.deepEqual([g.st.gold, g.st.pending, g.st.maxHp], [3, 0, 5], 'HP: 1 Gold');
-  nxt(g); assert.ok(go(g, { type: 'spend', what: 'limit' }).ok); assert.deepEqual([g.st.gold, g.st.limit], [1, 2], 'Limit: 2 Gold');
-  nxt(g); assert.equal(go(g, { type: 'spend', what: 'limit' }).ok, false, 'Limit 3 braucht 2 Gold, es ist nur noch 1 da'); assert.equal(g.st.limit, 2);
+  nxt(g); assert.ok(go(g, { type: 'spend', what: 'limit' }).ok); assert.deepEqual([g.st.gold, g.st.limit], [1, 3], 'Limit 2 → 3: 2 Gold');
+  nxt(g); assert.equal(go(g, { type: 'spend', what: 'limit' }).ok, false, 'Limit 4 braucht 2 Gold, es ist nur noch 1 da'); assert.equal(g.st.limit, 3);
   nxt(g); assert.ok(go(g, { type: 'spend', what: 'slot' }).ok); assert.deepEqual([g.st.gold, g.s.players[0].slots], [0, 4], 'Handplatz: 1 Gold');
   nxt(g); assert.equal(go(g, { type: 'spend', what: 'mana' }).ok, false, 'ohne Gold kein Upgrade, auch wenn Upgrade-Punkte da wären');
   g = mk({ swapCosts: 0 });   // alte Zuordnung
@@ -410,4 +410,10 @@ test('Überschusspunkte: Sind alle Magien auf Stufe 3, werden Upgrade-Punkte (ni
   assert.equal(s.players[1].stats.pending, 3, '1 Bonuspunkt + 2 aus dem Tempel'); assert.equal(s.players[1].sp, 2);
   const t = M.newGame({ seed: 5, ai: [false, false], first: 0, rules: { surplusSp: 0 } }); t.players[0].stats.mag = { F: 3, E: 3, W: 3 }; t.players[0].stats.pending = 2; t.players[0].stats.gold = 0;
   assert.ok(M.apply(t, { pid: 0, type: 'draw' }).ok); assert.deepEqual([t.players[0].stats.pending, t.players[0].sp], [2, 2], 'ohne Regel bleibt es');
+});
+
+test('Ausspiellimit startet bei 2 (startLimit), mit startLimit 0 wie früher bei 1', () => {
+  assert.equal(M.DEFAULT_RULES.startLimit, 2);
+  assert.deepEqual(M.newGame({ seed: 5 }).players.map(p => p.stats.limit), [2, 2]);
+  assert.deepEqual(M.newGame({ seed: 5, rules: { startLimit: 0 } }).players.map(p => p.stats.limit), [1, 1]);
 });
