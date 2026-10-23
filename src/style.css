@@ -151,7 +151,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .up.off{opacity:.38;cursor:var(--cd);pointer-events:auto}
 .up.off:hover{background-image:var(--plusg)}
 .up.mg.off:hover{background-image:var(--plusg)}
-.up.mg.gd,.up.mg.gd:hover{background-image:var(--gup)}.up.mg.gd:hover{background-image:var(--gupH)}   /* Magie kaufen: goldene Scheibe rund um das Magiebrett (Knopffläche 32 px, die Scheibe darin 26 px, Platz für die Funken beim Überfahren) */
+.up.mg.gd,.up.mg.gd:hover{background-image:var(--gup)}.up.mg.gd:hover{background-image:var(--gupH)}.up.mg.gd.off:hover{background-image:var(--gup)}   /* Magie kaufen: goldene Scheibe rund um das Magiebrett (Knopffläche 32 px, die Scheibe darin 26 px, Platz für die Funken beim Überfahren) */
 .up.mg{position:absolute;margin:0;z-index:2}
 .up.ph{visibility:hidden;pointer-events:none;background:none}
 .upgpts{position:absolute;display:flex;align-items:center;gap:2px;color:var(--good);font-size:28px;pointer-events:auto;z-index:70}
