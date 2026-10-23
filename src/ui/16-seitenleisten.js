@@ -1,4 +1,11 @@
 /* ---------- Seitenleisten ---------- */
+// Knopf so setzen, dass die MITTE SEINER SCHEIBE auf (cx, cy) liegt (Durchmesser diam). Die Grafiken haben die Scheibe nicht in der Bildmitte:
+// goldene Münz-Scheibe (goldup, 128 × 128): Scheibe Ø 106 in der Mitte; Plus-Scheibe (plusg, 64 × 71): Ø 61, Mitte bei (32,5 | 31), darunter Schatten.
+function discBox(gold, cx, cy, diam) {
+  if (gold) { const s = diam * 128 / 106; return 'left:' + (cx - s / 2).toFixed(1) + 'px;top:' + (cy - s / 2).toFixed(1) + 'px;width:' + s.toFixed(1) + 'px;height:' + s.toFixed(1) + 'px'; }
+  const bz = diam * 64 / 61, bh = bz * 71 / 64;
+  return 'left:' + (cx - bz * 32.5 / 64).toFixed(1) + 'px;top:' + (cy - bz * 31 / 64).toFixed(1) + 'px;width:' + bz.toFixed(1) + 'px;height:' + bh.toFixed(1) + 'px';
+}
 function boardHTML(mag, size) {
   const dr = size * 0.036, orbit = size * 0.11, gap = size * 0.079;
   let h = '<div class="bd" style="width:' + size + 'px;height:' + size + 'px" title="Magie: Feuer oben, Erde rechts unten, Wasser links unten"><img src="' + IMG.board + '">';
@@ -57,13 +64,13 @@ function statsBlock(name, s, p, size, up, full) {
   const bsz = size || 140;
   let bd = boardHTML(s.mag, bsz);
   if (up && my) {
-    const dir = { F: -90, E: 30, W: 150 }, d = 32;   // Knopffläche; die Scheibe darin misst 26 px
+    const dir = { F: -90, E: 30, W: 150 }, diam = 26;   // Richtung wie die Ringe auf dem Brett (Linie von der Mitte durch die Magie); die Scheibe misst 26 px und sitzt mit ihrer Mitte genau auf dem Rand des Bretts (Rand bei 0,475 der Bildgröße)
     let btn = '';
     for (const e of M.ELEMENTS) {
       const MF = M.magicField(G), lv = s.mag[e], mc = M.magicCost(G, lv), ok = s[MF] >= mc; if (lv >= M.MAX_MAGIC || s[MF] <= 0) continue;   // wie die Upgrade-Knöpfe: sichtbar, sobald die Währung (Gold, mit swapCosts Upgrade-Punkte) da ist; zu teure Stufen durchscheinend und gesperrt
-      const ang = dir[e] * Math.PI / 180, r = bsz * 0.507;
-      const x = bsz / 2 + Math.cos(ang) * r - d / 2, y = bsz / 2 + Math.sin(ang) * r - d / 2;
-      btn += '<button class="up mg ' + (MF === 'gold' ? 'gd' : 'pt') + (mc > 1 ? ' costly' : '') + (ok ? '' : ' off') + '"' + (mc > 1 ? ' data-c="' + mc + '"' : '') + (ok ? '' : ' disabled') + ' style="left:' + x.toFixed(1) + 'px;top:' + y.toFixed(1) + 'px;width:' + d + 'px;height:' + d + 'px" data-act="magic" data-e="' + e + '" title="' + NAMES[e] + ' Stufe ' + (lv + 1) + ' kaufen (' + M.payTxt(G, MF, mc) + (ok ? '' : ', du hast ' + s[MF]) + ')"></button>';
+      const ang = dir[e] * Math.PI / 180, r = bsz * 0.475;
+      const x = bsz / 2 + Math.cos(ang) * r, y = bsz / 2 + Math.sin(ang) * r;
+      btn += '<button class="up mg ' + (MF === 'gold' ? 'gd' : 'pt') + (mc > 1 ? ' costly' : '') + (ok ? '' : ' off') + '"' + (mc > 1 ? ' data-c="' + mc + '"' : '') + (ok ? '' : ' disabled') + ' style="' + discBox(MF === 'gold', x, y, diam) + '" data-act="magic" data-e="' + e + '" title="' + NAMES[e] + ' Stufe ' + (lv + 1) + ' kaufen (' + M.payTxt(G, MF, mc) + (ok ? '' : ', du hast ' + s[MF]) + ')"></button>';
     }
     bd = bd.replace(/<\/div>$/, btn + '</div>');
   }

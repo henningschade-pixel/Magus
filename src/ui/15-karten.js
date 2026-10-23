@@ -82,8 +82,8 @@ function drawTrack(L, mine) {
   h += '<div class="dmark ' + (red ? 'red' : 'green') + '" title="Nachziehmarker ' + (red ? 'rot: Nachziehen gibt dem Gegner ' + pen : 'grün: noch ' + (lim - (pl.drawN || 0)) + 'x Nachziehen frei') + '" style="width:' + tk + 'px;height:' + tk + 'px;left:' + (x0 + (at - 1) * (sz + gap) + (sz - tk) / 2) + 'px;top:' + (y + (sz - tk) / 2) + 'px"></div>';
   const cost = M.drawLimitCost(G, st);
   if (mine && lim < n && G.phase === 'world' && !G.over && myTurn() && st[M.upField(G)] >= cost) {   // wie die anderen Plus-Knöpfe: nur im eigenen Zug der Weltphase und nur, wenn die Upgrade-Punkte reichen
-    const bz = sz * 64 / 59, bh = bz * 71 / 64, cx = x0 + lim * (sz + gap) + sz / 2, cy = y + sz / 2;   // Plus-Grafik 64 × 71: die Scheibe (Ø 59, Mitte 32,5 / 30,5) deckt sich mit dem Kreis
-    h += '<button class="up ' + (M.upField(G) === 'gold' ? 'gc' : 'pt') + (cost > 1 ? ' costly' : '') + '"' + (cost > 1 ? ' data-c="' + cost + '"' : '') + ' data-act="drawlimit" title="Nachziehlimit auf ' + (lim + 1) + ' steigern (' + M.payTxt(G, M.upField(G), cost) + ')" style="left:' + (cx - bz * 32.5 / 64).toFixed(1) + 'px;top:' + (cy - bz * 30.5 / 64).toFixed(1) + 'px;width:' + bz.toFixed(1) + 'px;height:' + bh.toFixed(1) + 'px;margin:0;z-index:63"></button>';
+    const cx = x0 + lim * (sz + gap) + sz / 2, cy = y + sz / 2;   // die Scheibe des Knopfes deckt sich mit dem Kreis (Mitte auf Mitte, gleicher Durchmesser)
+    h += '<button class="up ' + (M.upField(G) === 'gold' ? 'gc' : 'pt') + (cost > 1 ? ' costly' : '') + '"' + (cost > 1 ? ' data-c="' + cost + '"' : '') + ' data-act="drawlimit" title="Nachziehlimit auf ' + (lim + 1) + ' steigern (' + M.payTxt(G, M.upField(G), cost) + ')" style="' + discBox(M.upField(G) === 'gold', cx, cy, sz) + ';margin:0;z-index:63"></button>';
   }
   return h;
 }
