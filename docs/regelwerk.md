@@ -15,6 +15,7 @@ Eine Partie hat drei Abschnitte (1, 2, 3). Je Abschnitt gibt es drei Monster (St
 | Wert | Start | Anmerkung |
 |---|---|---|
 | Gold | 0 | Abschnittsbonus siehe unten |
+| Siegpunkte | 2 | seit 0.3 (`startSp`): schon die ersten Kämpfe kosten bei einer Niederlage etwas; nie unter 0 |
 | HP | 3 | jeder Upgrade-Punkt +2 Maximum |
 | Mana | 4 | jeder Upgrade-Punkt +1 Maximum |
 | Magie Feuer / Erde / Wasser | je 1 | höchstens 3 |
@@ -184,3 +185,7 @@ Nur die **Bezahlung** ist vertauscht, nicht was man wann bekommt. Gold und Upgra
 Die Knöpfe tauschen mit: Die goldene Münz-Scheibe sitzt jetzt an den Verbesserungen (HP, Mana, Limit, Handplatz, Nachziehlimit), das grüne Plus der Upgrade-Punkte rund um das Magiebrett. `swapCosts` 0 stellt die alte Zuordnung wieder her.
 Folge: Der Tempel ist jetzt der Weg zur Magie (Gold opfern, Punkte sammeln), Gold kauft die Werte im Kampf direkt. Die Siegbedingung ändert sich nicht (Gold bleibt das zweite, die Tempelstufe das dritte Kriterium).
 KI: Sie kauft zuerst Magie mit Punkten, dann Verbesserungen mit dem Gold und opfert nur noch, wenn ihr Plan es verlangt; sie ist **nicht neu abgestimmt**. Selbstspiel (300 Partien): keine festgefahrenen Partien, Median 463 Aktionen, Beginner 45 % / Zweiter 48 % / Unentschieden 7 %; die Tempelstufe am Ende ist 0, weil die KI nicht opfert (Magie kommt nur aus den Abschnittsboni).
+
+## Startsiegpunkte (Version 0.3, Schalter `startSp`, Standard 2)
+
+Jeder Spieler beginnt mit 2 Siegpunkten (vorher 0), damit schon die ersten Kämpfe ein Risiko sind: Eine Niederlage gegen ein Monster oder im Showdown kostet einen Siegpunkt, der vorher „nie unter 0“ wegfiel. Die Schwelle für das vorzeitige Ende (`winSp` 4 nach Showdown 2) und die übrigen Siegpunktregeln bleiben, die 4 sind also mit 2 Punkten Vorsprung schneller erreicht. KI-Selbstspiel (400 Partien): keine festgefahrenen Partien, Unentschieden 4,8 % statt 7,5 %, Beginner 46 % / Zweiter 49 %; die KI ist nicht darauf abgestimmt.

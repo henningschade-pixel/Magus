@@ -393,3 +393,10 @@ test('Kosten getauscht (swapCosts): Magie kostet Upgrade-Punkte, alle anderen Ve
   assert.ok(go(g, { type: 'magic', elem: 'F' }).ok); assert.deepEqual([g.st.gold, g.st.pending], [3, 4], 'Magie kostet Gold');
   nxt(g); assert.ok(go(g, { type: 'spend', what: 'hp' }).ok); assert.deepEqual([g.st.gold, g.st.pending], [3, 3], 'HP kostet einen Upgrade-Punkt');
 });
+
+test('Startsiegpunkte: jeder Spieler beginnt mit 2 Siegpunkten (startSp), eine frühe Niederlage kostet einen', () => {
+  assert.equal(M.DEFAULT_RULES.startSp, 2);
+  const s = M.newGame({ seed: 5, ai: [false, false], first: 0 });
+  assert.deepEqual(s.players.map(p => p.sp), [2, 2]);
+  assert.deepEqual(M.newGame({ seed: 5, rules: { startSp: 0 } }).players.map(p => p.sp), [0, 0]);
+});
