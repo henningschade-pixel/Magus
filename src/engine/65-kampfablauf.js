@@ -218,6 +218,7 @@ function execAttack(state) {
   const ev = evalAttack(side.stats, sel);
   if (!ev.valid) return fail(ev.reason);
   if (!ev.affordable) return fail('Zu wenig Mana (' + ev.cost + ' nötig).');
+  side.passed = 0;   // ein Angriff beendet die Serie der Passen-Züge
   const lvs = levelsFor(ev), death = ev.levels.ulti > 0, plan = [];
   if (!death) for (const k of ['fw', 'fe', 'ew', 'rm', 'gh']) if (lvs[k] > 0) plan.push([k, lvs[k]]);
   side.stats.mana -= ev.cost;
@@ -317,7 +318,7 @@ function applyCombat(state, a) {
     case 'defend': if (c.action !== 'defense') return fail('Jetzt wird angegriffen.'); return execDefense(state, false);
     case 'pass':
       if (c.action === 'defense') return execDefense(state, true);
-      side.deck.marks = []; log(state, side.name + ' passt.', side.ctrl);
+      side.deck.marks = []; side.passed = (side.passed || 0) + 1; log(state, side.name + ' passt.', side.ctrl);   // passed: Passen-Züge in Folge (die KI greift dann eher an)
       passAttackTurn(state); return { ok: true, combatEnd: finishStep(state) };
     case 'flee': {
       if (c.action !== 'attack') return fail('Fliehen geht nur im eigenen Angriffszug, nicht unter Angriff.');

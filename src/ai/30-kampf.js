@@ -137,7 +137,7 @@ function combatPlan(state, pid) {
     }
     const red = !!state.players[pid].drawRed;   // roter Nachziehmarker: Nachziehen schenkt dem Gegner ein Nachziehtoken
     const lowMana = Q.rW * gain * Math.max(0, Q.rRef - s.mana) - (red ? Q.cRedA : 0);   // wenig Mana: nur noch starke Angriffe, sonst lieber erholen; roter Marker: auch schwächere Angriffe statt nachzuziehen
-    if (best && best.value > Q.aThr + lowMana - Q.stallDec * Math.max(0, Math.floor(((c.turns || 0) - Q.stallFrom) / 2))) {   // lange ohne Angriff: Schwelle sinkt, damit die KI nicht endlos nachzieht
+    if (best && best.value > Q.aThr + lowMana - Q.pasDec * (opp.passed || 0) - Q.stallDec * Math.max(0, Math.floor(((c.turns || 0) - Q.stallFrom) / 2))) {   // Passt der Gegner im Angriffszug, bleibt er ohne Druck: dann lohnt auch ein knapper Angriff (sonst wartet die KI, bis die Anti-Stillstands-Schwelle sinkt)   // lange ohne Angriff: Schwelle sinkt, damit die KI nicht endlos nachzieht
       const acts = best.ord.map(h => A({ type: 'mark', slot: h.slot }));
       const lvB = M.levelsFor(best.ev);
       if (best.ev.levels.ulti <= 0 && lvB.ew > 0) {   // Läuterung: eigene Todesmarker, dann Spiegel des Gegners, zuletzt dessen Nachziehtokens

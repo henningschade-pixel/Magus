@@ -357,3 +357,22 @@ test('KI: Stellschraube dlMax kauft das Nachziehlimit mit Upgrade-Punkten bis zu
     assert.notEqual(AI.ecoStep(s, 0).type, 'drawlimit');
   } finally { AI.setParams(0, null); }
 });
+
+test('KI: Passt der Gegner im Showdown immer, greift sie sofort an und gewinnt, statt endlos nachzuziehen und zu erholen', () => {
+  const s = M.newGame({ seed: 301, ai: [false, true], first: 0 });
+  s.monsters.E.stats.hp = 0; s.monsters.W.stats.hp = 0;
+  M.apply(s, { pid: 0, type: 'combat', elem: 'F' });
+  const me = s.combat.sides.a, op = s.combat.sides.b; me.stats.limit = 2; me.stats.mag = { F: 3, E: 3, W: 3 }; op.stats.hp = 1;
+  me.deck.hand[0] = Object.assign({}, me.deck.hand[0], { id: 'F3' });
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'attack' });
+  for (let q = 0; q < 6 && s.combat.mode === 'monster' && M.actor(s) === 1; q++) AI.runTurn(s, 1);
+  assert.equal(s.combat.mode, 'showdown', 'letztes Monster besiegt: Showdown');
+  let pcMoves = 0, firstAttack = 0;
+  for (let i = 0; i < 400 && s.phase === 'combat'; i++) {
+    if (M.actor(s) === 0) { assert.ok(M.apply(s, { pid: 0, type: 'pass' }).ok); continue; }
+    const r = AI.runTurn(s, 1); pcMoves++;
+    if (!firstAttack && r.acts[r.acts.length - 1].type === 'attack') firstAttack = pcMoves;
+  }
+  assert.ok(firstAttack > 0 && firstAttack <= 3, 'erster Angriff nach höchstens 3 Zügen, war ' + firstAttack);
+  assert.ok(s.log.some(e => /^Gegner gewinnt den Showdown/.test(e.txt)), 'der Computer gewinnt gegen den Dauerpasser');
+});

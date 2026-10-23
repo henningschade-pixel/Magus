@@ -7,7 +7,7 @@ const DEFAULTS = {
   dlMax: 0, dlPos: 4, tKeep: 0, cRedE: 0, dFree: 0, rAtk: 0,   // rAtk: Angriffslust auf ein Monster, solange der Marker rot ist (statt nachzuziehen und dem Gegner Gold zu schenken); Nachziehlimit (Upgrade-Punkte): dlMax bis zu welcher Stufe die KI es kauft (0 = nie), dlPos Stelle in der Ausbaureihenfolge von pickSpend (0 = vor allem anderen, 4 = nach den A-Zielen, 9 = zuletzt); tKeep: Gold, das beim Tempel-Opfern zurückbleibt (Notgroschen gegen die Strafe, siehe dTmp); cRedE 1: mit leerer Hand bei Rot erst erholen (Marker auf Grün), dann nachziehen; dFree: Bonus aufs Nachziehen in der Weltphase, solange der Marker noch grün ist
   dBase: 7, dCurse: 4, dEmpty: 12, dSlot: 2, dNorm: 5,                    // Lust, nachzuziehen
   vUp: 8.85, vUpW: 1.4,                                                       // Händler-Aufwertung
-  smart: 1, wMark: 0.5, keepB: 3, keepOn: 0, wDeath: 6, wDraw: 1.6, wFW: 1.3, wFE: 0.9, wEW: 2.8, aDmg: 1.5, aCost: 1.5, aCurse: 1.6, aThr: 0.5, oHits: 4, oFree: 4, stallDec: 0.25, stallFrom: 24,   // Angriffsbewertung
+  smart: 1, wMark: 0.5, keepB: 3, keepOn: 0, wDeath: 6, wDraw: 1.6, wFW: 1.3, wFE: 0.9, wEW: 2.8, aDmg: 1.5, aCost: 1.5, aCurse: 1.6, aThr: 0.5, oHits: 4, oFree: 4, stallDec: 0.25, stallFrom: 24, pasDec: 1,   // Angriffsbewertung; pasDec: die Angriffsschwelle sinkt um so viel je Passen-Zug des Gegners in Folge
   rW: 0, rRef: 3, dRec: 0, dU: 2,                                                 // Erholen als Manaquelle: Angriffsschwelle steigt bei wenig Mana, Verzicht auf Verteidigung bringt Mana
   dLeth: 40, dPend: 6, dCost: 1.4, dKeep: 0.9, mirW: 4, mirKeep: 3, mirAvoid: 2, lfOpp: 2, lfOppW: 0.8,                            // Verteidigungsbewertung
   mBase: 14, mCost: 2.1, mCnt: 0.7, mTop: 2,
