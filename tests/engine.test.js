@@ -384,7 +384,7 @@ test('Kosten getauscht (swapCosts): Magie kostet Upgrade-Punkte, alle anderen Ve
   assert.equal(M.DEFAULT_RULES.swapCosts, 1);
   assert.ok(go(g, { type: 'magic', elem: 'F' }).ok); assert.deepEqual([g.st.gold, g.st.pending, g.st.mag.F], [4, 3, 2], 'Magie Stufe 2: 1 Upgrade-Punkt');
   nxt(g); assert.ok(go(g, { type: 'magic', elem: 'F' }).ok); assert.deepEqual([g.st.gold, g.st.pending, g.st.mag.F], [4, 0, 3], 'Magie Stufe 3: 3 Upgrade-Punkte');
-  nxt(g); assert.ok(go(g, { type: 'spend', what: 'hp' }).ok); assert.deepEqual([g.st.gold, g.st.pending, g.st.maxHp], [3, 0, 5], 'HP: 1 Gold');
+  nxt(g); assert.ok(go(g, { type: 'spend', what: 'hp' }).ok); assert.deepEqual([g.st.gold, g.st.pending, g.st.maxHp], [3, 0, 6], 'HP: 1 Gold (+2, Start 4)');
   nxt(g); assert.ok(go(g, { type: 'spend', what: 'limit' }).ok); assert.deepEqual([g.st.gold, g.st.limit], [1, 3], 'Limit 2 → 3: 2 Gold');
   nxt(g); assert.equal(go(g, { type: 'spend', what: 'limit' }).ok, false, 'Limit 4 braucht 2 Gold, es ist nur noch 1 da'); assert.equal(g.st.limit, 3);
   nxt(g); assert.ok(go(g, { type: 'spend', what: 'slot' }).ok); assert.deepEqual([g.st.gold, g.s.players[0].slots], [0, 4], 'Handplatz: 1 Gold');
@@ -432,4 +432,12 @@ test('Monster-Varianten tauschen: „ausdauernd“ = 1 Mana mehr, dafür 1 HP we
     }
   }
   assert.ok(seen.zäh > 0 && seen.ausdauernd > 0 && seen.gleich > 0, JSON.stringify(seen));
+});
+
+test('Start-HP der Spieler 4 (startHp), Monster beginnen weiter mit eigenen Werten', () => {
+  assert.equal(M.DEFAULT_RULES.startHp, 4);
+  const s = M.newGame({ seed: 5 });
+  assert.deepEqual(s.players.map(p => [p.stats.hp, p.stats.maxHp]), [[4, 4], [4, 4]]);
+  assert.deepEqual(M.newGame({ seed: 5, rules: { startHp: 0 } }).players.map(p => p.stats.maxHp), [3, 3]);
+  assert.equal(M.spawnMonsters(1, s.rng).F.stats.maxHp >= 2, true);
 });

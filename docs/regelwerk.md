@@ -16,7 +16,7 @@ Eine Partie hat drei Abschnitte (1, 2, 3). Je Abschnitt gibt es drei Monster (St
 |---|---|---|
 | Gold | 0 | Abschnittsbonus siehe unten |
 | Siegpunkte | 2 | seit 0.3 (`startSp`): schon die ersten Kämpfe kosten bei einer Niederlage etwas; nie unter 0 |
-| HP | 3 | jeder Upgrade-Punkt +2 Maximum |
+| HP | 4 | seit 0.3.1 (`startHp`, vorher 3); jeder Upgrade-Punkt +2 Maximum (seit 0.3 mit Gold bezahlt) |
 | Mana | 4 | jeder Upgrade-Punkt +1 Maximum |
 | Magie Feuer / Erde / Wasser | je 1 | höchstens 3 |
 | Ausspiellimit | 2 | seit 0.3 (`startLimit`, vorher 1); höchstens 5, jeder Schritt kostet 2 Gold (seit 0.3, vorher 2 Upgrade-Punkte) |
@@ -205,3 +205,8 @@ KI-Selbstspiel (1000 Partien): Der Vorteil des Beginners wächst, Beginner 51 % 
 ## Monster neu abgestimmt (Version 0.3.1)
 
 Siehe Abschnitt „Monster“ (Werte je Stufe) und `tools/balance/README.md` (Messung). KI-Selbstspiel (1000 Partien): Beginner 47 % / Zweiter 50 % / Unentschieden 3 %, Median 394 Aktionen; der Beginner-Vorteil durch das Start-Limit 2 ist mit den neuen Monstern ausgeglichen.
+
+## Start-HP 4 (Version 0.3.1, Schalter `startHp`, Standard 4)
+
+Die Spieler beginnen mit 4 HP (vorher 3), damit sie dem Angriff der Stufe-I-Monster etwas entgegensetzen können. Die Monster behalten ihre eigenen Werte (Stufe I: 3 HP). Wirkung auf die Monster (KI-Selbstspiel, 1500 Partien, Niederlagen des Angreifers): Stufe I 12 % (vorher 16), Stufe II 20 % (20), Stufe III 34 % (39); das Risiko steigt weiter von Stufe zu Stufe. Die KI bleibt am Optimum ihrer Stellschrauben (`hpA`, `slotA`, `manaA`, `minMana`, `oHits` geprüft, keine Verbesserung).
+Anzeige: Auf den Monsterkarten steht unten „HP · Limit“ als tatsächlicher Wert; das Mana steht schon am Balken.
