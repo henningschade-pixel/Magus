@@ -161,6 +161,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .up.off{opacity:.38;cursor:var(--cd);pointer-events:auto}
 .up.off:hover{background-image:var(--plusg)}
 .up.mg.off:hover{background-image:var(--plusg)}
+.up.mg.gd,.up.mg.gd:hover{background-image:var(--gup)}.up.mg.gd:hover{background-image:var(--gupH)}   /* Magie kaufen: goldene Scheibe rund um das Magiebrett (Knopffläche 32 px, die Scheibe darin 26 px, Platz für die Funken beim Überfahren) */
 .up.mg{position:absolute;margin:0;z-index:2}
 .up.ph{visibility:hidden;pointer-events:none;background:none}
 .upgpts{position:absolute;display:flex;align-items:center;gap:2px;color:var(--good);font-size:28px;pointer-events:auto;z-index:70}
@@ -332,7 +333,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
   <div id="toast"></div><div id="overlay" class="overlay" style="display:none"></div>
 </div></div>
 <script>const IMG={"shield_E": "assets/img/shield_E.webp", "shield_F": "assets/img/shield_F.webp", "F1": "assets/img/F1.webp", "F2": "assets/img/F2.webp", "F3": "assets/img/F3.webp", "E1": "assets/img/E1.webp", "E2": "assets/img/E2.webp", "E3": "assets/img/E3.webp", "W1": "assets/img/W1.webp", "W2": "assets/img/W2.webp", "W3": "assets/img/W3.webp", "C1": "assets/img/C1.webp", "C2": "assets/img/C2.webp", "C3": "assets/img/C3.webp", "back": "assets/img/back.webp", "lock": "assets/img/lock.webp", "m_f1": "assets/img/m_f1.webp", "m_f2": "assets/img/m_f2.webp", "m_f3": "assets/img/m_f3.webp", "d_f": "assets/img/d_f.webp", "m_e1": "assets/img/m_e1.webp", "m_e2": "assets/img/m_e2.webp", "m_e3": "assets/img/m_e3.webp", "d_e": "assets/img/d_e.webp", "m_w1": "assets/img/m_w1.webp", "m_w2": "assets/img/m_w2.webp", "m_w3": "assets/img/m_w3.webp", "d_w": "assets/img/d_w.webp", "board": "assets/img/board.webp", "gold": "assets/img/gold.webp", "hp": "assets/img/hp.webp", "mana": "assets/img/mana.webp", "limit": "assets/img/limit.webp", "attack": "assets/img/attack.webp", "defense": "assets/img/defense.webp", "wait": "assets/img/wait.webp", "gratis": "assets/img/gratis.webp", "upgrade": "assets/img/upgrade.webp", "arrow": "assets/img/arrow.webp"};</script>
-<script>IMG.board="assets/img/board.webp";IMG.curse="assets/img/curse.png";IMG.plus="assets/img/plus.png";IMG.plush="assets/img/plush.png";IMG.plusg="assets/img/plusg.png";IMG.plushg="assets/img/plushg.png";window.SND={"aggro": "assets/audio/aggro.mp3", "atk_earth": "assets/audio/atk_earth.mp3", "atk_fire": "assets/audio/atk_fire.mp3", "atk_water": "assets/audio/atk_water.mp3", "block": "assets/audio/block.mp3", "break": "assets/audio/break.mp3", "card_lv2": "assets/audio/card_lv2.mp3", "card_lv3": "assets/audio/card_lv3.mp3", "coin_sacrifice": "assets/audio/coin_sacrifice.mp3", "curse": "assets/audio/curse.mp3", "draw": "assets/audio/draw.mp3", "flip": "assets/audio/flip.mp3", "heal": "assets/audio/heal.mp3", "hit": "assets/audio/hit.mp3", "lose": "assets/audio/lose.mp3", "magic_lv2": "assets/audio/magic_lv2.mp3", "magic_lv3": "assets/audio/magic_lv3.mp3", "mirror_cast": "assets/audio/mirror_cast.mp3", "mirror_reflect": "assets/audio/mirror_reflect.mp3", "play": "assets/audio/play.mp3", "purify": "assets/audio/purify.mp3", "recover": "assets/audio/recover.mp3", "ruin": "assets/audio/ruin.mp3", "shield_hit": "assets/audio/shield_hit.mp3", "showdown_start": "assets/audio/showdown_start.mp3", "shuffle": "assets/audio/shuffle.mp3", "spend_upgrade": "assets/audio/spend_upgrade.mp3", "stage_start": "assets/audio/stage_start.mp3", "temple_level": "assets/audio/temple_level.mp3", "turn_change": "assets/audio/turn_change.mp3", "ui_click": "assets/audio/ui_click.mp3", "ultimate": "assets/audio/ultimate.mp3", "upgrade_gain": "assets/audio/upgrade_gain.mp3", "win": "assets/audio/win.mp3"};</script>
+<script>IMG.board="assets/img/board.webp";IMG.curse="assets/img/curse.png";IMG.plus="assets/img/plus.png";IMG.plush="assets/img/plush.png";IMG.plusg="assets/img/plusg.png";IMG.plushg="assets/img/plushg.png";IMG.goldup="assets/img/goldup.webp";IMG.goldupH="assets/img/goldupH.webp";window.SND={"aggro": "assets/audio/aggro.mp3", "atk_earth": "assets/audio/atk_earth.mp3", "atk_fire": "assets/audio/atk_fire.mp3", "atk_water": "assets/audio/atk_water.mp3", "block": "assets/audio/block.mp3", "break": "assets/audio/break.mp3", "card_lv2": "assets/audio/card_lv2.mp3", "card_lv3": "assets/audio/card_lv3.mp3", "coin_sacrifice": "assets/audio/coin_sacrifice.mp3", "curse": "assets/audio/curse.mp3", "draw": "assets/audio/draw.mp3", "flip": "assets/audio/flip.mp3", "heal": "assets/audio/heal.mp3", "hit": "assets/audio/hit.mp3", "lose": "assets/audio/lose.mp3", "magic_lv2": "assets/audio/magic_lv2.mp3", "magic_lv3": "assets/audio/magic_lv3.mp3", "mirror_cast": "assets/audio/mirror_cast.mp3", "mirror_reflect": "assets/audio/mirror_reflect.mp3", "play": "assets/audio/play.mp3", "purify": "assets/audio/purify.mp3", "recover": "assets/audio/recover.mp3", "ruin": "assets/audio/ruin.mp3", "shield_hit": "assets/audio/shield_hit.mp3", "showdown_start": "assets/audio/showdown_start.mp3", "shuffle": "assets/audio/shuffle.mp3", "spend_upgrade": "assets/audio/spend_upgrade.mp3", "stage_start": "assets/audio/stage_start.mp3", "temple_level": "assets/audio/temple_level.mp3", "turn_change": "assets/audio/turn_change.mp3", "ui_click": "assets/audio/ui_click.mp3", "ultimate": "assets/audio/ultimate.mp3", "upgrade_gain": "assets/audio/upgrade_gain.mp3", "win": "assets/audio/win.mp3"};</script>
 <script>(function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
   else root.Magus = factory();
@@ -1745,7 +1746,7 @@ function runTurn(state, pid) {
 return { plan, runTurn, fallback, ecoStep, setParams, DEFAULTS, _race: raceTurns };
 }));</script>
 <script>Object.values(IMG).forEach(u => { const im = new Image(); im.src = u; });   // Bilder vorladen, damit Karten nicht nachflackern
-document.documentElement.style.setProperty('--plus','url('+IMG.plus+')');document.documentElement.style.setProperty('--plush','url('+IMG.plush+')');document.documentElement.style.setProperty('--plusg','url('+IMG.plusg+')');document.documentElement.style.setProperty('--plushg','url('+IMG.plushg+')');
+document.documentElement.style.setProperty('--plus','url('+IMG.plus+')');document.documentElement.style.setProperty('--plush','url('+IMG.plush+')');document.documentElement.style.setProperty('--plusg','url('+IMG.plusg+')');document.documentElement.style.setProperty('--plushg','url('+IMG.plushg+')');document.documentElement.style.setProperty('--gup','url('+IMG.goldup+')');document.documentElement.style.setProperty('--gupH','url('+IMG.goldupH+')');
 /* Magus – Oberfläche. Liest nur den Zustand des Regelkerns und sendet Aktionen.
    Die Dateien src/ui/*.js werden in dieser Reihenfolge zu einem Block zusammengesetzt (00 öffnet, 80 schließt ihn). */
 (function () {
@@ -2173,13 +2174,13 @@ function statsBlock(name, s, p, size, up, full) {
   const bsz = size || 140;
   let bd = boardHTML(s.mag, bsz);
   if (up && my) {
-    const dir = { F: -90, E: 30, W: 150 }, d = 26;
+    const dir = { F: -90, E: 30, W: 150 }, d = 32;   // Knopffläche; die Scheibe darin misst 26 px
     let btn = '';
     for (const e of M.ELEMENTS) {
       const lv = s.mag[e], mc = M.magicCost(G, lv); if (lv >= M.MAX_MAGIC || s.gold < mc) continue;
       const ang = dir[e] * Math.PI / 180, r = bsz * 0.507;
       const x = bsz / 2 + Math.cos(ang) * r - d / 2, y = bsz / 2 + Math.sin(ang) * r - d / 2;
-      btn += '<button class="up mg gd" style="left:' + x.toFixed(1) + 'px;top:' + y.toFixed(1) + 'px;width:' + d + 'px;height:' + d + 'px" data-act="magic" data-e="' + e + '" title="' + NAMES[e] + ' Stufe ' + (lv + 1) + ' kaufen (' + mc + ' Gold)"></button>';
+      btn += '<button class="up mg gd' + (mc > 1 ? ' costly' : '') + '"' + (mc > 1 ? ' data-c="' + mc + '"' : '') + ' style="left:' + x.toFixed(1) + 'px;top:' + y.toFixed(1) + 'px;width:' + d + 'px;height:' + d + 'px" data-act="magic" data-e="' + e + '" title="' + NAMES[e] + ' Stufe ' + (lv + 1) + ' kaufen (' + mc + ' Gold)"></button>';
     }
     bd = bd.replace(/<\/div>$/, btn + '</div>');
   }
