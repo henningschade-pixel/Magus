@@ -87,3 +87,11 @@ Ergebnis: 58,7 % ±0,9 gegen die bisherige KI (3200 Partien); gegen drei früh a
 ## Monster ziehen sich nach ihrem Sieg wieder zurück (22.10., Version 0.2)
 
 Mit stehenbleibenden Monstern ließ sich die unbegrenzte Hilfe farmen: Die HP stiegen in Einzelpartien auf über 130 (Spitzenwert je Partie, 400 Partien: Median 17, P90 55, Maximum 131). Mit Rückzug: Median 23, P90 49, Maximum 57. Die verbliebenen hohen Werte sind kein Farming: Upgrade-Punkte, für die nichts anderes mehr offen ist, gehen als Rückfall in HP (2 HP je Punkt). KI unverändert, 60,3 % ±0,9 gegen die KI vor dem Nachziehmarker-Training (3200 Partien).
+
+## KI auf das Nachziehlimit trainiert (23.10., Version 0.2.1)
+
+Neue Stellschrauben: `dlMax` (bis zu welcher Stufe die KI das Nachziehlimit kauft, jeder Kauf ist eine Zugaktion), `dlRes` (Gold, das danach bleiben muss), `dlFirst` (vor der Magie kaufen), `tKeep` (Notgroschen beim Tempel-Opfern), `cRedE` (mit leerer Hand bei Rot erst erholen), `dFree` (Nachziehlust bei grünem Marker), `rAtk` (Angriffslust auf ein Monster, solange der Marker rot ist).
+Befund: Alle Strafzüge in der Weltphase geschahen mit 0 Gold, vollem Mana und Monstern auf dem Feld: Die KI wartet auf den Angriffszeitpunkt und nutzt das Nachziehen als „Passen“. Ohne Gold gibt es dabei keine straffreie Alternative; der Ausweg ist, bei Rot früher anzugreifen.
+Raster (1600 bis 3200 Partien gegen den Vorgänger): `dlMax` 2 51,2 %, `dlMax` 3 43,6 % (jeder Kauf kostet einen Zug), `dlFirst` 1 9,5 % (die Magie bleibt ungekauft), `tKeep` 1 und `cRedE` 1 neutral oder schlechter. `rAtk` 40/80/150 gegen `dlMax` 2: 52,6/54,4/52,3 %; Strafen je Partie 18/13/12. `opt2.js 2 600` ab `dlMax` 2, `rAtk` 80 fand nichts Besseres (beste Kandidaten +0,4 Punkte, unter der Schwelle).
+Übernommen: `dlMax` 2, `rAtk` 80. Ergebnis: 54,5 % ±0,9 gegen die KI ohne Limit-Nutzung (3200 Partien), 55 % ±1,6 gegen drei früh angreifende Gegner ohne Limit-Nutzung. Strafzüge in der Weltphase 13 statt 33 je Partie (im Kampf keine), 1,8 Käufe je Partie; P90 der Partielänge 675 statt 869 Aktionen, Maximum 1556, keine festgefahrene Partie in 500.
+Hinweis: Im Selbstspiel schenken sich beide KIs gegenseitig Gold; gegen Menschen, die den Marker beachten, zählt jeder vermiedene Strafzug.

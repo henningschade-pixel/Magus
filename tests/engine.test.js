@@ -344,3 +344,11 @@ test('Nachziehlimit Kampf: erst das Nachziehen über dem Limit gibt dem Gegner e
   assert.ok(M.apply(s, { pid: 0, type: 'draw' }).ok);
   assert.equal(op.stats.freeDraws, 1);
 });
+
+test('KI kauft das Nachziehlimit bis Stufe 2, nicht weiter', () => {
+  const s = M.newGame({ seed: 5, ai: [true, true], first: 0 }), p = s.players[0];
+  p.stats.gold = 3; p.stats.pending = 0; p.stats.mag = { F: 3, E: 3, W: 3 };   // Magie ausgereizt: das Gold bleibt für Limit und Tempel
+  assert.equal(AI.ecoStep(s, 0).type, 'drawlimit');
+  p.stats.drawLimit = 2;
+  assert.notEqual(AI.ecoStep(s, 0).type, 'drawlimit');
+});
