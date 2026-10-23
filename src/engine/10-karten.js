@@ -6,7 +6,7 @@ const ELEMENTS = ['F', 'E', 'W'];
 const SUPERIOR = { F: 'W', W: 'E', E: 'F' };     // überlegenes Element gegen X
 const NAMES = { F: 'Feuer', E: 'Erde', W: 'Wasser' };
 const START_DECK = ['F1','F1','F1','E1','E1','E1','W1','W1','W1'];
-const MAX_MAGIC = 3, MAX_SLOTS = 5, MIN_SLOTS = 3, MAX_LIMIT = 5;
+const MAX_MAGIC = 3, MAX_SLOTS = 5, MIN_SLOTS = 3, MAX_LIMIT = 5, MAX_DRAW_LIMIT = 3;
 const MAX_COMBAT_TURNS = 400;                      // Sicherung gegen Endlosschleifen, keine Spielregel
 
 /* ---------- Zufall (deterministisch über den Seed) ---------- */

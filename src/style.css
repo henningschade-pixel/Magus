@@ -66,7 +66,8 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
  100%{translate:0 -70px;opacity:0;filter:grayscale(.8) brightness(.28) blur(2px);-webkit-mask-position:0 100%;mask-position:0 100%}}
 .pile-ph{position:absolute;border:2px dashed rgba(169,159,189,.28);border-radius:12px;pointer-events:none}
 .slot-ph{position:absolute;width:128px;height:194px;border:2px dashed rgba(169,159,189,.28);border-radius:12px}
-.dmark{position:absolute;z-index:62;width:22px;height:22px;border-radius:50%;border:2px solid rgba(0,0,0,.65);box-shadow:0 2px 4px rgba(0,0,0,.65);pointer-events:none}.dmark.green{background:#3f9d5c}.dmark.red{background:#c4412a}
+.dlc{position:absolute;z-index:61;box-sizing:border-box;border-radius:50%;border:2px solid var(--gold);background:rgba(0,0,0,.5);box-shadow:inset 0 0 5px rgba(0,0,0,.8);pointer-events:auto}.dlc.off{border:2px dashed rgba(169,159,189,.4);background:rgba(0,0,0,.18);box-shadow:none}
+.dmark{position:absolute;z-index:62;box-sizing:border-box;width:22px;height:22px;border-radius:50%;border:2px solid rgba(0,0,0,.65);box-shadow:0 2px 4px rgba(0,0,0,.65);pointer-events:none;transition:left .25s,background .2s}.dmark.green{background:#3f9d5c}.dmark.red{background:#c4412a}
 .pilelabel{position:absolute;font-size:15px;color:var(--mute);text-align:center;width:110px}
 .pilehit{position:absolute;border-radius:12px;cursor:var(--cp);z-index:60}
 .pilehit:hover{box-shadow:0 0 0 2px var(--gold)}

@@ -67,7 +67,7 @@ function checkShowdownIntro() {
 function worldSound(type, gainedUp, magNow, cardLv) {
   if (FAST) return;
   if (type === 'temple') { Snd.play('coin_sacrifice'); if (gainedUp) Snd.play('temple_level', .45); }
-  else if (type === 'spend') Snd.play('spend_upgrade');
+  else if (type === 'spend' || type === 'drawlimit') Snd.play('spend_upgrade');
   else if (type === 'magic') { if (magNow === 2) Snd.play('magic_lv2'); else if (magNow === 3) Snd.play('magic_lv3'); }   // Magie auf Stufe 2 bzw. 3 (höher geht es nicht)
   else if (type === 'vendor' && cardLv >= 2) Snd.play('card_lv' + cardLv);   // Karte auf Stufe 2 bzw. 3 aufgewertet
 }

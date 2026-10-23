@@ -31,6 +31,7 @@ function onAct(d) {
     case 'temple': sacN = 0; act({ type: 'temple', amount: +d.n }); break;
     case 'spend': act({ type: 'spend', what: d.w }); break;
     case 'magic': act({ type: 'magic', elem: d.e }); break;
+    case 'drawlimit': act({ type: 'drawlimit' }); break;
     case 'fd': act({ type: 'fd', slots: [...fdSel] }); fdSel.clear(); break;
     case 'draw': if (canDrawNow()) act({ type: 'draw' }); else if (myTurn()) toast('Jetzt ist kein Nachziehen möglich.'); break;
     case 'freedraw': act({ type: 'freeDraw' }); break;
@@ -96,6 +97,7 @@ function pvShow(b) {
     const fr = stage.querySelector('[data-pv="frac"]');
     if (fr) { const old = fr.innerHTML; fr.innerHTML = '<span class="pvnew">' + fracHTML(pv.pool, pv.level) + '</span>'; undos.push(() => { fr.innerHTML = old; }); }
   } else if (act === 'magic') redo('gold', M.magicCost(G, st.mag[b.dataset.e]));
+  else if (act === 'drawlimit') redo('gold', M.drawLimitCost(G, st));
   else if (act === 'spend') redo('pts', w === 'limit' ? M.limitStepCost(G, st) : w === 'mana' ? M.manaStepCost(G, st) : 1);
   if (act === 'magic') {
     const el = b.dataset.e, dot = b.parentElement.querySelector('.rg[data-e="' + el + '"][data-lv="' + (st.mag[el] + 1) + '"]');

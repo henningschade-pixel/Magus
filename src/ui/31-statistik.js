@@ -8,6 +8,7 @@ const ST_SERIES = [
   { k: 'W', name: 'Magie Wasser', col: '#52a6f5', chip: 'mag' },
   { k: 'slots', name: 'Handkarten', col: '#e58aa0' },
   { k: 'limit', name: 'Ausspiellimit', col: '#5fd0c4' },
+  { k: 'dl', name: 'Nachziehlimit', col: '#f2d27a' },
   { k: 'hp', name: 'Max. HP', col: '#ff5d6c' },
   { k: 'mana', name: 'Max. Mana', col: '#6ea8ff' },
   { k: 'aF', name: 'Ø Karte Feuer', col: '#ffb48a', chip: 'avg', thin: true },
@@ -16,7 +17,7 @@ const ST_SERIES = [
 ];
 ST_SERIES.forEach(s => { s.chip = s.chip || s.k; });
 // Filterknöpfe (immer genau ein Merkmal sichtbar): die drei Magierichtungen bzw. die drei Kartendurchschnitte teilen sich je einen Knopf, jede Farbe bleibt eine eigene Linie
-const ST_CHIPS = [['sp', 'Siegpunkte', '#e0b84a'], ['up', 'Upgrades (insgesamt)', '#c47fe0'], ['lvl', 'Tempelstufe', '#e8e3d0'], ['mag', 'Magie (Feuer, Erde, Wasser)', '#ff7a3d'], ['avg', 'Ø Karten (Feuer, Erde, Wasser)', '#ffb48a'], ['slots', 'Handkarten', '#e58aa0'], ['limit', 'Ausspiellimit', '#5fd0c4'], ['hp', 'Max. HP', '#ff5d6c'], ['mana', 'Max. Mana', '#6ea8ff']];
+const ST_CHIPS = [['sp', 'Siegpunkte', '#e0b84a'], ['up', 'Upgrades (insgesamt)', '#c47fe0'], ['lvl', 'Tempelstufe', '#e8e3d0'], ['mag', 'Magie (Feuer, Erde, Wasser)', '#ff7a3d'], ['avg', 'Ø Karten (Feuer, Erde, Wasser)', '#ffb48a'], ['slots', 'Handkarten', '#e58aa0'], ['limit', 'Ausspiellimit', '#5fd0c4'], ['dl', 'Nachziehlimit', '#f2d27a'], ['hp', 'Max. HP', '#ff5d6c'], ['mana', 'Max. Mana', '#6ea8ff']];
 const stOn = new Set(['sp']), stWho = { me: true, opp: true };
 const stView = { auto: true, x0: 0, x1: 1, y0: 0, y1: 4 };   // sichtbarer Ausschnitt in Daten-Einheiten; auto = Ursprung links unten, Achsen dehnen sich mit dem Spiel
 const ST = { W: 1000, T: 52, B: 40, L: 44, R: 16, PH: 330 };
