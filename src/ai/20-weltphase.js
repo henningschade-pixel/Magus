@@ -149,6 +149,10 @@ function worldPlan(state, pid) {
 
   if (canDraw(d)) cands.push({ score: Q.dBase + Q.dCurse * curses.length + (normals.length === 0 ? Q.dEmpty : 0) + emptySlots * Q.dSlot - (normals.length >= 3 ? Q.dNorm : 0) - (p.drawRed ? Q.dRed : 0) + (!p.drawRed ? Q.dFree : 0) + R(), acts: [A({ type: 'draw' })] });
   if (p.drawRed && Q.dTmp && s.gold >= 1) cands.push({ score: Q.dTmp + R(), acts: [A({ type: 'temple', amount: 1 })] });   // roter Marker: 1 Gold im Tempel stellt ihn auf grün, statt dem Gegner beim Nachziehen Gold zu schenken
+  if (p.drawRed && Q.dVen && s.gold < 1) {   // roter Marker ohne Gold: ein Gratis-Tausch beim Händler stellt ihn ebenfalls auf grün (sonst schenkt das Warten dem Gegner jede zweite Runde 1 Gold)
+    const best = M.ELEMENTS.slice().sort((a, b) => s.mag[b] - s.mag[a]), free = M.vendorPlans(state, pid).filter(o => o.free).sort((a, b) => best.indexOf(a.result[0]) - best.indexOf(b.result[0]))[0];
+    if (free) cands.push({ score: Q.dVen + R(), acts: [A({ type: 'vendor', result: free.result, cost: [] })] });
+  }
   {
     const plans = M.vendorPlans(state, pid), mk = o => o.slots.map(sl => A({ type: 'mark', slot: sl }));
     // Wirksamer Wert einer Aufwertung: Eine Karte zählt höchstens mit dem Magielevel ihrer Farbe. Darüber (ohne bald erschwingliche Magie) kostet die Aufwertung nur Zeit.
@@ -177,7 +181,8 @@ function worldPlan(state, pid) {
         // Kampfprognose wie im Kampf: Gewinnt das Monster das Rennen, verliere ich (oder muss fliehen); Abschlag je Zug Rückstand
         let doom = 0;
         if (Q.fleeW > 0) { const me = { stats: s, deck: d }, mo = { stats: m.stats, deck: { draw: (m.deckIds || []).map(id => ({ id })), discard: [], hand: new Array(Math.max(3, m.stats.limit + 2)).fill(null) } }; doom = Math.max(0, raceTurns(state, me, mo) - raceTurns(state, mo, me)) * Q.fleeW; }
-        const score = -doom - risk - steal - Q.oHits * Math.max(0, hits - Q.oFree) + Q.cBase + Q.cHp * (s.hp - 1) + Q.cMana * (s.mana - 2) + state.worldTurns * Q.cWt - m.stats.hp * Q.cMon + press + (p.drawRed ? Q.rAtk : 0) + R();
+        const broke = p.drawRed && s.gold < 1 && !cands.some(c => c.acts.some(a => a.type !== 'draw')) ? Q.rBroke : 0;   // roter Marker, kein Gold, keine andere Aktion: lieber angreifen als dem Gegner mit dem Nachziehen Gold zu schenken
+        const score = broke - doom - risk - steal - Q.oHits * Math.max(0, hits - Q.oFree) + Q.cBase + Q.cHp * (s.hp - 1) + Q.cMana * (s.mana - 2) + state.worldTurns * Q.cWt - m.stats.hp * Q.cMon + press + (p.drawRed ? Q.rAtk : 0) + R();
         if (!bestC || score > bestC.score) bestC = { score, acts: [A({ type: 'combat', elem: target })] };
       }
       cands.push(bestC);

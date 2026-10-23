@@ -345,10 +345,14 @@ test('Nachziehlimit Kampf: erst das Nachziehen über dem Limit gibt dem Gegner e
   assert.equal(op.stats.freeDraws, 1);
 });
 
-test('KI kauft das Nachziehlimit bis Stufe 2, nicht weiter', () => {
+test('KI: Stellschraube dlMax kauft das Nachziehlimit bis zur gewählten Stufe, nicht weiter', () => {
   const s = M.newGame({ seed: 5, ai: [true, true], first: 0 }), p = s.players[0];
   p.stats.gold = 3; p.stats.pending = 0; p.stats.mag = { F: 3, E: 3, W: 3 };   // Magie ausgereizt: das Gold bleibt für Limit und Tempel
-  assert.equal(AI.ecoStep(s, 0).type, 'drawlimit');
-  p.stats.drawLimit = 2;
-  assert.notEqual(AI.ecoStep(s, 0).type, 'drawlimit');
+  assert.notEqual(AI.ecoStep(s, 0).type, 'drawlimit', 'Standard: kauft nicht');
+  AI.setParams(0, { dlMax: 2 });
+  try {
+    assert.equal(AI.ecoStep(s, 0).type, 'drawlimit');
+    p.stats.drawLimit = 2;
+    assert.notEqual(AI.ecoStep(s, 0).type, 'drawlimit');
+  } finally { AI.setParams(0, null); }
 });
