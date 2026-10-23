@@ -91,5 +91,5 @@ Mit stehenbleibenden Monstern ließ sich die unbegrenzte Hilfe farmen: Die HP st
 ## Strafnachziehen bei rotem Nachziehmarker (22.10.)
 
 Befund (300 Partien KI gegen KI): 37 Gold je Partie (66 % allen erhaltenen Goldes) stammten aus der Strafe für Nachziehen bei rotem Marker. Die KI zog in Abschnitt 2 (97 % der Fälle) mit 0 Gold, vollem Mana und voller Hand bei Rot nach: Sie hielt jedes Monster für unbesiegbar, und ohne Gold blieb keine andere Aktion. Beide Seiten schenkten sich so abwechselnd Gold, das in den Tempel und damit in Upgrade-Punkte floss. Im Selbstspiel hebt sich das auf, gegen einen Menschen ist es ein reines Geschenk.
-Neu: `dVen` 5 (bei Rot ohne Gold gratis beim Händler tauschen, solange der Vorrat reicht) und `rAtk` 400 (bleibt sonst nur das Strafnachziehen, lieber ein Monster angreifen).
-Ergebnis: Strafgold 0,24 statt 37 je Partie (1 % statt 66 % des Goldes); Siegquote 70,7 % ±1,3 gegen die vorherige KI (1600 Partien, neue Seeds), `rAtk` allein 66,4 %, beide gegen nur `dVen` 63,9 %. Hilfe-Ereignisse (Niederlage gegen ein Monster) steigen von 2,6 auf 3,4 je Partie.
+Neu: `dVen` 5 (bei Rot ohne Gold gratis beim Händler tauschen, solange der Vorrat reicht) und `rBroke` 400 (bleibt sonst nur das Strafnachziehen, lieber ein Monster angreifen).
+Ergebnis: Strafgold 0,24 statt 37 je Partie (1 % statt 66 % des Goldes); Siegquote 70,7 % ±1,3 gegen die vorherige KI (1600 Partien, neue Seeds), `rBroke` allein 66,4 %, beide gegen nur `dVen` 63,9 %. Hilfe-Ereignisse (Niederlage gegen ein Monster) steigen von 2,6 auf 3,4 je Partie.

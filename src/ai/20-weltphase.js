@@ -178,7 +178,7 @@ function worldPlan(state, pid) {
         // Kampfprognose wie im Kampf: Gewinnt das Monster das Rennen, verliere ich (oder muss fliehen); Abschlag je Zug Rückstand
         let doom = 0;
         if (Q.fleeW > 0) { const me = { stats: s, deck: d }, mo = { stats: m.stats, deck: { draw: (m.deckIds || []).map(id => ({ id })), discard: [], hand: new Array(Math.max(3, m.stats.limit + 2)).fill(null) } }; doom = Math.max(0, raceTurns(state, me, mo) - raceTurns(state, mo, me)) * Q.fleeW; }
-        const broke = p.drawRed && s.gold < 1 && !cands.some(c => c.acts.some(a => a.type !== 'draw')) ? Q.rAtk : 0;   // roter Marker, kein Gold, keine andere Aktion: lieber angreifen als dem Gegner mit dem Nachziehen Gold zu schenken
+        const broke = p.drawRed && s.gold < 1 && !cands.some(c => c.acts.some(a => a.type !== 'draw')) ? Q.rBroke : 0;   // roter Marker, kein Gold, keine andere Aktion: lieber angreifen als dem Gegner mit dem Nachziehen Gold zu schenken
         const score = broke - doom - risk - steal - Q.oHits * Math.max(0, hits - Q.oFree) + Q.cBase + Q.cHp * (s.hp - 1) + Q.cMana * (s.mana - 2) + state.worldTurns * Q.cWt - m.stats.hp * Q.cMon + press + R();
         if (!bestC || score > bestC.score) bestC = { score, acts: [A({ type: 'combat', elem: target })] };
       }
