@@ -103,11 +103,13 @@ Die Farbe der ersten markierten Karte bestimmt die Rolle (Feuer aggressiv, Wasse
 
 Variante je Monster wird beim Erscheinen gewürfelt (Tempel-Verbesserungen, Nebenelement, Deckform).
 
-| Stufe | Beute (Gold) | HP | Mana | Limit | Magie (Haupt/Neben/dritte) |
+| Stufe | HP | Mana | Limit | Magie (Haupt/Neben/dritte) | Startdeck |
 |---|---|---|---|---|---|
-| I | 1 | 3 | 4 (Variante 5) | 1 | 2 im eigenen Element |
-| II | 2 | 8 | 4–6 | 2 | 3 / 2 / 1 |
-| III | 3 | 11 | 6–7 | 3 | 3 / 2 / 1 |
+| I | 3 | 5 (Variante 6; Erdmonster 6/7) | 2 | 2 im eigenen Element | Startdeck, 3 Karten des eigenen Elements auf Stufe 2 |
+| II | 4 | 5 (Varianten 4/6) | 3 | 3 / 2 / 1 | siehe `MONSTER.deck` |
+| III | 8 | 6 (Varianten 5/7) | 4 | 3 / 2 / 1 | siehe `MONSTER.deck` |
+
+**Neu abgestimmt in 0.3.1** (Spieler starten mit Ausspiellimit 2). Die Beute entfällt (`monsterLoot` 0), die Stufen I bis III zahlten früher 1/2/3 Gold. Das Monster-Limit steigt von Stufe zu Stufe um 1 (2/3/4); die frühere Reihe 1/2/3 passt nicht mehr zu Spielern mit Limit 2. Ein Monster mit Limit 2 und vielen HP führt den Angreifer in endlose Angriffs-/Fluchtschleifen (Stufe II mit Limit 2: bis 27 Angriffe je Partie), erst Limit 3 gibt ihm die nötige Gefahr. Gemessen (KI gegen KI, je Angreifer: Sieg / Niederlage): Stufe I 25 % / 16 %, Stufe II 37 % / 23 %, Stufe III 32 % / 41 %; der Rest sind Fluchten (meist des Monsterführers, der das schwache Monster danach selbst besiegt). Das Risiko für den Angreifer steigt also von Stufe zu Stufe (16 → 23 → 41 %). Messwerkzeuge: `tools/balance/monster-bal.js`, `tools/balance/monster-tune.js`.
 
 Monsterdecks passen zur Magie (Test in `tests/engine.test.js`): Zu jeder Magiestufe ab 2 gibt es mindestens eine Karte dieser Stufe, und keine Karte steht über der Magie ihrer Farbe (Stufe III: Nebenelement höchstens Stufe 2, drittes Element Stufe 1). Das Erdmonster I hat dafür wie die anderen eine Stufe-2-Karte (E2 statt eines F1).
 

@@ -17,7 +17,7 @@ test('Spiel startet, Kampf endet mit Ergebnis-Bildschirm, Klick führt zurück i
     await p.evaluate(() => {
       const G = window.__magus.state, M = window.Magus;
       M.apply(G, { pid: 0, type: 'combat', elem: 'F' });
-      const me = G.combat.sides.a, op = G.combat.sides.b; me.stats.limit = 2; me.stats.mag = { F: 3, E: 3, W: 3 }; op.stats.hp = 1;
+      const me = G.combat.sides.a, op = G.combat.sides.b; me.stats.limit = 2; me.stats.mag = { F: 3, E: 3, W: 3 }; op.stats.hp = 1; op.deck.hand = op.deck.hand.map(() => null);
       me.deck.hand[0] = Object.assign({}, me.deck.hand[0], { id: 'F3' });
       M.apply(G, { pid: 0, type: 'mark', slot: 0 }); window.__magus.pump();
     });

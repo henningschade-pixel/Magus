@@ -57,7 +57,7 @@ function evaluateEnd(state) {
   return null;
 }
 function endCombat(state, end) {
-  const c = state.combat, res = { mode: c.mode, reason: end.reason, winner: end.winner, monsterDefeated: false };
+  const c = state.combat, res = { mode: c.mode, reason: end.reason, winner: end.winner, monsterDefeated: false, elem: c.elem, stage: state.stage, turns: c.turns, fled: end.fled || null };   // elem/stage/turns: für die Balance-Auswertung
   if (state.keepSnap) res.snap = JSON.parse(JSON.stringify(c));   // Oberfläche: Endstand des Kampfes (vor Zurücksetzen und Rückkehr in die Weltphase)
   state.players.forEach(p => { p.stats.freeDraws = 0; p.deck.marks = []; delete p.stats.mirror; delete p.stats.mirrorEl; delete p.stats.mirrorFree; delete p.stats.death; });
   state.players.forEach(p => stripCurseCards(state, p.deck));
@@ -327,7 +327,7 @@ function applyCombat(state, a) {
       side.deck.marks = [];
       log(state, side.name + ' flieht vor ' + opp.name + '.', side.ctrl);
       c.turns++; traceStep(state, { t: c.turns });
-      return { ok: true, combatEnd: endCombat(state, { reason: 'flee', winner: null, monsterDefeated: false }) };
+      return { ok: true, combatEnd: endCombat(state, { reason: 'flee', winner: null, monsterDefeated: false, fled: side.key }) };
     }
     case 'recover': {
       if (c.action !== 'attack') return fail('Erholen geht nur im Angriffszug.');

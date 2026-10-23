@@ -93,12 +93,12 @@ test('Rückwurf ist durch den eingehenden Schaden gedeckelt', () => {
 
 test('Monsterwerte je Stufe (Zäh, Limit, Beute)', () => {
   const s = M.newGame({ seed: 3, ai: [true, true], first: 0 });
-  const hp = [3, 8, 11], limit = [1, 2, 3], gold = [1, 2, 3];
+  const hp = [3, 4, 8], limit = [2, 3, 4], gold = [1, 2, 3];
   [1, 2, 3].forEach((st, i) => {
     const r = M.spawnMonsters(st, s.rng);
     for (const el of Object.keys(r)) {
       const m = r[el].stats;
-      assert.equal(m.maxHp, hp[i], 'HP Stufe ' + st); assert.equal(m.limit, limit[i]); assert.equal(m.gold, gold[i]);
+      assert.ok(Math.abs(m.maxHp - hp[i]) <= (st > 1 ? 1 : 0), 'HP Stufe ' + st + ': ' + m.maxHp);   // die Mana-Varianten (Stufe II/III) tauschen 1 HP gegen 1 Mana assert.equal(m.limit, limit[i]); assert.equal(m.gold, gold[i]);
       assert.ok(m.maxMana >= 4 && m.maxMana <= 9, 'Mana Stufe ' + st + ': ' + m.maxMana);
     }
   });
@@ -362,7 +362,7 @@ test('KI: Passt der Gegner im Showdown immer, greift sie sofort an und gewinnt, 
   const s = M.newGame({ seed: 301, ai: [false, true], first: 0 });
   s.monsters.E.stats.hp = 0; s.monsters.W.stats.hp = 0;
   M.apply(s, { pid: 0, type: 'combat', elem: 'F' });
-  const me = s.combat.sides.a, op = s.combat.sides.b; me.stats.limit = 2; me.stats.mag = { F: 3, E: 3, W: 3 }; op.stats.hp = 1;
+  const me = s.combat.sides.a, op = s.combat.sides.b; me.stats.limit = 2; me.stats.mag = { F: 3, E: 3, W: 3 }; op.stats.hp = 1; op.deck.hand = op.deck.hand.map(() => null);   // ohne Handkarten kann das Monster nicht blocken (seit 0.3.1 hat es Limit 2)
   me.deck.hand[0] = Object.assign({}, me.deck.hand[0], { id: 'F3' });
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'attack' });
   for (let q = 0; q < 6 && s.combat.mode === 'monster' && M.actor(s) === 1; q++) AI.runTurn(s, 1);

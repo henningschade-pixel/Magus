@@ -4,11 +4,15 @@
 
 // Startdeck jedes Monsters: das Startdeck mit Karten des Elements auf Stufe 2 (Anzahl: ‚upgrades‘).
 // Tempel-Verbesserungen: Stufe I ‚stage1Temple‘, danach je Stufe die Liste ‚temple[stufe][element]‘.
-// Ausspiellimit der Monster: Stufe I = 1, Stufe II = 2 (ein ‚limit‘), Stufe III = 3 (ein weiteres ‚limit‘). Abgestimmt gegen Magiekosten 1/3 Gold und 2 HP je Upgrade-Punkt.
+// Werte je Stufe (Version 0.3.1, neu abgestimmt auf Spieler mit Ausspiellimit 2 von Anfang an; Messung mit tools/balance/monster-tune.js):
+//   Stufe I   3 HP, Mana 5 (Variante 6; Erdmonster 6/7), Limit 2 (wie die Spieler), Startdeck mit 3 Karten des eigenen Elements auf Stufe 2
+//   Stufe II  4 HP, Mana 5 (Varianten 4/6), Limit 3
+//   Stufe III 8 HP, Mana 6 (Varianten 5/7), Limit 4
+// Das Limit steigt nur dort, wo es gewollt ist: Ein Monster mit Limit 2 und vielen HP verwickelt den Angreifer in endlose Angriffe und Fluchten (bis 27 Angriffe je Partie), erst Limit 3 gibt ihm die nötige Gefahr.
 const MONSTER = {
   profile: { F: { primary: 'F', secondary: 'E' }, E: { primary: 'E', secondary: 'W' }, W: { primary: 'W', secondary: 'F' } },
   stage1Temple: { F: [], E: [], W: [] },
-  temple: { 2: { F: ['limit', 'hp', 'hp', 'hp', 'hp', 'hp', 'mana'], E: ['limit', 'hp', 'hp', 'hp', 'hp', 'hp', 'mana'], W: ['limit', 'hp', 'hp', 'hp', 'hp', 'hp', 'mana'] }, 3: { F: ['hp', 'limit', 'hp', 'hp', 'mana'], E: ['hp', 'limit', 'hp', 'hp', 'mana'], W: ['hp', 'limit', 'hp', 'hp', 'mana'] } },   // inkl. Skalierung auf die höheren Belohnungen (2g/2up, 3g/3up) und Start-Mana 4
+  temple: { 2: { F: ['limit', 'hp', 'mana'], E: ['limit', 'hp', 'mana'], W: ['limit', 'hp', 'mana'] }, 3: { F: ['limit', 'hp', 'hp', 'hp', 'hp', 'mana'], E: ['limit', 'hp', 'hp', 'hp', 'hp', 'mana'], W: ['limit', 'hp', 'hp', 'hp', 'hp', 'mana'] } },   // Schritte je Stufe (Stufe III kommt auf Stufe II obendrauf): II = Limit 3, 4 HP, Mana 5; III = Limit 4, 8 HP, Mana 6
   magic: { 2: [3, 2, 1], 3: [3, 2, 1] },                                  // Stufen von Haupt-, Neben- und drittem Element
   deck: {
     2: (P, S, T) => [P + '3', P + '2', P + '2', P + '2', S + '2', S + '2', T + '1', T + '1', P + '1'],
@@ -16,10 +20,10 @@ const MONSTER = {
   },
   // Varianten (gleich stark, gemessen): je Monster wird beim Erscheinen gewürfelt. Index 0 = Grundform.
   variants: {
-    temple1: { F: [[], ['mana']], E: [[], ['mana']], W: [[], ['mana']] },
-    temple: {   // Stufe II/III: Grundform (Limit, Zäh, Mana), dazu ohne Mana (ruhiger) und mit doppeltem Mana (zielt auf Dauerdruck); gemessen etwa gleich schwer für den Spieler
-      2: { F: [['limit', 'hp', 'hp', 'hp', 'hp', 'hp', 'mana'], ['limit', 'hp', 'hp', 'hp', 'hp', 'hp'], ['limit', 'hp', 'hp', 'hp', 'hp', 'hp', 'mana', 'mana']], E: [['limit', 'hp', 'hp', 'hp', 'hp', 'hp', 'mana'], ['limit', 'hp', 'hp', 'hp', 'hp', 'hp'], ['limit', 'hp', 'hp', 'hp', 'hp', 'hp', 'mana', 'mana']], W: [['limit', 'hp', 'hp', 'hp', 'hp', 'hp', 'mana'], ['limit', 'hp', 'hp', 'hp', 'hp', 'hp'], ['limit', 'hp', 'hp', 'hp', 'hp', 'hp', 'mana', 'mana']] },
-      3: { F: [['hp', 'limit', 'hp', 'hp', 'mana'], ['hp', 'limit', 'hp', 'hp'], ['hp', 'limit', 'hp', 'hp', 'mana', 'mana']], E: [['hp', 'limit', 'hp', 'hp', 'mana'], ['hp', 'limit', 'hp', 'hp'], ['hp', 'limit', 'hp', 'hp', 'mana', 'mana']], W: [['hp', 'limit', 'hp', 'hp', 'mana'], ['hp', 'limit', 'hp', 'hp'], ['hp', 'limit', 'hp', 'hp', 'mana', 'mana']] },
+    temple1: { F: [['mana'], ['mana', 'mana']], E: [['mana', 'mana'], ['mana', 'mana', 'mana']], W: [['mana'], ['mana', 'mana']] },   // Stufe I: Mana 5, Variante Mana 6; das Erdmonster Mana 6/7 (sonst verlor es die Angreifer nur halb so oft wie die anderen)
+    temple: {   // Stufe II/III: Grundform, dazu ohne das Mana-Extra, dafür 1 HP mehr (ruhiger), und mit einem Mana mehr, dafür 1 HP weniger (zielt auf Dauerdruck); gemessen gleich oft Niederlage für den Angreifer (24/24/22 % in Stufe II, 40/41/37 % in Stufe III)
+      2: { F: [['limit', 'hp', 'mana'], ['limit', 'hp', 'hp'], ['limit', 'mana', 'mana']], E: [['limit', 'hp', 'mana'], ['limit', 'hp', 'hp'], ['limit', 'mana', 'mana']], W: [['limit', 'hp', 'mana'], ['limit', 'hp', 'hp'], ['limit', 'mana', 'mana']] },
+      3: { F: [['limit', 'hp', 'hp', 'hp', 'hp', 'mana'], ['limit', 'hp', 'hp', 'hp', 'hp', 'hp'], ['limit', 'hp', 'hp', 'hp', 'mana', 'mana']], E: [['limit', 'hp', 'hp', 'hp', 'hp', 'mana'], ['limit', 'hp', 'hp', 'hp', 'hp', 'hp'], ['limit', 'hp', 'hp', 'hp', 'mana', 'mana']], W: [['limit', 'hp', 'hp', 'hp', 'hp', 'mana'], ['limit', 'hp', 'hp', 'hp', 'hp', 'hp'], ['limit', 'hp', 'hp', 'hp', 'mana', 'mana']] },
     },
     swap: { F: { primary: 'F', secondary: 'W' }, E: { primary: 'E', secondary: 'F' }, W: { primary: 'W', secondary: 'E' } },   // Neben- und drittes Element getauscht
     deck: {   // Deckformen: Grundform, breit (mehr Nebenelement), spitz (stärkere Spitze, schwächere Basis)
@@ -28,7 +32,8 @@ const MONSTER = {
     },
     deckNames: ['', 'breit', 'spitz'],
   },
-  upgrades: { F: 2, E: 1, W: 1 },   // Karten des Startdecks, die auf Stufe 2 gehoben werden (nur Abschnitt I); mindestens eine, weil das Monster seine Hauptmagie auf Stufe 2 hat (ohne passende Karte wäre sie wertlos)
+  upgrades: { F: 3, E: 3, W: 3 },   // Karten des Startdecks, die auf Stufe 2 gehoben werden (nur Abschnitt I); mindestens eine, weil das Monster seine Hauptmagie auf Stufe 2 hat (ohne passende Karte wäre sie wertlos)
+  startLimit: 2,                                                          // Ausspiellimit aller Monster vor den Tempel-Schritten (Spieler starten seit 0.3 mit 2; hier wird neu abgestimmt)
   gold: { 1: 1, 2: 2, 3: 3 },                                              // Beute
   names: { F: 'Feuermonster', E: 'Erdmonster', W: 'Wassermonster' },
 };
@@ -40,6 +45,7 @@ function spawnOne(el, stage, rng, v) {
   v = v || { t: 0, p: 0, d: 0 };
   for (let i = 0, src = SUPERIOR[el] + '1'; i < (M.upgrades[el] === undefined ? 2 : M.upgrades[el]); i++) { const idx = deck.indexOf(src); if (idx < 0) break; deck[idx] = el + '2'; }
   const stats = newStats();
+  stats.limit = M.startLimit;
   stats.mag[el] = 2;
   (stage === 1 ? V.temple1[el][v.t] || M.stage1Temple[el] : M.stage1Temple[el]).forEach(f => applyTemple(stats, f));
   stats.gold = M.gold[1];
@@ -64,8 +70,8 @@ function spawnOne(el, stage, rng, v) {
   if (stage === 1 && v.t && V.temple1[el][v.t]) { const fs = V.temple1[el][v.t]; tags.push(fs.map(f => ({ hp: 'Zäh', mana: 'Mana', limit: 'Limit' }[f])).join('+')); fs.filter((f, i) => fs.indexOf(f) === i).forEach(f => hints.push(FHINT[f])); }
   if (stage >= 2 && v.t && V.temple[stage] && V.temple[stage][el] && V.temple[stage][el][v.t]) {
     const cnt = (l, f) => l.filter(x => x === f).length, tv = V.temple[stage][el][v.t], bs = M.temple[stage][el], dm = cnt(tv, 'mana') - cnt(bs, 'mana');
-    if (dm < 0) { tags.push('ohne Extra-Mana'); hints.push('Ohne Extra-Mana: in diesem Abschnitt kein zusätzliches maximales Mana (weniger Dauerdruck).'); }
-    else if (dm > 0) { tags.push('Mana+'); hints.push('Mana+: ein weiteres zusätzliches maximales Mana, es kann länger angreifen.'); }
+    if (dm < 0) { tags.push('ohne Extra-Mana'); hints.push('Ohne Extra-Mana: in diesem Abschnitt ein Mana weniger, dafür 1 maximale HP mehr (weniger Dauerdruck, zäher).'); }
+    else if (dm > 0) { tags.push('Mana+'); hints.push('Mana+: ein Mana mehr, dafür 1 maximale HP weniger (kann länger angreifen, ist aber leichter zu besiegen).'); }
   }
   if (stage >= 2 && v.p) { tags.push(ELEMENT_NAME_SHORT[S] + '-lastig'); { const FN = { F: 'Feuer', E: 'Erde', W: 'Wasser' }; hints.push(ELEMENT_NAME_SHORT[S] + '-lastig: Das Nebenelement dieses Monsters ist ' + FN[S] + ' (normalerweise ' + FN[M.profile[el].secondary] + '). Es spielt neben seinem Hauptelement vor allem ' + FN[S] + '.'); } }
   if (stage >= 2 && v.d) { tags.push(V.deckNames[v.d]); hints.push(v.d === 1 ? 'breit: mehr Karten im Nebenelement, dafür weniger im Hauptelement. Vielseitiger, aber mit schwächerer Spitze.' : 'spitz: stärkere Spitze (mehr Karten der höchsten Stufe), dafür eine schwächere Basis (mehr Stufe-1-Karten).'); }
