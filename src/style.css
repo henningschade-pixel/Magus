@@ -125,8 +125,8 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .pendhdr{float:right;color:var(--gold);font-size:15px;font-weight:400}.pendhdr b{font-size:19px;font-weight:700}
 
 /* Plus-Knöpfe (Upgrade-Punkte ausgeben) */
-.up{width:24px;height:26px;padding:0;border:0;background:var(--plus) center/contain no-repeat;cursor:var(--cp);margin-left:4px;flex:none}
-.up:hover{background-image:var(--plush)}
+.up{width:24px;height:26px;padding:0;border:0;background:var(--plusg) center/contain no-repeat;cursor:var(--cp);margin-left:4px;flex:none}
+.up:hover{background-image:var(--plushg)}
 .up.mg{background-image:var(--plusg)}.up.mg:hover{background-image:var(--plushg)}
 .up.costly{position:relative}
 .up{position:relative}
@@ -149,8 +149,9 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .lfsum{margin-top:6px}.lfsum .note{font-size:15px}.lfsum b{color:#f2d27a}
 .up.costly::after{content:attr(data-c);position:absolute;right:-5px;top:-6px;min-width:15px;height:15px;border-radius:8px;background:#e8c35a;color:#2a1a05;font:700 12px/15px Alegreya,serif;text-align:center;box-shadow:0 0 0 1px #2a1a05}
 .up.off{opacity:.38;cursor:var(--cd);pointer-events:auto}
-.up.off:hover{background-image:var(--plus)}
+.up.off:hover{background-image:var(--plusg)}
 .up.mg.off:hover{background-image:var(--plusg)}
+.up.mg.gd,.up.mg.gd:hover{background-image:var(--gup)}.up.mg.gd:hover{background-image:var(--gupH)}.up.mg.gd.off:hover{background-image:var(--gup)}   /* Magie kaufen: goldene Scheibe rund um das Magiebrett (Knopffläche 32 px, die Scheibe darin 26 px, Platz für die Funken beim Überfahren) */
 .up.mg{position:absolute;margin:0;z-index:2}
 .up.ph{visibility:hidden;pointer-events:none;background:none}
 .upgpts{position:absolute;display:flex;align-items:center;gap:2px;color:var(--good);font-size:28px;pointer-events:auto;z-index:70}

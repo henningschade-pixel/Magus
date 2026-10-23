@@ -57,13 +57,13 @@ function statsBlock(name, s, p, size, up, full) {
   const bsz = size || 140;
   let bd = boardHTML(s.mag, bsz);
   if (up && my) {
-    const dir = { F: -90, E: 30, W: 150 }, d = 26;
+    const dir = { F: -90, E: 30, W: 150 }, d = 32;   // Knopffläche; die Scheibe darin misst 26 px
     let btn = '';
     for (const e of M.ELEMENTS) {
       const lv = s.mag[e], mc = M.magicCost(G, lv); if (lv >= M.MAX_MAGIC || s.gold < mc) continue;
       const ang = dir[e] * Math.PI / 180, r = bsz * 0.507;
       const x = bsz / 2 + Math.cos(ang) * r - d / 2, y = bsz / 2 + Math.sin(ang) * r - d / 2;
-      btn += '<button class="up mg gd" style="left:' + x.toFixed(1) + 'px;top:' + y.toFixed(1) + 'px;width:' + d + 'px;height:' + d + 'px" data-act="magic" data-e="' + e + '" title="' + NAMES[e] + ' Stufe ' + (lv + 1) + ' kaufen (' + mc + ' Gold)"></button>';
+      btn += '<button class="up mg gd' + (mc > 1 ? ' costly' : '') + '"' + (mc > 1 ? ' data-c="' + mc + '"' : '') + ' style="left:' + x.toFixed(1) + 'px;top:' + y.toFixed(1) + 'px;width:' + d + 'px;height:' + d + 'px" data-act="magic" data-e="' + e + '" title="' + NAMES[e] + ' Stufe ' + (lv + 1) + ' kaufen (' + mc + ' Gold)"></button>';
     }
     bd = bd.replace(/<\/div>$/, btn + '</div>');
   }

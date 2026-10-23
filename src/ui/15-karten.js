@@ -68,12 +68,12 @@ function layoutDeck(deck, L, mine) {
     place(c, { x: slotX(i, n, L), y: L.y + (marked ? L.raise : 0), sc: L.s, down: !mine, z: 20 + i + (marked ? 30 : 0), marked, fd: fdm, locked: mine && c.locked, mine, slot: i, spawn, zone: 'hand', first: mine && marked && !fdm && isFirstAtk(deck, i)});
   });
 }
-// Nachziehlimit: drei Kreise am Nachziehstapel (eigener Stapel: darüber, Gegner: darunter), der rot/grüne Marker liegt auf der Stufe des nächsten freien Nachziehens; Stufen über dem Limit sind abgedunkelt, auf der nächsten sitzt der Kauf-Knopf (Gold)
+// Nachziehlimit: drei Kreise unter dem Nachziehstapel (beide Spieler), der rot/grüne Marker liegt auf der Stufe des nächsten freien Nachziehens; Stufen über dem Limit sind abgedunkelt, auf der nächsten sitzt der Kauf-Knopf (Gold)
 function drawTrack(L, mine) {
   if (!G.rules.drawMarker) return '';
   const pl = G.players[mine ? ME : 1 - ME], st = pl.stats, n = M.MAX_DRAW_LIMIT, lim = st.drawLimit || 1;
-  const sz = mine ? 26 : 19, gap = mine ? 6 : 4, tk = mine ? 20 : 15, w = CW * L.ps;
-  const x0 = L.draw.x + (w - (n * sz + (n - 1) * gap)) / 2, y = mine ? L.draw.y - sz - 8 : L.draw.y + CH * L.ps + 24;
+  const sz = mine ? 24 : 19, gap = mine ? 6 : 4, tk = mine ? 18 : 15, w = CW * L.ps;
+  const x0 = L.draw.x + (w - (n * sz + (n - 1) * gap)) / 2, y = L.draw.y + CH * L.ps + 24;   // unter der Stapelbeschriftung
   const red = !!pl.drawRed, at = Math.min((pl.drawN || 0) + 1, lim);   // Stufe des Markers: das wievielte Nachziehen als Nächstes frei wäre
   const pen = G.phase === 'combat' ? 'ein Nachziehtoken' : G.rules.drawPenaltyGold + ' Gold';
   const tip = (mine ? 'Dein' : 'Gegnerisches') + ' Nachziehlimit ' + lim + ' von ' + n + ': So oft ' + (mine ? 'darfst du' : 'darf er') + ' hintereinander nachziehen (ohne andere Aktion dazwischen), bevor der Marker auf Rot springt. Nachziehen bei rotem Marker gibt dem Gegner ' + pen + '.';
@@ -81,8 +81,8 @@ function drawTrack(L, mine) {
   for (let i = 1; i <= n; i++) h += '<div class="dlc' + (i <= lim ? '' : ' off') + '" title="' + tip + '" style="left:' + (x0 + (i - 1) * (sz + gap)) + 'px;top:' + y + 'px;width:' + sz + 'px;height:' + sz + 'px"></div>';
   h += '<div class="dmark ' + (red ? 'red' : 'green') + '" title="Nachziehmarker ' + (red ? 'rot: Nachziehen gibt dem Gegner ' + pen : 'grün: noch ' + (lim - (pl.drawN || 0)) + 'x Nachziehen frei') + '" style="width:' + tk + 'px;height:' + tk + 'px;left:' + (x0 + (at - 1) * (sz + gap) + (sz - tk) / 2) + 'px;top:' + (y + (sz - tk) / 2) + 'px"></div>';
   if (mine && lim < n && G.phase === 'world' && !G.over) {
-    const cost = M.drawLimitCost(G, st), can = myTurn() && st.gold >= cost;
-    h += '<button class="up mg' + (can ? '' : ' off') + '" data-act="drawlimit"' + (can ? '' : ' disabled') + ' title="Nachziehlimit auf ' + (lim + 1) + ' steigern (' + cost + ' Gold)" style="left:' + (x0 + lim * (sz + gap)) + 'px;top:' + y + 'px;width:' + sz + 'px;height:' + sz + 'px;margin:0;z-index:63"></button>';
+    const cost = M.drawLimitCost(G, st), can = myTurn() && st.gold >= cost, bz = Math.round(sz * 32 / 26), off = (bz - sz) / 2;   // wie die Magie-Knöpfe: Knopffläche größer als die Scheibe (Platz für die Funken)
+    h += '<button class="up mg gd' + (cost > 1 ? ' costly' : '') + (can ? '' : ' off') + '"' + (cost > 1 ? ' data-c="' + cost + '"' : '') + (can ? '' : ' disabled') + ' data-act="drawlimit" title="Nachziehlimit auf ' + (lim + 1) + ' steigern (' + cost + ' Gold)" style="left:' + (x0 + lim * (sz + gap) - off) + 'px;top:' + (y - off) + 'px;width:' + bz + 'px;height:' + bz + 'px;margin:0;z-index:63"></button>';
   }
   return h;
 }
@@ -115,7 +115,7 @@ function renderCards() {
   ph += '<div class="pilehit" data-act="deckview" title="Dein Deck als Balkendiagramm (Stufen der Karten)" style="left:' + L_MY.disc.x + 'px;top:' + L_MY.disc.y + 'px;width:' + CW * L_MY.ps + 'px;height:' + CH * L_MY.ps + 'px"></div>';
   $('dimdeck').classList.toggle('on', !!deckView);   // Deckübersicht: Spielfeld dahinter sanft abdunkeln
   if (deckView) ph += deckPopHTML(cx.myDeck);
-  if (cx.combat && cx.myStats.freeDraws > 0) ph += '<div class="freedraw" data-act="freedraw" title="Gratis-Nachziehen: ' + cx.myStats.freeDraws + 'x (Klick)" style="left:' + L_MY.draw.x + 'px;top:' + (L_MY.draw.y - (G.rules.drawMarker ? 86 : 52)) + 'px"><img src="' + IMG.gratis + '">' + (cx.myStats.freeDraws > 1 ? '<b class="mul">×' + cx.myStats.freeDraws + '</b>' : '') + '</div>';
+  if (cx.combat && cx.myStats.freeDraws > 0) ph += '<div class="freedraw" data-act="freedraw" title="Gratis-Nachziehen: ' + cx.myStats.freeDraws + 'x (Klick)" style="left:' + L_MY.draw.x + 'px;top:' + (L_MY.draw.y - 52) + 'px"><img src="' + IMG.gratis + '">' + (cx.myStats.freeDraws > 1 ? '<b class="mul">×' + cx.myStats.freeDraws + '</b>' : '') + '</div>';
   if (cx.combat && cx.oppStats.freeDraws > 0) {   // gegnerische Nachziehtokens; im Läuterungs-Angriff anklickbar (werden zerstört, nicht gutgeschrieben)
     const lf = lfCtx(), sel = lf ? lf.picks.filter(p => p === 'ot').length : 0, pos = 'left:' + L_OP.draw.x + 'px;top:' + (L_OP.draw.y + CH * L_OP.ps + (G.rules.drawMarker ? 48 : 22)) + 'px', inner = '<img src="' + IMG.gratis + '">' + (cx.oppStats.freeDraws > 1 ? '<b class="mul">×' + cx.oppStats.freeDraws + '</b>' : '') + (sel ? '<i class="lfb">✓' + sel + '</i>' : '');
     ph += lf ? '<button class="freedraw opp lf' + (sel ? ' sel' : '') + '" data-act="lfm" data-k="ot" title="Läuterung: gegnerische Nachziehtokens zerstören (Klick: einen mehr, nach dem Maximum wieder alle weg). Sie werden nicht gutgeschrieben." style="' + pos + '">' + inner + '</button>' : '<div class="freedraw opp" title="Gratis-Nachziehen des Gegners: ' + cx.oppStats.freeDraws + 'x" style="' + pos + '">' + inner + '</div>';

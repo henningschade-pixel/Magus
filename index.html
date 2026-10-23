@@ -135,8 +135,8 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .pendhdr{float:right;color:var(--gold);font-size:15px;font-weight:400}.pendhdr b{font-size:19px;font-weight:700}
 
 /* Plus-Knöpfe (Upgrade-Punkte ausgeben) */
-.up{width:24px;height:26px;padding:0;border:0;background:var(--plus) center/contain no-repeat;cursor:var(--cp);margin-left:4px;flex:none}
-.up:hover{background-image:var(--plush)}
+.up{width:24px;height:26px;padding:0;border:0;background:var(--plusg) center/contain no-repeat;cursor:var(--cp);margin-left:4px;flex:none}
+.up:hover{background-image:var(--plushg)}
 .up.mg{background-image:var(--plusg)}.up.mg:hover{background-image:var(--plushg)}
 .up.costly{position:relative}
 .up{position:relative}
@@ -159,8 +159,9 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .lfsum{margin-top:6px}.lfsum .note{font-size:15px}.lfsum b{color:#f2d27a}
 .up.costly::after{content:attr(data-c);position:absolute;right:-5px;top:-6px;min-width:15px;height:15px;border-radius:8px;background:#e8c35a;color:#2a1a05;font:700 12px/15px Alegreya,serif;text-align:center;box-shadow:0 0 0 1px #2a1a05}
 .up.off{opacity:.38;cursor:var(--cd);pointer-events:auto}
-.up.off:hover{background-image:var(--plus)}
+.up.off:hover{background-image:var(--plusg)}
 .up.mg.off:hover{background-image:var(--plusg)}
+.up.mg.gd,.up.mg.gd:hover{background-image:var(--gup)}.up.mg.gd:hover{background-image:var(--gupH)}.up.mg.gd.off:hover{background-image:var(--gup)}   /* Magie kaufen: goldene Scheibe rund um das Magiebrett (Knopffläche 32 px, die Scheibe darin 26 px, Platz für die Funken beim Überfahren) */
 .up.mg{position:absolute;margin:0;z-index:2}
 .up.ph{visibility:hidden;pointer-events:none;background:none}
 .upgpts{position:absolute;display:flex;align-items:center;gap:2px;color:var(--good);font-size:28px;pointer-events:auto;z-index:70}
@@ -332,7 +333,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
   <div id="toast"></div><div id="overlay" class="overlay" style="display:none"></div>
 </div></div>
 <script>const IMG={"shield_E": "assets/img/shield_E.webp", "shield_F": "assets/img/shield_F.webp", "F1": "assets/img/F1.webp", "F2": "assets/img/F2.webp", "F3": "assets/img/F3.webp", "E1": "assets/img/E1.webp", "E2": "assets/img/E2.webp", "E3": "assets/img/E3.webp", "W1": "assets/img/W1.webp", "W2": "assets/img/W2.webp", "W3": "assets/img/W3.webp", "C1": "assets/img/C1.webp", "C2": "assets/img/C2.webp", "C3": "assets/img/C3.webp", "back": "assets/img/back.webp", "lock": "assets/img/lock.webp", "m_f1": "assets/img/m_f1.webp", "m_f2": "assets/img/m_f2.webp", "m_f3": "assets/img/m_f3.webp", "d_f": "assets/img/d_f.webp", "m_e1": "assets/img/m_e1.webp", "m_e2": "assets/img/m_e2.webp", "m_e3": "assets/img/m_e3.webp", "d_e": "assets/img/d_e.webp", "m_w1": "assets/img/m_w1.webp", "m_w2": "assets/img/m_w2.webp", "m_w3": "assets/img/m_w3.webp", "d_w": "assets/img/d_w.webp", "board": "assets/img/board.webp", "gold": "assets/img/gold.webp", "hp": "assets/img/hp.webp", "mana": "assets/img/mana.webp", "limit": "assets/img/limit.webp", "attack": "assets/img/attack.webp", "defense": "assets/img/defense.webp", "wait": "assets/img/wait.webp", "gratis": "assets/img/gratis.webp", "upgrade": "assets/img/upgrade.webp", "arrow": "assets/img/arrow.webp"};</script>
-<script>IMG.board="assets/img/board.webp";IMG.curse="assets/img/curse.png";IMG.plus="assets/img/plus.png";IMG.plush="assets/img/plush.png";IMG.plusg="assets/img/plusg.png";IMG.plushg="assets/img/plushg.png";window.SND={"aggro": "assets/audio/aggro.mp3", "atk_earth": "assets/audio/atk_earth.mp3", "atk_fire": "assets/audio/atk_fire.mp3", "atk_water": "assets/audio/atk_water.mp3", "block": "assets/audio/block.mp3", "break": "assets/audio/break.mp3", "card_lv2": "assets/audio/card_lv2.mp3", "card_lv3": "assets/audio/card_lv3.mp3", "coin_sacrifice": "assets/audio/coin_sacrifice.mp3", "curse": "assets/audio/curse.mp3", "draw": "assets/audio/draw.mp3", "flip": "assets/audio/flip.mp3", "heal": "assets/audio/heal.mp3", "hit": "assets/audio/hit.mp3", "lose": "assets/audio/lose.mp3", "magic_lv2": "assets/audio/magic_lv2.mp3", "magic_lv3": "assets/audio/magic_lv3.mp3", "mirror_cast": "assets/audio/mirror_cast.mp3", "mirror_reflect": "assets/audio/mirror_reflect.mp3", "play": "assets/audio/play.mp3", "purify": "assets/audio/purify.mp3", "recover": "assets/audio/recover.mp3", "ruin": "assets/audio/ruin.mp3", "shield_hit": "assets/audio/shield_hit.mp3", "showdown_start": "assets/audio/showdown_start.mp3", "shuffle": "assets/audio/shuffle.mp3", "spend_upgrade": "assets/audio/spend_upgrade.mp3", "stage_start": "assets/audio/stage_start.mp3", "temple_level": "assets/audio/temple_level.mp3", "turn_change": "assets/audio/turn_change.mp3", "ui_click": "assets/audio/ui_click.mp3", "ultimate": "assets/audio/ultimate.mp3", "upgrade_gain": "assets/audio/upgrade_gain.mp3", "win": "assets/audio/win.mp3"};</script>
+<script>IMG.board="assets/img/board.webp";IMG.curse="assets/img/curse.png";IMG.plus="assets/img/plus.png";IMG.plush="assets/img/plush.png";IMG.plusg="assets/img/plusg.png";IMG.plushg="assets/img/plushg.png";IMG.goldup="assets/img/goldup.webp";IMG.goldupH="assets/img/goldupH.webp";window.SND={"aggro": "assets/audio/aggro.mp3", "atk_earth": "assets/audio/atk_earth.mp3", "atk_fire": "assets/audio/atk_fire.mp3", "atk_water": "assets/audio/atk_water.mp3", "block": "assets/audio/block.mp3", "break": "assets/audio/break.mp3", "card_lv2": "assets/audio/card_lv2.mp3", "card_lv3": "assets/audio/card_lv3.mp3", "coin_sacrifice": "assets/audio/coin_sacrifice.mp3", "curse": "assets/audio/curse.mp3", "draw": "assets/audio/draw.mp3", "flip": "assets/audio/flip.mp3", "heal": "assets/audio/heal.mp3", "hit": "assets/audio/hit.mp3", "lose": "assets/audio/lose.mp3", "magic_lv2": "assets/audio/magic_lv2.mp3", "magic_lv3": "assets/audio/magic_lv3.mp3", "mirror_cast": "assets/audio/mirror_cast.mp3", "mirror_reflect": "assets/audio/mirror_reflect.mp3", "play": "assets/audio/play.mp3", "purify": "assets/audio/purify.mp3", "recover": "assets/audio/recover.mp3", "ruin": "assets/audio/ruin.mp3", "shield_hit": "assets/audio/shield_hit.mp3", "showdown_start": "assets/audio/showdown_start.mp3", "shuffle": "assets/audio/shuffle.mp3", "spend_upgrade": "assets/audio/spend_upgrade.mp3", "stage_start": "assets/audio/stage_start.mp3", "temple_level": "assets/audio/temple_level.mp3", "turn_change": "assets/audio/turn_change.mp3", "ui_click": "assets/audio/ui_click.mp3", "ultimate": "assets/audio/ultimate.mp3", "upgrade_gain": "assets/audio/upgrade_gain.mp3", "win": "assets/audio/win.mp3"};</script>
 <script>(function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
   else root.Magus = factory();
@@ -1292,6 +1293,7 @@ const DEFAULTS = {
   limitA: 1, slotA: 4, manaA: 4, hpA: 4, limitB: 3, slotB: 5,          // Ausbaureihenfolge der Upgrade-Punkte
   cBase: 34, cHp: 3, cMana: 1.5, cWt: 2.8, cMon: 0.8, minHp: 1, minMana: 4,   // Lust, ein Monster anzugreifen
   dRed: 10, dTmp: 10, dVen: 5, rBroke: 400, cRed: 1, cRedA: 0,   // Nachziehmarker rot (Nachziehen schenkt dem Gegner Gold bzw. ein Nachziehtoken): dRed Abschlag auf das Nachziehen in der Weltphase, dTmp Lust, stattdessen 1 Gold im Tempel zu opfern, dVen Lust, ohne Gold stattdessen gratis beim Händler zu tauschen, rBroke Bonus für einen Monsterangriff, wenn sonst nur das Strafnachziehen bleibt; im Kampf cRed 1: erholen statt nachziehen (auch bei vollem Mana), cRedA: Angriffsschwelle sinkt um so viel
+  dlMax: 0, dlRes: 0, dlFirst: 0, tKeep: 0, cRedE: 0, dFree: 0, rAtk: 0,   // rAtk: Angriffslust auf ein Monster, solange der Marker rot ist (statt nachzuziehen und dem Gegner Gold zu schenken); Nachziehlimit (Gold): dlMax bis zu welcher Stufe die KI es kauft (0 = nie), dlRes: Gold, das danach übrig bleiben muss, dlFirst 1: vor der Magie kaufen; tKeep: Gold, das beim Tempel-Opfern zurückbleibt (Notgroschen gegen die Strafe, siehe dTmp); cRedE 1: mit leerer Hand bei Rot erst erholen (Marker auf Grün), dann nachziehen; dFree: Bonus aufs Nachziehen in der Weltphase, solange der Marker noch grün ist
   dBase: 7, dCurse: 4, dEmpty: 12, dSlot: 2, dNorm: 5,                    // Lust, nachzuziehen
   vUp: 8.85, vUpW: 1.4,                                                       // Händler-Aufwertung
   smart: 1, wMark: 0.5, keepB: 3, keepOn: 0, wDeath: 6, wDraw: 1.6, wFW: 1.3, wFE: 0.9, wEW: 2.8, aDmg: 1.5, aCost: 1.5, aCurse: 1.6, aThr: 0.5, oHits: 4, oFree: 4, stallDec: 0.25, stallFrom: 24,   // Angriffsbewertung
@@ -1395,12 +1397,15 @@ function ecoStep(state, pid) {
     if (s.gold >= 2) return A({ type: 'temple', amount: Math.min(s.gold, 3) });
     return null;
   }
+  const dlBuy = () => Q.dlMax > s.drawLimit && s.drawLimit < M.MAX_DRAW_LIMIT && state.rules.drawMarker && s.gold >= M.drawLimitCost(state, s) + Q.dlRes ? A({ type: 'drawlimit' }) : null;
+  if (Q.dlFirst) { const b = dlBuy(); if (b) return b; }
   const opp = state.players[1 - pid].stats, oppTop = M.ELEMENTS.slice().sort((x, y) => opp.mag[y] - opp.mag[x])[0];   // Aufbau des Gegners: seine stärkste Magie, und welche Farbe ihr überlegen ist
   const planEl = planElement(state, pid);
   let best = null;
   for (const e of M.ELEMENTS) { const cost = M.magicCost(state, s.mag[e]); if (s.mag[e] < M.MAX_MAGIC && s.gold >= cost) { const sc = Q.mBase - cost * Q.mCost + countEl(e) * Q.mCnt + (s.mag[e] === Math.max(s.mag.F, s.mag.E, s.mag.W) ? Q.mTop : 0) + (e === M.SUPERIOR[oppTop] ? Q.mCounter * opp.mag[oppTop] : 0) + (e === planEl ? Q.mPlan : 0) + Q.mCatch * Math.max(0, opp.mag[e] - s.mag[e]); if (!best || sc > best.sc) best = { sc, a: A({ type: 'magic', elem: e }) }; } }
   if (best) return best.a;
-  if (s.gold >= 2) return A({ type: 'temple', amount: Math.min(s.gold, 3) });
+  const b = dlBuy(); if (b) return b;
+  if (s.gold - Q.tKeep >= 2) return A({ type: 'temple', amount: Math.min(s.gold - Q.tKeep, 3) });
   return null;
 }
 
@@ -1473,7 +1478,7 @@ function worldPlan(state, pid) {
   const allIds = [...d.draw, ...d.discard, ...d.hand.filter(Boolean)].map(c => c.id);
   const countEl = e => allIds.filter(id => id[0] === e).length;
 
-  if (canDraw(d)) cands.push({ score: Q.dBase + Q.dCurse * curses.length + (normals.length === 0 ? Q.dEmpty : 0) + emptySlots * Q.dSlot - (normals.length >= 3 ? Q.dNorm : 0) - (p.drawRed ? Q.dRed : 0) + R(), acts: [A({ type: 'draw' })] });
+  if (canDraw(d)) cands.push({ score: Q.dBase + Q.dCurse * curses.length + (normals.length === 0 ? Q.dEmpty : 0) + emptySlots * Q.dSlot - (normals.length >= 3 ? Q.dNorm : 0) - (p.drawRed ? Q.dRed : 0) + (!p.drawRed ? Q.dFree : 0) + R(), acts: [A({ type: 'draw' })] });
   if (p.drawRed && Q.dTmp && s.gold >= 1) cands.push({ score: Q.dTmp + R(), acts: [A({ type: 'temple', amount: 1 })] });   // roter Marker: 1 Gold im Tempel stellt ihn auf grün, statt dem Gegner beim Nachziehen Gold zu schenken
   if (p.drawRed && Q.dVen && s.gold < 1) {   // roter Marker ohne Gold: ein Gratis-Tausch beim Händler stellt ihn ebenfalls auf grün (sonst schenkt das Warten dem Gegner jede zweite Runde 1 Gold)
     const best = M.ELEMENTS.slice().sort((a, b) => s.mag[b] - s.mag[a]), free = M.vendorPlans(state, pid).filter(o => o.free).sort((a, b) => best.indexOf(a.result[0]) - best.indexOf(b.result[0]))[0];
@@ -1508,7 +1513,7 @@ function worldPlan(state, pid) {
         let doom = 0;
         if (Q.fleeW > 0) { const me = { stats: s, deck: d }, mo = { stats: m.stats, deck: { draw: (m.deckIds || []).map(id => ({ id })), discard: [], hand: new Array(Math.max(3, m.stats.limit + 2)).fill(null) } }; doom = Math.max(0, raceTurns(state, me, mo) - raceTurns(state, mo, me)) * Q.fleeW; }
         const broke = p.drawRed && s.gold < 1 && !cands.some(c => c.acts.some(a => a.type !== 'draw')) ? Q.rBroke : 0;   // roter Marker, kein Gold, keine andere Aktion: lieber angreifen als dem Gegner mit dem Nachziehen Gold zu schenken
-        const score = broke - doom - risk - steal - Q.oHits * Math.max(0, hits - Q.oFree) + Q.cBase + Q.cHp * (s.hp - 1) + Q.cMana * (s.mana - 2) + state.worldTurns * Q.cWt - m.stats.hp * Q.cMon + press + R();
+        const score = broke - doom - risk - steal - Q.oHits * Math.max(0, hits - Q.oFree) + Q.cBase + Q.cHp * (s.hp - 1) + Q.cMana * (s.mana - 2) + state.worldTurns * Q.cWt - m.stats.hp * Q.cMon + press + (p.drawRed ? Q.rAtk : 0) + R();
         if (!bestC || score > bestC.score) bestC = { score, acts: [A({ type: 'combat', elem: target })] };
       }
       cands.push(bestC);
@@ -1674,7 +1679,7 @@ function combatPlan(state, pid) {
     if (canFlee && (c.turns || 0) >= Q.fleeT && (!best || best.value <= Q.aThr)) return [A({ type: 'flee' })];   // lange ohne brauchbaren Angriff gegen ein Monster ohne Mana: abbrechen statt endlos nachzuziehen
     if (s.freeDraws > 0 && canDraw(d) && hand.length < d.hand.length) return [A({ type: 'freeDraw' })];
     if (s.freeDraws > 0 && canDraw(d) && (!best || best.value <= Q.aThr)) return [A({ type: 'freeDraw' })];
-    if (s.mana <= 0 || !hand.length) { if (hand.length === 0 && canDraw(d)) return [A({ type: 'draw' })]; return [A({ type: 'recover' })]; }
+    if (s.mana <= 0 || !hand.length) { if (hand.length === 0 && canDraw(d) && !(Q.cRedE && red)) return [A({ type: 'draw' })]; return [A({ type: 'recover' })]; }
     if (Q.rW > 0 && s.mana < Q.rRef && s.mana < s.maxMana) return [A({ type: 'recover' })];
     if (canDraw(d)) {
       if (Q.cRed && red) return [A({ type: 'recover' })];
@@ -1750,7 +1755,7 @@ function runTurn(state, pid) {
 return { plan, runTurn, fallback, ecoStep, setParams, DEFAULTS, _race: raceTurns };
 }));</script>
 <script>Object.values(IMG).forEach(u => { const im = new Image(); im.src = u; });   // Bilder vorladen, damit Karten nicht nachflackern
-document.documentElement.style.setProperty('--plus','url('+IMG.plus+')');document.documentElement.style.setProperty('--plush','url('+IMG.plush+')');document.documentElement.style.setProperty('--plusg','url('+IMG.plusg+')');document.documentElement.style.setProperty('--plushg','url('+IMG.plushg+')');
+document.documentElement.style.setProperty('--plus','url('+IMG.plus+')');document.documentElement.style.setProperty('--plush','url('+IMG.plush+')');document.documentElement.style.setProperty('--plusg','url('+IMG.plusg+')');document.documentElement.style.setProperty('--plushg','url('+IMG.plushg+')');document.documentElement.style.setProperty('--gup','url('+IMG.goldup+')');document.documentElement.style.setProperty('--gupH','url('+IMG.goldupH+')');
 /* Magus – Oberfläche. Liest nur den Zustand des Regelkerns und sendet Aktionen.
    Die Dateien src/ui/*.js werden in dieser Reihenfolge zu einem Block zusammengesetzt (00 öffnet, 80 schließt ihn). */
 (function () {
@@ -2031,12 +2036,12 @@ function layoutDeck(deck, L, mine) {
     place(c, { x: slotX(i, n, L), y: L.y + (marked ? L.raise : 0), sc: L.s, down: !mine, z: 20 + i + (marked ? 30 : 0), marked, fd: fdm, locked: mine && c.locked, mine, slot: i, spawn, zone: 'hand', first: mine && marked && !fdm && isFirstAtk(deck, i)});
   });
 }
-// Nachziehlimit: drei Kreise am Nachziehstapel (eigener Stapel: darüber, Gegner: darunter), der rot/grüne Marker liegt auf der Stufe des nächsten freien Nachziehens; Stufen über dem Limit sind abgedunkelt, auf der nächsten sitzt der Kauf-Knopf (Gold)
+// Nachziehlimit: drei Kreise unter dem Nachziehstapel (beide Spieler), der rot/grüne Marker liegt auf der Stufe des nächsten freien Nachziehens; Stufen über dem Limit sind abgedunkelt, auf der nächsten sitzt der Kauf-Knopf (Gold)
 function drawTrack(L, mine) {
   if (!G.rules.drawMarker) return '';
   const pl = G.players[mine ? ME : 1 - ME], st = pl.stats, n = M.MAX_DRAW_LIMIT, lim = st.drawLimit || 1;
-  const sz = mine ? 26 : 19, gap = mine ? 6 : 4, tk = mine ? 20 : 15, w = CW * L.ps;
-  const x0 = L.draw.x + (w - (n * sz + (n - 1) * gap)) / 2, y = mine ? L.draw.y - sz - 8 : L.draw.y + CH * L.ps + 24;
+  const sz = mine ? 24 : 19, gap = mine ? 6 : 4, tk = mine ? 18 : 15, w = CW * L.ps;
+  const x0 = L.draw.x + (w - (n * sz + (n - 1) * gap)) / 2, y = L.draw.y + CH * L.ps + 24;   // unter der Stapelbeschriftung
   const red = !!pl.drawRed, at = Math.min((pl.drawN || 0) + 1, lim);   // Stufe des Markers: das wievielte Nachziehen als Nächstes frei wäre
   const pen = G.phase === 'combat' ? 'ein Nachziehtoken' : G.rules.drawPenaltyGold + ' Gold';
   const tip = (mine ? 'Dein' : 'Gegnerisches') + ' Nachziehlimit ' + lim + ' von ' + n + ': So oft ' + (mine ? 'darfst du' : 'darf er') + ' hintereinander nachziehen (ohne andere Aktion dazwischen), bevor der Marker auf Rot springt. Nachziehen bei rotem Marker gibt dem Gegner ' + pen + '.';
@@ -2044,8 +2049,8 @@ function drawTrack(L, mine) {
   for (let i = 1; i <= n; i++) h += '<div class="dlc' + (i <= lim ? '' : ' off') + '" title="' + tip + '" style="left:' + (x0 + (i - 1) * (sz + gap)) + 'px;top:' + y + 'px;width:' + sz + 'px;height:' + sz + 'px"></div>';
   h += '<div class="dmark ' + (red ? 'red' : 'green') + '" title="Nachziehmarker ' + (red ? 'rot: Nachziehen gibt dem Gegner ' + pen : 'grün: noch ' + (lim - (pl.drawN || 0)) + 'x Nachziehen frei') + '" style="width:' + tk + 'px;height:' + tk + 'px;left:' + (x0 + (at - 1) * (sz + gap) + (sz - tk) / 2) + 'px;top:' + (y + (sz - tk) / 2) + 'px"></div>';
   if (mine && lim < n && G.phase === 'world' && !G.over) {
-    const cost = M.drawLimitCost(G, st), can = myTurn() && st.gold >= cost;
-    h += '<button class="up mg' + (can ? '' : ' off') + '" data-act="drawlimit"' + (can ? '' : ' disabled') + ' title="Nachziehlimit auf ' + (lim + 1) + ' steigern (' + cost + ' Gold)" style="left:' + (x0 + lim * (sz + gap)) + 'px;top:' + y + 'px;width:' + sz + 'px;height:' + sz + 'px;margin:0;z-index:63"></button>';
+    const cost = M.drawLimitCost(G, st), can = myTurn() && st.gold >= cost, bz = Math.round(sz * 32 / 26), off = (bz - sz) / 2;   // wie die Magie-Knöpfe: Knopffläche größer als die Scheibe (Platz für die Funken)
+    h += '<button class="up mg gd' + (cost > 1 ? ' costly' : '') + (can ? '' : ' off') + '"' + (cost > 1 ? ' data-c="' + cost + '"' : '') + (can ? '' : ' disabled') + ' data-act="drawlimit" title="Nachziehlimit auf ' + (lim + 1) + ' steigern (' + cost + ' Gold)" style="left:' + (x0 + lim * (sz + gap) - off) + 'px;top:' + (y - off) + 'px;width:' + bz + 'px;height:' + bz + 'px;margin:0;z-index:63"></button>';
   }
   return h;
 }
@@ -2078,7 +2083,7 @@ function renderCards() {
   ph += '<div class="pilehit" data-act="deckview" title="Dein Deck als Balkendiagramm (Stufen der Karten)" style="left:' + L_MY.disc.x + 'px;top:' + L_MY.disc.y + 'px;width:' + CW * L_MY.ps + 'px;height:' + CH * L_MY.ps + 'px"></div>';
   $('dimdeck').classList.toggle('on', !!deckView);   // Deckübersicht: Spielfeld dahinter sanft abdunkeln
   if (deckView) ph += deckPopHTML(cx.myDeck);
-  if (cx.combat && cx.myStats.freeDraws > 0) ph += '<div class="freedraw" data-act="freedraw" title="Gratis-Nachziehen: ' + cx.myStats.freeDraws + 'x (Klick)" style="left:' + L_MY.draw.x + 'px;top:' + (L_MY.draw.y - (G.rules.drawMarker ? 86 : 52)) + 'px"><img src="' + IMG.gratis + '">' + (cx.myStats.freeDraws > 1 ? '<b class="mul">×' + cx.myStats.freeDraws + '</b>' : '') + '</div>';
+  if (cx.combat && cx.myStats.freeDraws > 0) ph += '<div class="freedraw" data-act="freedraw" title="Gratis-Nachziehen: ' + cx.myStats.freeDraws + 'x (Klick)" style="left:' + L_MY.draw.x + 'px;top:' + (L_MY.draw.y - 52) + 'px"><img src="' + IMG.gratis + '">' + (cx.myStats.freeDraws > 1 ? '<b class="mul">×' + cx.myStats.freeDraws + '</b>' : '') + '</div>';
   if (cx.combat && cx.oppStats.freeDraws > 0) {   // gegnerische Nachziehtokens; im Läuterungs-Angriff anklickbar (werden zerstört, nicht gutgeschrieben)
     const lf = lfCtx(), sel = lf ? lf.picks.filter(p => p === 'ot').length : 0, pos = 'left:' + L_OP.draw.x + 'px;top:' + (L_OP.draw.y + CH * L_OP.ps + (G.rules.drawMarker ? 48 : 22)) + 'px', inner = '<img src="' + IMG.gratis + '">' + (cx.oppStats.freeDraws > 1 ? '<b class="mul">×' + cx.oppStats.freeDraws + '</b>' : '') + (sel ? '<i class="lfb">✓' + sel + '</i>' : '');
     ph += lf ? '<button class="freedraw opp lf' + (sel ? ' sel' : '') + '" data-act="lfm" data-k="ot" title="Läuterung: gegnerische Nachziehtokens zerstören (Klick: einen mehr, nach dem Maximum wieder alle weg). Sie werden nicht gutgeschrieben." style="' + pos + '">' + inner + '</button>' : '<div class="freedraw opp" title="Gratis-Nachziehen des Gegners: ' + cx.oppStats.freeDraws + 'x" style="' + pos + '">' + inner + '</div>';
@@ -2178,13 +2183,13 @@ function statsBlock(name, s, p, size, up, full) {
   const bsz = size || 140;
   let bd = boardHTML(s.mag, bsz);
   if (up && my) {
-    const dir = { F: -90, E: 30, W: 150 }, d = 26;
+    const dir = { F: -90, E: 30, W: 150 }, d = 32;   // Knopffläche; die Scheibe darin misst 26 px
     let btn = '';
     for (const e of M.ELEMENTS) {
       const lv = s.mag[e], mc = M.magicCost(G, lv); if (lv >= M.MAX_MAGIC || s.gold < mc) continue;
       const ang = dir[e] * Math.PI / 180, r = bsz * 0.507;
       const x = bsz / 2 + Math.cos(ang) * r - d / 2, y = bsz / 2 + Math.sin(ang) * r - d / 2;
-      btn += '<button class="up mg gd" style="left:' + x.toFixed(1) + 'px;top:' + y.toFixed(1) + 'px;width:' + d + 'px;height:' + d + 'px" data-act="magic" data-e="' + e + '" title="' + NAMES[e] + ' Stufe ' + (lv + 1) + ' kaufen (' + mc + ' Gold)"></button>';
+      btn += '<button class="up mg gd' + (mc > 1 ? ' costly' : '') + '"' + (mc > 1 ? ' data-c="' + mc + '"' : '') + ' style="left:' + x.toFixed(1) + 'px;top:' + y.toFixed(1) + 'px;width:' + d + 'px;height:' + d + 'px" data-act="magic" data-e="' + e + '" title="' + NAMES[e] + ' Stufe ' + (lv + 1) + ' kaufen (' + mc + ' Gold)"></button>';
     }
     bd = bd.replace(/<\/div>$/, btn + '</div>');
   }
