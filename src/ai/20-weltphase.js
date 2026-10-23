@@ -66,12 +66,15 @@ function ecoStep(state, pid) {
     if (s.gold >= 2) return A({ type: 'temple', amount: Math.min(s.gold, 3) });
     return null;
   }
+  const dlBuy = () => Q.dlMax > s.drawLimit && s.drawLimit < M.MAX_DRAW_LIMIT && state.rules.drawMarker && s.gold >= M.drawLimitCost(state, s) + Q.dlRes ? A({ type: 'drawlimit' }) : null;
+  if (Q.dlFirst) { const b = dlBuy(); if (b) return b; }
   const opp = state.players[1 - pid].stats, oppTop = M.ELEMENTS.slice().sort((x, y) => opp.mag[y] - opp.mag[x])[0];   // Aufbau des Gegners: seine stärkste Magie, und welche Farbe ihr überlegen ist
   const planEl = planElement(state, pid);
   let best = null;
   for (const e of M.ELEMENTS) { const cost = M.magicCost(state, s.mag[e]); if (s.mag[e] < M.MAX_MAGIC && s.gold >= cost) { const sc = Q.mBase - cost * Q.mCost + countEl(e) * Q.mCnt + (s.mag[e] === Math.max(s.mag.F, s.mag.E, s.mag.W) ? Q.mTop : 0) + (e === M.SUPERIOR[oppTop] ? Q.mCounter * opp.mag[oppTop] : 0) + (e === planEl ? Q.mPlan : 0) + Q.mCatch * Math.max(0, opp.mag[e] - s.mag[e]); if (!best || sc > best.sc) best = { sc, a: A({ type: 'magic', elem: e }) }; } }
   if (best) return best.a;
-  if (s.gold >= 2) return A({ type: 'temple', amount: Math.min(s.gold, 3) });
+  const b = dlBuy(); if (b) return b;
+  if (s.gold - Q.tKeep >= 2) return A({ type: 'temple', amount: Math.min(s.gold - Q.tKeep, 3) });
   return null;
 }
 
@@ -144,7 +147,7 @@ function worldPlan(state, pid) {
   const allIds = [...d.draw, ...d.discard, ...d.hand.filter(Boolean)].map(c => c.id);
   const countEl = e => allIds.filter(id => id[0] === e).length;
 
-  if (canDraw(d)) cands.push({ score: Q.dBase + Q.dCurse * curses.length + (normals.length === 0 ? Q.dEmpty : 0) + emptySlots * Q.dSlot - (normals.length >= 3 ? Q.dNorm : 0) - (p.drawRed ? Q.dRed : 0) + R(), acts: [A({ type: 'draw' })] });
+  if (canDraw(d)) cands.push({ score: Q.dBase + Q.dCurse * curses.length + (normals.length === 0 ? Q.dEmpty : 0) + emptySlots * Q.dSlot - (normals.length >= 3 ? Q.dNorm : 0) - (p.drawRed ? Q.dRed : 0) + (!p.drawRed ? Q.dFree : 0) + R(), acts: [A({ type: 'draw' })] });
   if (p.drawRed && Q.dTmp && s.gold >= 1) cands.push({ score: Q.dTmp + R(), acts: [A({ type: 'temple', amount: 1 })] });   // roter Marker: 1 Gold im Tempel stellt ihn auf grün, statt dem Gegner beim Nachziehen Gold zu schenken
   {
     const plans = M.vendorPlans(state, pid), mk = o => o.slots.map(sl => A({ type: 'mark', slot: sl }));
@@ -174,7 +177,7 @@ function worldPlan(state, pid) {
         // Kampfprognose wie im Kampf: Gewinnt das Monster das Rennen, verliere ich (oder muss fliehen); Abschlag je Zug Rückstand
         let doom = 0;
         if (Q.fleeW > 0) { const me = { stats: s, deck: d }, mo = { stats: m.stats, deck: { draw: (m.deckIds || []).map(id => ({ id })), discard: [], hand: new Array(Math.max(3, m.stats.limit + 2)).fill(null) } }; doom = Math.max(0, raceTurns(state, me, mo) - raceTurns(state, mo, me)) * Q.fleeW; }
-        const score = -doom - risk - steal - Q.oHits * Math.max(0, hits - Q.oFree) + Q.cBase + Q.cHp * (s.hp - 1) + Q.cMana * (s.mana - 2) + state.worldTurns * Q.cWt - m.stats.hp * Q.cMon + press + R();
+        const score = -doom - risk - steal - Q.oHits * Math.max(0, hits - Q.oFree) + Q.cBase + Q.cHp * (s.hp - 1) + Q.cMana * (s.mana - 2) + state.worldTurns * Q.cWt - m.stats.hp * Q.cMon + press + (p.drawRed ? Q.rAtk : 0) + R();
         if (!bestC || score > bestC.score) bestC = { score, acts: [A({ type: 'combat', elem: target })] };
       }
       cands.push(bestC);
