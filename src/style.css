@@ -291,6 +291,8 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .overlay .box.start{align-items:center;padding:34px 44px 30px}
 .overlay .box.start .logo{width:170px;height:170px;object-fit:contain;margin:6px 0 12px;mix-blend-mode:lighten;-webkit-mask-image:radial-gradient(circle,#000 58%,transparent 72%);mask-image:radial-gradient(circle,#000 58%,transparent 72%)}
 .overlay .box.start .mpbox{align-self:stretch}
+.overlay .box.start .note.intro{flex:0 1 auto;min-height:64px;overflow-y:auto;padding-right:10px}   /* langer Einleitungstext: schrumpft und scrollt, Logo und Knöpfe bleiben sichtbar */
+.overlay .box.start .note.intro::-webkit-scrollbar{width:8px}.overlay .box.start .note.intro::-webkit-scrollbar-thumb{background:var(--gold);border-radius:4px}.overlay .box.start .note.intro::-webkit-scrollbar-track{background:rgba(255,255,255,.06);border-radius:4px}
 #log.logpanel h3{display:flex;align-items:center}
 .logdl{order:2;margin-left:auto;width:26px;height:26px;border-radius:50%;border:1px solid var(--line);background:rgba(10,8,14,.55);color:var(--mute);font-size:14px;line-height:1;cursor:var(--cp);padding:0;opacity:.7}.logdl:hover{opacity:1;border-color:var(--gold);color:var(--gold)}
 .overlay .box.stats{width:1060px;max-width:96vw;max-height:760px;padding:18px 22px;overflow-y:auto}
