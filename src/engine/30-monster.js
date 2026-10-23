@@ -5,7 +5,7 @@
 // Startdeck jedes Monsters: das Startdeck mit Karten des Elements auf Stufe 2 (Anzahl: ‚upgrades‘).
 // Tempel-Verbesserungen: Stufe I ‚stage1Temple‘, danach je Stufe die Liste ‚temple[stufe][element]‘.
 // Werte je Stufe (Version 0.3.1, neu abgestimmt auf Spieler mit Ausspiellimit 2 von Anfang an; Messung mit tools/balance/monster-tune.js):
-//   Stufe I   3 HP, Mana 5 (Variante 6; Erdmonster 6/7), Limit 2 (wie die Spieler), Startdeck mit 3 Karten des eigenen Elements auf Stufe 2
+//   Stufe I   3 HP, Mana 5 (Erdmonster 6), Limit 2; Variante: ausdauernd (+1 Mana, −1 HP) (wie die Spieler), Startdeck mit 3 Karten des eigenen Elements auf Stufe 2
 //   Stufe II  4 HP, Mana 5 (Varianten 4/6), Limit 3
 //   Stufe III 8 HP, Mana 6 (Varianten 5/7), Limit 4
 // Das Limit steigt nur dort, wo es gewollt ist: Ein Monster mit Limit 2 und vielen HP verwickelt den Angreifer in endlose Angriffe und Fluchten (bis 27 Angriffe je Partie), erst Limit 3 gibt ihm die nötige Gefahr.
@@ -20,7 +20,9 @@ const MONSTER = {
   },
   // Varianten (gleich stark, gemessen): je Monster wird beim Erscheinen gewürfelt. Index 0 = Grundform.
   variants: {
-    temple1: { F: [['mana'], ['mana', 'mana']], E: [['mana', 'mana'], ['mana', 'mana', 'mana']], W: [['mana'], ['mana', 'mana']] },   // Stufe I: Mana 5, Variante Mana 6; das Erdmonster Mana 6/7 (sonst verlor es die Angreifer nur halb so oft wie die anderen)
+    temple1: {   // Stufe I: Grundform (F/W: 3 HP, Mana 5; Erde: 3 HP, Mana 6 – sonst verlor es die Angreifer nur halb so oft), ausdauernd (1 Mana mehr, dafür 1 HP weniger; die Gegenstücke „zäh“ mit 1 HP mehr waren mit 1 Mana weniger oder einer Karte weniger zu harmlos: 8 bis 9 % Niederlagen)
+      F: [['mana'], ['mana', 'mana', '-hp']], E: [['mana', 'mana'], ['mana', 'mana', 'mana', '-hp']], W: [['mana'], ['mana', 'mana', '-hp']],
+    },
     temple: {   // Stufe II/III: Grundform, dazu ohne das Mana-Extra, dafür 1 HP mehr (ruhiger), und mit einem Mana mehr, dafür 1 HP weniger (zielt auf Dauerdruck); gemessen gleich oft Niederlage für den Angreifer (24/24/22 % in Stufe II, 40/41/37 % in Stufe III)
       2: { F: [['limit', 'hp', 'mana'], ['limit', 'hp', 'hp'], ['limit', 'mana', 'mana']], E: [['limit', 'hp', 'mana'], ['limit', 'hp', 'hp'], ['limit', 'mana', 'mana']], W: [['limit', 'hp', 'mana'], ['limit', 'hp', 'hp'], ['limit', 'mana', 'mana']] },
       3: { F: [['limit', 'hp', 'hp', 'hp', 'hp', 'mana'], ['limit', 'hp', 'hp', 'hp', 'hp', 'hp'], ['limit', 'hp', 'hp', 'hp', 'mana', 'mana']], E: [['limit', 'hp', 'hp', 'hp', 'hp', 'mana'], ['limit', 'hp', 'hp', 'hp', 'hp', 'hp'], ['limit', 'hp', 'hp', 'hp', 'mana', 'mana']], W: [['limit', 'hp', 'hp', 'hp', 'hp', 'mana'], ['limit', 'hp', 'hp', 'hp', 'hp', 'hp'], ['limit', 'hp', 'hp', 'hp', 'mana', 'mana']] },
@@ -66,15 +68,13 @@ function spawnOne(el, stage, rng, v) {
   finalDeck = finalDeck.map(id => id[0] !== 'C' && +id[1] > stats.mag[id[0]] ? id[0] + stats.mag[id[0]] : id);   // Eine Karte wirkt höchstens mit der Magie ihrer Farbe: die Anzeige soll das zeigen
   rng.shuffle(finalDeck);
   const tags = [], hints = [];
-  const FHINT = { hp: 'Zäh: zusätzliche maximale HP.', mana: 'Mana: zusätzliches maximales Mana.', limit: 'Limit: darf mehr Karten gleichzeitig spielen (höheres Ausspiellimit).' };
-  if (stage === 1 && v.t && V.temple1[el][v.t]) {   // Stufe I: nur der Unterschied zur Grundform des Monsters wird genannt (das Erdmonster hat schon in der Grundform Mana 6)
-    const cm = l => l.filter(x => x === 'mana').length, dm = cm(V.temple1[el][v.t]) - cm(V.temple1[el][0]);
-    if (dm > 0) { tags.push('Mana+'); hints.push('Mana+: ein Mana mehr als die Grundform dieses Monsters, es kann länger angreifen.'); }
-  }
-  if (stage >= 2 && v.t && V.temple[stage] && V.temple[stage][el] && V.temple[stage][el][v.t]) {
-    const cnt = (l, f) => l.filter(x => x === f).length, tv = V.temple[stage][el][v.t], bs = M.temple[stage][el], dm = cnt(tv, 'mana') - cnt(bs, 'mana');
-    if (dm < 0) { tags.push('ohne Extra-Mana'); hints.push('Ohne Extra-Mana: in diesem Abschnitt ein Mana weniger, dafür 1 maximale HP mehr (weniger Dauerdruck, zäher).'); }
-    else if (dm > 0) { tags.push('Mana+'); hints.push('Mana+: ein Mana mehr, dafür 1 maximale HP weniger (kann länger angreifen, ist aber leichter zu besiegen).'); }
+  {   // Wertetausch-Varianten (alle Stufen): kein Monster ist einfach „mehr“, jede Variante tauscht 1 HP gegen 1 Mana; Etikett und Hinweis nennen den Tausch, die tatsächlichen Werte stehen auf der Karte
+    const lists = stage === 1 ? V.temple1[el] : V.temple[stage] && V.temple[stage][el];
+    if (v.t && lists && lists[v.t]) {
+      const net = (l, f) => l.filter(x => x === f).length - l.filter(x => x === '-' + f).length, dh = net(lists[v.t], 'hp') - net(lists[0], 'hp'), dm = net(lists[v.t], 'mana') - net(lists[0], 'mana');
+      if (dh > 0 && dm < 0) { tags.push('zäh'); hints.push('Zäh: 1 maximale HP mehr, dafür 1 Mana weniger (hält mehr aus, kann weniger lange angreifen).'); }
+      else if (dm > 0 && dh < 0) { tags.push('ausdauernd'); hints.push('Ausdauernd: 1 Mana mehr, dafür 1 maximale HP weniger (kann länger angreifen, ist leichter zu besiegen).'); }
+    }
   }
   if (stage >= 2 && v.p) { tags.push(ELEMENT_NAME_SHORT[S] + '-lastig'); { const FN = { F: 'Feuer', E: 'Erde', W: 'Wasser' }; hints.push(ELEMENT_NAME_SHORT[S] + '-lastig: Das Nebenelement dieses Monsters ist ' + FN[S] + ' (normalerweise ' + FN[M.profile[el].secondary] + '). Es spielt neben seinem Hauptelement vor allem ' + FN[S] + '.'); } }
   if (stage >= 2 && v.d) { tags.push(V.deckNames[v.d]); hints.push(v.d === 1 ? 'breit: mehr Karten im Nebenelement, dafür weniger im Hauptelement. Vielseitiger, aber mit schwächerer Spitze.' : 'spitz: stärkere Spitze (mehr Karten der höchsten Stufe), dafür eine schwächere Basis (mehr Stufe-1-Karten).'); }

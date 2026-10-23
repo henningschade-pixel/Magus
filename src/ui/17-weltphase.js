@@ -24,11 +24,12 @@ function monsterCards() {
     const m = G.monsters[e], alive = M.monsterAlive(m), st = m.stats;
     const gone = !alive && m.retreated, img = alive || gone ? IMG['m_' + e.toLowerCase() + m.stage] : IMG['d_' + e.toLowerCase()];   // zurückgezogenes Monster: eigenes Bild, durchscheinend
     h += '<div class="mon ' + (alive ? '' : gone ? 'dead gone' : 'dead') + '" style="left:' + (R.left + i * R.step) + 'px;top:' + R.top + 'px;width:' + R.w + 'px;height:' + R.h + 'px;padding:10px 8px"><img class="pic" src="' + img + '" style="width:172px;height:196px">' +
-      '<div class="nm ' + e + '">' + esc(m.name) + '</div>' + (alive ? '<div class="sm mlabel" ' + (m.label ? 'title="' + esc((m.hints || []).join('\n')) + '" ' : '') + 'style="color:var(--gold);margin-top:-2px;height:18px;line-height:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (m.label ? esc(m.label) : '&nbsp;') + '</div>' : '');
+      '<div class="nm ' + e + '">' + esc(m.name) + '</div>' + (alive ? '<div class="sm' + (m.label ? ' mlabel' : '') + '" ' + (m.label ? 'title="' + esc((m.hints || []).join('\n')) + '" ' : '') + 'style="color:var(--gold);margin-top:-2px;height:18px;line-height:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (m.label ? esc(m.label) : '&nbsp;') + '</div>' : '');
     if (alive) {
       h += '<div class="sm">HP ' + st.hp + '/' + st.maxHp + '</div><div class="bar"><i style="width:' + st.hp / st.maxHp * 100 + '%"></i></div>' +
-        '<div class="sm">Mana ' + st.mana + '/' + st.maxMana + ' · Limit ' + st.limit + '</div><div class="bar mana"><i style="width:' + st.mana / st.maxMana * 100 + '%"></i></div>' +
+        '<div class="sm">Mana ' + st.mana + '/' + st.maxMana + '</div><div class="bar mana"><i style="width:' + st.mana / st.maxMana * 100 + '%"></i></div>' +
         '<div class="sm"><span class="dots F">' + dots(st.mag.F) + '</span> <span class="dots E">' + dots(st.mag.E) + '</span> <span class="dots W">' + dots(st.mag.W) + '</span></div>' +
+        '<div class="sm vals" title="Die tatsächlichen Werte dieses Monsters (Maximum)">HP ' + st.maxHp + ' · Mana ' + st.maxMana + ' · Limit ' + st.limit + '</div>' +
         '<button class="btn small" data-act="combat" data-e="' + e + '" ' + (my ? '' : 'disabled') + '>Kämpfen</button>';
     } else h += '<div class="sm" style="margin-top:12px">' + (gone ? 'hat gewonnen und sich zurückgezogen' : 'besiegt') + '</div>';
     h += '</div>';

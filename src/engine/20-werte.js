@@ -29,6 +29,7 @@ function previewTemple(p, amount) {
 }
 function applyTemple(stats, field) {
   if (field === 'hp') { stats.maxHp++; stats.hp = Math.min(stats.maxHp, stats.hp + 1); }
+  else if (field === '-hp') { stats.maxHp = Math.max(1, stats.maxHp - 1); stats.hp = Math.min(stats.maxHp, stats.hp); }   // nur für Monster-Varianten: 1 HP weniger als Preis für etwas anderes
   else if (field === 'mana') { stats.maxMana++; stats.mana = Math.min(stats.maxMana, stats.mana + 1); }
   else if (field === 'limit') stats.limit++;
 }

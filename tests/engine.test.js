@@ -98,7 +98,7 @@ test('Monsterwerte je Stufe (Zäh, Limit, Beute)', () => {
     const r = M.spawnMonsters(st, s.rng);
     for (const el of Object.keys(r)) {
       const m = r[el].stats;
-      assert.ok(Math.abs(m.maxHp - hp[i]) <= (st > 1 ? 1 : 0), 'HP Stufe ' + st + ': ' + m.maxHp);   // die Mana-Varianten (Stufe II/III) tauschen 1 HP gegen 1 Mana assert.equal(m.limit, limit[i]); assert.equal(m.gold, gold[i]);
+      assert.ok(Math.abs(m.maxHp - hp[i]) <= 1, 'HP Stufe ' + st + ': ' + m.maxHp);   // die Mana-Varianten (alle Stufen) tauschen 1 HP gegen 1 Mana assert.equal(m.limit, limit[i]); assert.equal(m.gold, gold[i]);
       assert.ok(m.maxMana >= 4 && m.maxMana <= 9, 'Mana Stufe ' + st + ': ' + m.maxMana);
     }
   });
@@ -418,17 +418,18 @@ test('Ausspiellimit startet bei 2 (startLimit), mit startLimit 0 wie früher bei
   assert.deepEqual(M.newGame({ seed: 5, rules: { startLimit: 0 } }).players.map(p => p.stats.limit), [1, 1]);
 });
 
-test('Monster-Beschriftung Stufe I: „Mana+“ nur, wenn das Monster mehr Mana hat als seine Grundform (Erde 6, Feuer/Wasser 5)', () => {
-  const base = { F: 5, E: 6, W: 5 };
-  let plus = 0;
-  for (let seed = 1; seed <= 80; seed++) {
-    const r = M.spawnMonsters(1, M.newGame({ seed }).rng);
+test('Monster-Varianten tauschen: „ausdauernd“ = 1 Mana mehr, dafür 1 HP weniger; nie nur mehr (Stufe I bis III)', () => {
+  const base = { 1: { F: [3, 5], E: [3, 6], W: [3, 5] }, 2: { F: [4, 5], E: [4, 5], W: [4, 5] }, 3: { F: [8, 6], E: [8, 6], W: [8, 6] } };
+  const seen = { zäh: 0, ausdauernd: 0, gleich: 0 };
+  for (const st of [1, 2, 3]) for (let seed = 1; seed <= 80; seed++) {
+    const r = M.spawnMonsters(st, M.newGame({ seed }).rng);
     for (const el of Object.keys(r)) {
-      const m = r[el], extra = m.stats.maxMana - base[el];
-      assert.ok(extra === 0 || extra === 1, el + ' Mana ' + m.stats.maxMana);
-      assert.equal(/Mana\+/.test(m.label), extra === 1, el + ': ' + m.label + ' bei Mana ' + m.stats.maxMana); plus += extra;
-      assert.ok(!/Mana\+Mana/.test(m.label));
+      const m = r[el], [bh, bm] = base[st][el], dh = m.stats.maxHp - bh, dm = m.stats.maxMana - bm;
+      assert.ok((dh === 0 && dm === 0) || dh + dm === 0 && Math.abs(dh) === 1, 'Stufe ' + st + ' ' + el + ': HP ' + m.stats.maxHp + ', Mana ' + m.stats.maxMana + ' (Etikett ' + m.label + ')');   // jede Abweichung ist ein Tausch
+      assert.equal(/ausdauernd/.test(m.label), dm === 1, 'Etikett ausdauernd: ' + m.label); assert.equal(/zäh/.test(m.label), dh === 1, 'Etikett zäh: ' + m.label);
+      assert.ok(!/Mana\+/.test(m.label));
+      seen[dh === 0 ? 'gleich' : dh > 0 ? 'zäh' : 'ausdauernd']++;
     }
   }
-  assert.ok(plus > 0, 'die Variante kam vor');
+  assert.ok(seen.zäh > 0 && seen.ausdauernd > 0 && seen.gleich > 0, JSON.stringify(seen));
 });
