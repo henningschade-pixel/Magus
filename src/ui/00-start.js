@@ -1,5 +1,5 @@
 Object.values(IMG).forEach(u => { const im = new Image(); im.src = u; });   // Bilder vorladen, damit Karten nicht nachflackern
-document.documentElement.style.setProperty('--plus','url('+IMG.plus+')');document.documentElement.style.setProperty('--plush','url('+IMG.plush+')');document.documentElement.style.setProperty('--plusg','url('+IMG.plusg+')');document.documentElement.style.setProperty('--plushg','url('+IMG.plushg+')');document.documentElement.style.setProperty('--gup','url('+IMG.goldup+')');document.documentElement.style.setProperty('--gupH','url('+IMG.goldupH+')');
+document.documentElement.style.setProperty('--plusg','url('+IMG.plusg+')');document.documentElement.style.setProperty('--plushg','url('+IMG.plushg+')');document.documentElement.style.setProperty('--gup','url('+IMG.goldup+')');document.documentElement.style.setProperty('--gupH','url('+IMG.goldupH+')');
 /* Magus – Oberfläche. Liest nur den Zustand des Regelkerns und sendet Aktionen.
    Die Dateien src/ui/*.js werden in dieser Reihenfolge zu einem Block zusammengesetzt (00 öffnet, 80 schließt ihn). */
 (function () {
