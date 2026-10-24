@@ -490,3 +490,11 @@ test('Steigende Preise (priceRise): jeder Kauf einer Kategorie verteuert die nä
   const t = M.newGame({ seed: 5, rules: { priceRise: 0 } }), ts = t.players[0].stats; ts.gold = 9; t.turn = 0;
   for (let i = 0; i < 3; i++) { t.turn = 0; assert.ok(M.apply(t, { pid: 0, type: 'spend', what: 'hp' }).ok); } assert.equal(ts.gold, 6);
 });
+
+test('Kombo mit mehreren Karten der zweiten Farbe: F2, W1, W1 ergibt Zerrüttung 2 (Kartenstufen derselben Farbe zählen zusammen)', () => {
+  const st = { mag: { F: 3, E: 3, W: 3 }, mana: 9 }, ev = ids => M.evalAttack(st, ids.map(id => Object.assign({ id }, M.parseCard(id))));
+  assert.deepEqual([ev(['F2', 'W1', 'W1']).ord.key, ev(['F2', 'W1', 'W1']).ord.lvl], ['rm', 2]);
+  assert.equal(ev(['F2', 'W1']).ord.lvl, 1);
+  assert.deepEqual([ev(['W1', 'F2', 'W1']).ord.key, ev(['W1', 'F2', 'W1']).ord.lvl], ['bm', 2]);   // andere erste Farbe: Spiegel, ebenfalls Stufe 2
+  assert.equal(ev(['F1', 'F1', 'E2']).ord.lvl, 2); assert.equal(ev(['F1', 'F1', 'E1']).ord.lvl, 1);
+});

@@ -237,3 +237,27 @@ test('Schild-Effekt: Der Rückwurf startet dort, wo das Schild angezeigt wurde, 
     assert.deepEqual(errs, []);
   } finally { await b.close(); }
 });
+
+test('Lähmung: die Flüche erscheinen erst im Ablagestapel, wenn die Animation sie ankommen lässt', { skip: !chromium && 'Playwright nicht installiert', timeout: 60000 }, async () => {
+  const b = await chromium.launch({ executablePath: exe });
+  try {
+    const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
+    p.on('pageerror', e => errs.push(e.message));
+    await p.goto(url); await p.waitForTimeout(500);
+    await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
+    await p.evaluate(() => { const G = window.__magus.state; window.Magus.apply(G, { pid: 0, type: 'combat', elem: 'F' }); window.__magus.pump(); });
+    await p.waitForTimeout(600);
+    const ablage = () => p.evaluate(() => [...document.querySelectorAll('*')].filter(e => e.children.length === 0 && /^Ablage \d+$/.test(e.textContent.trim())).map(e => +e.textContent.replace(/\D/g, '')));
+    await p.evaluate(() => {
+      const G = window.__magus.state, me = G.combat.sides.a; me.stats.mag = { F: 3, E: 3, W: 3 }; me.stats.limit = 3; me.stats.mana = me.stats.maxMana = 9;
+      ['F2', 'E1', 'E1'].forEach((id, i) => { me.deck.hand[i] = Object.assign({}, me.deck.hand[i], { id }); window.Magus.apply(G, { pid: 0, type: 'mark', slot: i }); });
+      window.__magus.act({ type: 'attack' });
+    });
+    await p.waitForTimeout(300);
+    assert.equal(await p.evaluate(() => window.__magus.state.combat.sides.b.deck.discard.length), 4, 'die Engine hat die Flüche schon gelegt (Lähmung 2 = 4 Flüche)');
+    assert.equal((await ablage()).length >= 2 && (await ablage()).includes(0), true, 'Anzeige: Ablagestapel des Gegners noch leer, solange die Funken fliegen');
+    await p.waitForTimeout(2500);
+    assert.equal((await ablage()).includes(4), true, 'nach der Ankunft liegen 4 Flüche auf dem Ablagestapel');
+    assert.deepEqual(errs, []);
+  } finally { await b.close(); }
+});
