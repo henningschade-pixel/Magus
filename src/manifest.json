@@ -171,6 +171,9 @@
   "file": "ui/31-statistik.js"
  },
  {
+  "file": "ui/31a-wuerfel.js"
+ },
+ {
   "file": "ui/32-spiellog.js"
  },
  {

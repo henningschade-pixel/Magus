@@ -261,3 +261,22 @@ test('Lähmung: die Flüche erscheinen erst im Ablagestapel, wenn die Animation 
     assert.deepEqual(errs, []);
   } finally { await b.close(); }
 });
+
+test('Monsterwürfel: je lebendem Monster ein grüner und ein roter Würfel über der Karte, nach dem Wurf mit der gewürfelten Seite oben', { skip: !chromium && 'Playwright nicht installiert', timeout: 60000 }, async () => {
+  const b = await chromium.launch({ executablePath: exe });
+  try {
+    const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
+    p.on('pageerror', e => errs.push(e.message));
+    await p.goto(url); await p.waitForTimeout(500);
+    await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(3500);   // Wurf (ca. 1,5 s + Versatz) ist vorbei
+    const r = await p.evaluate(() => {
+      const G = window.__magus.state, dice = [...document.querySelectorAll('#dicelayer .dk-die')];
+      return { n: dice.length, visible: dice.every(d => d.style.visibility !== 'hidden' && d.offsetParent !== null), faces: dice.map(d => d.title.split(':')[0]), expect: G.monsters.F && ['F', 'E', 'W'].map(e => [G.monsters[e].variant.pl, G.monsters[e].variant.mi]).flat() };
+    });
+    assert.equal(r.n, 6); assert.equal(r.visible, true);
+    assert.deepEqual(r.faces, ['Pluswürfel', 'Minuswürfel', 'Pluswürfel', 'Minuswürfel', 'Pluswürfel', 'Minuswürfel']);
+    assert.equal(r.expect.length, 6);
+    assert.equal(await p.evaluate(() => document.querySelectorAll('.mon .mlabel').length), 0, 'keine benannten Effekte mehr unter dem Namen');
+    assert.deepEqual(errs, []);
+  } finally { await b.close(); }
+});

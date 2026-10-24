@@ -24,7 +24,7 @@ function monsterCards() {
     const m = G.monsters[e], alive = M.monsterAlive(m), st = m.stats;
     const gone = !alive && m.retreated, img = alive || gone ? IMG['m_' + m.el.toLowerCase() + m.stage] : IMG['d_' + m.el.toLowerCase()];   // zurückgezogenes Monster: eigenes Bild, durchscheinend
     h += '<div class="mon ' + (alive ? '' : gone ? 'dead gone' : 'dead') + '" style="left:' + (R.left + i * R.step) + 'px;top:' + R.top + 'px;width:' + R.w + 'px;height:' + R.h + 'px;padding:10px 8px"><img class="pic" src="' + img + '" style="width:172px;height:196px">' +
-      '<div class="nm ' + m.el + '">' + esc(m.name) + '</div>' + (alive ? '<div class="sm' + (m.hints && m.hints.length ? ' mlabel' : '') + '" ' + (m.hints && m.hints.length ? 'title="' + esc((m.hints || []).join('\n')) + '" ' : '') + 'style="color:var(--gold);margin-top:-2px;height:18px;line-height:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (m.label ? esc(m.label) : '&nbsp;') + '</div>' : '');
+      '<div class="nm ' + m.el + '"' + (m.hints && m.hints.length ? ' title="' + esc(m.hints.join('\n')) + '"' : '') + '>' + esc(m.name) + '</div>' + (alive ? '<div class="sm" style="height:18px;margin-top:-2px">&nbsp;</div>' : '');   // früher stand hier die Beschriftung der Würfel; jetzt liegen die Würfel über der Karte (DiceBoard)
     if (alive) {
       h += '<div class="sm">HP ' + st.hp + '/' + st.maxHp + '</div><div class="bar"><i style="width:' + st.hp / st.maxHp * 100 + '%"></i></div>' +
         '<div class="sm">Mana ' + st.mana + '/' + st.maxMana + '</div><div class="bar mana"><i style="width:' + st.mana / st.maxMana * 100 + '%"></i></div>' +

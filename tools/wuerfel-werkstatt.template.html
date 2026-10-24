@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Würfel-Werkstatt</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+SC:wght@500;700&family=Alegreya+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --ink:#141416; --panel:#232327; --panel2:#2e2e33; --line:#4d4d55; --gold:#d2ad4f; --bone:#efe6d2; --mute:#aaaab2; --water:#52a6f5; --good:#7fd08a; --bad:#ff6b6b;
+  --f-display:"Alegreya SC",Georgia,serif; --f-body:"Alegreya Sans","Segoe UI",system-ui,sans-serif; --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--ink);color:var(--bone);font:16px/1.45 var(--f-body);margin:0;padding-block:20px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+h1{font:700 28px/1.1 var(--f-display);letter-spacing:.05em;margin:0;color:var(--gold)}
+h2{font:700 13px/1 var(--f-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--gold);margin:0 0 10px}
+header p{margin:6px 0 0;color:var(--mute);max-width:72ch}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--water);outline-offset:2px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 350px;gap:18px;align-items:start}
+@media(max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+.left{display:flex;flex-direction:column;gap:14px;min-width:0}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px}
+.stagebox{position:relative;border:1px solid var(--line);border-radius:10px;background:#0c0c0e;overflow:hidden;padding:12px 0}
+.board{position:relative;margin:0 auto;transform-origin:top left}
+.mcard{position:absolute;top:0;width:188px;height:408px;border:1px solid var(--line);border-radius:12px;background:#000;text-align:center;overflow:hidden;display:flex;flex-direction:column;padding:10px 8px}
+.mcard .pic{width:172px;height:196px;margin:0 auto 2px;border-radius:50%/60%;opacity:.95}
+.mcard .nm{font:500 18px var(--f-display);letter-spacing:.02em}
+.mcard .sm{font-size:15px;color:var(--mute);line-height:1.2}
+.mcard .vals{color:#e6e1d6;font-weight:700;margin-top:2px}
+.mcard .bar{height:10px;border-radius:5px;margin:3px 4px;background:#3a2a2a;overflow:hidden}.mcard .bar i{display:block;height:100%}
+.mcard .bar.hp i{background:linear-gradient(90deg,#b8454b,#e0737a)}.mcard .bar.mana i{background:linear-gradient(90deg,#3d78c9,#6fb0f5)}
+.mcard .btn{margin-top:auto;border:1px solid var(--line);background:var(--panel2);color:var(--mute);border-radius:6px;padding:3px 10px;font:500 15px var(--f-body)}
+.F{color:#ff7a3d}.E{color:#93c24f}.W{color:#52a6f5}
+.transport{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.btn{font:500 15px var(--f-body);background:var(--panel2);color:var(--bone);border:1px solid var(--line);border-radius:6px;padding:8px 14px;cursor:pointer}
+.btn:hover{border-color:var(--gold)}
+.btn.prim{background:#5b4a1d;border-color:var(--gold);color:#ffe9a8;font-weight:700}
+.picks{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+@media(max-width:600px){.picks{grid-template-columns:1fr}}
+.pick{display:flex;flex-direction:column;gap:6px;font-size:14px;color:var(--mute)}
+.pick label{display:flex;align-items:center;gap:8px}
+.pick .dot{width:12px;height:12px;border-radius:3px;flex:none}
+select,input[type=number],input[type=text],textarea{background:var(--panel2);color:var(--bone);border:1px solid var(--line);border-radius:6px;padding:5px 8px;font:inherit;min-width:0}
+select{flex:1}
+.gal{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+@media(max-width:700px){.gal{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.gal figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:4px}
+.gal .slot{position:relative;height:84px;width:100%}
+.gal figcaption{font-size:13px;color:var(--mute);text-align:center}
+.right{display:flex;flex-direction:column;gap:14px}
+.ctl{display:grid;grid-template-columns:1fr 54px;gap:2px 10px;align-items:center;margin-bottom:8px;font-size:14px}
+.ctl label{color:var(--bone)}
+.ctl output{font:500 13px var(--f-mono);color:var(--gold);text-align:right}
+.ctl input[type=range]{grid-column:1 / 3;width:100%;accent-color:var(--gold)}
+.row2{display:flex;gap:10px;align-items:center;margin-bottom:8px;font-size:14px}
+.row2 input[type=color]{width:44px;height:30px;border:1px solid var(--line);border-radius:6px;background:var(--panel2);padding:2px}
+.chk{display:flex;align-items:center;gap:8px;font-size:14px;margin-bottom:8px}
+textarea{width:100%;height:150px;font:500 12px/1.4 var(--f-mono);resize:vertical}
+.note{color:var(--mute);font-size:13px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Würfel-Werkstatt</h1>
+  <p>Ein grüner Pluswürfel und ein roter Minuswürfel liegen über jeder Monsterkarte und zeigen die Boni und Mali des Monsters. Hier stellst du Aussehen und Wurf ein; der Export (JSON) wird im Spiel in <code>DiceKit.P</code> (<code>src/ui/31a-wuerfel.js</code>) übernommen. Die Würfel sind dieselben wie im Spiel.</p>
+</header>
+<div class="grid">
+  <div class="left">
+    <div class="panel">
+      <h2>Monsterkarten</h2>
+      <div class="stagebox" id="stagebox"><div class="board" id="board"></div></div>
+      <div class="transport" style="margin-top:12px">
+        <button class="btn prim" id="throw3">Alle drei Monster würfeln</button>
+        <button class="btn" id="throwSel">Gewählte Seiten werfen</button>
+        <button class="btn" id="rest">Würfel hinlegen (ohne Wurf)</button>
+      </div>
+      <div class="picks" id="picks" style="margin-top:12px"></div>
+    </div>
+    <div class="panel">
+      <h2>Alle Seiten</h2>
+      <div class="gal" id="gal"></div>
+      <p class="note" style="margin-top:10px;margin-bottom:0">Beträge wie im Spiel (in allen Stufen gleich): 2 HP, 1 Mana, 1 Limit, 1 Ziehen (Nachziehlimit), 1 Hand (Handkarte), eine Seite leer. Grün macht das Monster in diesem Wert stärker, Rot schwächer; derselbe Wert auf beiden Würfeln hebt sich auf (die Würfel werden dann abgedunkelt).</p>
+    </div>
+  </div>
+  <div class="right">
+    <div class="panel" id="ctls"><h2>Würfel</h2></div>
+    <div class="panel">
+      <h2>Export / Import</h2>
+      <textarea id="json" spellcheck="false"></textarea>
+      <div class="transport" style="margin-top:8px"><button class="btn" id="copy">Kopieren</button><button class="btn" id="apply">Aus Feld übernehmen</button><button class="btn" id="reset">Standard</button></div>
+    </div>
+  </div>
+</div>
+</div>
+<script>
+/*KIT*/
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const DEF = JSON.parse(JSON.stringify(DiceKit.P));
+const AMOUNTS = [2, 1, 1, 1, 1, 0];   // wie MONSTER.variants.dice im Spiel, alle Stufen gleich
+const FACE_TXT = ['HP', 'Mana', 'Limit', 'Ziehen', 'Hand', 'leer'];
+const MON = [{ el: 'F', name: 'Feuerspezialist I' }, { el: 'E', name: 'Erdgeneralist I' }, { el: 'W', name: 'Wasserspezialist I' }];
+const COL = { F: ['#ff9a4d', '#5a1a08'], E: ['#9bd05a', '#25360f'], W: ['#6cb6ff', '#0f2a4a'] };
+const sel = [{ pl: 4, mi: 0 }, { pl: 1, mi: 5 }, { pl: 5, mi: 2 }];   // gewählte Seiten je Monster (−1 = Zufall)
+let dice = [], timer = 0;
+const R = { left: 0, step: 212, w: 188, top: 0 };
+
+/* Regler */
+const CTL = [
+  ['size', 'Größe der Würfel', 30, 90, 1, ' px'], ['glyph', 'Größe der Symbole', .3, .9, .01, ''], ['gap', 'Abstand der beiden Würfel', 0, 40, 1, ' px'], ['y', 'Höhe auf der Karte', 90, 260, 1, ' px'],
+  ['duration', 'Dauer des Wurfs', .5, 3.5, .05, ' s'], ['spins', 'Umdrehungen', 0, 5, 1, ''], ['bounces', 'Hüpfer', 0, 6, 1, ''], ['hop', 'Hüpfhöhe', 0, 120, 1, ' px'],
+  ['fromX', 'Start: waagerecht (rel.)', -600, 600, 5, ' px'], ['fromY', 'Start: senkrecht (rel.)', -500, 300, 5, ' px'],
+  ['tiltX', 'Kippung vorn/hinten', -60, 60, 1, '°'], ['tiltY', 'Kippung links/rechts', -60, 60, 1, '°'],
+  ['stagger', 'Versatz Plus/Minus', 0, 1, .02, ' s'], ['monsterStagger', 'Versatz zwischen Monstern', 0, 1.5, .02, ' s'], ['shadow', 'Schatten', 0, 1, .02, ''],
+];
+const ctls = $('ctls');
+CTL.forEach(([k, label, mn, mx, st, unit]) => {
+  const d = document.createElement('div'); d.className = 'ctl';
+  d.innerHTML = '<label for="c_' + k + '">' + label + '</label><output id="o_' + k + '"></output><input type="range" id="c_' + k + '" min="' + mn + '" max="' + mx + '" step="' + st + '">';
+  ctls.appendChild(d);
+  const inp = d.querySelector('input'), out = d.querySelector('output');
+  inp.addEventListener('input', () => { DiceKit.P[k] = +inp.value; out.textContent = (+inp.value).toFixed(st < 1 ? (st < .1 ? 2 : 1) : 0) + unit; schedule(); });
+});
+const extra = document.createElement('div');
+extra.innerHTML = '<div class="chk"><input type="checkbox" id="c_numbers"><label for="c_numbers">Beträge auf den Seiten zeigen (+2, −1 …)</label></div>' +
+  '<div class="row2"><label for="c_plus" style="flex:1">Farbe Pluswürfel</label><input type="color" id="c_plus"></div>' +
+  '<div class="row2"><label for="c_minus" style="flex:1">Farbe Minuswürfel</label><input type="color" id="c_minus"></div>';
+ctls.appendChild(extra);
+$('c_numbers').addEventListener('change', e => { DiceKit.P.numbers = e.target.checked ? 1 : 0; schedule(); });
+$('c_plus').addEventListener('input', e => { DiceKit.P.plus = e.target.value; schedule(); });
+$('c_minus').addEventListener('input', e => { DiceKit.P.minus = e.target.value; schedule(); });
+function syncCtl() {
+  CTL.forEach(([k, , , , st, unit]) => { $('c_' + k).value = DiceKit.P[k]; $('o_' + k).textContent = (+DiceKit.P[k]).toFixed(st < 1 ? (st < .1 ? 2 : 1) : 0) + unit; });
+  $('c_numbers').checked = !!DiceKit.P.numbers; $('c_plus').value = DiceKit.P.plus; $('c_minus').value = DiceKit.P.minus;
+  $('json').value = JSON.stringify(DiceKit.P, null, 1);
+}
+function schedule() { clearTimeout(timer); timer = setTimeout(() => { buildDice(false); buildGallery(); $('json').value = JSON.stringify(DiceKit.P, null, 1); }, 40); }
+
+/* Bühne mit drei Monsterkarten */
+const board = $('board');
+board.style.width = (2 * R.step + R.w) + 'px'; board.style.height = '408px';
+MON.forEach((m, i) => {
+  const c = document.createElement('div'); c.className = 'mcard'; c.style.left = (i * R.step) + 'px';
+  c.innerHTML = '<div class="pic" style="background:radial-gradient(ellipse at 50% 55%,' + COL[m.el][0] + ' 0%,' + COL[m.el][1] + ' 55%,#000 75%)"></div><div class="nm ' + m.el + '">' + m.name + '</div><div class="sm" style="height:18px">&nbsp;</div>' +
+    '<div class="sm">HP 3/3</div><div class="bar hp"><i style="width:100%"></i></div><div class="sm">Mana 5/5</div><div class="bar mana"><i style="width:100%"></i></div><div class="sm vals">Limit 2 · Hand 4 · Ziehen 2</div><button class="btn" disabled>Kämpfen</button>';
+  board.appendChild(c);
+});
+const box = $('stagebox');
+function fit() { const k = Math.min(1, (box.clientWidth - 16) / (2 * R.step + R.w)); board.style.transform = 'scale(' + k + ')'; board.style.marginLeft = Math.max(8, (box.clientWidth - (2 * R.step + R.w) * k) / 2) + 'px'; box.style.height = (408 * k + 24) + 'px'; }
+new ResizeObserver(fit).observe(box); fit();
+
+const faceOf = (v) => v < 0 ? Math.floor(Math.random() * 6) : v;
+function buildDice(doThrow) {
+  dice.forEach(d => { d.pl.remove(); d.mi.remove(); }); dice = [];
+  const P = DiceKit.P;
+  MON.forEach((m, i) => {
+    const pl = DiceKit.make(1, AMOUNTS), mi = DiceKit.make(-1, AMOUNTS), cx = i * R.step + R.w / 2;
+    const kp = doThrow ? faceOf(sel[i].pl) : (sel[i].pl < 0 ? 0 : sel[i].pl), km = doThrow ? faceOf(sel[i].mi) : (sel[i].mi < 0 ? 0 : sel[i].mi);
+    pl.style.left = (cx - P.gap / 2 - P.size) + 'px'; mi.style.left = (cx + P.gap / 2) + 'px'; pl.style.top = mi.style.top = P.y + 'px';
+    pl.title = '+ ' + FACE_TXT[kp]; mi.title = '− ' + FACE_TXT[km];
+    DiceKit.setRest(pl, kp); DiceKit.setRest(mi, km);
+    if (kp === km && kp !== 5) { pl.classList.add('dk-off'); mi.classList.add('dk-off'); }
+    board.appendChild(pl); board.appendChild(mi); dice.push({ pl, mi, kp, km });
+    if (doThrow) { const d0 = i * P.monsterStagger * 1000; DiceKit.roll(pl, kp, d0); DiceKit.roll(mi, km, d0 + P.stagger * 1000); }
+  });
+}
+$('throw3').addEventListener('click', () => { sel.forEach(s => { s.pl = -1; s.mi = -1; }); renderPicks(); buildDice(true); });
+$('throwSel').addEventListener('click', () => buildDice(true));
+$('rest').addEventListener('click', () => buildDice(false));
+
+/* Auswahl der Seiten je Monster */
+function renderPicks() {
+  const p = $('picks'); p.innerHTML = '';
+  MON.forEach((m, i) => {
+    const d = document.createElement('div'); d.className = 'pick';
+    const opts = k => '<option value="-1"' + (sel[i][k] < 0 ? ' selected' : '') + '>Zufall</option>' + FACE_TXT.map((t, f) => '<option value="' + f + '"' + (sel[i][k] === f ? ' selected' : '') + '>' + t + (AMOUNTS[f] ? ' ' + AMOUNTS[f] : '') + '</option>').join('');
+    d.innerHTML = '<b class="' + m.el + '">' + m.name + '</b><label><span class="dot" style="background:var(--good)"></span><select data-i="' + i + '" data-k="pl" aria-label="Pluswürfel ' + m.name + '">' + opts('pl') + '</select></label><label><span class="dot" style="background:var(--bad)"></span><select data-i="' + i + '" data-k="mi" aria-label="Minuswürfel ' + m.name + '">' + opts('mi') + '</select></label>';
+    p.appendChild(d);
+  });
+  p.querySelectorAll('select').forEach(s => s.addEventListener('change', () => { sel[+s.dataset.i][s.dataset.k] = +s.value; buildDice(false); }));
+}
+
+/* Alle zwölf Seiten */
+function buildGallery() {
+  const g = $('gal'); g.innerHTML = '';
+  [1, -1].forEach(sign => DiceKit.KINDS.forEach((k, i) => {
+    const f = document.createElement('figure'), slot = document.createElement('div'); slot.className = 'slot';
+    const die = DiceKit.make(sign, AMOUNTS); die.style.left = Math.max(0, (slot.offsetWidth || 70) / 2 - DiceKit.P.size / 2) + 'px'; die.style.left = '50%'; die.style.marginLeft = (-DiceKit.P.size / 2) + 'px'; die.style.top = '10px';
+    DiceKit.setRest(die, i); slot.appendChild(die); f.appendChild(slot);
+    const c = document.createElement('figcaption'); c.textContent = (sign > 0 ? '+' : '−') + FACE_TXT[i] + (AMOUNTS[i] ? ' ' + AMOUNTS[i] : ''); f.appendChild(c); g.appendChild(f);
+  }));
+}
+$('copy').addEventListener('click', () => { const t = $('json'); t.select(); try { navigator.clipboard.writeText(t.value); } catch (e) { document.execCommand('copy'); } });
+$('apply').addEventListener('click', () => { try { Object.assign(DiceKit.P, JSON.parse($('json').value)); syncCtl(); buildDice(false); buildGallery(); } catch (e) { alert('Kein gültiges JSON.'); } });
+$('reset').addEventListener('click', () => { Object.assign(DiceKit.P, DEF); syncCtl(); buildDice(false); buildGallery(); });
+
+syncCtl(); renderPicks(); buildDice(false); buildGallery();
+setTimeout(() => buildDice(true), 400);
+})();
+</script>
+</body>
+</html>

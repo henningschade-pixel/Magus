@@ -1,0 +1,124 @@
+/* ---------- Monster-Würfel (seit 0.4): ein grüner Pluswürfel und ein roter Minuswürfel je Monster ----------
+   Sie werden zu Beginn jedes Abschnitts auf die Monsterkarten geworfen und bleiben dort liegen (statt der benannten Effekte unter dem Namen).
+   DiceKit (zwischen den Markierungen) steht unverändert auch in werkstatt/wuerfel-werkstatt.html; dort lassen sich alle Werte einstellen,
+   der Export (JSON) wird in DiceKit.P übernommen. Ein Test prüft, dass beide Fassungen gleich sind. */
+/* DICEKIT BEGIN */
+const DiceKit = (() => {
+  const KINDS = ['hp', 'mana', 'limit', 'draws', 'hand', 'none'];   // Reihenfolge wie MONSTER.variants.dice (Seite 0 bis 5)
+  const NAMES = { hp: 'HP', mana: 'Mana', limit: 'Limit', draws: 'Ziehen', hand: 'Hand', none: 'leer' };
+  // Einstellungen (Werkstatt: Export einfügen)
+  const P = { size: 46, duration: 1.45, spins: 2, bounces: 3, hop: 38, fromX: -300, fromY: -230, tiltX: -24, tiltY: 20, stagger: 0.16, monsterStagger: 0.5, glyph: 0.6, numbers: 1, shadow: 0.5, plus: '#3f9d4d', minus: '#c0392b', gap: 8, y: 150 };
+  const GLYPH = {   // Symbole (48 × 48), Farbe über currentColor
+    hp: '<path d="M24 42C11 31 6 23 6 16.5A9.5 9.5 0 0 1 24 12a9.5 9.5 0 0 1 18 4.5C42 23 37 31 24 42Z" fill="currentColor"/>',
+    mana: '<path d="M24 5C32 16 38 23.5 38 30.5a14 14 0 0 1-28 0C10 23.5 16 16 24 5Z" fill="currentColor"/><path d="M17.5 31a6.5 6.5 0 0 0 5 6.2" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="3" stroke-linecap="round"/>',
+    limit: '<rect x="6" y="10" width="20" height="28" rx="3.5" fill="none" stroke="currentColor" stroke-width="3.4"/><path d="M30 24h13m-5.5-6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>',
+    draws: '<rect x="14" y="11" width="20" height="27" rx="3.5" fill="currentColor"/><path d="M40 20a16.5 16.5 0 1 0 1.2 9" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/><path d="M42.5 12.5 40.5 21 32 19" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>',
+    hand: '<g fill="currentColor"><rect x="7" y="13" width="17" height="25" rx="3" transform="rotate(-22 15 38)"/><rect x="15.5" y="9" width="17" height="25" rx="3" transform="rotate(0 24 38)" opacity=".92"/><rect x="24" y="13" width="17" height="25" rx="3" transform="rotate(22 33 38)"/></g>',
+    none: '<circle cx="24" cy="24" r="3.2" fill="currentColor" opacity=".35"/>',
+  };
+  // Welche Würfelseite zeigt zum Betrachter? [rotateX, rotateY] des Würfels in Ruhe
+  const REST = [[0, 0], [0, 180], [0, -90], [0, 90], [-90, 0], [90, 0]];
+  const FACE_T = ['rotateY(0deg)', 'rotateY(180deg)', 'rotateY(90deg)', 'rotateY(-90deg)', 'rotateX(90deg)', 'rotateX(-90deg)'];
+  let cssDone = false;
+  function css() {
+    if (cssDone) return; cssDone = true;
+    const st = document.createElement('style');
+    st.textContent = '.dk-die{position:absolute;perspective:420px;will-change:transform}' +
+      '.dk-cube{position:absolute;left:0;top:0;transform-style:preserve-3d}' +
+      '.dk-f{position:absolute;left:0;top:0;box-sizing:border-box;display:flex;align-items:center;justify-content:center;color:#fff6df;border:2px solid rgba(255,255,255,.32);background:linear-gradient(145deg,var(--c2),var(--c1));box-shadow:inset 0 0 10px rgba(0,0,0,.4);backface-visibility:hidden}' +
+      '.dk-f svg{display:block;filter:drop-shadow(0 1px 1px rgba(0,0,0,.45))}' +
+      '.dk-f b{position:absolute;right:4px;bottom:1px;font:700 15px/1 "Alegreya SC",Georgia,serif;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.8)}' +
+      '.dk-sh{position:absolute;left:12%;right:12%;bottom:-5px;height:10px;border-radius:50%;background:#000;filter:blur(3px);pointer-events:none}' +
+      '.dk-die.dk-off{opacity:.5;filter:saturate(.45)}';
+    document.head.appendChild(st);
+  }
+  function shade(hex, k) { const n = parseInt(hex.slice(1), 16), f = c => Math.max(0, Math.min(255, Math.round(c + (k > 0 ? (255 - c) * k : c * k)))); return 'rgb(' + f(n >> 16 & 255) + ',' + f(n >> 8 & 255) + ',' + f(n & 255) + ')'; }
+  // Würfel bauen: sign +1 (grün) / −1 (rot), amounts: Betrag je Seite (0 = keiner) für die Beschriftung
+  function make(sign, amounts, o) {
+    css(); o = Object.assign({}, P, o || {});
+    const S = o.size, col = sign > 0 ? o.plus : o.minus, el = document.createElement('div');
+    el.className = 'dk-die'; el.style.cssText = 'width:' + S + 'px;height:' + S + 'px;--c1:' + col + ';--c2:' + shade(col, .32);
+    const sh = document.createElement('div'); sh.className = 'dk-sh'; sh.style.opacity = o.shadow; el.appendChild(sh);
+    const cube = document.createElement('div'); cube.className = 'dk-cube'; cube.style.cssText = 'width:' + S + 'px;height:' + S + 'px'; el.appendChild(cube);
+    KINDS.forEach((k, i) => {
+      const f = document.createElement('div'); f.className = 'dk-f'; f.style.cssText = 'width:' + S + 'px;height:' + S + 'px;border-radius:' + Math.round(S * .2) + 'px;transform:' + FACE_T[i] + ' translateZ(' + (S / 2) + 'px)';
+      const g = Math.round(S * o.glyph), n = amounts && amounts[i];
+      f.innerHTML = '<svg width="' + g + '" height="' + g + '" viewBox="0 0 48 48">' + GLYPH[k] + '</svg>' + (o.numbers && n ? '<b style="font-size:' + Math.round(S * .3) + 'px">' + (sign > 0 ? '+' : '−') + n + '</b>' : '');
+      cube.appendChild(f);
+    });
+    el._k = 0; el._cube = cube; el._o = o; el._sh = sh; el._sign = sign;
+    return el;
+  }
+  const rot = (o, rx, ry, rz) => 'rotateX(' + o.tiltX + 'deg) rotateY(' + o.tiltY + 'deg) rotateZ(' + (rz || 0) + 'deg) rotateX(' + rx + 'deg) rotateY(' + ry + 'deg)';
+  function setRest(el, k) { el._k = k; const r = REST[k]; el._cube.style.transform = rot(el._o, r[0], r[1], 0); }
+  // Wurf: Der Würfel fliegt von (fromX, fromY) relativ zu seinem Platz heran, hüpft, dreht sich und bleibt mit Seite k nach oben liegen. cb nach der Landung.
+  function roll(el, k, delay, cb, o2) {
+    const o = Object.assign({}, el._o, o2 || {}), r = REST[k], rnd = () => Math.random() * 2 - 1, dir = () => (Math.random() < .5 ? -1 : 1);
+    const sx = o.spins * 360 * dir() + rnd() * 90, sy = o.spins * 360 * dir() + rnd() * 90, sz = rnd() * 70, dur = Math.max(.2, o.duration) * 1000;
+    el._k = k; el.style.visibility = 'hidden'; el._cube.style.transform = rot(o, r[0] + sx, r[1] + sy, sz);
+    let t0 = 0, landed = false;
+    const step = ts => {
+      if (!el.isConnected && t0) return;
+      if (!t0) t0 = ts;
+      const u = Math.min(1, (ts - t0) / dur), e = 1 - Math.pow(1 - u, 3), spin = 1 - Math.pow(1 - u, 2.2);
+      const hopA = o.hop * Math.pow(1 - u, 1.4) * Math.abs(Math.sin(Math.PI * o.bounces * Math.pow(u, .85)));   // Hüpfer mit abnehmender Höhe
+      const x = o.fromX * (1 - e), y = o.fromY * (1 - e) - (o.bounces > 0 ? hopA : 0);
+      el.style.transform = 'translate(' + x + 'px,' + y + 'px)';
+      el._cube.style.transform = rot(o, r[0] + sx * (1 - spin), r[1] + sy * (1 - spin), sz * (1 - spin));
+      el._sh.style.transform = 'scale(' + (1 - Math.min(.5, Math.abs(y) / 260)) + ')'; el._sh.style.opacity = o.shadow * (1 - Math.min(.7, Math.abs(y) / 300));
+      if (u < 1) requestAnimationFrame(step); else if (!landed) { landed = true; el.style.transform = ''; setRest(el, k); if (cb) cb(); }
+    };
+    setTimeout(() => { el.style.visibility = ''; requestAnimationFrame(step); }, Math.max(0, delay || 0));
+  }
+  return { P, KINDS, NAMES, make, setRest, roll, REST, shade };
+})();
+/* DICEKIT END */
+
+// Spielbrett: legt die Würfel der drei Monster über die Monsterkarten der Weltphase. Die Würfel liegen in einer eigenen Ebene (die Karten werden bei jedem Zeichnen neu gebaut).
+const DiceBoard = (() => {
+  let layer = null, mons = null, items = [], thrown = false;
+  const V = () => M.MONSTER.variants;
+  function ensure() { if (!layer) { layer = document.createElement('div'); layer.id = 'dicelayer'; layer.style.cssText = 'position:absolute;left:0;top:0;width:1280px;height:800px;z-index:45;pointer-events:none'; stage.appendChild(layer); } return layer; }
+  function tip(sign, face, n, same) {
+    const k = face.k, nm = V().diceNames[k];
+    if (k === 'none') return (sign > 0 ? 'Pluswürfel' : 'Minuswürfel') + ': leere Seite, keine Wirkung.';
+    return (sign > 0 ? 'Pluswürfel: +' : 'Minuswürfel: −') + n + ' ' + nm + ' (' + (sign > 0 ? 'mehr ' : 'weniger ') + V().diceHints[k] + ').' + (same ? ' Beide Würfel zeigen denselben Wert: die Wirkungen heben sich auf.' : '');
+  }
+  function build() {
+    items.forEach(it => { it.pl.remove(); it.mi.remove(); }); items = [];
+    const R = LAYOUT.monsters, D = V().dice, amounts = (die, stage) => DiceKit.KINDS.map((k, i) => (k === 'none' ? 0 : die[i].n[stage - 1]));
+    M.ELEMENTS.forEach((slot, i) => {
+      const m = G.monsters[slot], v = m && m.variant;
+      if (!v || !(v.pl >= 0) || !(v.mi >= 0)) { items.push(null); return; }
+      const P = DiceKit.P, S = P.size, cx = R.left + i * R.step + R.w / 2, same = D.plus[v.pl].k === D.minus[v.mi].k;
+      const pl = DiceKit.make(1, amounts(D.plus, m.stage)), mi = DiceKit.make(-1, amounts(D.minus, m.stage));
+      pl.style.left = (cx - P.gap / 2 - S) + 'px'; mi.style.left = (cx + P.gap / 2) + 'px'; pl.style.top = mi.style.top = (R.top + P.y) + 'px';
+      pl.style.pointerEvents = mi.style.pointerEvents = 'auto';
+      pl.title = tip(1, D.plus[v.pl], D.plus[v.pl].n[m.stage - 1], same); mi.title = tip(-1, D.minus[v.mi], D.minus[v.mi].n[m.stage - 1], same);
+      if (same) { pl.classList.add('dk-off'); mi.classList.add('dk-off'); }
+      DiceKit.setRest(pl, v.pl); DiceKit.setRest(mi, v.mi); pl.style.visibility = mi.style.visibility = 'hidden';
+      layer.appendChild(pl); layer.appendChild(mi); items.push({ slot, pl, mi, v });
+    });
+    thrown = false;
+  }
+  function throwAll() {
+    thrown = true;
+    items.forEach((it, i) => {
+      if (!it) return;
+      const P = DiceKit.P, d0 = i * P.monsterStagger * 1000;
+      [it.pl, it.mi].forEach((el, j) => { const k = j ? it.v.mi : it.v.pl; DiceKit.roll(el, k, d0 + j * P.stagger * 1000, () => { if (!FAST) Snd.play('flip', 0, .5); }); });
+    });
+  }
+  // Nach jedem Zeichnen: neue Monster -> neue Würfel; sichtbar nur in der Weltphase ohne Überlagerung; geworfen wird, sobald sie sichtbar sind
+  function sync() {
+    if (!G || FAST) return;
+    ensure();
+    if (mons !== G.monsters) { mons = G.monsters; build(); }
+    const visible = G.phase === 'world' && !G.over && !endView && !modal && overlay.style.display === 'none';
+    layer.style.display = visible ? '' : 'none';
+    if (!visible) return;
+    items.forEach(it => { if (!it) return; const alive = M.monsterAlive(G.monsters[it.slot]); it.pl.style.display = it.mi.style.display = alive ? '' : 'none'; });
+    if (!thrown) throwAll();
+  }
+  return { sync };
+})();
