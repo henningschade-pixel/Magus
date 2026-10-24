@@ -6,8 +6,8 @@
 const DiceKit = (() => {
   const KINDS = ['hp', 'mana', 'limit', 'draws', 'hand', 'none'];   // Reihenfolge wie MONSTER.variants.dice (Seite 0 bis 5)
   const NAMES = { hp: 'HP', mana: 'Mana', limit: 'Limit', draws: 'Ziehen', hand: 'Hand', none: 'leer' };
-  // Einstellungen (Werkstatt: Export einfügen)
-  const P = { size: 46, duration: 1.45, spins: 2, bounces: 3, hop: 38, fromX: -300, fromY: -230, tiltX: -24, tiltY: 20, stagger: 0.16, monsterStagger: 0.5, glyph: 0.6, numbers: 1, shadow: 0.5, plus: '#3f9d4d', minus: '#c0392b', gap: 8, y: 150 };
+  // Einstellungen (Werkstatt: Export einfügen). tiltX/tiltY: Kippung im Flug, restTiltX/restTiltY: Kippung in Ruhe (0 = die Symbole stehen gerade); vary: Stärke der Abweichung je Monster (0 = keine)
+  const P = { size: 46, duration: 1.45, spins: 2, bounces: 3, hop: 38, fromX: -300, fromY: -230, tiltX: -24, tiltY: 20, restTiltX: 0, restTiltY: 0, vary: 1, stagger: 0.16, monsterStagger: 0.5, glyph: 0.6, numbers: 1, shadow: 0.5, plus: '#3f9d4d', minus: '#c0392b', gap: 8, y: 150 };
   const GLYPH = {   // Symbole (48 × 48), Farbe über currentColor
     hp: '<path d="M24 42C11 31 6 23 6 16.5A9.5 9.5 0 0 1 24 12a9.5 9.5 0 0 1 18 4.5C42 23 37 31 24 42Z" fill="currentColor"/>',
     mana: '<path d="M24 5C32 16 38 23.5 38 30.5a14 14 0 0 1-28 0C10 23.5 16 16 24 5Z" fill="currentColor"/><path d="M17.5 31a6.5 6.5 0 0 0 5 6.2" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="3" stroke-linecap="round"/>',
@@ -36,12 +36,16 @@ const DiceKit = (() => {
   // Würfel bauen: sign +1 (grün) / −1 (rot), amounts: Betrag je Seite (0 = keiner) für die Beschriftung
   function make(sign, amounts, o) {
     css(); o = Object.assign({}, P, o || {});
-    const S = o.size, col = sign > 0 ? o.plus : o.minus, el = document.createElement('div');
+    const S = o.size, col = o.color || (sign > 0 ? o.plus : o.minus), el = document.createElement('div');
     el.className = 'dk-die'; el.style.cssText = 'width:' + S + 'px;height:' + S + 'px;--c1:' + col + ';--c2:' + shade(col, .32);
     const sh = document.createElement('div'); sh.className = 'dk-sh'; sh.style.opacity = o.shadow; el.appendChild(sh);
     const cube = document.createElement('div'); cube.className = 'dk-cube'; cube.style.cssText = 'width:' + S + 'px;height:' + S + 'px'; el.appendChild(cube);
+    FACE_T.forEach(t => {   // Kern: sechs volle Quadrate knapp unter den Seiten, damit an den Ecken und Kanten nichts durchscheint
+      const c = document.createElement('div'); c.style.cssText = 'position:absolute;left:0;top:0;width:' + S + 'px;height:' + S + 'px;background:' + shade(col, -.25) + ';backface-visibility:hidden;transform:' + t + ' translateZ(' + (S / 2 - 2) + 'px)';
+      cube.appendChild(c);
+    });
     KINDS.forEach((k, i) => {
-      const f = document.createElement('div'); f.className = 'dk-f'; f.style.cssText = 'width:' + S + 'px;height:' + S + 'px;border-radius:' + Math.round(S * .2) + 'px;transform:' + FACE_T[i] + ' translateZ(' + (S / 2) + 'px)';
+      const f = document.createElement('div'); f.className = 'dk-f'; f.style.cssText = 'width:' + S + 'px;height:' + S + 'px;border-radius:' + Math.round(S * .12) + 'px;transform:' + FACE_T[i] + ' translateZ(' + (S / 2) + 'px)';
       const g = Math.round(S * o.glyph), n = amounts && amounts[i];
       f.innerHTML = '<svg width="' + g + '" height="' + g + '" viewBox="0 0 48 48">' + GLYPH[k] + '</svg>' + (o.numbers && n ? '<b style="font-size:' + Math.round(S * .3) + 'px">' + (sign > 0 ? '+' : '−') + n + '</b>' : '');
       cube.appendChild(f);
@@ -49,13 +53,13 @@ const DiceKit = (() => {
     el._k = 0; el._cube = cube; el._o = o; el._sh = sh; el._sign = sign;
     return el;
   }
-  const rot = (o, rx, ry, rz) => 'rotateX(' + o.tiltX + 'deg) rotateY(' + o.tiltY + 'deg) rotateZ(' + (rz || 0) + 'deg) rotateX(' + rx + 'deg) rotateY(' + ry + 'deg)';
-  function setRest(el, k) { el._k = k; const r = REST[k]; el._cube.style.transform = rot(el._o, r[0], r[1], 0); }
+  const rot = (tx, ty, rx, ry, rz) => 'rotateX(' + tx + 'deg) rotateY(' + ty + 'deg) rotateZ(' + (rz || 0) + 'deg) rotateX(' + rx + 'deg) rotateY(' + ry + 'deg)';
+  function setRest(el, k) { el._k = k; const r = REST[k]; el._cube.style.transform = rot(el._o.restTiltX, el._o.restTiltY, r[0], r[1], 0); }
   // Wurf: Der Würfel fliegt von (fromX, fromY) relativ zu seinem Platz heran, hüpft, dreht sich und bleibt mit Seite k nach oben liegen. cb nach der Landung.
   function roll(el, k, delay, cb, o2) {
     const o = Object.assign({}, el._o, o2 || {}), r = REST[k], rnd = () => Math.random() * 2 - 1, dir = () => (Math.random() < .5 ? -1 : 1);
     const sx = o.spins * 360 * dir() + rnd() * 90, sy = o.spins * 360 * dir() + rnd() * 90, sz = rnd() * 70, dur = Math.max(.2, o.duration) * 1000;
-    el._k = k; el.style.visibility = 'hidden'; el._cube.style.transform = rot(o, r[0] + sx, r[1] + sy, sz);
+    el._k = k; el.style.visibility = 'hidden'; el._cube.style.transform = rot(o.tiltX, o.tiltY, r[0] + sx, r[1] + sy, sz);
     let t0 = 0, landed = false;
     const step = ts => {
       if (!el.isConnected && t0) return;
@@ -64,13 +68,31 @@ const DiceKit = (() => {
       const hopA = o.hop * Math.pow(1 - u, 1.4) * Math.abs(Math.sin(Math.PI * o.bounces * Math.pow(u, .85)));   // Hüpfer mit abnehmender Höhe
       const x = o.fromX * (1 - e), y = o.fromY * (1 - e) - (o.bounces > 0 ? hopA : 0);
       el.style.transform = 'translate(' + x + 'px,' + y + 'px)';
-      el._cube.style.transform = rot(o, r[0] + sx * (1 - spin), r[1] + sy * (1 - spin), sz * (1 - spin));
+      const tl = Math.pow(u, 1.6); el._cube.style.transform = rot(o.tiltX + (o.restTiltX - o.tiltX) * tl, o.tiltY + (o.restTiltY - o.tiltY) * tl, r[0] + sx * (1 - spin), r[1] + sy * (1 - spin), sz * (1 - spin));   // die Kippung läuft bis zur Landung auf den Ruhewert aus
       el._sh.style.transform = 'scale(' + (1 - Math.min(.5, Math.abs(y) / 260)) + ')'; el._sh.style.opacity = o.shadow * (1 - Math.min(.7, Math.abs(y) / 300));
       if (u < 1) requestAnimationFrame(step); else if (!landed) { landed = true; el.style.transform = ''; setRest(el, k); if (cb) cb(); }
     };
     setTimeout(() => { el.style.visibility = ''; requestAnimationFrame(step); }, Math.max(0, delay || 0));
   }
-  return { P, KINDS, NAMES, make, setRest, roll, REST, shade };
+  // Farbton und Helligkeit leicht verschieben
+  function tint(hex, dh, dl) {
+    const n = parseInt(hex.slice(1), 16); let r = (n >> 16 & 255) / 255, g = (n >> 8 & 255) / 255, b = (n & 255) / 255;
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b); let h = 0, s = 0, l = (mx + mn) / 2;
+    if (mx !== mn) { const d = mx - mn; s = l > .5 ? d / (2 - mx - mn) : d / (mx + mn); h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h *= 60; }
+    h = (h + dh + 360) % 360; l = Math.max(.12, Math.min(.85, l + dl));
+    const q = l < .5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q, f = t => { t = (t + 360) % 360 / 360; return Math.round(255 * (t < 1 / 6 ? p + (q - p) * 6 * t : t < .5 ? q : t < 2 / 3 ? p + (q - p) * (2 / 3 - t) * 6 : p)); };
+    const to = x => ('0' + x.toString(16)).slice(-2);
+    return '#' + to(f(h + 120)) + to(f(h)) + to(f(h - 120));
+  }
+  // Abweichung je Monster aus einer Zahl (seed): Größe, Farbton, Lage und Wurf der beiden Würfel unterscheiden sich leicht. Rückgabe: Überschreibungen für make() und roll() sowie Versatz der Würfel.
+  function vary(seed, k) {
+    k = (k === undefined ? P.vary : k);
+    let a = (seed * 2654435761 + 1013904223) >>> 0; const r = () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return (((t ^ (t >>> 14)) >>> 0) / 4294967296) * 2 - 1; };
+    const one = sign => ({ size: Math.round(P.size * (1 + .07 * k * r())), color: tint(sign > 0 ? P.plus : P.minus, 7 * k * r(), .05 * k * r()), dx: Math.round(5 * k * r()), dy: Math.round(5 * k * r()),
+      roll: { duration: P.duration * (1 + .14 * k * r()), spins: Math.max(0, P.spins + Math.round(k * r())), fromX: P.fromX * (1 + .18 * k * r()), fromY: P.fromY * (1 + .18 * k * r()), hop: P.hop * (1 + .2 * k * r()), bounces: Math.max(0, P.bounces + Math.round(.6 * k * r())) } });
+    return { plus: one(1), minus: one(-1) };
+  }
+  return { P, KINDS, NAMES, make, setRest, roll, REST, shade, tint, vary };
 })();
 /* DICEKIT END */
 
@@ -90,14 +112,14 @@ const DiceBoard = (() => {
     M.ELEMENTS.forEach((slot, i) => {
       const m = G.monsters[slot], v = m && m.variant;
       if (!v || !(v.pl >= 0) || !(v.mi >= 0)) { items.push(null); return; }
-      const P = DiceKit.P, S = P.size, cx = R.left + i * R.step + R.w / 2, same = D.plus[v.pl].k === D.minus[v.mi].k;
-      const pl = DiceKit.make(1, amounts(D.plus, m.stage)), mi = DiceKit.make(-1, amounts(D.minus, m.stage));
-      pl.style.left = (cx - P.gap / 2 - S) + 'px'; mi.style.left = (cx + P.gap / 2) + 'px'; pl.style.top = mi.style.top = (R.top + P.y) + 'px';
+      const P = DiceKit.P, cx = R.left + i * R.step + R.w / 2, same = D.plus[v.pl].k === D.minus[v.mi].k, vr = DiceKit.vary((G.seed || 0) * 7 + G.stage * 131 + i * 17 + 1);   // je Monster leicht andere Würfel, bei allen Spielern gleich (aus dem Spielzufall)
+      const pl = DiceKit.make(1, amounts(D.plus, m.stage), vr.plus), mi = DiceKit.make(-1, amounts(D.minus, m.stage), vr.minus);
+      pl.style.left = (cx - P.gap / 2 - vr.plus.size + vr.plus.dx) + 'px'; mi.style.left = (cx + P.gap / 2 + vr.minus.dx) + 'px'; pl.style.top = (R.top + P.y + vr.plus.dy) + 'px'; mi.style.top = (R.top + P.y + vr.minus.dy) + 'px';
       pl.style.pointerEvents = mi.style.pointerEvents = 'auto';
       pl.title = tip(1, D.plus[v.pl], D.plus[v.pl].n[m.stage - 1], same); mi.title = tip(-1, D.minus[v.mi], D.minus[v.mi].n[m.stage - 1], same);
       if (same) { pl.classList.add('dk-off'); mi.classList.add('dk-off'); }
       DiceKit.setRest(pl, v.pl); DiceKit.setRest(mi, v.mi); pl.style.visibility = mi.style.visibility = 'hidden';
-      layer.appendChild(pl); layer.appendChild(mi); items.push({ slot, pl, mi, v });
+      layer.appendChild(pl); layer.appendChild(mi); items.push({ slot, pl, mi, v, vr });
     });
     thrown = false;
   }
@@ -106,7 +128,7 @@ const DiceBoard = (() => {
     items.forEach((it, i) => {
       if (!it) return;
       const P = DiceKit.P, d0 = i * P.monsterStagger * 1000;
-      [it.pl, it.mi].forEach((el, j) => { const k = j ? it.v.mi : it.v.pl; DiceKit.roll(el, k, d0 + j * P.stagger * 1000, () => { if (!FAST) Snd.play('flip', 0, .5); }); });
+      [it.pl, it.mi].forEach((el, j) => { const k = j ? it.v.mi : it.v.pl; DiceKit.roll(el, k, d0 + j * P.stagger * 1000, () => { if (!FAST) Snd.play('flip', 0, .5); }, (j ? it.vr.minus : it.vr.plus).roll); });
     });
   }
   // Nach jedem Zeichnen: neue Monster -> neue Würfel; sichtbar nur in der Weltphase ohne Überlagerung; geworfen wird, sobald sie sichtbar sind

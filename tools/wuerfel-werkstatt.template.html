@@ -109,7 +109,7 @@ const FACE_TXT = ['HP', 'Mana', 'Limit', 'Ziehen', 'Hand', 'leer'];
 const MON = [{ el: 'F', name: 'Feuerspezialist I' }, { el: 'E', name: 'Erdgeneralist I' }, { el: 'W', name: 'Wasserspezialist I' }];
 const COL = { F: ['#ff9a4d', '#5a1a08'], E: ['#9bd05a', '#25360f'], W: ['#6cb6ff', '#0f2a4a'] };
 const sel = [{ pl: 4, mi: 0 }, { pl: 1, mi: 5 }, { pl: 5, mi: 2 }];   // gewählte Seiten je Monster (−1 = Zufall)
-let dice = [], timer = 0;
+let dice = [], timer = 0, seeds = [11, 22, 33];
 const R = { left: 0, step: 212, w: 188, top: 0 };
 
 /* Regler */
@@ -117,7 +117,7 @@ const CTL = [
   ['size', 'Größe der Würfel', 30, 90, 1, ' px'], ['glyph', 'Größe der Symbole', .3, .9, .01, ''], ['gap', 'Abstand der beiden Würfel', 0, 40, 1, ' px'], ['y', 'Höhe auf der Karte', 90, 260, 1, ' px'],
   ['duration', 'Dauer des Wurfs', .5, 3.5, .05, ' s'], ['spins', 'Umdrehungen', 0, 5, 1, ''], ['bounces', 'Hüpfer', 0, 6, 1, ''], ['hop', 'Hüpfhöhe', 0, 120, 1, ' px'],
   ['fromX', 'Start: waagerecht (rel.)', -600, 600, 5, ' px'], ['fromY', 'Start: senkrecht (rel.)', -500, 300, 5, ' px'],
-  ['tiltX', 'Kippung vorn/hinten', -60, 60, 1, '°'], ['tiltY', 'Kippung links/rechts', -60, 60, 1, '°'],
+  ['tiltX', 'Kippung im Flug vorn/hinten', -60, 60, 1, '°'], ['tiltY', 'Kippung im Flug links/rechts', -60, 60, 1, '°'], ['restTiltX', 'Kippung in Ruhe vorn/hinten', -30, 30, 1, '°'], ['restTiltY', 'Kippung in Ruhe links/rechts', -30, 30, 1, '°'], ['vary', 'Variation je Monster', 0, 2, .05, ''],
   ['stagger', 'Versatz Plus/Minus', 0, 1, .02, ' s'], ['monsterStagger', 'Versatz zwischen Monstern', 0, 1.5, .02, ' s'], ['shadow', 'Schatten', 0, 1, .02, ''],
 ];
 const ctls = $('ctls');
@@ -158,17 +158,18 @@ new ResizeObserver(fit).observe(box); fit();
 
 const faceOf = (v) => v < 0 ? Math.floor(Math.random() * 6) : v;
 function buildDice(doThrow) {
+  if (doThrow) seeds = seeds.map(() => Math.floor(Math.random() * 1e6));   // jeder Wurf: neue Abweichungen
   dice.forEach(d => { d.pl.remove(); d.mi.remove(); }); dice = [];
   const P = DiceKit.P;
   MON.forEach((m, i) => {
-    const pl = DiceKit.make(1, AMOUNTS), mi = DiceKit.make(-1, AMOUNTS), cx = i * R.step + R.w / 2;
+    const vr = DiceKit.vary(seeds[i]), pl = DiceKit.make(1, AMOUNTS, vr.plus), mi = DiceKit.make(-1, AMOUNTS, vr.minus), cx = i * R.step + R.w / 2;
     const kp = doThrow ? faceOf(sel[i].pl) : (sel[i].pl < 0 ? 0 : sel[i].pl), km = doThrow ? faceOf(sel[i].mi) : (sel[i].mi < 0 ? 0 : sel[i].mi);
-    pl.style.left = (cx - P.gap / 2 - P.size) + 'px'; mi.style.left = (cx + P.gap / 2) + 'px'; pl.style.top = mi.style.top = P.y + 'px';
+    pl.style.left = (cx - P.gap / 2 - vr.plus.size + vr.plus.dx) + 'px'; mi.style.left = (cx + P.gap / 2 + vr.minus.dx) + 'px'; pl.style.top = (P.y + vr.plus.dy) + 'px'; mi.style.top = (P.y + vr.minus.dy) + 'px';
     pl.title = '+ ' + FACE_TXT[kp]; mi.title = '− ' + FACE_TXT[km];
     DiceKit.setRest(pl, kp); DiceKit.setRest(mi, km);
     if (kp === km && kp !== 5) { pl.classList.add('dk-off'); mi.classList.add('dk-off'); }
     board.appendChild(pl); board.appendChild(mi); dice.push({ pl, mi, kp, km });
-    if (doThrow) { const d0 = i * P.monsterStagger * 1000; DiceKit.roll(pl, kp, d0); DiceKit.roll(mi, km, d0 + P.stagger * 1000); }
+    if (doThrow) { const d0 = i * P.monsterStagger * 1000; DiceKit.roll(pl, kp, d0, null, vr.plus.roll); DiceKit.roll(mi, km, d0 + P.stagger * 1000, null, vr.minus.roll); }
   });
 }
 $('throw3').addEventListener('click', () => { sel.forEach(s => { s.pl = -1; s.mi = -1; }); renderPicks(); buildDice(true); });
@@ -192,7 +193,7 @@ function buildGallery() {
   const g = $('gal'); g.innerHTML = '';
   [1, -1].forEach(sign => DiceKit.KINDS.forEach((k, i) => {
     const f = document.createElement('figure'), slot = document.createElement('div'); slot.className = 'slot';
-    const die = DiceKit.make(sign, AMOUNTS); die.style.left = Math.max(0, (slot.offsetWidth || 70) / 2 - DiceKit.P.size / 2) + 'px'; die.style.left = '50%'; die.style.marginLeft = (-DiceKit.P.size / 2) + 'px'; die.style.top = '10px';
+    const die = DiceKit.make(sign, AMOUNTS); die.style.left = '50%'; die.style.marginLeft = (-DiceKit.P.size / 2) + 'px'; die.style.top = '10px';
     DiceKit.setRest(die, i); slot.appendChild(die); f.appendChild(slot);
     const c = document.createElement('figcaption'); c.textContent = (sign > 0 ? '+' : '−') + FACE_TXT[i] + (AMOUNTS[i] ? ' ' + AMOUNTS[i] : ''); f.appendChild(c); g.appendChild(f);
   }));
