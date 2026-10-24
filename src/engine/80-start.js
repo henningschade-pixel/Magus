@@ -45,7 +45,7 @@ function snapshot(state) {
   const hand = d => d && d.hand ? d.hand.map(x => x ? x.id : null) : null;
   const s = { phase: state.phase, stage: state.stage, showdown: state.showdown, turn: state.turn, worldTurns: state.worldTurns,
     players: state.players.map(p => ({ name: p.name, sp: p.sp, stats: prim(p.stats), hand: hand(p.deck) })),
-    monsters: state.monsters ? Object.keys(state.monsters).map(e => ({ elem: e, stats: prim(state.monsters[e].stats) })) : null };
+    monsters: state.monsters ? Object.keys(state.monsters).map(e => ({ elem: state.monsters[e].el, stats: prim(state.monsters[e].stats) })) : null };
   if (state.combat) { const c = state.combat; s.combat = { mode: c.mode, turn: c.turn, turns: c.turns, action: c.action, att: c.att, sides: ['a', 'b'].map(k => ({ ctrl: c.sides[k].ctrl, stats: prim(c.sides[k].stats), hand: hand(c.sides[k].deck) })) }; }
   return s;
 }
@@ -108,5 +108,5 @@ return { ELEMENTS, SUPERIOR, NAMES, START_DECK, MAX_MAGIC, MAX_SLOTS, MIN_SLOTS,
   makeRng, parseCard, selection, newGame, apply, record, prim, actor, other, regen, handCounts,
   vendorOffers, vendorPlans, previewTemple, pointsForGold, nextLevelCost, limitStepCost, manaStepCost, hpStepCost, slotStepCost, magicCost, drawLimitCost, upField, magicField, payTxt,
   evalAttack, evalDefense, canFlee, stockOf, recoverGain, regenGain, comboLevels, levelsFor,
-  mirrorOf, monsterAlive, allMonstersDead, magicProgress, spawnMonsters, spawnForGame };
+  mirrorOf, monsterAlive, monsterHand, allMonstersDead, magicProgress, spawnMonsters, spawnForGame };
 }));

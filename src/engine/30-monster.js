@@ -107,16 +107,26 @@ function spawnOne(el, stage, rng, v) {
   rng.shuffle(finalDeck);
   return { el, name: M.names[el] + ' ' + STAGE_NUMERAL[stage], label: tags.join(', '), hints, variant: v, stage, stats, deckIds: finalDeck };
 }
-// Mit ‚rng‘ (aus dem Spiel abgeleitet) werden Deckform und beide Würfel gewürfelt; ohne bleibt es die feste Grundform.
+// Mit ‚rng‘ (aus dem Spiel abgeleitet) werden Monster, Deckform und beide Würfel gewürfelt; ohne bleibt es die feste Grundform.
 function spawnMonsters(stage, rng) {
   const out = {};
   const r = rng || makeRng(stage * 7919);
-  for (const e of ELEMENTS) {
-    const v = rng ? { d: rng.randint(1, 2), pl: rng.randint(0, 5), mi: rng.randint(0, 5) } : null;
-    out[e] = spawnOne(e, stage, r, v);
+  // Mit Zufall: 3 der 6 möglichen Monster (Element × Form) ohne Zurücklegen; ein Element darf also doppelt vorkommen (dann in beiden Formen), ein anderes fehlen.
+  // Die Plätze heißen weiter F, E, W (Reihenfolge von links nach rechts); das Element eines Monsters steht in ‚el‘.
+  let picks = ELEMENTS.map(e => ({ el: e, d: 0 }));
+  if (rng) {
+    const all = []; ELEMENTS.forEach(e => [1, 2].forEach(d => all.push({ el: e, d })));
+    picks = []; while (picks.length < 3) picks.push(all.splice(rng.randint(0, all.length - 1), 1)[0]);
+    picks.sort((a, b) => ELEMENTS.indexOf(a.el) - ELEMENTS.indexOf(b.el) || a.d - b.d);
   }
+  ELEMENTS.forEach((slot, i) => {
+    const v = rng ? { d: picks[i].d, pl: rng.randint(0, 5), mi: rng.randint(0, 5) } : null;
+    out[slot] = spawnOne(picks[i].el, stage, r, v);
+  });
   return out;
 }
+// Handkarten eines Monsters: Limit + 2 (mindestens 3), dazu die Würfel-Seite „Hand“ (mindestens 2).
+function monsterHand(m) { return Math.max(2, Math.max(MIN_SLOTS, m.stats.limit + 2) + (m.stats.handExtra || 0)); }
 function monsterAlive(m) { return m.stats.hp > 0; }
 // Monsterphase vorbei: alle drei Monster sind besiegt.
 function allMonstersDead(state) { return ELEMENTS.every(e => !monsterAlive(state.monsters[e])); }

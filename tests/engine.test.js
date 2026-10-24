@@ -114,7 +114,7 @@ test('Monster-Würfel (0.4): Deckform spitz/breit, ein Plus- und ein Minuswürfe
   for (const st of [1, 2, 3]) for (let seed = 1; seed <= 120; seed++) {
     const r = M.spawnMonsters(st, M.newGame({ seed }).rng);
     for (const el of Object.keys(r)) {
-      const m = r[el], v = m.variant, pl = D.plus[v.pl], mi = D.minus[v.mi], [bh, bm] = base[st][el];
+      const m = r[el], v = m.variant, pl = D.plus[v.pl], mi = D.minus[v.mi], [bh, bm] = base[st][m.el];
       assert.ok(v.d === 1 || v.d === 2, 'Deckform spitz oder breit');
       assert.equal(m.label.split(', ')[0], v.d === 1 ? 'breit' : 'spitz');
       assert.equal(m.label, [v.d === 1 ? 'breit' : 'spitz', '+' + M.MONSTER.variants.diceNames[pl.k], '\u2212' + M.MONSTER.variants.diceNames[mi.k]].join(', '));

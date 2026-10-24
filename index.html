@@ -614,16 +614,26 @@ function spawnOne(el, stage, rng, v) {
   rng.shuffle(finalDeck);
   return { el, name: M.names[el] + ' ' + STAGE_NUMERAL[stage], label: tags.join(', '), hints, variant: v, stage, stats, deckIds: finalDeck };
 }
-// Mit ‚rng‘ (aus dem Spiel abgeleitet) werden Deckform und beide Würfel gewürfelt; ohne bleibt es die feste Grundform.
+// Mit ‚rng‘ (aus dem Spiel abgeleitet) werden Monster, Deckform und beide Würfel gewürfelt; ohne bleibt es die feste Grundform.
 function spawnMonsters(stage, rng) {
   const out = {};
   const r = rng || makeRng(stage * 7919);
-  for (const e of ELEMENTS) {
-    const v = rng ? { d: rng.randint(1, 2), pl: rng.randint(0, 5), mi: rng.randint(0, 5) } : null;
-    out[e] = spawnOne(e, stage, r, v);
+  // Mit Zufall: 3 der 6 möglichen Monster (Element × Form) ohne Zurücklegen; ein Element darf also doppelt vorkommen (dann in beiden Formen), ein anderes fehlen.
+  // Die Plätze heißen weiter F, E, W (Reihenfolge von links nach rechts); das Element eines Monsters steht in ‚el‘.
+  let picks = ELEMENTS.map(e => ({ el: e, d: 0 }));
+  if (rng) {
+    const all = []; ELEMENTS.forEach(e => [1, 2].forEach(d => all.push({ el: e, d })));
+    picks = []; while (picks.length < 3) picks.push(all.splice(rng.randint(0, all.length - 1), 1)[0]);
+    picks.sort((a, b) => ELEMENTS.indexOf(a.el) - ELEMENTS.indexOf(b.el) || a.d - b.d);
   }
+  ELEMENTS.forEach((slot, i) => {
+    const v = rng ? { d: picks[i].d, pl: rng.randint(0, 5), mi: rng.randint(0, 5) } : null;
+    out[slot] = spawnOne(picks[i].el, stage, r, v);
+  });
   return out;
 }
+// Handkarten eines Monsters: Limit + 2 (mindestens 3), dazu die Würfel-Seite „Hand“ (mindestens 2).
+function monsterHand(m) { return Math.max(2, Math.max(MIN_SLOTS, m.stats.limit + 2) + (m.stats.handExtra || 0)); }
 function monsterAlive(m) { return m.stats.hp > 0; }
 // Monsterphase vorbei: alle drei Monster sind besiegt.
 function allMonstersDead(state) { return ELEMENTS.every(e => !monsterAlive(state.monsters[e])); }
@@ -771,17 +781,17 @@ function resetPlayers(state, mode) {
   const parts = mode === 'monster' ? 'd' : 'hmd';
   state.players.forEach(p => { if (parts.includes('h')) p.stats.hp = p.stats.maxHp; if (parts.includes('m')) p.stats.mana = p.stats.maxMana; p.stats.freeDraws = 0; if (parts.includes('d')) dealFresh(state, p.deck, p.slots); });
 }
-function startCombat(state, attPid, el) {
+function startCombat(state, attPid, slot) {   // slot: Platz des Monsters (F, E, W); sein Element steht in monster.el
   const A = state.players[attPid];
   resetPlayers(state, 'monster');
   dealFresh(state, A.deck, A.slots);
-  const m = state.monsters[el];
-  const mdeck = newDeck(state, m.deckIds, Math.max(2, Math.max(MIN_SLOTS, m.stats.limit + 2) + (m.stats.handExtra || 0)));
+  const m = state.monsters[slot], el = m.el;
+  const mdeck = newDeck(state, m.deckIds, monsterHand(m));
   state.players.forEach(p => { p.stats.freeDraws = 0; });
   m.stats.freeDraws = 0;
   state.combat = {
     logFrom: state.logN,
-    mode: 'monster', elem: el, att: attPid, def: other(attPid),
+    mode: 'monster', elem: el, slot, att: attPid, def: other(attPid),
     sides: { a: playerSide(state, attPid, 'a'), b: { key: 'b', kind: 'monster', ctrl: other(attPid), name: m.name, stats: m.stats, deck: mdeck, monster: m } },
     turn: 'a', action: 'attack', color: null, pending: 0, turns: 0,
   };
@@ -1291,7 +1301,7 @@ function snapshot(state) {
   const hand = d => d && d.hand ? d.hand.map(x => x ? x.id : null) : null;
   const s = { phase: state.phase, stage: state.stage, showdown: state.showdown, turn: state.turn, worldTurns: state.worldTurns,
     players: state.players.map(p => ({ name: p.name, sp: p.sp, stats: prim(p.stats), hand: hand(p.deck) })),
-    monsters: state.monsters ? Object.keys(state.monsters).map(e => ({ elem: e, stats: prim(state.monsters[e].stats) })) : null };
+    monsters: state.monsters ? Object.keys(state.monsters).map(e => ({ elem: state.monsters[e].el, stats: prim(state.monsters[e].stats) })) : null };
   if (state.combat) { const c = state.combat; s.combat = { mode: c.mode, turn: c.turn, turns: c.turns, action: c.action, att: c.att, sides: ['a', 'b'].map(k => ({ ctrl: c.sides[k].ctrl, stats: prim(c.sides[k].stats), hand: hand(c.sides[k].deck) })) }; }
   return s;
 }
@@ -1354,7 +1364,7 @@ return { ELEMENTS, SUPERIOR, NAMES, START_DECK, MAX_MAGIC, MAX_SLOTS, MIN_SLOTS,
   makeRng, parseCard, selection, newGame, apply, record, prim, actor, other, regen, handCounts,
   vendorOffers, vendorPlans, previewTemple, pointsForGold, nextLevelCost, limitStepCost, manaStepCost, hpStepCost, slotStepCost, magicCost, drawLimitCost, upField, magicField, payTxt,
   evalAttack, evalDefense, canFlee, stockOf, recoverGain, regenGain, comboLevels, levelsFor,
-  mirrorOf, monsterAlive, allMonstersDead, magicProgress, spawnMonsters, spawnForGame };
+  mirrorOf, monsterAlive, monsterHand, allMonstersDead, magicProgress, spawnMonsters, spawnForGame };
 }));</script>
 <script>/* Magus – einfacher Computergegner. Wählt nur Aktionen, die auch ein Mensch hätte. */
 (function (root, factory) {
@@ -1423,7 +1433,7 @@ const looted = (state, s) => s.goldGot > stageBonusGold(state);   // schon Beute
 function focusScore(state, pid, e) {
   const p = state.players[pid], Q = P(pid), hand = p.deck.hand.filter(Boolean);
   let sc = Q.fHand * hand.filter(c => c.id[0] === e).length;
-  for (const x of M.ELEMENTS) { const m = state.monsters[x]; if (M.monsterAlive(m) && M.SUPERIOR[x] === e) sc += Q.fWeak * (1 - m.stats.hp / m.stats.maxHp); }
+  for (const x of M.ELEMENTS) { const m = state.monsters[x]; if (M.monsterAlive(m) && M.SUPERIOR[m.el] === e) sc += Q.fWeak * (1 - m.stats.hp / m.stats.maxHp); }
   return sc + 0.01 * (e === planElement(state, pid));
 }
 function stratPlan(state, pid) {
@@ -1699,11 +1709,11 @@ function combatPlan(state, pid) {
   const canFlee = M.canFlee(state, pid) && (state.idleTurns || 0) < Q.fleeIdle;   // lange kein Kampf entschieden: nicht mehr fliehen, damit der Kampf einen Sieger bekommt (sonst Patt-Schleife Angreifen–Fliehen)
   if (c.action === 'attack') {
     if (Q.fleeHits > 0 && side.kind === 'monster' && canFlee) {   // Ich führe das Monster, der Angreifer hat kein Mana mehr: Fliehe ich, bleibt das angeschlagene Monster stehen, und ich bin als Nächster dran, es selbst zu besiegen (die Beute geht an mich)
-      const me = state.players[pid].stats, net = outlook(state, pid, c.elem);
+      const me = state.players[pid].stats, net = outlook(state, pid, c.slot);
       if (net > 0 && side.stats.hp / net <= Q.fleeHits && me.hp >= Q.minHp && me.mana >= Q.minMana) return [A({ type: 'flee' })];
     }
     if (Q.fleeSafe > 0 && side.kind === 'monster' && canFlee && state.players[pid].sp > 0) {   // Als Monsterführer: Besiegt der Angreifer das Monster bald, kostet mich das 1 Siegpunkt; die Flucht lässt das angeschlagene Monster stehen, und ich bin als Nächster dran
-      const net = outlook(state, opp.ctrl, c.elem);
+      const net = outlook(state, opp.ctrl, c.slot);
       if (net > 0 && side.stats.hp / net <= Q.fleeSafe) return [A({ type: 'flee' })];
     }
     if (Q.fleeHp > 0 && side.kind !== 'monster' && c.mode === 'monster' && canFlee && state.players[pid].sp > 0 && s.hp <= Q.fleeHp) return [A({ type: 'flee' })];   // Als Angreifer mit wenig HP: lieber fliehen als 1 Siegpunkt verlieren
@@ -1737,7 +1747,7 @@ function combatPlan(state, pid) {
         } else if (Q.fleeEV & 2) {
           // Monsterführer: Gewinnt der Angreifer, bekommt er +1 und ich verliere 1; gewinnt das Monster, verliert der Angreifer 1. Die Flucht ist lukrativer („Monster sind feige“):
           // Das angeschlagene Monster bleibt stehen, ich bin als Nächster am Zug und kann es selbst besiegen (Prognose aus meiner Sicht als Angreifer).
-          const me = state.players[pid], mf = monsterFighter(state.monsters[c.elem]), pf = playerFighter(me);
+          const me = state.players[pid], mf = monsterFighter(state.monsters[c.slot]), pf = playerFighter(me);
           mf.stats = side.stats;
           const ready = me.stats.hp >= Q.minHp && me.stats.mana >= 1;
           const kill = ready ? fightOdds(raceTurns(state, mf, pf) - raceTurns(state, pf, mf), false) : { win: 0, lose: 0 };
@@ -2340,14 +2350,14 @@ function monsterCards() {
   const my = myTurn(), R = LAYOUT.monsters;
   M.ELEMENTS.forEach((e, i) => {
     const m = G.monsters[e], alive = M.monsterAlive(m), st = m.stats;
-    const gone = !alive && m.retreated, img = alive || gone ? IMG['m_' + e.toLowerCase() + m.stage] : IMG['d_' + e.toLowerCase()];   // zurückgezogenes Monster: eigenes Bild, durchscheinend
+    const gone = !alive && m.retreated, img = alive || gone ? IMG['m_' + m.el.toLowerCase() + m.stage] : IMG['d_' + m.el.toLowerCase()];   // zurückgezogenes Monster: eigenes Bild, durchscheinend
     h += '<div class="mon ' + (alive ? '' : gone ? 'dead gone' : 'dead') + '" style="left:' + (R.left + i * R.step) + 'px;top:' + R.top + 'px;width:' + R.w + 'px;height:' + R.h + 'px;padding:10px 8px"><img class="pic" src="' + img + '" style="width:172px;height:196px">' +
-      '<div class="nm ' + e + '">' + esc(m.name) + '</div>' + (alive ? '<div class="sm' + (m.label ? ' mlabel' : '') + '" ' + (m.label ? 'title="' + esc((m.hints || []).join('\n')) + '" ' : '') + 'style="color:var(--gold);margin-top:-2px;height:18px;line-height:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (m.label ? esc(m.label) : '&nbsp;') + '</div>' : '');
+      '<div class="nm ' + m.el + '">' + esc(m.name) + '</div>' + (alive ? '<div class="sm' + (m.label ? ' mlabel' : '') + '" ' + (m.label ? 'title="' + esc((m.hints || []).join('\n')) + '" ' : '') + 'style="color:var(--gold);margin-top:-2px;height:18px;line-height:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (m.label ? esc(m.label) : '&nbsp;') + '</div>' : '');
     if (alive) {
       h += '<div class="sm">HP ' + st.hp + '/' + st.maxHp + '</div><div class="bar"><i style="width:' + st.hp / st.maxHp * 100 + '%"></i></div>' +
         '<div class="sm">Mana ' + st.mana + '/' + st.maxMana + '</div><div class="bar mana"><i style="width:' + st.mana / st.maxMana * 100 + '%"></i></div>' +
         '<div class="sm"><span class="dots F">' + dots(st.mag.F) + '</span> <span class="dots E">' + dots(st.mag.E) + '</span> <span class="dots W">' + dots(st.mag.W) + '</span></div>' +
-        '<div class="sm vals" title="Die tatsächlichen Werte dieses Monsters (Maximum)">Limit ' + st.limit + '</div>' +
+        '<div class="sm vals" style="font-size:15px;white-space:nowrap" title="Die tatsächlichen Werte dieses Monsters: Ausspiellimit, Handkarten, Nachziehlimit">Limit ' + st.limit + ' · Hand ' + M.monsterHand(m) + ' · Nachziehen ' + (st.drawLimit || 1) + '</div>' +
         '<button class="btn small" data-act="combat" data-e="' + e + '" ' + (my ? '' : 'disabled') + '>Kämpfen</button>';
     } else h += '<div class="sm" style="margin-top:12px">' + (gone ? 'hat gewonnen und sich zurückgezogen' : 'besiegt') + '</div>';
     h += '</div>';
@@ -3285,7 +3295,7 @@ function showStart() {
   setCursor('human');
   overlay.style.display = 'flex'; overlay.className = 'overlay';
   overlay.innerHTML = '<div class="box start"><h1>Magus</h1>' +
-    '<p class="note intro" style="margin-top:-2px"><b>Neu in Version 0.4:</b> Die <b>Monster</b> sind variabel. Zu jedem Monster gibt es eine <b>spitze</b> Form (stärkere Spitze, schwächere Basis) und eine <b>breite</b> Form (vielseitiger, schwächere Spitze); je Stufe sind das 6 mögliche Monster, drei erscheinen. Dazu kommen <b>zwei Würfel</b>: Der <b>Pluswürfel</b> macht ein Monster in einem Wert stärker (HP, Mana, beides zugleich als <i>Kraft</i>, stärkere Karten, mehr Handkarten oder mehr Erholung als <i>Regen</i>), der <b>Minuswürfel</b> schwächer; die Gesamtstärke bleibt etwa gleich. Je höher die Stufe, desto größer die Ausschläge. Unter dem Namen steht, was gewürfelt wurde, zum Beispiel <i>spitz, +Mana, −HP</i>. <b>Version 0.3.2:</b> Mehr Einnahmen, dafür steigende Preise. Der Bonus zu Beginn jedes Abschnitts (und die Hilfe nach einer Niederlage gegen ein Monster) beträgt <b>2, 3 und 4</b> Gold und Upgrade-Punkte. <b>Jeder Kauf verteuert die nächste Stufe seiner Kategorie um den Grundpreis</b>: HP, Mana und Handplatz kosten 1, 2, 3 Gold, das Ausspiellimit 2, 4, 6, die Magie auf Stufe 2 kostet 1, 2, 3 Punkte, auf Stufe 3 kostet sie 3, 6, 9. Stufe III der Monster ist etwas milder. <b>Version 0.3.1:</b> Alle <b>Monster</b> sind neu abgestimmt. Sie sind von Stufe zu Stufe gefährlicher: Ausspiellimit 2, 3 und 4, mehr Lebenspunkte und Mana in den späteren Abschnitten, in Abschnitt I ein Startdeck mit drei Karten der Stufe 2. Das Risiko einer Niederlage wächst mit der Stufe. <b>Seit 0.3:</b> Du startest mit <b>Ausspiellimit 2</b> und <b>2 Siegpunkten</b>. <b>Magie</b> kaufst du mit <b>Upgrade-Punkten</b> (Stufe 2: 1, Stufe 3: 3), alle anderen Verbesserungen (HP, Mana, Ausspiellimit, Handplätze, Nachziehlimit) mit <b>Gold</b>; im Tempel wandelst du Gold in Upgrade-Punkte. Stehen alle drei Magien auf Stufe 3, werden übrige Upgrade-Punkte sofort zu Siegpunkten (Gold nicht). <b>Nachziehmarker:</b> Wer nachzieht, dreht seinen Marker auf Rot, jede andere Aktion zurück auf Grün; wer bei Rot nachzieht, gibt dem Gegner 1 Gold (Weltphase) bzw. ein Nachziehtoken (Kampf). Das <b>Nachziehlimit</b> (1 Gold je Stufe, bis 3) erlaubt öfter hintereinander nachzuziehen, bevor der Marker auf Rot springt.</p>' +
+    '<p class="note intro" style="margin-top:-2px"><b>Neu in Version 0.4:</b> Die <b>Monster</b> sind variabel. Zu jedem Monster gibt es eine <b>spitze</b> Form (stärkere Spitze, schwächere Basis) und eine <b>breite</b> Form (vielseitiger, schwächere Spitze); je Stufe sind das 6 mögliche Monster, davon werden <b>drei ausgelost</b> (ein Element kann also doppelt vorkommen, ein anderes fehlen). Dazu kommen <b>zwei Würfel</b>: Der <b>Pluswürfel</b> macht ein Monster in einem Wert stärker (HP, Mana, beides zugleich als <i>Kraft</i>, stärkere Karten, mehr Handkarten oder mehr Erholung als <i>Regen</i>), der <b>Minuswürfel</b> schwächer; die Gesamtstärke bleibt etwa gleich. Je höher die Stufe, desto größer die Ausschläge. Unter dem Namen steht, was gewürfelt wurde, zum Beispiel <i>spitz, +Mana, −HP</i>. <b>Version 0.3.2:</b> Mehr Einnahmen, dafür steigende Preise. Der Bonus zu Beginn jedes Abschnitts (und die Hilfe nach einer Niederlage gegen ein Monster) beträgt <b>2, 3 und 4</b> Gold und Upgrade-Punkte. <b>Jeder Kauf verteuert die nächste Stufe seiner Kategorie um den Grundpreis</b>: HP, Mana und Handplatz kosten 1, 2, 3 Gold, das Ausspiellimit 2, 4, 6, die Magie auf Stufe 2 kostet 1, 2, 3 Punkte, auf Stufe 3 kostet sie 3, 6, 9. Stufe III der Monster ist etwas milder. <b>Version 0.3.1:</b> Alle <b>Monster</b> sind neu abgestimmt. Sie sind von Stufe zu Stufe gefährlicher: Ausspiellimit 2, 3 und 4, mehr Lebenspunkte und Mana in den späteren Abschnitten, in Abschnitt I ein Startdeck mit drei Karten der Stufe 2. Das Risiko einer Niederlage wächst mit der Stufe. <b>Seit 0.3:</b> Du startest mit <b>Ausspiellimit 2</b> und <b>2 Siegpunkten</b>. <b>Magie</b> kaufst du mit <b>Upgrade-Punkten</b> (Stufe 2: 1, Stufe 3: 3), alle anderen Verbesserungen (HP, Mana, Ausspiellimit, Handplätze, Nachziehlimit) mit <b>Gold</b>; im Tempel wandelst du Gold in Upgrade-Punkte. Stehen alle drei Magien auf Stufe 3, werden übrige Upgrade-Punkte sofort zu Siegpunkten (Gold nicht). <b>Nachziehmarker:</b> Wer nachzieht, dreht seinen Marker auf Rot, jede andere Aktion zurück auf Grün; wer bei Rot nachzieht, gibt dem Gegner 1 Gold (Weltphase) bzw. ein Nachziehtoken (Kampf). Das <b>Nachziehlimit</b> (1 Gold je Stufe, bis 3) erlaubt öfter hintereinander nachzuziehen, bevor der Marker auf Rot springt.</p>' +
     '<img class="logo" alt="" src="assets/img/bg-9c4789d6.webp">' +
     (G && !G.over && !MP && started ? '<button class="btn primary" style="font-size:22px;padding:10px 28px;flex:none;align-self:center;margin-bottom:8px" data-act="resume">Spiel fortsetzen</button>' : '') + '<button class="btn' + (G && !G.over && !MP && started ? '' : ' primary') + '" style="font-size:22px;padding:10px 28px;flex:none;align-self:center" data-act="newgame">' + (G && !G.over && !MP && started ? 'Neues Spiel gegen den Computer' : 'Gegen den Computer spielen') + '</button>' +
     '<button class="btn" style="font-size:18px;padding:8px 22px;flex:none;align-self:center;margin-top:8px" data-act="newspec" title="Zwei Computerspieler spielen gegeneinander, du schaust zu (für Spielablauf und Statistik)">Zwei Computern zuschauen</button>' +

@@ -15,7 +15,7 @@ const looted = (state, s) => s.goldGot > stageBonusGold(state);   // schon Beute
 function focusScore(state, pid, e) {
   const p = state.players[pid], Q = P(pid), hand = p.deck.hand.filter(Boolean);
   let sc = Q.fHand * hand.filter(c => c.id[0] === e).length;
-  for (const x of M.ELEMENTS) { const m = state.monsters[x]; if (M.monsterAlive(m) && M.SUPERIOR[x] === e) sc += Q.fWeak * (1 - m.stats.hp / m.stats.maxHp); }
+  for (const x of M.ELEMENTS) { const m = state.monsters[x]; if (M.monsterAlive(m) && M.SUPERIOR[m.el] === e) sc += Q.fWeak * (1 - m.stats.hp / m.stats.maxHp); }
   return sc + 0.01 * (e === planElement(state, pid));
 }
 function stratPlan(state, pid) {

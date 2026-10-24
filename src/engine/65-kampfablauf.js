@@ -8,17 +8,17 @@ function resetPlayers(state, mode) {
   const parts = mode === 'monster' ? 'd' : 'hmd';
   state.players.forEach(p => { if (parts.includes('h')) p.stats.hp = p.stats.maxHp; if (parts.includes('m')) p.stats.mana = p.stats.maxMana; p.stats.freeDraws = 0; if (parts.includes('d')) dealFresh(state, p.deck, p.slots); });
 }
-function startCombat(state, attPid, el) {
+function startCombat(state, attPid, slot) {   // slot: Platz des Monsters (F, E, W); sein Element steht in monster.el
   const A = state.players[attPid];
   resetPlayers(state, 'monster');
   dealFresh(state, A.deck, A.slots);
-  const m = state.monsters[el];
-  const mdeck = newDeck(state, m.deckIds, Math.max(2, Math.max(MIN_SLOTS, m.stats.limit + 2) + (m.stats.handExtra || 0)));
+  const m = state.monsters[slot], el = m.el;
+  const mdeck = newDeck(state, m.deckIds, monsterHand(m));
   state.players.forEach(p => { p.stats.freeDraws = 0; });
   m.stats.freeDraws = 0;
   state.combat = {
     logFrom: state.logN,
-    mode: 'monster', elem: el, att: attPid, def: other(attPid),
+    mode: 'monster', elem: el, slot, att: attPid, def: other(attPid),
     sides: { a: playerSide(state, attPid, 'a'), b: { key: 'b', kind: 'monster', ctrl: other(attPid), name: m.name, stats: m.stats, deck: mdeck, monster: m } },
     turn: 'a', action: 'attack', color: null, pending: 0, turns: 0,
   };

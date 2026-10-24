@@ -83,11 +83,11 @@ function combatPlan(state, pid) {
   const canFlee = M.canFlee(state, pid) && (state.idleTurns || 0) < Q.fleeIdle;   // lange kein Kampf entschieden: nicht mehr fliehen, damit der Kampf einen Sieger bekommt (sonst Patt-Schleife Angreifen–Fliehen)
   if (c.action === 'attack') {
     if (Q.fleeHits > 0 && side.kind === 'monster' && canFlee) {   // Ich führe das Monster, der Angreifer hat kein Mana mehr: Fliehe ich, bleibt das angeschlagene Monster stehen, und ich bin als Nächster dran, es selbst zu besiegen (die Beute geht an mich)
-      const me = state.players[pid].stats, net = outlook(state, pid, c.elem);
+      const me = state.players[pid].stats, net = outlook(state, pid, c.slot);
       if (net > 0 && side.stats.hp / net <= Q.fleeHits && me.hp >= Q.minHp && me.mana >= Q.minMana) return [A({ type: 'flee' })];
     }
     if (Q.fleeSafe > 0 && side.kind === 'monster' && canFlee && state.players[pid].sp > 0) {   // Als Monsterführer: Besiegt der Angreifer das Monster bald, kostet mich das 1 Siegpunkt; die Flucht lässt das angeschlagene Monster stehen, und ich bin als Nächster dran
-      const net = outlook(state, opp.ctrl, c.elem);
+      const net = outlook(state, opp.ctrl, c.slot);
       if (net > 0 && side.stats.hp / net <= Q.fleeSafe) return [A({ type: 'flee' })];
     }
     if (Q.fleeHp > 0 && side.kind !== 'monster' && c.mode === 'monster' && canFlee && state.players[pid].sp > 0 && s.hp <= Q.fleeHp) return [A({ type: 'flee' })];   // Als Angreifer mit wenig HP: lieber fliehen als 1 Siegpunkt verlieren
@@ -121,7 +121,7 @@ function combatPlan(state, pid) {
         } else if (Q.fleeEV & 2) {
           // Monsterführer: Gewinnt der Angreifer, bekommt er +1 und ich verliere 1; gewinnt das Monster, verliert der Angreifer 1. Die Flucht ist lukrativer („Monster sind feige“):
           // Das angeschlagene Monster bleibt stehen, ich bin als Nächster am Zug und kann es selbst besiegen (Prognose aus meiner Sicht als Angreifer).
-          const me = state.players[pid], mf = monsterFighter(state.monsters[c.elem]), pf = playerFighter(me);
+          const me = state.players[pid], mf = monsterFighter(state.monsters[c.slot]), pf = playerFighter(me);
           mf.stats = side.stats;
           const ready = me.stats.hp >= Q.minHp && me.stats.mana >= 1;
           const kill = ready ? fightOdds(raceTurns(state, mf, pf) - raceTurns(state, pf, mf), false) : { win: 0, lose: 0 };

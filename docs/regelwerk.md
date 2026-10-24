@@ -211,7 +211,7 @@ Siehe Abschnitt „Monster“ (Werte je Stufe) und `tools/balance/README.md` (Me
 ## Start-HP 4 (Version 0.3.1, Schalter `startHp`, Standard 4)
 
 Die Spieler beginnen mit 4 HP (vorher 3), damit sie dem Angriff der Stufe-I-Monster etwas entgegensetzen können. Die Monster behalten ihre eigenen Werte (Stufe I: 3 HP). Wirkung auf die Monster (KI-Selbstspiel, 1500 Partien, Niederlagen des Angreifers): Stufe I 12 % (vorher 16), Stufe II 20 % (20), Stufe III 34 % (39); das Risiko steigt weiter von Stufe zu Stufe. Die KI bleibt am Optimum ihrer Stellschrauben (`hpA`, `slotA`, `manaA`, `minMana`, `oHits` geprüft, keine Verbesserung).
-Anzeige: Auf den Monsterkarten stehen HP und Mana an den Balken, unten steht nur das Limit (es hat keinen Balken).
+Anzeige: Auf den Monsterkarten stehen HP und Mana an den Balken, unten stehen Limit, Hand und Nachziehen (es hat keinen Balken).
 
 ## Mehr Einnahmen, steigende Preise (Version 0.3.2, Schalter `priceRise`, Standard 1)
 
@@ -237,7 +237,7 @@ KI nachgestimmt (`manaA` 5, `vUp` 10,35, `stallDec` −0,05; 60 % gegen die KI d
 
 Jedes Monster hat eine **Deckform** und wird von **zwei Würfeln** verändert. Alles wird beim Erscheinen der Monster eines Abschnitts gewürfelt (aus dem Spielzufall abgeleitet, daher in Mehrspielerpartien auf beiden Geräten gleich).
 
-**Deckform (6 mögliche Monster je Stufe):** Zu jedem der drei Monster (Feuer, Erde, Wasser) gibt es eine **spitze** und eine **breite** Form, zusammen 3 × 2 = 6 mögliche Monster je Stufe. Je Element wird eine der beiden Formen gewürfelt, so erscheinen jeweils drei. *Spitz:* stärkere Spitze (mehr Karten der höchsten Stufe), dafür eine schwächere Basis. *Breit:* mehr Karten im Nebenelement, vielseitiger, dafür schwächere Spitze. Stufe I: spitz 4× Hauptelement Stufe 2, 2× Stufe 1, 3× Nebenelement; breit 2× Hauptelement Stufe 2, 2× Stufe 1, 3× Nebenelement, 2× drittes Element. Das frühere Nebenelement-Tauschen („Wasser-lastig“) und die Tempel-Varianten „zäh“ und „ausdauernd“ entfallen.
+**Deckform (6 mögliche Monster je Stufe):** Zu jedem der drei Monster (Feuer, Erde, Wasser) gibt es eine **spitze** und eine **breite** Form, zusammen 3 × 2 = 6 mögliche Monster je Stufe. Davon werden **drei ohne Zurücklegen ausgelost** (20 mögliche Kombinationen, gleich wahrscheinlich): Ein Element kann doppelt vorkommen (dann in beiden Formen), ein anderes fehlen. Die Plätze auf dem Brett bleiben Feuer/Erde/Wasser-Plätze in der Reihenfolge der Elemente; das Element steht im Monster selbst. *Spitz:* stärkere Spitze (mehr Karten der höchsten Stufe), dafür eine schwächere Basis. *Breit:* mehr Karten im Nebenelement, vielseitiger, dafür schwächere Spitze. Stufe I: spitz 4× Hauptelement Stufe 2, 2× Stufe 1, 3× Nebenelement; breit 2× Hauptelement Stufe 2, 2× Stufe 1, 3× Nebenelement, 2× drittes Element. Das frühere Nebenelement-Tauschen („Wasser-lastig“) und die Tempel-Varianten „zäh“ und „ausdauernd“ entfallen.
 
 **Pluswürfel und Minuswürfel (je 6 Seiten):** Der Pluswürfel macht das Monster in einem Wert stärker, der Minuswürfel in einem Wert schwächer. Beide haben dieselben sechs Werte; würfelt man zweimal denselben, heben sich die Ausschläge auf (die Etiketten nennen trotzdem beide). Die Ausschläge steigen mit der Stufe (Spalten Stufe I / II / III):
 
