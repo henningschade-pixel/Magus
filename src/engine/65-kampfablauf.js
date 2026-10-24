@@ -13,7 +13,7 @@ function startCombat(state, attPid, el) {
   resetPlayers(state, 'monster');
   dealFresh(state, A.deck, A.slots);
   const m = state.monsters[el];
-  const mdeck = newDeck(state, m.deckIds, Math.max(MIN_SLOTS, m.stats.limit + 2));
+  const mdeck = newDeck(state, m.deckIds, Math.max(2, Math.max(MIN_SLOTS, m.stats.limit + 2) + (m.stats.handExtra || 0)));
   state.players.forEach(p => { p.stats.freeDraws = 0; });
   m.stats.freeDraws = 0;
   state.combat = {

@@ -3,36 +3,44 @@
    die Monster werden im Kampf vom Gegenspieler gesteuert. */
 
 // Startdeck jedes Monsters: das Startdeck mit Karten des Elements auf Stufe 2 (Anzahl: ‚upgrades‘).
-// Tempel-Verbesserungen: Stufe I ‚stage1Temple‘, danach je Stufe die Liste ‚temple[stufe][element]‘.
-// Werte je Stufe (Version 0.3.1, neu abgestimmt auf Spieler mit Ausspiellimit 2 von Anfang an; Messung mit tools/balance/monster-tune.js):
-//   Stufe I   3 HP, Mana 5 (Erdmonster 6), Limit 2; Variante: ausdauernd (+1 Mana, −1 HP) (wie die Spieler), Startdeck mit 3 Karten des eigenen Elements auf Stufe 2
-//   Stufe II  4 HP, Mana 5 (Varianten 4/6), Limit 3
-//   Stufe III 6 HP, Mana 6 (Varianten 5/7), Limit 4 (0.3.2: 8 HP waren mit den höheren Einnahmen zu hart, 48 % Niederlagen)
+// Tempel-Verbesserungen: Stufe I ‚stage1Temple‘ (nur dort), danach je Stufe die Liste ‚temple[stufe][element]‘.
+// Grundwerte je Stufe (Version 0.3.1, neu abgestimmt auf Spieler mit Ausspiellimit 2 von Anfang an; Messung mit tools/balance/monster-tune.js); seit 0.4 kommen Deckform und zwei Würfel dazu (variants):
+//   Stufe I   3 HP, Mana 5 (Erdmonster 6), Limit 2, Startdeck mit 3 Karten des eigenen Elements auf Stufe 2
+//   Stufe II  4 HP, Mana 5, Limit 3
+//   Stufe III 6 HP, Mana 6, Limit 4 (0.3.2: 8 HP waren mit den höheren Einnahmen zu hart, 48 % Niederlagen)
 // Das Limit steigt nur dort, wo es gewollt ist: Ein Monster mit Limit 2 und vielen HP verwickelt den Angreifer in endlose Angriffe und Fluchten (bis 27 Angriffe je Partie), erst Limit 3 gibt ihm die nötige Gefahr.
 const MONSTER = {
   profile: { F: { primary: 'F', secondary: 'E' }, E: { primary: 'E', secondary: 'W' }, W: { primary: 'W', secondary: 'F' } },
-  stage1Temple: { F: [], E: [], W: [] },
+  stage1Temple: { F: ['mana'], E: ['mana', 'mana'], W: ['mana'] },   // Stufe I: Mana 5 (Erdmonster 6; sonst verlor es die Angreifer nur halb so oft)
   temple: { 2: { F: ['limit', 'hp', 'mana'], E: ['limit', 'hp', 'mana'], W: ['limit', 'hp', 'mana'] }, 3: { F: ['limit', 'hp', 'hp', 'mana'], E: ['limit', 'hp', 'hp', 'mana'], W: ['limit', 'hp', 'hp', 'mana'] } },   // Schritte je Stufe (Stufe III kommt auf Stufe II obendrauf): II = Limit 3, 4 HP, Mana 5; III = Limit 4, 6 HP, Mana 6
   magic: { 2: [3, 2, 1], 3: [3, 2, 1] },                                  // Stufen von Haupt-, Neben- und drittem Element
   deck: {
     2: (P, S, T) => [P + '3', P + '2', P + '2', P + '2', S + '2', S + '2', T + '1', T + '1', P + '1'],
     3: (P, S, T) => [P + '3', P + '3', P + '3', P + '2', P + '2', S + '3', S + '3', T + '2', T + '1'],
   },
-  // Varianten (gleich stark, gemessen): je Monster wird beim Erscheinen gewürfelt. Index 0 = Grundform.
+  // Varianten (seit 0.4): Je Element gibt es zwei Formen, spitz und breit (6 mögliche Monster je Stufe, davon erscheinen drei: je Element eine Form, gewürfelt).
+  // Dazu kommen zwei Würfel: der Pluswürfel macht das Monster stärker, der Minuswürfel schwächer (gleich starke Ausschläge, die Gesamtstärke bleibt). Die Ausschläge wachsen mit der Stufe: Spalten = Stufe I, II, III.
   variants: {
-    temple1: {   // Stufe I: Grundform (F/W: 3 HP, Mana 5; Erde: 3 HP, Mana 6 – sonst verlor es die Angreifer nur halb so oft), ausdauernd (1 Mana mehr, dafür 1 HP weniger; die Gegenstücke „zäh“ mit 1 HP mehr waren mit 1 Mana weniger oder einer Karte weniger zu harmlos: 8 bis 9 % Niederlagen)
-      F: [['mana'], ['mana', 'mana', '-hp']], E: [['mana', 'mana'], ['mana', 'mana', 'mana', '-hp']], W: [['mana'], ['mana', 'mana', '-hp']],
-    },
-    temple: {   // Stufe II/III: Grundform, dazu ohne das Mana-Extra, dafür 1 HP mehr (ruhiger), und mit einem Mana mehr, dafür 1 HP weniger (zielt auf Dauerdruck); gemessen gleich oft Niederlage für den Angreifer (24/24/22 % in Stufe II, 40/41/37 % in Stufe III)
-      2: { F: [['limit', 'hp', 'mana'], ['limit', 'hp', 'hp'], ['limit', 'mana', 'mana']], E: [['limit', 'hp', 'mana'], ['limit', 'hp', 'hp'], ['limit', 'mana', 'mana']], W: [['limit', 'hp', 'mana'], ['limit', 'hp', 'hp'], ['limit', 'mana', 'mana']] },
-      3: { F: [['limit', 'hp', 'hp', 'mana'], ['limit', 'hp', 'hp', 'hp'], ['limit', 'hp', 'mana', 'mana']], E: [['limit', 'hp', 'hp', 'mana'], ['limit', 'hp', 'hp', 'hp'], ['limit', 'hp', 'mana', 'mana']], W: [['limit', 'hp', 'hp', 'mana'], ['limit', 'hp', 'hp', 'hp'], ['limit', 'hp', 'mana', 'mana']] },
-    },
-    swap: { F: { primary: 'F', secondary: 'W' }, E: { primary: 'E', secondary: 'F' }, W: { primary: 'W', secondary: 'E' } },   // Neben- und drittes Element getauscht
-    deck: {   // Deckformen: Grundform, breit (mehr Nebenelement), spitz (stärkere Spitze, schwächere Basis)
+    deck: {   // Deckformen. Index 0 = Grundform (nur für die feste Form ohne Würfel), 1 = breit (mehr Nebenelement), 2 = spitz (stärkere Spitze, schwächere Basis)
+      1: [null, (P, S, T) => [P + '2', P + '2', P + '1', P + '1', S + '1', S + '1', S + '1', T + '1', T + '1'], (P, S, T) => [P + '2', P + '2', P + '2', P + '2', P + '1', P + '1', S + '1', S + '1', S + '1']],
       2: [null, (P, S, T) => [P + '3', P + '2', P + '2', S + '2', S + '2', S + '2', T + '1', T + '1', P + '1'], (P, S, T) => [P + '3', P + '3', P + '1', P + '1', S + '2', S + '2', S + '2', T + '1', T + '1']],
       3: [null, (P, S, T) => [P + '3', P + '3', P + '3', P + '2', S + '3', S + '3', S + '2', T + '2', T + '1'], (P, S, T) => [P + '3', P + '3', P + '3', P + '3', P + '1', S + '3', S + '3', T + '2', T + '1']],
     },
     deckNames: ['', 'breit', 'spitz'],
+    // Die Würfel: sechs Seiten je Würfel, jede Seite ein Wert und sein Ausschlag je Stufe (n: Stufe I, II, III).
+    dice: {   // k: Wert, n: Ausschlag je Stufe. Pluswürfel und Minuswürfel haben dieselben sechs Werte, aber eigene Ausschläge (geeicht mit tools/balance/monster-dice.js: im Mittel verschiebt jeder Würfel die Stärke gleich weit)
+      plus:  [{ k: 'hp', n: [1, 1, 2] }, { k: 'mana', n: [3, 3, 3] }, { k: 'both', n: [1, 1, 1] }, { k: 'cards', n: [1, 2, 3] }, { k: 'hand', n: [1, 1, 2] }, { k: 'regen', n: [2, 3, 3] }],
+      minus: [{ k: 'hp', n: [1, 1, 1] }, { k: 'mana', n: [2, 2, 1] }, { k: 'both', n: [1, 1, 1] }, { k: 'cards', n: [2, 2, 1] }, { k: 'hand', n: [1, 1, 1] }, { k: 'regen', n: [1, 1, 1] }],
+    },
+    diceNames: { hp: 'HP', mana: 'Mana', both: 'Kraft', cards: 'Karten', hand: 'Hand', regen: 'Regen' },
+    diceHints: {
+      hp: 'maximale Lebenspunkte',
+      mana: 'maximales Mana',
+      both: 'Kraft: maximale HP und maximales Mana zugleich',
+      cards: 'Karten: die schwächsten Karten werden zur stärksten Karte, bzw. die stärksten Karten fallen auf Stufe 1',
+      hand: 'Handkarten',
+      regen: 'Erholung (HP und Mana am Ende jeder Runde)',
+    },
   },
   upgrades: { F: 3, E: 3, W: 3 },   // Karten des Startdecks, die auf Stufe 2 gehoben werden (nur Abschnitt I); mindestens eine, weil das Monster seine Hauptmagie auf Stufe 2 hat (ohne passende Karte wäre sie wertlos)
   startLimit: 2,                                                          // Ausspiellimit aller Monster vor den Tempel-Schritten (Spieler starten seit 0.3 mit 2; hier wird neu abgestimmt)
@@ -41,64 +49,78 @@ const MONSTER = {
 };
 const STAGE_NUMERAL = ['', 'I', 'II', 'III'];
 
-// v: gewürfelte Variante { t: Tempel-Index, p: 0/1 (Neben-/drittes Element getauscht), d: Deck-Index }; ohne v die Grundform.
+// Würfelseite auf ein Monster anwenden (sign +1 = Pluswürfel, −1 = Minuswürfel). ‚ids‘ ist das Deck (wird verändert).
+function applyDie(stats, ids, face, sign, stage, P) {
+  const n = face.n[stage - 1] * sign, k = face.k;
+  if (k === 'hp') { stats.maxHp = Math.max(1, stats.maxHp + n); stats.hp = stats.maxHp; }
+  else if (k === 'mana') { stats.maxMana = Math.max(1, stats.maxMana + n); stats.mana = stats.maxMana; }
+  else if (k === 'both') { stats.maxHp = Math.max(1, stats.maxHp + n); stats.hp = stats.maxHp; stats.maxMana = Math.max(1, stats.maxMana + n); stats.mana = stats.maxMana; }
+  else if (k === 'hand') stats.handExtra = (stats.handExtra || 0) + n;
+  else if (k === 'regen') stats.regenExtra = (stats.regenExtra || 0) + n;
+  else if (k === 'cards') {
+    // plus: die schwächsten Karten werden zur stärksten Karte des Hauptelements; minus: die stärksten Karten fallen auf Stufe 1, aber nur solche, von deren Stufe es noch eine zweite gibt (jede Magiestufe behält ihre Karte)
+    for (let i = 0; i < Math.abs(n); i++) {
+      const lv = id => +id[1], all = ids.map((id, ix) => ix).filter(ix => ids[ix][0] !== 'C');
+      if (n > 0) { const top = P + stats.mag[P], low = all.sort((x, y) => lv(ids[x]) - lv(ids[y]) || y - x)[0]; if (low !== undefined && lv(ids[low]) < +top[1]) ids[low] = top; }
+      else { const ok = all.filter(ix => lv(ids[ix]) > 1 && ids.filter(o => o === ids[ix]).length > 1).sort((x, y) => lv(ids[y]) - lv(ids[x]) || x - y); if (ok.length) ids[ok[0]] = ids[ok[0]][0] + '1'; }
+    }
+  }
+}
+// v: gewürfelte Variante { d: Deckform (1 breit, 2 spitz), pl: Seite des Pluswürfels 0–5, mi: Seite des Minuswürfels 0–5 }; ohne v die feste Grundform (ohne Würfel).
 function spawnOne(el, stage, rng, v) {
   const M = MONSTER, deck = START_DECK.slice(), V = M.variants;
-  v = v || { t: 0, p: 0, d: 0 };
+  v = v || { d: 0, pl: -1, mi: -1 };
   for (let i = 0, src = SUPERIOR[el] + '1'; i < (M.upgrades[el] === undefined ? 2 : M.upgrades[el]); i++) { const idx = deck.indexOf(src); if (idx < 0) break; deck[idx] = el + '2'; }
   const stats = newStats();
   stats.limit = M.startLimit;
   stats.mag[el] = 2;
-  (stage === 1 ? V.temple1[el][v.t] || M.stage1Temple[el] : M.stage1Temple[el]).forEach(f => applyTemple(stats, f));
+  if (stage === 1) M.stage1Temple[el].forEach(f => applyTemple(stats, f));   // ab Stufe II zählen nur die Schritte von ‚temple‘
   stats.gold = M.gold[1];
-  let finalDeck = deck;
-  const prof = v.p && stage >= 2 ? V.swap[el] : M.profile[el];
+  const prof = M.profile[el];
   const P = prof.primary, S = prof.secondary, T = ELEMENTS.find(e => e !== P && e !== S);
+  let finalDeck = deck;
+  if (stage === 1 && v.d && V.deck[1][v.d]) finalDeck = V.deck[1][v.d](P, S, T);
   for (let st = 2; st <= stage; st++) {
     const m = M.magic[st];
     stats.mag[P] = Math.max(stats.mag[P], m[0]); stats.mag[S] = Math.max(stats.mag[S], m[1]); stats.mag[T] = Math.max(stats.mag[T], m[2]);
-    const tv = st === stage && V.temple[st] && V.temple[st][el] ? V.temple[st][el][v.t] : null;
-    (tv || M.temple[st][el]).forEach(f => {
+    M.temple[st][el].forEach(f => {
       if (f === 'limit' && stats.limit >= MAX_LIMIT) f = 'hp';
       applyTemple(stats, f);
     });
     finalDeck = (st === stage && V.deck[st][v.d]) ? V.deck[st][v.d](P, S, T) : M.deck[st](P, S, T);
     stats.gold = M.gold[st];
   }
+  finalDeck = finalDeck.slice();
+  const tags = [], hints = [];
+  if (v.d) {
+    tags.push(V.deckNames[v.d]);
+    hints.push(v.d === 1 ? 'breit: mehr Karten im Nebenelement, dafür weniger im Hauptelement. Vielseitiger, aber mit schwächerer Spitze.' : 'spitz: stärkere Spitze (mehr Karten der höchsten Stufe), dafür eine schwächere Basis (mehr Stufe-1-Karten).');
+  }
+  [[v.pl, 1, V.dice.plus], [v.mi, -1, V.dice.minus]].forEach(([i, sign, die]) => {
+    if (i === undefined || i < 0) return;
+    const face = die[i], n = face.n[stage - 1];
+    applyDie(stats, finalDeck, face, sign, stage, P);
+    tags.push((sign > 0 ? '+' : '−') + V.diceNames[face.k]);
+    hints.push((sign > 0 ? 'Pluswürfel' : 'Minuswürfel') + ': ' + (sign > 0 ? '+' : '−') + n + ' ' + V.diceNames[face.k] + ' (' + (sign > 0 ? 'mehr ' : 'weniger ') + V.diceHints[face.k] + ').');
+  });
   finalDeck = finalDeck.map(id => id[0] !== 'C' && +id[1] > stats.mag[id[0]] ? id[0] + stats.mag[id[0]] : id);   // Eine Karte wirkt höchstens mit der Magie ihrer Farbe: die Anzeige soll das zeigen
   rng.shuffle(finalDeck);
-  const tags = [], hints = [];
-  {   // Wertetausch-Varianten (alle Stufen): kein Monster ist einfach „mehr“, jede Variante tauscht 1 HP gegen 1 Mana; Etikett und Hinweis nennen den Tausch, die tatsächlichen Werte stehen auf der Karte
-    const lists = stage === 1 ? V.temple1[el] : V.temple[stage] && V.temple[stage][el];
-    if (v.t && lists && lists[v.t]) {
-      const net = (l, f) => l.filter(x => x === f).length - l.filter(x => x === '-' + f).length, dh = net(lists[v.t], 'hp') - net(lists[0], 'hp'), dm = net(lists[v.t], 'mana') - net(lists[0], 'mana');
-      if (dh > 0 && dm < 0) { tags.push('zäh'); hints.push('Zäh: 1 maximale HP mehr, dafür 1 Mana weniger (hält mehr aus, kann weniger lange angreifen).'); }
-      else if (dm > 0 && dh < 0) { tags.push('ausdauernd'); hints.push('Ausdauernd: 1 Mana mehr, dafür 1 maximale HP weniger (kann länger angreifen, ist leichter zu besiegen).'); }
-    }
-  }
-  if (stage >= 2 && v.p) { tags.push(ELEMENT_NAME_SHORT[S] + '-lastig'); { const FN = { F: 'Feuer', E: 'Erde', W: 'Wasser' }; hints.push(ELEMENT_NAME_SHORT[S] + '-lastig: Das Nebenelement dieses Monsters ist ' + FN[S] + ' (normalerweise ' + FN[M.profile[el].secondary] + '). Es spielt neben seinem Hauptelement vor allem ' + FN[S] + '.'); } }
-  if (stage >= 2 && v.d) { tags.push(V.deckNames[v.d]); hints.push(v.d === 1 ? 'breit: mehr Karten im Nebenelement, dafür weniger im Hauptelement. Vielseitiger, aber mit schwächerer Spitze.' : 'spitz: stärkere Spitze (mehr Karten der höchsten Stufe), dafür eine schwächere Basis (mehr Stufe-1-Karten).'); }
   return { el, name: M.names[el] + ' ' + STAGE_NUMERAL[stage], label: tags.join(', '), hints, variant: v, stage, stats, deckIds: finalDeck };
 }
-const ELEMENT_NAME_SHORT = { F: 'Feuer', E: 'Erd', W: 'Wasser' };
-// Mit ‚rng‘ (aus dem Spiel abgeleitet) werden die Varianten gewürfelt; ohne bleibt es die feste Grundform.
+// Mit ‚rng‘ (aus dem Spiel abgeleitet) werden Deckform und beide Würfel gewürfelt; ohne bleibt es die feste Grundform.
 function spawnMonsters(stage, rng) {
-  const out = {}, V = MONSTER.variants;
+  const out = {};
   const r = rng || makeRng(stage * 7919);
   for (const e of ELEMENTS) {
-    let v = null;
-    if (rng) {
-      const nt = stage === 1 ? V.temple1[e].length : (V.temple[stage] && V.temple[stage][e] ? V.temple[stage][e].length : 1);
-      v = { t: rng.randint(0, nt - 1), p: stage >= 2 ? rng.randint(0, 1) : 0, d: stage >= 2 ? rng.randint(0, V.deck[stage].length - 1) : 0 };
-    }
-    out[e] = spawnOne(e, stage, rng ? rng : r, v);
+    const v = rng ? { d: rng.randint(1, 2), pl: rng.randint(0, 5), mi: rng.randint(0, 5) } : null;
+    out[e] = spawnOne(e, stage, r, v);
   }
   return out;
 }
 function monsterAlive(m) { return m.stats.hp > 0; }
 // Monsterphase vorbei: alle drei Monster sind besiegt.
 function allMonstersDead(state) { return ELEMENTS.every(e => !monsterAlive(state.monsters[e])); }
-function regenMonsters(state) { ELEMENTS.forEach(e => { const m = state.monsters[e]; if (monsterAlive(m)) regen(m.stats); }); }
+function regenMonsters(state) { ELEMENTS.forEach(e => { const m = state.monsters[e]; if (monsterAlive(m)) { const n = 1 + (m.stats.regenExtra || 0); if (n > 0) regen(m.stats, n); } }); }
 
 // Monster eines Abschnitts für ein Spiel: gewürfelt (eigener, vom Spielzufall getrennter Strom) oder feste Grundform.
 function spawnForGame(state, stage) {

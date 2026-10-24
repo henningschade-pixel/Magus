@@ -101,13 +101,15 @@ Die Farbe der ersten markierten Karte bestimmt die Rolle (Feuer aggressiv, Wasse
 
 ## Monster
 
-Variante je Monster wird beim Erscheinen gewürfelt (Tempel-Verbesserungen, Nebenelement, Deckform).
+Variante je Monster wird beim Erscheinen gewürfelt (seit 0.4: Deckform und zwei Würfel, siehe „Monster-Würfel“ unten).
 
 | Stufe | HP | Mana | Limit | Magie (Haupt/Neben/dritte) | Startdeck |
 |---|---|---|---|---|---|
-| I | 3 | 5 (Variante 6; Erdmonster 6/7) | 2 | 2 im eigenen Element | Startdeck, 3 Karten des eigenen Elements auf Stufe 2 |
-| II | 4 | 5 (Varianten 4/6) | 3 | 3 / 2 / 1 | siehe `MONSTER.deck` |
-| III | 6 | 6 (Varianten 5/7) | 4 | 3 / 2 / 1 | siehe `MONSTER.deck` |
+| I | 3 | 5 (Erdmonster 6) | 2 | 2 im eigenen Element | Startdeck, 3 Karten des eigenen Elements auf Stufe 2 |
+| II | 4 | 5 | 3 | 3 / 2 / 1 | siehe `MONSTER.deck` |
+| III | 6 | 6 | 4 | 3 / 2 / 1 | siehe `MONSTER.deck` |
+
+Die Tabelle zeigt die Grundform (`spawnMonsters` ohne Zufall); im Spiel kommen Deckform und Würfel dazu.
 
 **Neu abgestimmt in 0.3.1** (Spieler starten mit Ausspiellimit 2). Die Beute entfällt (`monsterLoot` 0), die Stufen I bis III zahlten früher 1/2/3 Gold. Das Monster-Limit steigt von Stufe zu Stufe um 1 (2/3/4); die frühere Reihe 1/2/3 passt nicht mehr zu Spielern mit Limit 2. Ein Monster mit Limit 2 und vielen HP führt den Angreifer in endlose Angriffs-/Fluchtschleifen (Stufe II mit Limit 2: bis 27 Angriffe je Partie), erst Limit 3 gibt ihm die nötige Gefahr. Gemessen (KI gegen KI, je Angreifer: Sieg / Niederlage): Stufe I 25 % / 16 %, Stufe II 37 % / 23 %, Stufe III 32 % / 41 %; der Rest sind Fluchten (meist des Monsterführers, der das schwache Monster danach selbst besiegt). Das Risiko für den Angreifer steigt also von Stufe zu Stufe (16 → 23 → 41 %). Messwerkzeuge: `tools/balance/monster-bal.js`, `tools/balance/monster-tune.js`.
 
@@ -229,3 +231,27 @@ Gezählt werden die Käufe jedes Spielers, nicht der Wert selbst. Der Tempel (Go
 Folge: Volle Magie (24 Punkte) ist kaum erreichbar, die Umwandlung von Überschusspunkten in Siegpunkte greift selten. Die Anzeige nennt immer den aktuellen Preis (Kostenzahl am Knopf, Hinweis beim Darüberfahren, rote Vorschau).
 Monster Stufe III neu abgestimmt (6 statt 8 HP): mit den höheren Einnahmen verloren die Angreifer sonst 48 % der Kämpfe; jetzt Niederlagen des Angreifers Stufe I 15 %, II 20 %, III 37 %.
 KI nachgestimmt (`manaA` 5, `vUp` 10,35, `stallDec` −0,05; 60 % gegen die KI davor). Selbstspiel (1500 Partien): Beginner 47 % / Zweiter 48 % / Unentschieden 5 %, Median 299 Aktionen, keine festgefahrene Partie.
+
+
+## Monster-Würfel (Version 0.4)
+
+Jedes Monster hat eine **Deckform** und wird von **zwei Würfeln** verändert. Alles wird beim Erscheinen der Monster eines Abschnitts gewürfelt (aus dem Spielzufall abgeleitet, daher in Mehrspielerpartien auf beiden Geräten gleich).
+
+**Deckform (6 mögliche Monster je Stufe):** Zu jedem der drei Monster (Feuer, Erde, Wasser) gibt es eine **spitze** und eine **breite** Form, zusammen 3 × 2 = 6 mögliche Monster je Stufe. Je Element wird eine der beiden Formen gewürfelt, so erscheinen jeweils drei. *Spitz:* stärkere Spitze (mehr Karten der höchsten Stufe), dafür eine schwächere Basis. *Breit:* mehr Karten im Nebenelement, vielseitiger, dafür schwächere Spitze. Stufe I: spitz 4× Hauptelement Stufe 2, 2× Stufe 1, 3× Nebenelement; breit 2× Hauptelement Stufe 2, 2× Stufe 1, 3× Nebenelement, 2× drittes Element. Das frühere Nebenelement-Tauschen („Wasser-lastig“) und die Tempel-Varianten „zäh“ und „ausdauernd“ entfallen.
+
+**Pluswürfel und Minuswürfel (je 6 Seiten):** Der Pluswürfel macht das Monster in einem Wert stärker, der Minuswürfel in einem Wert schwächer. Beide haben dieselben sechs Werte; würfelt man zweimal denselben, heben sich die Ausschläge auf (die Etiketten nennen trotzdem beide). Die Ausschläge steigen mit der Stufe (Spalten Stufe I / II / III):
+
+| Wert | Pluswürfel | Minuswürfel | Wirkung |
+|---|---|---|---|
+| HP | +1 / +1 / +2 | −1 / −1 / −1 | maximale Lebenspunkte (mindestens 1) |
+| Mana | +3 / +3 / +3 | −2 / −2 / −1 | maximales Mana (mindestens 1) |
+| Kraft (HP und Mana) | +1 / +1 / +1 | −1 / −1 / −1 | beides zugleich |
+| Karten | 1 / 2 / 3 | 2 / 2 / 1 | Plus: so viele der schwächsten Karten werden zur stärksten Karte des Hauptelements. Minus: so viele der stärksten Karten fallen auf Stufe 1 (nur solche, von deren Stufe es noch eine zweite gibt) |
+| Hand | +1 / +1 / +2 | −1 / −1 / −1 | Handkarten des Monsters (mindestens 2) |
+| Regen (Erholung) | +2 / +3 / +3 | −1 / −1 / −1 | zusätzliche HP und Mana je Runde (Grundwert 1, nie unter 0) |
+
+**Beschriftung:** Unter dem Namen steht, was gewürfelt wurde, zum Beispiel „Wassermonster II“ und darunter *spitz, +Mana, −HP*; beim Darüberfahren erklärt ein Hinweis die genauen Zahlen. Die Monsterkarte zeigt die tatsächlichen Werte.
+
+**Eichung (`tools/balance/monster-dice.js`):** Jede Seite wurde einzeln gemessen (KI gegen KI, je Seite 3000 Partien): Maß ist „Niederlagen minus Siege des Angreifers“ in Prozentpunkten je Angriff. Die Ausschläge sind so gewählt, dass der Pluswürfel im Mittel so viel gibt, wie der Minuswürfel nimmt; die Verschiebung der einzelnen Seiten wächst mit der Stufe (etwa 7, 11 und 16 Punkte). Einzelne Seiten wirken stärker als andere (Handkarten am stärksten, Regen am schwächsten); das ist gewollt, die Würfel mischen sich. In Stufe III ist der Minuswürfel auf Ausschlag 1 geeicht, weil die Monster dort mit größeren Minus-Ausschlägen im Mittel zu schwach wurden. Gesamtmessung (5000 Partien KI gegen KI, Angreifer: Sieg / Niederlage je Angriff): Stufe I 32,7 / 13,1 % ohne und 29,0 / 11,1 % mit Würfeln, Stufe II 47,3 / 19,9 % und 46,7 / 21,3 %, Stufe III 38,6 / 35,8 % und 37,0 / 37,2 %. Die Würfel verschieben die Stärke im Mittel also um höchstens drei Prozentpunkte (Niederlagen minus Siege), das Risiko steigt weiter von Stufe zu Stufe. In Stufe I kommen etwa 1 % der Kämpfe ohne Sieger zu Ende (Erschöpfung), sonst entscheidet die Partielänge nicht (Median 378 Aktionen, vorher 344).
+
+Ein **Limit-Würfel wurde verworfen**: Ein Monster mit Limit 1 war in Stufe I nicht zu besiegen und führte zu langen Patts (über 2600 erschöpfte Kämpfe in 1500 Partien). Stattdessen gibt es die Seite „Kraft“ (HP und Mana zugleich).
