@@ -7,12 +7,12 @@
 // Grundwerte je Stufe (Version 0.3.1, neu abgestimmt auf Spieler mit Ausspiellimit 2 von Anfang an; Messung mit tools/balance/monster-tune.js); seit 0.4 kommen Deckform und zwei Würfel dazu (variants):
 //   Stufe I   3 HP, Mana 5 (Erdmonster 6), Limit 2, Startdeck mit 3 Karten des eigenen Elements auf Stufe 2
 //   Stufe II  4 HP, Mana 5, Limit 3
-//   Stufe III 6 HP, Mana 6, Limit 4 (0.3.2: 8 HP waren mit den höheren Einnahmen zu hart, 48 % Niederlagen)
+//   Stufe III 5 HP, Mana 6, Limit 4 (0.3.2: 8 HP waren mit den höheren Einnahmen zu hart, 48 % Niederlagen; 0.4: 5 statt 6 HP, weil jedes Monster nun 1 Gratis-Nachziehen mitbringt)
 // Das Limit steigt nur dort, wo es gewollt ist: Ein Monster mit Limit 2 und vielen HP verwickelt den Angreifer in endlose Angriffe und Fluchten (bis 27 Angriffe je Partie), erst Limit 3 gibt ihm die nötige Gefahr.
 const MONSTER = {
   profile: { F: { primary: 'F', secondary: 'E' }, E: { primary: 'E', secondary: 'W' }, W: { primary: 'W', secondary: 'F' } },
   stage1Temple: { F: ['mana'], E: ['mana', 'mana'], W: ['mana'] },   // Stufe I: Mana 5 (Erdmonster 6; sonst verlor es die Angreifer nur halb so oft)
-  temple: { 2: { F: ['limit', 'hp', 'mana'], E: ['limit', 'hp', 'mana'], W: ['limit', 'hp', 'mana'] }, 3: { F: ['limit', 'hp', 'hp', 'mana'], E: ['limit', 'hp', 'hp', 'mana'], W: ['limit', 'hp', 'hp', 'mana'] } },   // Schritte je Stufe (Stufe III kommt auf Stufe II obendrauf): II = Limit 3, 4 HP, Mana 5; III = Limit 4, 6 HP, Mana 6
+  temple: { 2: { F: ['limit', 'hp', 'mana'], E: ['limit', 'hp', 'mana'], W: ['limit', 'hp', 'mana'] }, 3: { F: ['limit', 'hp', 'mana'], E: ['limit', 'hp', 'mana'], W: ['limit', 'hp', 'mana'] } },   // Schritte je Stufe (Stufe III kommt auf Stufe II obendrauf): II = Limit 3, 4 HP, Mana 5; III = Limit 4, 5 HP, Mana 6
   magic: { 2: [3, 2, 1], 3: [3, 2, 1] },                                  // Stufen von Haupt-, Neben- und drittem Element
   deck: {
     2: (P, S, T) => [P + '3', P + '2', P + '2', P + '2', S + '2', S + '2', T + '1', T + '1', P + '1'],
@@ -29,20 +29,21 @@ const MONSTER = {
     deckNames: ['', 'breit', 'spitz'],
     // Die Würfel: sechs Seiten je Würfel, jede Seite ein Wert und sein Ausschlag je Stufe (n: Stufe I, II, III).
     dice: {   // k: Wert, n: Ausschlag je Stufe. Pluswürfel und Minuswürfel haben dieselben sechs Werte, aber eigene Ausschläge (geeicht mit tools/balance/monster-dice.js: im Mittel verschiebt jeder Würfel die Stärke gleich weit)
-      plus:  [{ k: 'hp', n: [1, 1, 2] }, { k: 'mana', n: [3, 3, 3] }, { k: 'both', n: [1, 1, 1] }, { k: 'cards', n: [1, 2, 3] }, { k: 'hand', n: [1, 1, 2] }, { k: 'regen', n: [2, 3, 3] }],
-      minus: [{ k: 'hp', n: [1, 1, 1] }, { k: 'mana', n: [2, 2, 1] }, { k: 'both', n: [1, 1, 1] }, { k: 'cards', n: [2, 2, 1] }, { k: 'hand', n: [1, 1, 1] }, { k: 'regen', n: [1, 1, 1] }],
+      plus:  [{ k: 'hp', n: [1, 1, 2] }, { k: 'mana', n: [3, 3, 3] }, { k: 'both', n: [1, 1, 1] }, { k: 'draws', n: [1, 1, 1] }, { k: 'hand', n: [1, 1, 1] }, { k: 'regen', n: [2, 3, 3] }],
+      minus: [{ k: 'hp', n: [1, 1, 1] }, { k: 'mana', n: [2, 2, 2] }, { k: 'both', n: [1, 1, 1] }, { k: 'draws', n: [1, 1, 1] }, { k: 'hand', n: [1, 1, 1] }, { k: 'regen', n: [1, 1, 1] }],
     },
-    diceNames: { hp: 'HP', mana: 'Mana', both: 'Kraft', cards: 'Karten', hand: 'Hand', regen: 'Regen' },
+    diceNames: { hp: 'HP', mana: 'Mana', both: 'Kraft', draws: 'Ziehen', hand: 'Hand', regen: 'Regen' },
     diceHints: {
       hp: 'maximale Lebenspunkte',
       mana: 'maximales Mana',
       both: 'Kraft: maximale HP und maximales Mana zugleich',
-      cards: 'Karten: die schwächsten Karten werden zur stärksten Karte, bzw. die stärksten Karten fallen auf Stufe 1',
+      draws: 'Ziehen: Gratis-Nachziehen zu Kampfbeginn (Nachziehtokens)',
       hand: 'Handkarten',
       regen: 'Erholung (HP und Mana am Ende jeder Runde)',
     },
   },
   upgrades: { F: 3, E: 3, W: 3 },   // Karten des Startdecks, die auf Stufe 2 gehoben werden (nur Abschnitt I); mindestens eine, weil das Monster seine Hauptmagie auf Stufe 2 hat (ohne passende Karte wäre sie wertlos)
+  startDraws: 1,                                                          // Ziehen: Gratis-Nachziehen (Tokens) je Monster zu Kampfbeginn; Grundwert, die Würfel verändern ihn
   startLimit: 2,                                                          // Ausspiellimit aller Monster vor den Tempel-Schritten (Spieler starten seit 0.3 mit 2; hier wird neu abgestimmt)
   gold: { 1: 1, 2: 2, 3: 3 },                                              // Beute
   names: { F: 'Feuermonster', E: 'Erdmonster', W: 'Wassermonster' },
@@ -50,21 +51,14 @@ const MONSTER = {
 const STAGE_NUMERAL = ['', 'I', 'II', 'III'];
 
 // Würfelseite auf ein Monster anwenden (sign +1 = Pluswürfel, −1 = Minuswürfel). ‚ids‘ ist das Deck (wird verändert).
-function applyDie(stats, ids, face, sign, stage, P) {
+function applyDie(stats, face, sign, stage) {
   const n = face.n[stage - 1] * sign, k = face.k;
   if (k === 'hp') { stats.maxHp = Math.max(1, stats.maxHp + n); stats.hp = stats.maxHp; }
   else if (k === 'mana') { stats.maxMana = Math.max(1, stats.maxMana + n); stats.mana = stats.maxMana; }
   else if (k === 'both') { stats.maxHp = Math.max(1, stats.maxHp + n); stats.hp = stats.maxHp; stats.maxMana = Math.max(1, stats.maxMana + n); stats.mana = stats.maxMana; }
   else if (k === 'hand') stats.handExtra = (stats.handExtra || 0) + n;
   else if (k === 'regen') stats.regenExtra = (stats.regenExtra || 0) + n;
-  else if (k === 'cards') {
-    // plus: die schwächsten Karten werden zur stärksten Karte des Hauptelements; minus: die stärksten Karten fallen auf Stufe 1, aber nur solche, von deren Stufe es noch eine zweite gibt (jede Magiestufe behält ihre Karte)
-    for (let i = 0; i < Math.abs(n); i++) {
-      const lv = id => +id[1], all = ids.map((id, ix) => ix).filter(ix => ids[ix][0] !== 'C');
-      if (n > 0) { const top = P + stats.mag[P], low = all.sort((x, y) => lv(ids[x]) - lv(ids[y]) || y - x)[0]; if (low !== undefined && lv(ids[low]) < +top[1]) ids[low] = top; }
-      else { const ok = all.filter(ix => lv(ids[ix]) > 1 && ids.filter(o => o === ids[ix]).length > 1).sort((x, y) => lv(ids[y]) - lv(ids[x]) || x - y); if (ok.length) ids[ok[0]] = ids[ok[0]][0] + '1'; }
-    }
-  }
+  else if (k === 'draws') stats.draws = Math.max(0, stats.draws + n);
 }
 // v: gewürfelte Variante { d: Deckform (1 breit, 2 spitz), pl: Seite des Pluswürfels 0–5, mi: Seite des Minuswürfels 0–5 }; ohne v die feste Grundform (ohne Würfel).
 function spawnOne(el, stage, rng, v) {
@@ -73,6 +67,7 @@ function spawnOne(el, stage, rng, v) {
   for (let i = 0, src = SUPERIOR[el] + '1'; i < (M.upgrades[el] === undefined ? 2 : M.upgrades[el]); i++) { const idx = deck.indexOf(src); if (idx < 0) break; deck[idx] = el + '2'; }
   const stats = newStats();
   stats.limit = M.startLimit;
+  stats.draws = M.startDraws;
   stats.mag[el] = 2;
   if (stage === 1) M.stage1Temple[el].forEach(f => applyTemple(stats, f));   // ab Stufe II zählen nur die Schritte von ‚temple‘
   stats.gold = M.gold[1];
@@ -96,10 +91,11 @@ function spawnOne(el, stage, rng, v) {
     tags.push(V.deckNames[v.d]);
     hints.push(v.d === 1 ? 'breit: mehr Karten im Nebenelement, dafür weniger im Hauptelement. Vielseitiger, aber mit schwächerer Spitze.' : 'spitz: stärkere Spitze (mehr Karten der höchsten Stufe), dafür eine schwächere Basis (mehr Stufe-1-Karten).');
   }
+  const same = v.pl >= 0 && v.mi >= 0 && V.dice.plus[v.pl].k === V.dice.minus[v.mi].k;   // gleicher Wert auf beiden Würfeln: die Ausschläge heben sich auf, sie werden weder angewendet noch gezeigt
   [[v.pl, 1, V.dice.plus], [v.mi, -1, V.dice.minus]].forEach(([i, sign, die]) => {
-    if (i === undefined || i < 0) return;
+    if (i === undefined || i < 0 || same) return;
     const face = die[i], n = face.n[stage - 1];
-    applyDie(stats, finalDeck, face, sign, stage, P);
+    applyDie(stats, face, sign, stage);
     tags.push((sign > 0 ? '+' : '−') + V.diceNames[face.k]);
     hints.push((sign > 0 ? 'Pluswürfel' : 'Minuswürfel') + ': ' + (sign > 0 ? '+' : '−') + n + ' ' + V.diceNames[face.k] + ' (' + (sign > 0 ? 'mehr ' : 'weniger ') + V.diceHints[face.k] + ').');
   });

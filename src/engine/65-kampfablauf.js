@@ -15,7 +15,7 @@ function startCombat(state, attPid, slot) {   // slot: Platz des Monsters (F, E,
   const m = state.monsters[slot], el = m.el;
   const mdeck = newDeck(state, m.deckIds, monsterHand(m));
   state.players.forEach(p => { p.stats.freeDraws = 0; });
-  m.stats.freeDraws = 0;
+  m.stats.freeDraws = m.stats.draws || 0;   // Ziehen: Gratis-Nachziehen des Monsters
   state.combat = {
     logFrom: state.logN,
     mode: 'monster', elem: el, slot, att: attPid, def: other(attPid),

@@ -107,7 +107,7 @@ Variante je Monster wird beim Erscheinen gewürfelt (seit 0.4: Deckform und zwei
 |---|---|---|---|---|---|
 | I | 3 | 5 (Erdmonster 6) | 2 | 2 im eigenen Element | Startdeck, 3 Karten des eigenen Elements auf Stufe 2 |
 | II | 4 | 5 | 3 | 3 / 2 / 1 | siehe `MONSTER.deck` |
-| III | 6 | 6 | 4 | 3 / 2 / 1 | siehe `MONSTER.deck` |
+| III | 5 | 6 | 4 | 3 / 2 / 1 | siehe `MONSTER.deck` |
 
 Die Tabelle zeigt die Grundform (`spawnMonsters` ohne Zufall); im Spiel kommen Deckform und Würfel dazu.
 
@@ -239,19 +239,21 @@ Jedes Monster hat eine **Deckform** und wird von **zwei Würfeln** verändert. A
 
 **Deckform (6 mögliche Monster je Stufe):** Zu jedem der drei Monster (Feuer, Erde, Wasser) gibt es eine **spitze** und eine **breite** Form, zusammen 3 × 2 = 6 mögliche Monster je Stufe. Davon werden **drei ohne Zurücklegen ausgelost** (20 mögliche Kombinationen, gleich wahrscheinlich): Ein Element kann doppelt vorkommen (dann in beiden Formen), ein anderes fehlen. Die Plätze auf dem Brett bleiben Feuer/Erde/Wasser-Plätze in der Reihenfolge der Elemente; das Element steht im Monster selbst. *Spitz:* stärkere Spitze (mehr Karten der höchsten Stufe), dafür eine schwächere Basis. *Breit:* mehr Karten im Nebenelement, vielseitiger, dafür schwächere Spitze. Stufe I: spitz 4× Hauptelement Stufe 2, 2× Stufe 1, 3× Nebenelement; breit 2× Hauptelement Stufe 2, 2× Stufe 1, 3× Nebenelement, 2× drittes Element. Das frühere Nebenelement-Tauschen („Wasser-lastig“) und die Tempel-Varianten „zäh“ und „ausdauernd“ entfallen.
 
-**Pluswürfel und Minuswürfel (je 6 Seiten):** Der Pluswürfel macht das Monster in einem Wert stärker, der Minuswürfel in einem Wert schwächer. Beide haben dieselben sechs Werte; würfelt man zweimal denselben, heben sich die Ausschläge auf (die Etiketten nennen trotzdem beide). Die Ausschläge steigen mit der Stufe (Spalten Stufe I / II / III):
+**Pluswürfel und Minuswürfel (je 6 Seiten):** Der Pluswürfel macht das Monster in einem Wert stärker, der Minuswürfel in einem Wert schwächer. Beide haben dieselben sechs Werte; würfelt man zweimal denselben Wert (zum Beispiel +HP und −HP), heben sich die Ausschläge auf: sie werden weder angewendet noch angezeigt, es bleibt nur die Deckform. Die Ausschläge steigen mit der Stufe (Spalten Stufe I / II / III):
 
 | Wert | Pluswürfel | Minuswürfel | Wirkung |
 |---|---|---|---|
 | HP | +1 / +1 / +2 | −1 / −1 / −1 | maximale Lebenspunkte (mindestens 1) |
-| Mana | +3 / +3 / +3 | −2 / −2 / −1 | maximales Mana (mindestens 1) |
+| Mana | +3 / +3 / +3 | −2 / −2 / −2 | maximales Mana (mindestens 1) |
 | Kraft (HP und Mana) | +1 / +1 / +1 | −1 / −1 / −1 | beides zugleich |
-| Karten | 1 / 2 / 3 | 2 / 2 / 1 | Plus: so viele der schwächsten Karten werden zur stärksten Karte des Hauptelements. Minus: so viele der stärksten Karten fallen auf Stufe 1 (nur solche, von deren Stufe es noch eine zweite gibt) |
-| Hand | +1 / +1 / +2 | −1 / −1 / −1 | Handkarten des Monsters (mindestens 2) |
+| Ziehen | +1 / +1 / +1 | −1 / −1 / −1 | Gratis-Nachziehen (Nachziehtokens) zu Kampfbeginn; Grundwert 1, nie unter 0 |
+| Hand | +1 / +1 / +1 | −1 / −1 / −1 | Handkarten des Monsters (mindestens 2) |
 | Regen (Erholung) | +2 / +3 / +3 | −1 / −1 / −1 | zusätzliche HP und Mana je Runde (Grundwert 1, nie unter 0) |
 
 **Beschriftung:** Unter dem Namen steht, was gewürfelt wurde, zum Beispiel „Wassermonster II“ und darunter *spitz, +Mana, −HP*; beim Darüberfahren erklärt ein Hinweis die genauen Zahlen. Die Monsterkarte zeigt die tatsächlichen Werte.
 
-**Eichung (`tools/balance/monster-dice.js`):** Jede Seite wurde einzeln gemessen (KI gegen KI, je Seite 3000 Partien): Maß ist „Niederlagen minus Siege des Angreifers“ in Prozentpunkten je Angriff. Die Ausschläge sind so gewählt, dass der Pluswürfel im Mittel so viel gibt, wie der Minuswürfel nimmt; die Verschiebung der einzelnen Seiten wächst mit der Stufe (etwa 7, 11 und 16 Punkte). Einzelne Seiten wirken stärker als andere (Handkarten am stärksten, Regen am schwächsten); das ist gewollt, die Würfel mischen sich. In Stufe III ist der Minuswürfel auf Ausschlag 1 geeicht, weil die Monster dort mit größeren Minus-Ausschlägen im Mittel zu schwach wurden. Gesamtmessung (5000 Partien KI gegen KI, Angreifer: Sieg / Niederlage je Angriff): Stufe I 32,7 / 13,1 % ohne und 29,0 / 11,1 % mit Würfeln, Stufe II 47,3 / 19,9 % und 46,7 / 21,3 %, Stufe III 38,6 / 35,8 % und 37,0 / 37,2 %. Die Würfel verschieben die Stärke im Mittel also um höchstens drei Prozentpunkte (Niederlagen minus Siege), das Risiko steigt weiter von Stufe zu Stufe. In Stufe I kommen etwa 1 % der Kämpfe ohne Sieger zu Ende (Erschöpfung), sonst entscheidet die Partielänge nicht (Median 378 Aktionen, vorher 344).
+**Ziehen:** Jedes Monster beginnt den Kampf mit 1 Gratis-Nachziehen (`startDraws`, ein Nachziehtoken wie bei den Spielern). Dafür hat Stufe III jetzt 5 statt 6 HP (sonst waren die Monster dort um etwa 11 Punkte zu stark). Auf der Monsterkarte stehen unten „Limit · Hand · Ziehen“.
 
-Ein **Limit-Würfel wurde verworfen**: Ein Monster mit Limit 1 war in Stufe I nicht zu besiegen und führte zu langen Patts (über 2600 erschöpfte Kämpfe in 1500 Partien). Stattdessen gibt es die Seite „Kraft“ (HP und Mana zugleich).
+**Eichung (`tools/balance/monster-dice.js`):** Jede Seite wurde einzeln gemessen (KI gegen KI, je Seite 3000 Partien): Maß ist „Niederlagen minus Siege des Angreifers“ in Prozentpunkten je Angriff. Die Ausschläge sind so gewählt, dass der Pluswürfel im Mittel so viel gibt, wie der Minuswürfel nimmt. Einzelne Seiten wirken stärker als andere (Handkarten und Kraft am stärksten, Regen und Ziehen am schwächsten); das ist gewollt, die Würfel mischen sich. Gesamtmessung (5000 Partien KI gegen KI, Angreifer: Sieg / Niederlage je Angriff): Stufe I 30,9 / 14,8 % ohne und 30,1 / 14,2 % mit Würfeln, Stufe II 44,5 / 22,6 % und 44,2 / 23,7 %, Stufe III 38,2 / 37,9 % und 38,2 / 38,3 %. Die Würfel verschieben die Stärke im Mittel also um höchstens etwa einen Prozentpunkt, das Risiko steigt weiter von Stufe zu Stufe. Partielänge: Median 348 Aktionen.
+
+Eine Seite „Karten“ (Karten um Stufen heben oder senken) wurde verworfen: Sie wirkte je nach Stufe kaum oder gegenläufig (schwächere Karten machten das Monster teils stärker). Ein **Limit-Würfel wurde verworfen**: Ein Monster mit Limit 1 war in Stufe I nicht zu besiegen und führte zu langen Patts (über 2600 erschöpfte Kämpfe in 1500 Partien). Stattdessen gibt es die Seite „Kraft“ (HP und Mana zugleich).

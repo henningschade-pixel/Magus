@@ -4,8 +4,8 @@
 // Ausgabe je Stufe: Stärke des Monsters = Niederlagen minus Siege des Angreifers in Prozentpunkten (je Angriff); in Klammern die Verschiebung gegen die Basis (beide Würfel neutral).
 // Eine Seite ist ausgewogen, wenn Plus und Minus die Basis etwa gleich weit nach oben und unten verschieben; Plus und Minus verschiedener Seiten sollten sich ebenfalls ausgleichen.
 const { M, AI } = require('./load.js');
-const N = +process.argv[2] || 300, stages = (process.argv[3] || '1,2,3').split(',').map(Number), kinds = (process.argv[4] || 'hp,mana,both,cards,hand,regen').split(','), over = JSON.parse(process.argv[5] || '{}'), seed0 = +process.argv[6] || 5000;
-const D = M.MONSTER.variants.dice, zero = { k: 'hp', n: [0, 0, 0] };
+const N = +process.argv[2] || 300, stages = (process.argv[3] || '1,2,3').split(',').map(Number), kinds = (process.argv[4] || 'hp,mana,both,draws,hand,regen').split(','), over = JSON.parse(process.argv[5] || '{}'), seed0 = +process.argv[6] || 5000;
+const D = M.MONSTER.variants.dice, zero = { k: 'none', n: [0, 0, 0] };
 function measure(plus, minus) {
   D.plus.fill(plus); D.minus.fill(minus);
   const agg = { 1: { att: 0, win: 0, lose: 0 }, 2: { att: 0, win: 0, lose: 0 }, 3: { att: 0, win: 0, lose: 0 } };
