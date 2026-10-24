@@ -28,18 +28,17 @@ const MONSTER = {
     },
     deckNames: ['', 'breit', 'spitz'],
     // Die Würfel: sechs Seiten je Würfel, jede Seite ein Wert und sein Ausschlag je Stufe (n: Stufe I, II, III).
-    dice: {   // k: Wert, n: Ausschlag je Stufe. Pluswürfel und Minuswürfel haben dieselben sechs Werte, aber eigene Ausschläge (geeicht mit tools/balance/monster-dice.js: im Mittel verschiebt jeder Würfel die Stärke gleich weit)
-      plus:  [{ k: 'hp', n: [1, 1, 2] }, { k: 'mana', n: [3, 3, 3] }, { k: 'both', n: [1, 1, 1] }, { k: 'draws', n: [1, 1, 1] }, { k: 'hand', n: [1, 1, 1] }, { k: 'regen', n: [2, 3, 3] }],
-      minus: [{ k: 'hp', n: [1, 1, 1] }, { k: 'mana', n: [2, 2, 2] }, { k: 'both', n: [1, 1, 1] }, { k: 'draws', n: [1, 1, 1] }, { k: 'hand', n: [1, 1, 1] }, { k: 'regen', n: [1, 1, 1] }],
+    dice: {   // k: Wert, n: Ausschlag je Stufe (seit der Überarbeitung in allen Stufen gleich). Beide Würfel haben dieselben sechs Seiten, der Minuswürfel dreht das Vorzeichen um; die sechste Seite ist leer
+      plus:  [{ k: 'hp', n: [2, 2, 2] }, { k: 'mana', n: [1, 1, 1] }, { k: 'limit', n: [1, 1, 1] }, { k: 'draws', n: [1, 1, 1] }, { k: 'hand', n: [1, 1, 1] }, { k: 'none', n: [0, 0, 0] }],
+      minus: [{ k: 'hp', n: [2, 2, 2] }, { k: 'mana', n: [1, 1, 1] }, { k: 'limit', n: [1, 1, 1] }, { k: 'draws', n: [1, 1, 1] }, { k: 'hand', n: [1, 1, 1] }, { k: 'none', n: [0, 0, 0] }],
     },
-    diceNames: { hp: 'HP', mana: 'Mana', both: 'Kraft', draws: 'Ziehen', hand: 'Hand', regen: 'Regen' },
+    diceNames: { hp: 'HP', mana: 'Mana', limit: 'Limit', hand: 'Hand', draws: 'Ziehen' },
     diceHints: {
       hp: 'maximale Lebenspunkte',
       mana: 'maximales Mana',
-      both: 'Kraft: maximale HP und maximales Mana zugleich',
-      draws: 'Ziehen: Gratis-Nachziehen zu Kampfbeginn (Nachziehtokens)',
+      limit: 'Ausspiellimit (Karten je Zug)',
       hand: 'Handkarten',
-      regen: 'Erholung (HP und Mana am Ende jeder Runde)',
+      draws: 'Ziehen: Gratis-Nachziehen zu Kampfbeginn (Nachziehtokens)',
     },
   },
   upgrades: { F: 3, E: 3, W: 3 },   // Karten des Startdecks, die auf Stufe 2 gehoben werden (nur Abschnitt I); mindestens eine, weil das Monster seine Hauptmagie auf Stufe 2 hat (ohne passende Karte wäre sie wertlos)
@@ -55,9 +54,8 @@ function applyDie(stats, face, sign, stage) {
   const n = face.n[stage - 1] * sign, k = face.k;
   if (k === 'hp') { stats.maxHp = Math.max(1, stats.maxHp + n); stats.hp = stats.maxHp; }
   else if (k === 'mana') { stats.maxMana = Math.max(1, stats.maxMana + n); stats.mana = stats.maxMana; }
-  else if (k === 'both') { stats.maxHp = Math.max(1, stats.maxHp + n); stats.hp = stats.maxHp; stats.maxMana = Math.max(1, stats.maxMana + n); stats.mana = stats.maxMana; }
+  else if (k === 'limit') stats.limit = Math.min(MAX_LIMIT, Math.max(2, stats.limit + n));   // nie unter 2: Limit 1 führte in Stufe I zu endlosen Patts
   else if (k === 'hand') stats.handExtra = (stats.handExtra || 0) + n;
-  else if (k === 'regen') stats.regenExtra = (stats.regenExtra || 0) + n;
   else if (k === 'draws') stats.draws = Math.max(0, stats.draws + n);
 }
 // v: gewürfelte Variante { d: Deckform (1 breit, 2 spitz), pl: Seite des Pluswürfels 0–5, mi: Seite des Minuswürfels 0–5 }; ohne v die feste Grundform (ohne Würfel).
@@ -93,7 +91,7 @@ function spawnOne(el, stage, rng, v) {
   }
   const same = v.pl >= 0 && v.mi >= 0 && V.dice.plus[v.pl].k === V.dice.minus[v.mi].k;   // gleicher Wert auf beiden Würfeln: die Ausschläge heben sich auf, sie werden weder angewendet noch gezeigt
   [[v.pl, 1, V.dice.plus], [v.mi, -1, V.dice.minus]].forEach(([i, sign, die]) => {
-    if (i === undefined || i < 0 || same) return;
+    if (i === undefined || i < 0 || same || die[i].k === 'none') return;
     const face = die[i], n = face.n[stage - 1];
     applyDie(stats, face, sign, stage);
     tags.push((sign > 0 ? '+' : '−') + V.diceNames[face.k]);
@@ -126,7 +124,7 @@ function monsterHand(m) { return Math.max(2, Math.max(MIN_SLOTS, m.stats.limit +
 function monsterAlive(m) { return m.stats.hp > 0; }
 // Monsterphase vorbei: alle drei Monster sind besiegt.
 function allMonstersDead(state) { return ELEMENTS.every(e => !monsterAlive(state.monsters[e])); }
-function regenMonsters(state) { ELEMENTS.forEach(e => { const m = state.monsters[e]; if (monsterAlive(m)) { const n = 1 + (m.stats.regenExtra || 0); if (n > 0) regen(m.stats, n); } }); }
+function regenMonsters(state) { ELEMENTS.forEach(e => { const m = state.monsters[e]; if (monsterAlive(m)) regen(m.stats); }); }
 
 // Monster eines Abschnitts für ein Spiel: gewürfelt (eigener, vom Spielzufall getrennter Strom) oder feste Grundform.
 function spawnForGame(state, stage) {

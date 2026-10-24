@@ -116,34 +116,33 @@ test('Monster-Würfel (0.4): Deckform spitz/breit, ein Plus- und ein Minuswürfe
     for (const el of Object.keys(r)) {
       const m = r[el], v = m.variant, pl = D.plus[v.pl], mi = D.minus[v.mi], [bh, bm] = base[st][m.el];
       assert.ok(v.d === 1 || v.d === 2, 'Deckform spitz oder breit');
-      const same = pl.k === mi.k;   // gleicher Wert auf beiden Würfeln: hebt sich auf und wird nicht gezeigt
-      assert.equal(m.label, [v.d === 1 ? 'breit' : 'spitz'].concat(same ? [] : ['+' + M.MONSTER.variants.diceNames[pl.k], '\u2212' + M.MONSTER.variants.diceNames[mi.k]]).join(', '));
-      assert.equal(m.hints.length, same ? 1 : 3);
-      const d = (k) => same ? 0 : (pl.k === k || pl.k === 'both' && (k === 'hp' || k === 'mana') ? pl.n[st - 1] : 0) - (mi.k === k || mi.k === 'both' && (k === 'hp' || k === 'mana') ? mi.n[st - 1] : 0);
+      const blank = pl.k === 'none' || mi.k === 'none', same = pl.k === mi.k;   // gleicher Wert auf beiden Würfeln: hebt sich auf und wird nicht gezeigt
+      assert.equal(m.label, [v.d === 1 ? 'breit' : 'spitz'].concat(same ? [] : [pl.k === 'none' ? null : '+' + M.MONSTER.variants.diceNames[pl.k], mi.k === 'none' ? null : '\u2212' + M.MONSTER.variants.diceNames[mi.k]].filter(Boolean)).join(', '));
+      assert.equal(m.hints.length, same ? 1 : 3 - (pl.k === 'none' ? 1 : 0) - (mi.k === 'none' ? 1 : 0));
+      const d = (k) => same ? 0 : (pl.k === k ? pl.n[st - 1] : 0) - (mi.k === k ? mi.n[st - 1] : 0);
       assert.equal(m.stats.maxHp, Math.max(1, bh + d('hp')), 'HP ' + m.label);
       assert.equal(m.stats.maxMana, Math.max(1, bm + d('mana')), 'Mana ' + m.label);
-      assert.equal(m.stats.limit, Math.max(1, limit[st] + d('limit')), 'Limit ' + m.label);
-      assert.equal(m.stats.handExtra || 0, d('hand')); assert.equal(m.stats.regenExtra || 0, d('regen')); assert.equal(m.stats.draws, Math.max(0, 1 + d('draws')));
+      assert.equal(m.stats.limit, Math.min(M.MAX_LIMIT, Math.max(2, limit[st] + d('limit'))), 'Limit ' + m.label);
+      assert.equal(m.stats.handExtra || 0, d('hand')); assert.equal(m.stats.draws, Math.max(0, 1 + d('draws')));
       seenForm[v.d] = 1; seenPlus.add(v.pl); seenMinus.add(v.mi);
     }
   }
   assert.equal(Object.keys(seenForm).length, 2); assert.equal(seenPlus.size, 6); assert.equal(seenMinus.size, 6);
 });
 
-test('Monster-Würfel: sechs Seiten je Würfel, gleiche Werte, Ausschläge wachsen mit der Stufe', () => {
+test('Monster-Würfel: sechs Seiten (HP 2, Mana 1, Limit 1, Ziehen 1, Hand 1, leer), gleich groß auf beiden Würfeln, in allen Stufen gleich', () => {
   const D = M.MONSTER.variants.dice;
   assert.equal(D.plus.length, 6); assert.equal(D.minus.length, 6);
-  for (let i = 0; i < 6; i++) assert.equal(D.plus[i].k, D.minus[i].k);
-  assert.equal(new Set(D.plus.map(f => f.k)).size, 6);
-  for (const f of D.plus.concat(D.minus)) { assert.equal(f.n.length, 3); assert.ok(f.n.every(x => x >= 1)); }
-  for (const f of D.plus) assert.ok(f.n[0] <= f.n[1] && f.n[1] <= f.n[2] || f.k === 'mana', 'die Ausschläge des Pluswürfels wachsen mit der Stufe: ' + f.k);   // Mana ist die schwächste Seite und behält 3; beim Minuswürfel ist Stufe III auf 1 geeicht (sonst wären die Monster dort im Mittel schwächer)
+  assert.deepEqual(D.plus.map(f => [f.k, f.n[0]]), [['hp', 2], ['mana', 1], ['limit', 1], ['draws', 1], ['hand', 1], ['none', 0]]);
+  assert.deepEqual(D.minus, D.plus);
+  for (const f of D.plus) assert.ok(f.n[0] === f.n[1] && f.n[1] === f.n[2], 'stufenunabhängig: ' + f.k);
 });
 
-test('Monster-Erholung und Hand folgen den Würfeln', () => {
+test('Monster-Hand folgt den Würfeln', () => {
   const D = M.MONSTER.variants.dice, st = M.newGame({ seed: 9, ai: [true, true] });
   const mk = (kPlus, kMinus) => { const save = [D.plus.slice(), D.minus.slice()]; D.plus.fill(D.plus.find(f => f.k === kPlus)); D.minus.fill(D.minus.find(f => f.k === kMinus)); const r = M.spawnMonsters(2, st.rng); D.plus.splice(0, 6, ...save[0]); D.minus.splice(0, 6, ...save[1]); return r.F; };
-  const a = mk('regen', 'hp'), b = mk('hp', 'regen');
-  assert.equal(a.stats.regenExtra, D.plus.find(f => f.k === 'regen').n[1]); assert.equal(b.stats.regenExtra, -D.minus.find(f => f.k === 'regen').n[1]);
+  assert.equal(mk('hand', 'hp').stats.handExtra, 1); assert.equal(mk('hp', 'hand').stats.handExtra, -1);
+  assert.equal(M.monsterHand(mk('hand', 'hp')), 6); assert.equal(M.monsterHand(mk('hp', 'hand')), 4);   // Stufe II: Limit 3 + 2 Handplätze, plus oder minus 1
 });
 
 test('Siegpunkte: Monsterkampf +1 / -1 (nie unter 0), keine Beute, kein Trostpreis, Ende ab 4 nach Showdown 2', () => {
@@ -465,7 +464,7 @@ test('Start-HP der Spieler 4 (startHp), Monster beginnen weiter mit eigenen Wert
   const s = M.newGame({ seed: 5 });
   assert.deepEqual(s.players.map(p => [p.stats.hp, p.stats.maxHp]), [[4, 4], [4, 4]]);
   assert.deepEqual(M.newGame({ seed: 5, rules: { startHp: 0 } }).players.map(p => p.stats.maxHp), [3, 3]);
-  assert.equal(M.spawnMonsters(1, s.rng).F.stats.maxHp >= 2, true);
+  assert.equal(M.spawnMonsters(1, s.rng).F.stats.maxHp >= 1, true);
 });
 
 test('Steigende Preise (priceRise): jeder Kauf einer Kategorie verteuert die nächste Stufe um den Grundpreis; Einnahmen je Abschnitt 2/3/4', () => {

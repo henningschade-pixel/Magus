@@ -136,4 +136,4 @@ Monster: Stufe III mit 8 HP verlor die Angreifer zu 48 % (mit den neuen Einnahme
 
 ## Monster-Würfel (0.4)
 
-`node tools/balance/monster-dice.js 3000 1,2,3 hp,mana` misst, wie stark jede Würfelseite die Monster verschiebt (Pluswürfel und Minuswürfel getrennt, der andere Würfel neutral; Maß: Niederlagen minus Siege des Angreifers in Prozentpunkten). `SCAN=1` misst jede Seite mit Ausschlag 1, 2 und 3 zum Eichen. Die Ausschläge stehen in `MONSTER.variants.dice`. `monster-tune.js` und `mon3.js` gehören zur Monsterform vor 0.4 (Tempel-Varianten) und laufen nicht mehr.
+`node tools/balance/monster-dice.js 3000 1,2,3 hp,mana` misst, wie stark jede Würfelseite die Monster verschiebt (Pluswürfel und Minuswürfel getrennt, der andere Würfel neutral; Maß: Niederlagen minus Siege des Angreifers in Prozentpunkten). `SCAN=1` misst jede Seite mit Ausschlag 1, 2 und 3 zum Eichen. Die Beträge stehen in `MONSTER.variants.dice` (seit der Überarbeitung fest in allen Stufen: 2 HP, 1 Mana, 1 Limit, 1 Ziehen, 1 Hand, leer). `monster-tune.js` und `mon3.js` gehören zur Monsterform vor 0.4 (Tempel-Varianten) und laufen nicht mehr.
