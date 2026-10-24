@@ -9,7 +9,6 @@ function combatSetup(seed, hand, opts) {
   const s = M.newGame({ seed: seed || 11, ai: [false, false], first: 0, rules: { surplusSp: 0 } });   // Kampftests setzen die Magie hoch; Überschusspunkte würden Siegpunkte verschieben
   M.apply(s, { pid: 0, type: 'combat', elem: 'F' });
   const c = s.combat, me = c.sides.a, op = c.sides.b;
-  op.stats.freeDraws = 0;   // seit 0.4 bringt das Monster Gratis-Nachziehen (Ziehen) mit; die Kampftests zählen ab null
   me.stats.limit = opts.limit || 3; me.stats.mag = { F: 3, E: 3, W: 3 }; me.stats.mana = me.stats.maxMana = 9;
   const h = me.deck.hand;
   hand.forEach((id, i) => { h[i] = Object.assign({}, h[i], { id }); });

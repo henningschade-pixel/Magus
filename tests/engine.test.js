@@ -93,7 +93,7 @@ test('Rückwurf ist durch den eingehenden Schaden gedeckelt', () => {
 
 test('Monsterwerte je Stufe: Grundform ohne Würfel, mit Würfeln höchstens die Ausschläge der Seiten', () => {
   const s = M.newGame({ seed: 3, ai: [true, true], first: 0 });
-  const hp = [3, 4, 5], limit = [2, 3, 4], gold = [1, 2, 3], D = M.MONSTER.variants.dice, maxN = (k, st) => Math.max(...D.plus.concat(D.minus).filter(f => f.k === k).map(f => f.n[st - 1]));
+  const hp = [3, 4, 6], limit = [2, 3, 4], gold = [1, 2, 3], D = M.MONSTER.variants.dice, maxN = (k, st) => Math.max(...D.plus.concat(D.minus).filter(f => f.k === k).map(f => f.n[st - 1]));
   [1, 2, 3].forEach((st, i) => {
     const base = M.spawnMonsters(st);
     for (const el of Object.keys(base)) { assert.equal(base[el].stats.maxHp, hp[i]); assert.equal(base[el].stats.limit, limit[i]); assert.equal(base[el].label, ''); }
@@ -109,7 +109,7 @@ test('Monsterwerte je Stufe: Grundform ohne Würfel, mit Würfeln höchstens die
 });
 
 test('Monster-Würfel (0.4): Deckform spitz/breit, ein Plus- und ein Minuswürfel, Name Spezialist/Generalist, Etikett „+X, −Y“, Werte folgen den Seiten', () => {
-  const D = M.MONSTER.variants.dice, base = { 1: { F: [3, 5], E: [3, 6], W: [3, 5] }, 2: { F: [4, 4], E: [4, 4], W: [4, 4] }, 3: { F: [5, 5], E: [5, 5], W: [5, 5] } }, limit = [0, 2, 3, 4];
+  const D = M.MONSTER.variants.dice, base = { 1: { F: [3, 5], E: [3, 6], W: [3, 5] }, 2: { F: [4, 5], E: [4, 5], W: [4, 5] }, 3: { F: [6, 6], E: [6, 6], W: [6, 6] } }, limit = [0, 2, 3, 4];
   const seenForm = {}, seenPlus = new Set(), seenMinus = new Set();
   for (const st of [1, 2, 3]) for (let seed = 1; seed <= 120; seed++) {
     const r = M.spawnMonsters(st, M.newGame({ seed }).rng);
@@ -124,7 +124,7 @@ test('Monster-Würfel (0.4): Deckform spitz/breit, ein Plus- und ein Minuswürfe
       assert.equal(m.stats.maxHp, Math.max(1, bh + d('hp')), 'HP ' + m.label);
       assert.equal(m.stats.maxMana, Math.max(1, bm + d('mana')), 'Mana ' + m.label);
       assert.equal(m.stats.limit, Math.min(M.MAX_LIMIT, Math.max(1, limit[st] + d('limit'))), 'Limit ' + m.label);
-      assert.equal(m.stats.handExtra || 0, d('hand')); assert.equal(m.stats.draws, Math.max(0, 2 + d('draws')));
+      assert.equal(m.stats.handExtra || 0, d('hand')); assert.equal(m.stats.drawLimit, Math.min(M.MAX_DRAW_LIMIT, Math.max(1, 2 + d('draws'))));
       seenForm[v.d] = 1; seenPlus.add(v.pl); seenMinus.add(v.mi);
     }
   }

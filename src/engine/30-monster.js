@@ -6,13 +6,13 @@
 // Tempel-Verbesserungen: Stufe I ‚stage1Temple‘ (nur dort), danach je Stufe die Liste ‚temple[stufe][element]‘.
 // Grundwerte je Stufe (Version 0.3.1, neu abgestimmt auf Spieler mit Ausspiellimit 2 von Anfang an; Messung mit tools/balance/monster-tune.js); seit 0.4 kommen Deckform und zwei Würfel dazu (variants):
 //   Stufe I   3 HP, Mana 5 (Erdmonster 6), Limit 2, Startdeck mit 3 Karten des eigenen Elements auf Stufe 2
-//   Stufe II  4 HP, Mana 4, Limit 3
-//   Stufe III 5 HP, Mana 5, Limit 4 (0.3.2: 8 HP waren mit den höheren Einnahmen zu hart, 48 % Niederlagen; 0.4: 5 statt 6 HP und 1 Mana weniger in Stufe II/III, weil jedes Monster nun 2 Gratis-Nachziehen mitbringt)
+//   Stufe II  4 HP, Mana 5, Limit 3
+//   Stufe III 6 HP, Mana 6, Limit 4 (0.3.2: 8 HP waren mit den höheren Einnahmen zu hart, 48 % Niederlagen)
 // Das Limit steigt nur dort, wo es gewollt ist: Ein Monster mit Limit 2 und vielen HP verwickelt den Angreifer in endlose Angriffe und Fluchten (bis 27 Angriffe je Partie), erst Limit 3 gibt ihm die nötige Gefahr.
 const MONSTER = {
   profile: { F: { primary: 'F', secondary: 'E' }, E: { primary: 'E', secondary: 'W' }, W: { primary: 'W', secondary: 'F' } },
   stage1Temple: { F: ['mana'], E: ['mana', 'mana'], W: ['mana'] },   // Stufe I: Mana 5 (Erdmonster 6; sonst verlor es die Angreifer nur halb so oft)
-  temple: { 2: { F: ['limit', 'hp'], E: ['limit', 'hp'], W: ['limit', 'hp'] }, 3: { F: ['limit', 'hp', 'mana'], E: ['limit', 'hp', 'mana'], W: ['limit', 'hp', 'mana'] } },   // Schritte je Stufe (Stufe III kommt auf Stufe II obendrauf): II = Limit 3, 4 HP, Mana 4; III = Limit 4, 5 HP, Mana 5
+  temple: { 2: { F: ['limit', 'hp', 'mana'], E: ['limit', 'hp', 'mana'], W: ['limit', 'hp', 'mana'] }, 3: { F: ['limit', 'hp', 'hp', 'mana'], E: ['limit', 'hp', 'hp', 'mana'], W: ['limit', 'hp', 'hp', 'mana'] } },   // Schritte je Stufe (Stufe III kommt auf Stufe II obendrauf): II = Limit 3, 4 HP, Mana 5; III = Limit 4, 6 HP, Mana 6
   magic: { 2: [3, 2, 1], 3: [3, 2, 1] },                                  // Stufen von Haupt-, Neben- und drittem Element
   deck: {
     2: (P, S, T) => [P + '3', P + '2', P + '2', P + '2', S + '2', S + '2', T + '1', T + '1', P + '1'],
@@ -37,11 +37,11 @@ const MONSTER = {
       mana: 'maximales Mana',
       limit: 'Ausspiellimit (Karten je Zug)',
       hand: 'Handkarten',
-      draws: 'Ziehen: Gratis-Nachziehen zu Kampfbeginn (Nachziehtokens)',
+      draws: 'Ziehen: Nachziehlimit (so oft hintereinander nachziehen, bevor der Marker auf Rot springt)',
     },
   },
   upgrades: { F: 3, E: 3, W: 3 },   // Karten des Startdecks, die auf Stufe 2 gehoben werden (nur Abschnitt I); mindestens eine, weil das Monster seine Hauptmagie auf Stufe 2 hat (ohne passende Karte wäre sie wertlos)
-  startDraws: 2,                                                          // Ziehen: Gratis-Nachziehen (Tokens) je Monster zu Kampfbeginn; Grundwert, die Würfel verändern ihn
+  startDraws: 2,                                                          // Ziehen = Nachziehlimit des Monsters (1 bis MAX_DRAW_LIMIT): so oft darf es hintereinander nachziehen, bevor sein Marker auf Rot springt; Grundwert, die Würfel verändern ihn
   startLimit: 2,                                                          // Ausspiellimit aller Monster vor den Tempel-Schritten (Spieler starten seit 0.3 mit 2; hier wird neu abgestimmt)
   gold: { 1: 1, 2: 2, 3: 3 },                                              // Beute
   names: { F: 'Feuermonster', E: 'Erdmonster', W: 'Wassermonster' },   // Grundform (ohne Würfel)
@@ -56,7 +56,7 @@ function applyDie(stats, face, sign, stage) {
   else if (k === 'mana') { stats.maxMana = Math.max(1, stats.maxMana + n); stats.mana = stats.maxMana; }
   else if (k === 'limit') stats.limit = Math.min(MAX_LIMIT, Math.max(1, stats.limit + n));   // bis auf 1, nie auf 0 (Achtung: Limit 1 führt in Stufe I oft zu Patts, siehe Regelwerk)
   else if (k === 'hand') stats.handExtra = (stats.handExtra || 0) + n;
-  else if (k === 'draws') stats.draws = Math.max(0, stats.draws + n);
+  else if (k === 'draws') stats.drawLimit = Math.min(MAX_DRAW_LIMIT, Math.max(1, stats.drawLimit + n));
 }
 // v: gewürfelte Variante { d: Deckform (1 breit, 2 spitz), pl: Seite des Pluswürfels 0–5, mi: Seite des Minuswürfels 0–5 }; ohne v die feste Grundform (ohne Würfel).
 function spawnOne(el, stage, rng, v) {
@@ -65,7 +65,7 @@ function spawnOne(el, stage, rng, v) {
   for (let i = 0, src = SUPERIOR[el] + '1'; i < (M.upgrades[el] === undefined ? 2 : M.upgrades[el]); i++) { const idx = deck.indexOf(src); if (idx < 0) break; deck[idx] = el + '2'; }
   const stats = newStats();
   stats.limit = M.startLimit;
-  stats.draws = M.startDraws;
+  stats.drawLimit = M.startDraws;
   stats.mag[el] = 2;
   if (stage === 1) M.stage1Temple[el].forEach(f => applyTemple(stats, f));   // ab Stufe II zählen nur die Schritte von ‚temple‘
   stats.gold = M.gold[1];

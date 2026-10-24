@@ -64,7 +64,7 @@ function applyInner(state, a) {
 function applyCore(state, a) {
   if (state.over) return fail('Das Spiel ist beendet.');
   if (!state.rules.drawMarker) return dispatch(state, a);
-  const kind = markerKind(state, a), pid = a.pid !== undefined ? a.pid : actor(state), wasRed = kind === 'draw' && !!state.players[pid].drawRed;
+  const kind = markerKind(state, a), pid = a.pid !== undefined ? a.pid : actor(state), wasRed = kind === 'draw' && !!markerOf(state, pid).h.drawRed;
   const r = dispatch(state, a);
   if (r.ok && kind) drawMarkerAfter(state, pid, kind, wasRed);
   return r;
@@ -80,10 +80,17 @@ function markerKind(state, a) {
   if (state.phase === 'combat') return a.type === 'draw' ? 'draw' : ['attack', 'defend', 'pass', 'recover', 'flee'].includes(a.type) ? 'other' : null;
   return null;
 }
-function drawMarkerAfter(state, pid, kind, wasRed) {
+// Wem gehört der Nachziehmarker, wenn pid handelt? Dem Spieler, im Monsterkampf aber für die Seite des Monsters dem Monster (Limit: seine Stufe ‚Ziehen‘ = stats.drawLimit). { h: Halter von drawN/drawRed, lim: Limit }
+function markerOf(state, pid) {
+  const c = state.phase === 'combat' ? state.combat : null;
+  if (c && c.mode === 'monster' && c.sides.b.ctrl === pid) { const m = c.sides.b.monster; return { h: m, lim: m.stats.drawLimit || 1 }; }
   const p = state.players[pid];
-  if (kind === 'other') { p.drawRed = false; p.drawN = 0; return; }
-  p.drawN = Math.min((p.drawN || 0) + 1, p.stats.drawLimit || 1); p.drawRed = p.drawN >= (p.stats.drawLimit || 1);   // Nachziehlimit: so viele Nachziehvorgänge hintereinander sind frei, danach springt der Marker auf Rot
+  return { h: p, lim: p.stats.drawLimit || 1 };
+}
+function drawMarkerAfter(state, pid, kind, wasRed) {
+  const p = state.players[pid], mk = markerOf(state, pid), h = mk.h;
+  if (kind === 'other') { h.drawRed = false; h.drawN = 0; return; }
+  h.drawN = Math.min((h.drawN || 0) + 1, mk.lim); h.drawRed = h.drawN >= mk.lim;   // Nachziehlimit: so viele Nachziehvorgänge hintereinander sind frei, danach springt der Marker auf Rot
   if (!wasRed) return;
   const q = state.players[other(pid)];
   if (state.phase === 'combat' && state.combat) {
@@ -108,5 +115,5 @@ return { ELEMENTS, SUPERIOR, NAMES, START_DECK, MAX_MAGIC, MAX_SLOTS, MIN_SLOTS,
   makeRng, parseCard, selection, newGame, apply, record, prim, actor, other, regen, handCounts,
   vendorOffers, vendorPlans, previewTemple, pointsForGold, nextLevelCost, limitStepCost, manaStepCost, hpStepCost, slotStepCost, magicCost, drawLimitCost, upField, magicField, payTxt,
   evalAttack, evalDefense, canFlee, stockOf, recoverGain, regenGain, comboLevels, levelsFor,
-  mirrorOf, monsterAlive, monsterHand, allMonstersDead, magicProgress, spawnMonsters, spawnForGame };
+  mirrorOf, monsterAlive, monsterHand, markerOf, allMonstersDead, magicProgress, spawnMonsters, spawnForGame };
 }));

@@ -513,13 +513,13 @@ function magicProgress(p) { return (p.stats.mag.F - 1) + (p.stats.mag.E - 1) + (
 // Tempel-Verbesserungen: Stufe I ‚stage1Temple‘ (nur dort), danach je Stufe die Liste ‚temple[stufe][element]‘.
 // Grundwerte je Stufe (Version 0.3.1, neu abgestimmt auf Spieler mit Ausspiellimit 2 von Anfang an; Messung mit tools/balance/monster-tune.js); seit 0.4 kommen Deckform und zwei Würfel dazu (variants):
 //   Stufe I   3 HP, Mana 5 (Erdmonster 6), Limit 2, Startdeck mit 3 Karten des eigenen Elements auf Stufe 2
-//   Stufe II  4 HP, Mana 4, Limit 3
-//   Stufe III 5 HP, Mana 5, Limit 4 (0.3.2: 8 HP waren mit den höheren Einnahmen zu hart, 48 % Niederlagen; 0.4: 5 statt 6 HP und 1 Mana weniger in Stufe II/III, weil jedes Monster nun 2 Gratis-Nachziehen mitbringt)
+//   Stufe II  4 HP, Mana 5, Limit 3
+//   Stufe III 6 HP, Mana 6, Limit 4 (0.3.2: 8 HP waren mit den höheren Einnahmen zu hart, 48 % Niederlagen)
 // Das Limit steigt nur dort, wo es gewollt ist: Ein Monster mit Limit 2 und vielen HP verwickelt den Angreifer in endlose Angriffe und Fluchten (bis 27 Angriffe je Partie), erst Limit 3 gibt ihm die nötige Gefahr.
 const MONSTER = {
   profile: { F: { primary: 'F', secondary: 'E' }, E: { primary: 'E', secondary: 'W' }, W: { primary: 'W', secondary: 'F' } },
   stage1Temple: { F: ['mana'], E: ['mana', 'mana'], W: ['mana'] },   // Stufe I: Mana 5 (Erdmonster 6; sonst verlor es die Angreifer nur halb so oft)
-  temple: { 2: { F: ['limit', 'hp'], E: ['limit', 'hp'], W: ['limit', 'hp'] }, 3: { F: ['limit', 'hp', 'mana'], E: ['limit', 'hp', 'mana'], W: ['limit', 'hp', 'mana'] } },   // Schritte je Stufe (Stufe III kommt auf Stufe II obendrauf): II = Limit 3, 4 HP, Mana 4; III = Limit 4, 5 HP, Mana 5
+  temple: { 2: { F: ['limit', 'hp', 'mana'], E: ['limit', 'hp', 'mana'], W: ['limit', 'hp', 'mana'] }, 3: { F: ['limit', 'hp', 'hp', 'mana'], E: ['limit', 'hp', 'hp', 'mana'], W: ['limit', 'hp', 'hp', 'mana'] } },   // Schritte je Stufe (Stufe III kommt auf Stufe II obendrauf): II = Limit 3, 4 HP, Mana 5; III = Limit 4, 6 HP, Mana 6
   magic: { 2: [3, 2, 1], 3: [3, 2, 1] },                                  // Stufen von Haupt-, Neben- und drittem Element
   deck: {
     2: (P, S, T) => [P + '3', P + '2', P + '2', P + '2', S + '2', S + '2', T + '1', T + '1', P + '1'],
@@ -544,11 +544,11 @@ const MONSTER = {
       mana: 'maximales Mana',
       limit: 'Ausspiellimit (Karten je Zug)',
       hand: 'Handkarten',
-      draws: 'Ziehen: Gratis-Nachziehen zu Kampfbeginn (Nachziehtokens)',
+      draws: 'Ziehen: Nachziehlimit (so oft hintereinander nachziehen, bevor der Marker auf Rot springt)',
     },
   },
   upgrades: { F: 3, E: 3, W: 3 },   // Karten des Startdecks, die auf Stufe 2 gehoben werden (nur Abschnitt I); mindestens eine, weil das Monster seine Hauptmagie auf Stufe 2 hat (ohne passende Karte wäre sie wertlos)
-  startDraws: 2,                                                          // Ziehen: Gratis-Nachziehen (Tokens) je Monster zu Kampfbeginn; Grundwert, die Würfel verändern ihn
+  startDraws: 2,                                                          // Ziehen = Nachziehlimit des Monsters (1 bis MAX_DRAW_LIMIT): so oft darf es hintereinander nachziehen, bevor sein Marker auf Rot springt; Grundwert, die Würfel verändern ihn
   startLimit: 2,                                                          // Ausspiellimit aller Monster vor den Tempel-Schritten (Spieler starten seit 0.3 mit 2; hier wird neu abgestimmt)
   gold: { 1: 1, 2: 2, 3: 3 },                                              // Beute
   names: { F: 'Feuermonster', E: 'Erdmonster', W: 'Wassermonster' },   // Grundform (ohne Würfel)
@@ -563,7 +563,7 @@ function applyDie(stats, face, sign, stage) {
   else if (k === 'mana') { stats.maxMana = Math.max(1, stats.maxMana + n); stats.mana = stats.maxMana; }
   else if (k === 'limit') stats.limit = Math.min(MAX_LIMIT, Math.max(1, stats.limit + n));   // bis auf 1, nie auf 0 (Achtung: Limit 1 führt in Stufe I oft zu Patts, siehe Regelwerk)
   else if (k === 'hand') stats.handExtra = (stats.handExtra || 0) + n;
-  else if (k === 'draws') stats.draws = Math.max(0, stats.draws + n);
+  else if (k === 'draws') stats.drawLimit = Math.min(MAX_DRAW_LIMIT, Math.max(1, stats.drawLimit + n));
 }
 // v: gewürfelte Variante { d: Deckform (1 breit, 2 spitz), pl: Seite des Pluswürfels 0–5, mi: Seite des Minuswürfels 0–5 }; ohne v die feste Grundform (ohne Würfel).
 function spawnOne(el, stage, rng, v) {
@@ -572,7 +572,7 @@ function spawnOne(el, stage, rng, v) {
   for (let i = 0, src = SUPERIOR[el] + '1'; i < (M.upgrades[el] === undefined ? 2 : M.upgrades[el]); i++) { const idx = deck.indexOf(src); if (idx < 0) break; deck[idx] = el + '2'; }
   const stats = newStats();
   stats.limit = M.startLimit;
-  stats.draws = M.startDraws;
+  stats.drawLimit = M.startDraws;
   stats.mag[el] = 2;
   if (stage === 1) M.stage1Temple[el].forEach(f => applyTemple(stats, f));   // ab Stufe II zählen nur die Schritte von ‚temple‘
   stats.gold = M.gold[1];
@@ -781,7 +781,7 @@ function startCombat(state, attPid, slot) {   // slot: Platz des Monsters (F, E,
   const m = state.monsters[slot], el = m.el;
   const mdeck = newDeck(state, m.deckIds, monsterHand(m));
   state.players.forEach(p => { p.stats.freeDraws = 0; });
-  m.stats.freeDraws = m.stats.draws || 0;   // Ziehen: Gratis-Nachziehen des Monsters
+  m.stats.freeDraws = 0; m.drawN = 0; m.drawRed = false;   // eigener Nachziehmarker des Monsters (Limit: stats.drawLimit), frisch zu Kampfbeginn
   state.combat = {
     logFrom: state.logN,
     mode: 'monster', elem: el, slot, att: attPid, def: other(attPid),
@@ -1313,7 +1313,7 @@ function applyInner(state, a) {
 function applyCore(state, a) {
   if (state.over) return fail('Das Spiel ist beendet.');
   if (!state.rules.drawMarker) return dispatch(state, a);
-  const kind = markerKind(state, a), pid = a.pid !== undefined ? a.pid : actor(state), wasRed = kind === 'draw' && !!state.players[pid].drawRed;
+  const kind = markerKind(state, a), pid = a.pid !== undefined ? a.pid : actor(state), wasRed = kind === 'draw' && !!markerOf(state, pid).h.drawRed;
   const r = dispatch(state, a);
   if (r.ok && kind) drawMarkerAfter(state, pid, kind, wasRed);
   return r;
@@ -1329,10 +1329,17 @@ function markerKind(state, a) {
   if (state.phase === 'combat') return a.type === 'draw' ? 'draw' : ['attack', 'defend', 'pass', 'recover', 'flee'].includes(a.type) ? 'other' : null;
   return null;
 }
-function drawMarkerAfter(state, pid, kind, wasRed) {
+// Wem gehört der Nachziehmarker, wenn pid handelt? Dem Spieler, im Monsterkampf aber für die Seite des Monsters dem Monster (Limit: seine Stufe ‚Ziehen‘ = stats.drawLimit). { h: Halter von drawN/drawRed, lim: Limit }
+function markerOf(state, pid) {
+  const c = state.phase === 'combat' ? state.combat : null;
+  if (c && c.mode === 'monster' && c.sides.b.ctrl === pid) { const m = c.sides.b.monster; return { h: m, lim: m.stats.drawLimit || 1 }; }
   const p = state.players[pid];
-  if (kind === 'other') { p.drawRed = false; p.drawN = 0; return; }
-  p.drawN = Math.min((p.drawN || 0) + 1, p.stats.drawLimit || 1); p.drawRed = p.drawN >= (p.stats.drawLimit || 1);   // Nachziehlimit: so viele Nachziehvorgänge hintereinander sind frei, danach springt der Marker auf Rot
+  return { h: p, lim: p.stats.drawLimit || 1 };
+}
+function drawMarkerAfter(state, pid, kind, wasRed) {
+  const p = state.players[pid], mk = markerOf(state, pid), h = mk.h;
+  if (kind === 'other') { h.drawRed = false; h.drawN = 0; return; }
+  h.drawN = Math.min((h.drawN || 0) + 1, mk.lim); h.drawRed = h.drawN >= mk.lim;   // Nachziehlimit: so viele Nachziehvorgänge hintereinander sind frei, danach springt der Marker auf Rot
   if (!wasRed) return;
   const q = state.players[other(pid)];
   if (state.phase === 'combat' && state.combat) {
@@ -1357,7 +1364,7 @@ return { ELEMENTS, SUPERIOR, NAMES, START_DECK, MAX_MAGIC, MAX_SLOTS, MIN_SLOTS,
   makeRng, parseCard, selection, newGame, apply, record, prim, actor, other, regen, handCounts,
   vendorOffers, vendorPlans, previewTemple, pointsForGold, nextLevelCost, limitStepCost, manaStepCost, hpStepCost, slotStepCost, magicCost, drawLimitCost, upField, magicField, payTxt,
   evalAttack, evalDefense, canFlee, stockOf, recoverGain, regenGain, comboLevels, levelsFor,
-  mirrorOf, monsterAlive, monsterHand, allMonstersDead, magicProgress, spawnMonsters, spawnForGame };
+  mirrorOf, monsterAlive, monsterHand, markerOf, allMonstersDead, magicProgress, spawnMonsters, spawnForGame };
 }));</script>
 <script>/* Magus – einfacher Computergegner. Wählt nur Aktionen, die auch ein Mensch hätte. */
 (function (root, factory) {
@@ -1754,7 +1761,7 @@ function combatPlan(state, pid) {
       const raw = bestAttack(side, opp, hand, Q, state);
       if (raw && raw.value > Q.aThr && (!best || best.value <= Q.aThr)) return [A({ type: 'recover' })];
     }
-    const red = !!state.players[pid].drawRed;   // roter Nachziehmarker: Nachziehen schenkt dem Gegner ein Nachziehtoken
+    const red = !!M.markerOf(state, pid).h.drawRed;   // roter Nachziehmarker: Nachziehen schenkt dem Gegner ein Nachziehtoken
     const lowMana = Q.rW * gain * Math.max(0, Q.rRef - s.mana) - (red ? Q.cRedA : 0);   // wenig Mana: nur noch starke Angriffe, sonst lieber erholen; roter Marker: auch schwächere Angriffe statt nachzuziehen
     if (best && best.value > Q.aThr + lowMana - Q.pasDec * (opp.passed || 0) - Q.stallDec * Math.max(0, Math.floor(((c.turns || 0) - Q.stallFrom) / 2))) {   // Passt der Gegner im Angriffszug, bleibt er ohne Druck: dann lohnt auch ein knapper Angriff (sonst wartet die KI, bis die Anti-Stillstands-Schwelle sinkt)   // lange ohne Angriff: Schwelle sinkt, damit die KI nicht endlos nachzieht
       const acts = best.ord.map(h => A({ type: 'mark', slot: h.slot }));
@@ -2132,7 +2139,9 @@ function layoutDeck(deck, L, mine) {
 // Nachziehlimit: drei Kreise unter dem Nachziehstapel (beide Spieler), der rot/grüne Marker liegt auf der Stufe des nächsten freien Nachziehens; Stufen über dem Limit sind abgedunkelt, auf der nächsten sitzt der Plus-Knopf (Upgrade-Punkte)
 function drawTrack(L, mine) {
   if (!G.rules.drawMarker) return '';
-  const pl = G.players[mine ? ME : 1 - ME], st = pl.stats, n = M.MAX_DRAW_LIMIT, lim = st.drawLimit || 1;
+  let pl = G.players[mine ? ME : 1 - ME], st = pl.stats; const n = M.MAX_DRAW_LIMIT;
+  if (G.phase === 'combat' && G.combat.mode === 'monster' && G.combat.sides.b.ctrl === (mine ? ME : 1 - ME)) { const mo = G.combat.sides.b.monster; pl = mo; st = mo.stats; }   // im Monsterkampf gehört der Marker dieser Seite dem Monster
+  const lim = st.drawLimit || 1;
   const sz = mine ? 24 : 19, gap = mine ? 6 : 4, tk = mine ? 18 : 15, w = CW * L.ps;
   const x0 = L.draw.x + (w - (n * sz + (n - 1) * gap)) / 2, y = L.draw.y + CH * L.ps + 24;   // unter der Stapelbeschriftung
   const red = !!pl.drawRed, at = Math.min((pl.drawN || 0) + 1, lim);   // Stufe des Markers: das wievielte Nachziehen als Nächstes frei wäre
@@ -2142,7 +2151,7 @@ function drawTrack(L, mine) {
   for (let i = 1; i <= n; i++) h += '<div class="dlc' + (i <= lim ? '' : ' off') + '" title="' + tip + '" style="left:' + (x0 + (i - 1) * (sz + gap)) + 'px;top:' + y + 'px;width:' + sz + 'px;height:' + sz + 'px"></div>';
   h += '<div class="dmark ' + (red ? 'red' : 'green') + '" title="Nachziehmarker ' + (red ? 'rot: Nachziehen gibt dem Gegner ' + pen : 'grün: noch ' + (lim - (pl.drawN || 0)) + 'x Nachziehen frei') + '" style="width:' + tk + 'px;height:' + tk + 'px;left:' + (x0 + (at - 1) * (sz + gap) + (sz - tk) / 2) + 'px;top:' + (y + (sz - tk) / 2) + 'px"></div>';
   const cost = M.drawLimitCost(G, st);
-  if (mine && lim < n && G.phase === 'world' && !G.over && myTurn() && st[M.upField(G)] >= cost) {   // wie die anderen Plus-Knöpfe: nur im eigenen Zug der Weltphase und nur, wenn die Upgrade-Punkte reichen
+  if (mine && pl !== G.combat?.sides?.b?.monster && lim < n && G.phase === 'world' && !G.over && myTurn() && st[M.upField(G)] >= cost) {   // wie die anderen Plus-Knöpfe: nur im eigenen Zug der Weltphase und nur, wenn die Upgrade-Punkte reichen
     const cx = x0 + lim * (sz + gap) + sz / 2, cy = y + sz / 2;   // die Scheibe des Knopfes deckt sich mit dem Kreis (Mitte auf Mitte, gleicher Durchmesser)
     h += '<button class="up ' + (M.upField(G) === 'gold' ? 'gc' : 'pt') + (cost > 1 ? ' costly' : '') + '"' + (cost > 1 ? ' data-c="' + cost + '"' : '') + ' data-act="drawlimit" title="Nachziehlimit auf ' + (lim + 1) + ' steigern (' + M.payTxt(G, M.upField(G), cost) + ')" style="' + discBox(M.upField(G) === 'gold', cx, cy, sz) + ';margin:0;z-index:63"></button>';
   }
@@ -2350,7 +2359,7 @@ function monsterCards() {
       h += '<div class="sm">HP ' + st.hp + '/' + st.maxHp + '</div><div class="bar"><i style="width:' + st.hp / st.maxHp * 100 + '%"></i></div>' +
         '<div class="sm">Mana ' + st.mana + '/' + st.maxMana + '</div><div class="bar mana"><i style="width:' + st.mana / st.maxMana * 100 + '%"></i></div>' +
         '<div class="sm"><span class="dots F">' + dots(st.mag.F) + '</span> <span class="dots E">' + dots(st.mag.E) + '</span> <span class="dots W">' + dots(st.mag.W) + '</span></div>' +
-        '<div class="sm vals" style="font-size:15px;white-space:nowrap" title="Die tatsächlichen Werte dieses Monsters: Ausspiellimit, Handkarten, Gratis-Nachziehen">Limit ' + st.limit + ' · Hand ' + M.monsterHand(m) + ' · Ziehen ' + (st.draws || 0) + '</div>' +
+        '<div class="sm vals" style="font-size:15px;white-space:nowrap" title="Die tatsächlichen Werte dieses Monsters: Ausspiellimit, Handkarten, Nachziehlimit">Limit ' + st.limit + ' · Hand ' + M.monsterHand(m) + ' · Ziehen ' + (st.drawLimit || 1) + '</div>' +
         '<button class="btn small" data-act="combat" data-e="' + e + '" ' + (my ? '' : 'disabled') + '>Kämpfen</button>';
     } else h += '<div class="sm" style="margin-top:12px">' + (gone ? 'hat gewonnen und sich zurückgezogen' : 'besiegt') + '</div>';
     h += '</div>';
@@ -3288,7 +3297,7 @@ function showStart() {
   setCursor('human');
   overlay.style.display = 'flex'; overlay.className = 'overlay';
   overlay.innerHTML = '<div class="box start"><h1>Magus</h1>' +
-    '<p class="note intro" style="margin-top:-2px"><b>Neu in Version 0.4:</b> Die <b>Monster</b> sind variabel. Zu jedem Element gibt es einen <b>Spezialisten</b> (stärkere Spitze, schwächere Basis) und einen <b>Generalisten</b> (vielseitiger, schwächere Spitze), zum Beispiel „Feuerspezialist“ und „Feuergeneralist“; je Stufe sind das 6 mögliche Monster, davon werden <b>drei ausgelost</b> (ein Element kann also doppelt vorkommen, ein anderes fehlen). Dazu kommen <b>zwei Würfel</b>: Der <b>Pluswürfel</b> macht ein Monster in einem Wert stärker, der <b>Minuswürfel</b> schwächer. Beide haben dieselben sechs Seiten: <b>2 HP, 1 Mana, 1 Limit, 1 Ziehen</b> (Gratis-Nachziehen), <b>1 Hand</b> (Handkarte) und eine <b>leere Seite</b>; die Beträge gelten in allen Stufen. Unter dem Namen steht, was gewürfelt wurde, zum Beispiel <i>+Mana, −HP</i>; heben sich beide Würfel auf, bleibt die Zeile frei. Jedes Monster bringt 2 Gratis-Nachziehen mit, dafür haben die Monster der Stufen II und III 1 Mana weniger (und Stufe III 5 statt 6 HP). <b>Version 0.3.2:</b> Mehr Einnahmen, dafür steigende Preise. Der Bonus zu Beginn jedes Abschnitts (und die Hilfe nach einer Niederlage gegen ein Monster) beträgt <b>2, 3 und 4</b> Gold und Upgrade-Punkte. <b>Jeder Kauf verteuert die nächste Stufe seiner Kategorie um den Grundpreis</b>: HP, Mana und Handplatz kosten 1, 2, 3 Gold, das Ausspiellimit 2, 4, 6, die Magie auf Stufe 2 kostet 1, 2, 3 Punkte, auf Stufe 3 kostet sie 3, 6, 9. Stufe III der Monster ist etwas milder. <b>Version 0.3.1:</b> Alle <b>Monster</b> sind neu abgestimmt. Sie sind von Stufe zu Stufe gefährlicher: Ausspiellimit 2, 3 und 4, mehr Lebenspunkte und Mana in den späteren Abschnitten, in Abschnitt I ein Startdeck mit drei Karten der Stufe 2. Das Risiko einer Niederlage wächst mit der Stufe. <b>Seit 0.3:</b> Du startest mit <b>Ausspiellimit 2</b> und <b>2 Siegpunkten</b>. <b>Magie</b> kaufst du mit <b>Upgrade-Punkten</b> (Stufe 2: 1, Stufe 3: 3), alle anderen Verbesserungen (HP, Mana, Ausspiellimit, Handplätze, Nachziehlimit) mit <b>Gold</b>; im Tempel wandelst du Gold in Upgrade-Punkte. Stehen alle drei Magien auf Stufe 3, werden übrige Upgrade-Punkte sofort zu Siegpunkten (Gold nicht). <b>Nachziehmarker:</b> Wer nachzieht, dreht seinen Marker auf Rot, jede andere Aktion zurück auf Grün; wer bei Rot nachzieht, gibt dem Gegner 1 Gold (Weltphase) bzw. ein Nachziehtoken (Kampf). Das <b>Nachziehlimit</b> (1 Gold je Stufe, bis 3) erlaubt öfter hintereinander nachzuziehen, bevor der Marker auf Rot springt.</p>' +
+    '<p class="note intro" style="margin-top:-2px"><b>Neu in Version 0.4:</b> Die <b>Monster</b> sind variabel. Zu jedem Element gibt es einen <b>Spezialisten</b> (stärkere Spitze, schwächere Basis) und einen <b>Generalisten</b> (vielseitiger, schwächere Spitze), zum Beispiel „Feuerspezialist“ und „Feuergeneralist“; je Stufe sind das 6 mögliche Monster, davon werden <b>drei ausgelost</b> (ein Element kann also doppelt vorkommen, ein anderes fehlen). Dazu kommen <b>zwei Würfel</b>: Der <b>Pluswürfel</b> macht ein Monster in einem Wert stärker, der <b>Minuswürfel</b> schwächer. Beide haben dieselben sechs Seiten: <b>2 HP, 1 Mana, 1 Limit, 1 Ziehen</b> (Nachziehlimit), <b>1 Hand</b> (Handkarte) und eine <b>leere Seite</b>; die Beträge gelten in allen Stufen. Unter dem Namen steht, was gewürfelt wurde, zum Beispiel <i>+Mana, −HP</i>; heben sich beide Würfel auf, bleibt die Zeile frei. Jedes Monster hat ein <b>Nachziehlimit</b> (Anzeige „Ziehen“, Grundwert 2, mit den Würfeln 1 bis 3) und einen eigenen Nachziehmarker. <b>Version 0.3.2:</b> Mehr Einnahmen, dafür steigende Preise. Der Bonus zu Beginn jedes Abschnitts (und die Hilfe nach einer Niederlage gegen ein Monster) beträgt <b>2, 3 und 4</b> Gold und Upgrade-Punkte. <b>Jeder Kauf verteuert die nächste Stufe seiner Kategorie um den Grundpreis</b>: HP, Mana und Handplatz kosten 1, 2, 3 Gold, das Ausspiellimit 2, 4, 6, die Magie auf Stufe 2 kostet 1, 2, 3 Punkte, auf Stufe 3 kostet sie 3, 6, 9. Stufe III der Monster ist etwas milder. <b>Version 0.3.1:</b> Alle <b>Monster</b> sind neu abgestimmt. Sie sind von Stufe zu Stufe gefährlicher: Ausspiellimit 2, 3 und 4, mehr Lebenspunkte und Mana in den späteren Abschnitten, in Abschnitt I ein Startdeck mit drei Karten der Stufe 2. Das Risiko einer Niederlage wächst mit der Stufe. <b>Seit 0.3:</b> Du startest mit <b>Ausspiellimit 2</b> und <b>2 Siegpunkten</b>. <b>Magie</b> kaufst du mit <b>Upgrade-Punkten</b> (Stufe 2: 1, Stufe 3: 3), alle anderen Verbesserungen (HP, Mana, Ausspiellimit, Handplätze, Nachziehlimit) mit <b>Gold</b>; im Tempel wandelst du Gold in Upgrade-Punkte. Stehen alle drei Magien auf Stufe 3, werden übrige Upgrade-Punkte sofort zu Siegpunkten (Gold nicht). <b>Nachziehmarker:</b> Wer nachzieht, dreht seinen Marker auf Rot, jede andere Aktion zurück auf Grün; wer bei Rot nachzieht, gibt dem Gegner 1 Gold (Weltphase) bzw. ein Nachziehtoken (Kampf). Das <b>Nachziehlimit</b> (1 Gold je Stufe, bis 3) erlaubt öfter hintereinander nachzuziehen, bevor der Marker auf Rot springt.</p>' +
     '<img class="logo" alt="" src="assets/img/bg-9c4789d6.webp">' +
     (G && !G.over && !MP && started ? '<button class="btn primary" style="font-size:22px;padding:10px 28px;flex:none;align-self:center;margin-bottom:8px" data-act="resume">Spiel fortsetzen</button>' : '') + '<button class="btn' + (G && !G.over && !MP && started ? '' : ' primary') + '" style="font-size:22px;padding:10px 28px;flex:none;align-self:center" data-act="newgame">' + (G && !G.over && !MP && started ? 'Neues Spiel gegen den Computer' : 'Gegen den Computer spielen') + '</button>' +
     '<button class="btn" style="font-size:18px;padding:8px 22px;flex:none;align-self:center;margin-top:8px" data-act="newspec" title="Zwei Computerspieler spielen gegeneinander, du schaust zu (für Spielablauf und Statistik)">Zwei Computern zuschauen</button>' +

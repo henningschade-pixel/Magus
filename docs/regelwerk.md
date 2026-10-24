@@ -106,8 +106,8 @@ Variante je Monster wird beim Erscheinen gewürfelt (seit 0.4: Deckform und zwei
 | Stufe | HP | Mana | Limit | Magie (Haupt/Neben/dritte) | Startdeck |
 |---|---|---|---|---|---|
 | I | 3 | 5 (Erdmonster 6) | 2 | 2 im eigenen Element | Startdeck, 3 Karten des eigenen Elements auf Stufe 2 |
-| II | 4 | 4 | 3 | 3 / 2 / 1 | siehe `MONSTER.deck` |
-| III | 5 | 5 | 4 | 3 / 2 / 1 | siehe `MONSTER.deck` |
+| II | 4 | 5 | 3 | 3 / 2 / 1 | siehe `MONSTER.deck` |
+| III | 6 | 6 | 4 | 3 / 2 / 1 | siehe `MONSTER.deck` |
 
 Die Tabelle zeigt die Grundform (`spawnMonsters` ohne Zufall); im Spiel kommen Deckform und Würfel dazu.
 
@@ -246,7 +246,7 @@ Jedes Monster hat eine **Deckform** und wird von **zwei Würfeln** verändert. A
 | a | +2 HP | −2 HP | maximale Lebenspunkte (mindestens 1) |
 | b | +1 Mana | −1 Mana | maximales Mana (mindestens 1) |
 | c | +1 Limit | −1 Limit | Ausspiellimit (mindestens 1, höchstens 5) |
-| d | +1 Ziehen | −1 Ziehen | Gratis-Nachziehen zu Kampfbeginn (Grundwert 2, nie unter 0) |
+| d | +1 Ziehen | −1 Ziehen | Nachziehlimit des Monsters (Grundwert 2, zwischen 1 und 3) |
 | e | +1 Hand | −1 Hand | Handkarten des Monsters (mindestens 2) |
 | f | leer | leer | keine Wirkung, wird nicht angezeigt |
 
@@ -254,8 +254,8 @@ Würfelt man denselben Wert auf beiden Würfeln (zum Beispiel +HP und −HP), he
 
 **Beschriftung:** Unter dem Namen steht, was gewürfelt wurde, zum Beispiel „Wasserspezialist II“ und darunter *+Mana, −HP*; heben sich die Würfel auf, bleibt die Zeile frei. Beim Darüberfahren erklärt ein Hinweis Form und genaue Zahlen. Die Grundform ohne Zufall (Tests, Werkzeuge) heißt weiter „Feuermonster“. Die Monsterkarte zeigt die tatsächlichen Werte.
 
-**Ziehen:** Jedes Monster beginnt den Kampf mit 2 Gratis-Nachziehen (`startDraws`, Nachziehtokens wie bei den Spielern); Grundwert 2, damit auch der Minuswürfel (−1) immer wirkt. Zum Ausgleich haben die Monster der Stufen II und III 1 Mana weniger (4 und 5) und Stufe III 5 statt 6 HP; sonst waren sie um 5 und 7 Punkte zu stark. Auf der Monsterkarte stehen unten „Limit · Hand · Ziehen“.
+**Ziehen (Nachziehlimit):** Jedes Monster hat ein Nachziehlimit (`stats.drawLimit`, Grundwert 2, `startDraws`; die Würfel ändern es auf 1 bis 3). Es gilt wie bei den Spielern: So oft darf das Monster hintereinander nachziehen, ohne dass etwas anderes dazwischen geschieht, danach springt sein **eigener Nachziehmarker** auf Rot, und jedes weitere Nachziehen schenkt dem Gegner ein Nachziehtoken. Im Monsterkampf gehört der Marker der Monsterseite dem Monster (nicht dem Spieler, der es führt) und startet in jedem Kampf auf Grün; die Anzeige unter dem Nachziehstapel der Monsterseite zeigt sein Limit. Auf der Monsterkarte stehen unten „Limit · Hand · Ziehen“. Die Grundwerte der Monster (HP, Mana, Limit) sind die von 0.3.2, das Nachziehlimit ändert sie nicht.
 
 **Limit bis auf 1:** Der Minuswürfel darf das Limit eines Stufe-I-Monsters von 2 auf 1 senken (nie auf 0). Bekannte Nebenwirkung: Ein Monster mit Limit 1 ist für die KI kaum zu besiegen, in Stufe I endeten 4,7 % der Kämpfe in Erschöpfung (Patt), und die längsten Partien dauerten bis 7800 Aktionen (Median 398, 99. Perzentil 2750 statt 350 und 980 mit Untergrenze 2). Bewusst so gewählt.
 
-**Messung (`tools/balance/monster-dice.js`, 5000 Partien KI gegen KI; Angreifer: Sieg / Niederlage je Angriff):** ohne Würfel Stufe I 30,8 / 17,0 %, II 42,4 / 20,4 %, III 36,8 / 37,3 %; mit Würfeln I 25,7 / 18,5 %, II 45,1 / 20,1 %, III 39,1 / 35,7 %. Die festen Beträge machen Stufe I gefährlicher (+7 Punkte, Niederlagen minus Siege des Angreifers), Stufe II etwas schwächer (−3), Stufe III etwas schwächer (−3), weil +2 HP bei 3 HP viel und bei 5 HP weniger wiegt. Die Gefahr steigt weiter von Stufe zu Stufe.
+**Messung (`tools/balance/monster-dice.js`, 5000 Partien KI gegen KI; Angreifer: Sieg / Niederlage je Angriff):** ohne Würfel Stufe I 33,3 / 13,1 %, II 46,0 / 21,4 %, III 35,7 / 40,2 %; mit Würfeln I 28,5 / 13,9 %, II 48,2 / 20,7 %, III 37,1 / 37,5 %. Die festen Beträge machen Stufe I gefährlicher (+6 Punkte, Niederlagen minus Siege des Angreifers), Stufe II etwas schwächer (−3), Stufe III etwas schwächer (−5), weil +2 HP bei 3 HP viel und bei 6 HP weniger wiegt. Die Gefahr steigt weiter von Stufe zu Stufe.

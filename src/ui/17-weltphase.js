@@ -29,7 +29,7 @@ function monsterCards() {
       h += '<div class="sm">HP ' + st.hp + '/' + st.maxHp + '</div><div class="bar"><i style="width:' + st.hp / st.maxHp * 100 + '%"></i></div>' +
         '<div class="sm">Mana ' + st.mana + '/' + st.maxMana + '</div><div class="bar mana"><i style="width:' + st.mana / st.maxMana * 100 + '%"></i></div>' +
         '<div class="sm"><span class="dots F">' + dots(st.mag.F) + '</span> <span class="dots E">' + dots(st.mag.E) + '</span> <span class="dots W">' + dots(st.mag.W) + '</span></div>' +
-        '<div class="sm vals" style="font-size:15px;white-space:nowrap" title="Die tatsächlichen Werte dieses Monsters: Ausspiellimit, Handkarten, Gratis-Nachziehen">Limit ' + st.limit + ' · Hand ' + M.monsterHand(m) + ' · Ziehen ' + (st.draws || 0) + '</div>' +
+        '<div class="sm vals" style="font-size:15px;white-space:nowrap" title="Die tatsächlichen Werte dieses Monsters: Ausspiellimit, Handkarten, Nachziehlimit">Limit ' + st.limit + ' · Hand ' + M.monsterHand(m) + ' · Ziehen ' + (st.drawLimit || 1) + '</div>' +
         '<button class="btn small" data-act="combat" data-e="' + e + '" ' + (my ? '' : 'disabled') + '>Kämpfen</button>';
     } else h += '<div class="sm" style="margin-top:12px">' + (gone ? 'hat gewonnen und sich zurückgezogen' : 'besiegt') + '</div>';
     h += '</div>';
