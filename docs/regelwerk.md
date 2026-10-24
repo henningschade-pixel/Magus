@@ -24,7 +24,7 @@ Eine Partie hat drei Abschnitte (1, 2, 3). Je Abschnitt gibt es drei Monster (St
 
 **Kartenvorrat (neu):** Vom Vorrat jeder Karte gibt es: Stufe 1 je 8 (`supply`), Stufe 2 je 6 (`supply2`), Stufe 3 je 4 (`supply3`), also F1/E1/W1, F2/E2/W2 und F3/E3/W3. Vor der Partie werden die 24 Stufe-1-Karten gemischt und gleichmäßig verteilt: jeder Spieler erhält 12 als Startdeck (`startCards` 0 = alle; die Startdecks sind daher ungleich, zum Beispiel 5/4/3 statt 4/4/4). Im Vorrat des Händlers liegen danach nur Stufe-2- und Stufe-3-Karten (je 6 bzw. 4); Stufe-1-Karten tauchen dort erst auf, wenn welche beim Aufwerten zurückgegeben werden. Der Händler zeigt, wie viele Karten jeder Art noch im Vorrat sind; sind sie weg, ist die Karte vergriffen und nicht kaufbar (auch die Gratiskarten F1/E1/W1 nicht). Beim Aufwerten gehen die bezahlten Karten zurück in den Vorrat, die gekaufte Karte kommt heraus. Monsterdecks haben ihren eigenen Vorrat und zählen nicht mit. `supply` 0 schaltet den Vorrat ab (altes Startdeck 3× F1, E1, W1, unbegrenzte Karten). Karten heißen Element plus Stufe (F2 = Feuer, Stufe 2), Stufen 1 bis 3.
 
-**Abschnittsbonus** (zu Beginn jedes Abschnitts, beide Spieler): Abschnitt 1: 1 Gold und 1 Upgrade-Punkt, Abschnitt 2: 2 und 2, Abschnitt 3: 3 und 3.
+**Abschnittsbonus** (zu Beginn jedes Abschnitts, beide Spieler): Abschnitt 1: 2 Gold und 2 Upgrade-Punkte, Abschnitt 2: 3 und 3, Abschnitt 3: 4 und 4 (seit 0.3.2; vorher 1/2/3).
 
 **Elementkreis:** Feuer schlägt Erde, Erde schlägt Wasser, Wasser schlägt Feuer. „Überlegen“: Wasser gegen Feuer, Feuer gegen Erde, Erde gegen Wasser.
 
@@ -70,7 +70,7 @@ Der aktive Spieler wählt ein lebendes Monster und greift an, der Mitspieler fü
 **Kampfende:**
 - Fällt eine Seite auf 0 HP, hat die andere gewonnen; fallen beide gleichzeitig, gibt es keinen Sieger.
 - Haben beide 0 Mana, endet der Kampf **nicht mehr automatisch** ohne Sieger. Er geht weiter: Erholen im Angriffszug bringt Mana, der Todes-Fluch zehrt am Ende der Angriffsphasen. Beenden lässt er sich durch **Fliehen** (möglich, wenn der Gegner 0 Mana hat). Als technische Sicherung endet ein Kampf nach 400 Schritten ohne Sieger.
-- Siegt der Spieler gegen das Monster, gibt es **keine Beute** (`monsterLoot` 0; ohne die Regel gälte das Gold des Monsters 1/2/3, auch für den Monsterführer mit `lootBoth`). Der Angreifer erhält 1 Siegpunkt (`monsterSp`); der Monsterführer verliert nichts. Siegt das Monster, gibt es keine Beute, und das Monster **zieht sich zurück**: Es verlässt das Brett, gilt als besiegt und bringt keine Beute (sonst ließe sich die Hilfe durch absichtliche Niederlagen farmen, die HP stiegen ohne Ende); der Angreifer verliert 1 Siegpunkt (nie unter 0), der Monsterführer gewinnt und verliert dabei nie Siegpunkte. **Hilfe:** Gewinnt das Monster, erhalten beide Spieler zusätzlich die Boni des Abschnittsbeginns des laufenden Abschnitts (`lossHelp` 1 = voller Bonus, Gold und Upgrade-Punkte; Abschnitt 1: 1/1, 2: 2/2, 3: 3/3), ohne Begrenzung (jede Niederlage gegen ein Monster löst sie erneut aus). Ohne Sieger (Flucht, beide fallen) gibt es weder Beute noch Siegpunkte, das Monster bleibt am Leben.
+- Siegt der Spieler gegen das Monster, gibt es **keine Beute** (`monsterLoot` 0; ohne die Regel gälte das Gold des Monsters 1/2/3, auch für den Monsterführer mit `lootBoth`). Der Angreifer erhält 1 Siegpunkt (`monsterSp`); der Monsterführer verliert nichts. Siegt das Monster, gibt es keine Beute, und das Monster **zieht sich zurück**: Es verlässt das Brett, gilt als besiegt und bringt keine Beute (sonst ließe sich die Hilfe durch absichtliche Niederlagen farmen, die HP stiegen ohne Ende); der Angreifer verliert 1 Siegpunkt (nie unter 0), der Monsterführer gewinnt und verliert dabei nie Siegpunkte. **Hilfe:** Gewinnt das Monster, erhalten beide Spieler zusätzlich die Boni des Abschnittsbeginns des laufenden Abschnitts (`lossHelp` 1 = voller Bonus, Gold und Upgrade-Punkte; Abschnitt 1: 2/2, 2: 3/3, 3: 4/4), ohne Begrenzung (jede Niederlage gegen ein Monster löst sie erneut aus). Ohne Sieger (Flucht, beide fallen) gibt es weder Beute noch Siegpunkte, das Monster bleibt am Leben.
 - In Monsterkämpfen bleiben HP und Mana erhalten und regenerieren in der Weltphase; vor und nach einem Showdown sind sie voll.
 
 **Ergebnis-Bildschirm:** Nach der letzten Aktion läuft die Animation zu Ende, die Werte passen sich an, der Bildschirm dunkelt ab und zeigt „Sieg“, „Niederlage“ oder „Unentschieden“ (bei Sieg mit Beute). Erst nach einem Klick geht es in die Weltphase zurück.
@@ -107,7 +107,7 @@ Variante je Monster wird beim Erscheinen gewürfelt (Tempel-Verbesserungen, Nebe
 |---|---|---|---|---|---|
 | I | 3 | 5 (Variante 6; Erdmonster 6/7) | 2 | 2 im eigenen Element | Startdeck, 3 Karten des eigenen Elements auf Stufe 2 |
 | II | 4 | 5 (Varianten 4/6) | 3 | 3 / 2 / 1 | siehe `MONSTER.deck` |
-| III | 8 | 6 (Varianten 5/7) | 4 | 3 / 2 / 1 | siehe `MONSTER.deck` |
+| III | 6 | 6 (Varianten 5/7) | 4 | 3 / 2 / 1 | siehe `MONSTER.deck` |
 
 **Neu abgestimmt in 0.3.1** (Spieler starten mit Ausspiellimit 2). Die Beute entfällt (`monsterLoot` 0), die Stufen I bis III zahlten früher 1/2/3 Gold. Das Monster-Limit steigt von Stufe zu Stufe um 1 (2/3/4); die frühere Reihe 1/2/3 passt nicht mehr zu Spielern mit Limit 2. Ein Monster mit Limit 2 und vielen HP führt den Angreifer in endlose Angriffs-/Fluchtschleifen (Stufe II mit Limit 2: bis 27 Angriffe je Partie), erst Limit 3 gibt ihm die nötige Gefahr. Gemessen (KI gegen KI, je Angreifer: Sieg / Niederlage): Stufe I 25 % / 16 %, Stufe II 37 % / 23 %, Stufe III 32 % / 41 %; der Rest sind Fluchten (meist des Monsterführers, der das schwache Monster danach selbst besiegt). Das Risiko für den Angreifer steigt also von Stufe zu Stufe (16 → 23 → 41 %). Messwerkzeuge: `tools/balance/monster-bal.js`, `tools/balance/monster-tune.js`.
 
@@ -210,3 +210,22 @@ Siehe Abschnitt „Monster“ (Werte je Stufe) und `tools/balance/README.md` (Me
 
 Die Spieler beginnen mit 4 HP (vorher 3), damit sie dem Angriff der Stufe-I-Monster etwas entgegensetzen können. Die Monster behalten ihre eigenen Werte (Stufe I: 3 HP). Wirkung auf die Monster (KI-Selbstspiel, 1500 Partien, Niederlagen des Angreifers): Stufe I 12 % (vorher 16), Stufe II 20 % (20), Stufe III 34 % (39); das Risiko steigt weiter von Stufe zu Stufe. Die KI bleibt am Optimum ihrer Stellschrauben (`hpA`, `slotA`, `manaA`, `minMana`, `oHits` geprüft, keine Verbesserung).
 Anzeige: Auf den Monsterkarten stehen HP und Mana an den Balken, unten steht nur das Limit (es hat keinen Balken).
+
+## Mehr Einnahmen, steigende Preise (Version 0.3.2, Schalter `priceRise`, Standard 1)
+
+Mehr Aktionspotential: Der Abschnittsbonus (und damit die Hilfe nach einer Niederlage gegen ein Monster) steigt auf **2/2, 3/3 und 4/4** Gold/Upgrade-Punkte je Abschnitt (`stageGold`, `stagePoints`; vorher 1/2/3). Dafür **verteuert jeder Kauf die nächste Stufe seiner Kategorie um deren Grundpreis**: Preis = Grundpreis × (1 + bisherige Käufe der Kategorie).
+
+| Kategorie (Währung seit 0.3) | 1. Kauf | 2. | 3. | 4. |
+|---|---|---|---|---|
+| max. HP (+2), Gold | 1 | 2 | 3 | 4 |
+| max. Mana (+1), Gold | 1 | 2 | 3 | 4 |
+| Handplatz, Gold | 1 | 2 | 3 | – |
+| Ausspiellimit, Gold | 2 | 4 | 6 | – |
+| Nachziehlimit, Gold | 1 | 2 | – | – |
+| Magie auf Stufe 2 (beliebige Farbe), Upgrade-Punkte | 1 | 2 | 3 | – |
+| Magie auf Stufe 3 (beliebige Farbe), Upgrade-Punkte | 3 | 6 | 9 | – |
+
+Gezählt werden die Käufe jedes Spielers, nicht der Wert selbst. Der Tempel (Gold → Punkte) und die Monster sind unverändert. `priceRise` 0 schaltet die Verteuerung ab (alle Preise bleiben beim Grundpreis).
+Folge: Volle Magie (24 Punkte) ist kaum erreichbar, die Umwandlung von Überschusspunkten in Siegpunkte greift selten. Die Anzeige nennt immer den aktuellen Preis (Kostenzahl am Knopf, Hinweis beim Darüberfahren, rote Vorschau).
+Monster Stufe III neu abgestimmt (6 statt 8 HP): mit den höheren Einnahmen verloren die Angreifer sonst 48 % der Kämpfe; jetzt Niederlagen des Angreifers Stufe I 15 %, II 20 %, III 37 %.
+KI nachgestimmt (`manaA` 5, `vUp` 10,35, `stallDec` −0,05; 60 % gegen die KI davor). Selbstspiel (1500 Partien): Beginner 47 % / Zweiter 48 % / Unentschieden 5 %, Median 299 Aktionen, keine festgefahrene Partie.

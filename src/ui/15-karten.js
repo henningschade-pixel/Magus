@@ -121,12 +121,12 @@ function renderCards() {
     const lf = lfCtx(), sel = lf ? lf.picks.filter(p => p === 'ot').length : 0, pos = 'left:' + L_OP.draw.x + 'px;top:' + (L_OP.draw.y + CH * L_OP.ps + (G.rules.drawMarker ? 48 : 22)) + 'px', inner = '<img src="' + IMG.gratis + '">' + (cx.oppStats.freeDraws > 1 ? '<b class="mul">×' + cx.oppStats.freeDraws + '</b>' : '') + (sel ? '<i class="lfb">✓' + sel + '</i>' : '');
     ph += lf ? '<button class="freedraw opp lf' + (sel ? ' sel' : '') + '" data-act="lfm" data-k="ot" title="Läuterung: gegnerische Nachziehtokens zerstören (Klick: einen mehr, nach dem Maximum wieder alle weg). Sie werden nicht gutgeschrieben." style="' + pos + '">' + inner + '</button>' : '<div class="freedraw opp" title="Gratis-Nachziehen des Gegners: ' + cx.oppStats.freeDraws + 'x" style="' + pos + '">' + inner + '</div>';
   }
-  const pnd = G.players[ME].stats[M.upField(G)];
-  if (!cx.combat && pnd > 0 && G.players[ME].slots < M.MAX_SLOTS) {
+  const pnd = G.players[ME].stats[M.upField(G)], slotC = M.slotStepCost(G, G.players[ME].stats);
+  if (!cx.combat && pnd >= slotC && G.players[ME].slots < M.MAX_SLOTS) {
     const canSlot = myTurn();
     const stp = n > 1 ? Math.min(L_MY.gap, (L_MY.span - CW * L_MY.s) / (n - 1)) : L_MY.gap, nx = slotX(n - 1, n, L_MY) + stp;   // Platz des nächsten Handplatzes
     ph += '<div class="slotgh" style="left:' + nx + 'px;top:' + L_MY.y + 'px"></div>' +
-      '<div class="upgpts" style="left:' + (nx + CW * L_MY.s / 2 - 17) + 'px;top:' + (L_MY.y + CH * L_MY.s / 2 - 19) + 'px">' + (canSlot ? '<button class="up ' + (M.upField(G) === 'gold' ? 'gc' : 'pt') + '" style="width:34px;height:38px;margin:0" data-act="spend" data-w="slot" title="+1 Handplatz (' + M.payTxt(G, M.upField(G), 1) + ')"></button>' : '') + '</div>';
+      '<div class="upgpts" style="left:' + (nx + CW * L_MY.s / 2 - 17) + 'px;top:' + (L_MY.y + CH * L_MY.s / 2 - 19) + 'px">' + (canSlot ? '<button class="up ' + (M.upField(G) === 'gold' ? 'gc' : 'pt') + (slotC > 1 ? ' costly' : '') + '" style="width:34px;height:38px;margin:0" data-act="spend" data-w="slot"' + (slotC > 1 ? ' data-c="' + slotC + '"' : '') + ' title="+1 Handplatz (' + M.payTxt(G, M.upField(G), slotC) + ')"></button>' : '') + '</div>';
   }
   if (cx.combat) {
     ph += mirrorStack(cx.myStats, slotX(n - 1, n, L_MY) + CW * L_MY.s + 10, L_MY.y + 20, 's');

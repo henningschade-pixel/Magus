@@ -29,33 +29,39 @@ function execSpend(state, pid, what) {
   const f = upField(state);
   if (s[f] <= 0) return fail(f === 'gold' ? 'Du hast kein Gold.' : 'Keine offenen Upgrade-Punkte.');
   let cost = 1;
-  if (what === 'hp') { const n = state.rules.hpPerPoint || 1; s.maxHp += n; }   // Upgrade erhöht nur das Maximum, die aktuellen HP bleiben
+  if (what === 'hp') {
+    cost = hpStepCost(state, s);
+    if (s[f] < cost) return fail('Die nächsten HP kosten ' + payTxt(state, f, cost) + '.');
+    const n = state.rules.hpPerPoint || 1; s.maxHp += n; buyCount(s, 'hp');   // Upgrade erhöht nur das Maximum, die aktuellen HP bleiben
+  }
   else if (what === 'mana') {
-    cost = manaStepCost();
+    cost = manaStepCost(state, s);
     if (s[f] < cost) return fail('Der nächste Mana-Schritt kostet ' + payTxt(state, f, cost) + '.');
-    s.maxMana++;   // nur das Maximum steigt, das aktuelle Mana bleibt
+    s.maxMana++; buyCount(s, 'mana');   // nur das Maximum steigt, das aktuelle Mana bleibt
   } else if (what === 'limit') {
     if (s.limit >= MAX_LIMIT) return fail('Das Ausspiellimit ist am Maximum (' + MAX_LIMIT + ').');
     cost = limitStepCost(state, s);
     if (s[f] < cost) return fail('Das nächste Limit kostet ' + payTxt(state, f, cost) + '.');
-    s.limit++;
+    s.limit++; buyCount(s, 'limit');
   } else if (what === 'slot') {
     if (p.slots >= MAX_SLOTS) return fail('Du hast schon ' + MAX_SLOTS + ' Handplätze.');
-    p.slots++; d.hand.push(null);
+    cost = slotStepCost(state, s);
+    if (s[f] < cost) return fail('Der nächste Handplatz kostet ' + payTxt(state, f, cost) + '.');
+    p.slots++; d.hand.push(null); buyCount(s, 'slot');
   } else return fail('Unbekanntes Upgrade.');
   s[f] -= cost;
   log(state, p.name + ' verbessert ' + { hp: 'max. HP', mana: 'max. Mana', limit: 'das Ausspiellimit', slot: 'die Handplätze' }[what] + '.', pid);
   return { ok: true };
 }
 // Nachziehlimit steigern (kostet Upgrade-Punkte aus dem Tempel, mit swapCosts Gold; drawLimitCost je Schritt): so oft darf man hintereinander nachziehen, bevor der Nachziehmarker auf Rot springt.
-function drawLimitCost(state, s) { const c = state.rules.drawLimitCost; return Array.isArray(c) ? (c[s.drawLimit - 1] != null ? c[s.drawLimit - 1] : c[c.length - 1]) : (c == null ? 1 : c); }
+function drawLimitCost(state, s) { const c = state.rules.drawLimitCost, base = Array.isArray(c) ? (c[s.drawLimit - 1] != null ? c[s.drawLimit - 1] : c[c.length - 1]) : (c == null ? 1 : c); return risen(state, base, s, 'draw'); }
 function execDrawLimit(state, pid) {
   const p = state.players[pid], s = p.stats;
   if (!state.rules.drawMarker) return fail('Ohne Nachziehmarker gibt es kein Nachziehlimit.');
   if (s.drawLimit >= MAX_DRAW_LIMIT) return fail('Das Nachziehlimit ist am Maximum (' + MAX_DRAW_LIMIT + ').');
   const cost = drawLimitCost(state, s), f = upField(state);
   if (s[f] < cost) return fail('Du brauchst ' + payTxt(state, f, cost) + '.');
-  s[f] -= cost; s.drawLimit++;
+  s[f] -= cost; s.drawLimit++; buyCount(s, 'draw');
   log(state, p.name + ' steigert das Nachziehlimit auf ' + s.drawLimit + ' (' + payTxt(state, f, cost) + ').', pid);
   return { ok: true };
 }
@@ -72,9 +78,9 @@ function execMagic(state, pid, e) {
   const p = state.players[pid], s = p.stats;
   if (!ELEMENTS.includes(e)) return fail('Unbekanntes Element.');
   if (s.mag[e] >= MAX_MAGIC) return fail(NAMES[e] + ' ist schon auf Stufe ' + MAX_MAGIC + '.');
-  const cost = magicCost(state, s.mag[e]), f = magicField(state);
+  const cost = magicCost(state, s.mag[e], s), f = magicField(state);
   if (s[f] < cost) return fail('Du brauchst ' + payTxt(state, f, cost) + '.');
-  s[f] -= cost; s.mag[e]++;
+  s[f] -= cost; buyCount(s, 'm' + (s.mag[e] + 1)); s.mag[e]++;
   log(state, p.name + ' steigert ' + NAMES[e] + ' auf Stufe ' + s.mag[e] + ' (' + payTxt(state, f, cost) + ').', pid);
   return { ok: true };
 }

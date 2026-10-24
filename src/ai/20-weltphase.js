@@ -34,19 +34,19 @@ function pickSpend(p, state, pid) {
   const s = p.stats, Q = P(pid);
   const lc = M.limitStepCost(state, s);
   const canL = lc <= upv(state, s);
-  const canM = M.manaStepCost(state, s) <= upv(state, s);
+  const canM = M.manaStepCost(state, s) <= upv(state, s), canH = M.hpStepCost(state, s) <= upv(state, s), canS = p.slots < M.MAX_SLOTS && M.slotStepCost(state, s) <= upv(state, s);   // seit 0.3.2 steigen alle Preise mit jedem Kauf
   const pl = stratPlan(state, pid);
   if (pl.st === 1 && s.limit < 2) return canL ? 'limit' : null;   // auf Ausspiellimit 2 sparen
   const noSlot = stratSlotLock(state, p, pid);
   const canD = !!state.rules.drawMarker && s.drawLimit < Math.min(Q.dlMax, M.MAX_DRAW_LIMIT) && M.drawLimitCost(state, s) <= upv(state, s);   // Nachziehlimit (Upgrade-Punkte) bis Stufe dlMax, an Stelle dlPos der Reihenfolge
   const order = [
-    ['limit', s.limit < Q.limitA && canL], ['slot', p.slots < Q.slotA], ['mana', s.maxMana < Q.manaA && canM], ['hp', s.maxHp < Q.hpA],
-    ['limit', s.limit < Q.limitB && canL], ['slot', p.slots < Q.slotB], ['hp', true], ['mana', canM], ['limit', s.limit < M.MAX_LIMIT && canL],
+    ['limit', s.limit < Q.limitA && canL], ['slot', p.slots < Q.slotA && canS], ['mana', s.maxMana < Q.manaA && canM], ['hp', s.maxHp < Q.hpA && canH],
+    ['limit', s.limit < Q.limitB && canL], ['slot', p.slots < Q.slotB && canS], ['hp', canH], ['mana', canM], ['limit', s.limit < M.MAX_LIMIT && canL],
   ];
   order.splice(Math.max(0, Math.min(order.length, Q.dlPos)), 0, ['drawlimit', canD]);
   if (s.limit < Q.limitA && !canL && upv(state, s) < lc) return null;   // auf den Limit-Schritt sparen
   for (const [w, ok] of order) if (ok && !(w === 'slot' && noSlot)) return w;
-  return 'hp';
+  return null;   // nichts Bezahlbares: sparen
 }
 const spendAct = (A, w) => w === 'drawlimit' ? A({ type: 'drawlimit' }) : A({ type: 'spend', what: w });   // Nachziehlimit ist eine eigene Aktion, die übrigen Punkte gehen über 'spend'
 // Wirtschaftsaktion (Punkte ausgeben, Magie kaufen, Gold opfern); sie zählt als Aktion und beendet den Zug.
@@ -66,10 +66,10 @@ function ecoStep(state, pid) {
     const want = pl.st === 2 ? 1 : 2;
     if (pl.els.length < want && mgv(state, s) >= 1) {
       const ranked = M.ELEMENTS.filter(e => !pl.els.includes(e) && s.mag[e] < 2).sort((x, y) => focusScore(state, pid, y) - focusScore(state, pid, x));
-      if (ranked.length && mgv(state, s) >= M.magicCost(state, s.mag[ranked[0]])) { pl.els.push(ranked[0]); return A({ type: 'magic', elem: ranked[0] }); }
+      if (ranked.length && mgv(state, s) >= M.magicCost(state, s.mag[ranked[0]], s)) { pl.els.push(ranked[0]); return A({ type: 'magic', elem: ranked[0] }); }
     }
     const foc = pl.st === 2 ? pl.els[0] : null;   // Fokus: danach weiter in dieselbe Farbe (Stufe 3)
-    if (foc && s.mag[foc] < M.MAX_MAGIC && mgv(state, s) >= M.magicCost(state, s.mag[foc])) return A({ type: 'magic', elem: foc });
+    if (foc && s.mag[foc] < M.MAX_MAGIC && mgv(state, s) >= M.magicCost(state, s.mag[foc], s)) return A({ type: 'magic', elem: foc });
     if (sw) { const a = spendStep(); if (a) return a; }
     if (s.gold >= 2) return A({ type: 'temple', amount: Math.min(s.gold, 3) });
     return null;
@@ -77,12 +77,12 @@ function ecoStep(state, pid) {
   const opp = state.players[1 - pid].stats, oppTop = M.ELEMENTS.slice().sort((x, y) => opp.mag[y] - opp.mag[x])[0];   // Aufbau des Gegners: seine stärkste Magie, und welche Farbe ihr überlegen ist
   const planEl = planElement(state, pid);
   let best = null;
-  for (const e of M.ELEMENTS) { const cost = M.magicCost(state, s.mag[e]); if (s.mag[e] < M.MAX_MAGIC && mgv(state, s) >= cost) { const sc = Q.mBase - cost * Q.mCost + countEl(e) * Q.mCnt + (s.mag[e] === Math.max(s.mag.F, s.mag.E, s.mag.W) ? Q.mTop : 0) + (e === M.SUPERIOR[oppTop] ? Q.mCounter * opp.mag[oppTop] : 0) + (e === planEl ? Q.mPlan : 0) + Q.mCatch * Math.max(0, opp.mag[e] - s.mag[e]); if (!best || sc > best.sc) best = { sc, a: A({ type: 'magic', elem: e }) }; } }
+  for (const e of M.ELEMENTS) { const cost = M.magicCost(state, s.mag[e], s); if (s.mag[e] < M.MAX_MAGIC && mgv(state, s) >= cost) { const sc = Q.mBase - cost * Q.mCost + countEl(e) * Q.mCnt + (s.mag[e] === Math.max(s.mag.F, s.mag.E, s.mag.W) ? Q.mTop : 0) + (e === M.SUPERIOR[oppTop] ? Q.mCounter * opp.mag[oppTop] : 0) + (e === planEl ? Q.mPlan : 0) + Q.mCatch * Math.max(0, opp.mag[e] - s.mag[e]); if (!best || sc > best.sc) best = { sc, a: A({ type: 'magic', elem: e }) }; } }
   if (best) return best.a;
   if (sw) {   // swapCosts: Magie kostet Punkte, die nur der Tempel liefert (Gold opfern); Verbesserungen kosten Gold
     if (Q.sacG && M.magicProgress(p) < Q.mgGoal) {
       let tgt = null;
-      for (const e of M.ELEMENTS) if (s.mag[e] < M.MAX_MAGIC) { const cost = M.magicCost(state, s.mag[e]), sc = -cost * Q.mCost + countEl(e) * Q.mCnt + (e === planEl ? Q.mPlan : 0) + (e === M.SUPERIOR[oppTop] ? Q.mCounter * opp.mag[oppTop] : 0); if (!tgt || sc > tgt.sc) tgt = { sc, cost }; }
+      for (const e of M.ELEMENTS) if (s.mag[e] < M.MAX_MAGIC) { const cost = M.magicCost(state, s.mag[e], s), sc = -cost * Q.mCost + countEl(e) * Q.mCnt + (e === planEl ? Q.mPlan : 0) + (e === M.SUPERIOR[oppTop] ? Q.mCounter * opp.mag[oppTop] : 0); if (!tgt || sc > tgt.sc) tgt = { sc, cost }; }
       if (tgt) { const need = tgt.cost - s.pending; for (let n = 1; n <= s.gold - Q.sacRes; n++) if (M.previewTemple(p, n).gained >= need) return A({ type: 'temple', amount: n }); }
     }
     return spendStep();   // Gold geht in Verbesserungen (oder wird fürs Limit gespart)
@@ -170,7 +170,7 @@ function worldPlan(state, pid) {
     const plans = M.vendorPlans(state, pid), mk = o => o.slots.map(sl => A({ type: 'mark', slot: sl }));
     // Wirksamer Wert einer Aufwertung: Eine Karte zählt höchstens mit dem Magielevel ihrer Farbe. Darüber (ohne bald erschwingliche Magie) kostet die Aufwertung nur Zeit.
     const planEl = planElement(state, pid);
-    const worth = o => { const e = o.result[0], t = +o.result[1], soon = Q.vFut > 0 && mgv(state, s) >= M.magicCost(state, s.mag[e]) && s.mag[e] < M.MAX_MAGIC; return t * (t <= s.mag[e] || soon ? 1 : Q.vOver) * (e === planEl || !planEl ? 1 : Q.vOff); };
+    const worth = o => { const e = o.result[0], t = +o.result[1], soon = Q.vFut > 0 && mgv(state, s) >= M.magicCost(state, s.mag[e], s) && s.mag[e] < M.MAX_MAGIC; return t * (t <= s.mag[e] || soon ? 1 : Q.vOver) * (e === planEl || !planEl ? 1 : Q.vOff); };
     const ups = plans.filter(o => !o.free).sort((a, b) => worth(b) - worth(a));
     if (ups.length) cands.push({ score: Q.vUp + worth(ups[0]) * Q.vUpW + R(), acts: [...mk(ups[0]), A({ type: 'vendor', result: ups[0].result, cost: ups[0].cost })] });
     else if (normals.length >= 1 && normals.length < 2 && allIds.length < 12) {

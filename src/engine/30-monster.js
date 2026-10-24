@@ -7,12 +7,12 @@
 // Werte je Stufe (Version 0.3.1, neu abgestimmt auf Spieler mit Ausspiellimit 2 von Anfang an; Messung mit tools/balance/monster-tune.js):
 //   Stufe I   3 HP, Mana 5 (Erdmonster 6), Limit 2; Variante: ausdauernd (+1 Mana, −1 HP) (wie die Spieler), Startdeck mit 3 Karten des eigenen Elements auf Stufe 2
 //   Stufe II  4 HP, Mana 5 (Varianten 4/6), Limit 3
-//   Stufe III 8 HP, Mana 6 (Varianten 5/7), Limit 4
+//   Stufe III 6 HP, Mana 6 (Varianten 5/7), Limit 4 (0.3.2: 8 HP waren mit den höheren Einnahmen zu hart, 48 % Niederlagen)
 // Das Limit steigt nur dort, wo es gewollt ist: Ein Monster mit Limit 2 und vielen HP verwickelt den Angreifer in endlose Angriffe und Fluchten (bis 27 Angriffe je Partie), erst Limit 3 gibt ihm die nötige Gefahr.
 const MONSTER = {
   profile: { F: { primary: 'F', secondary: 'E' }, E: { primary: 'E', secondary: 'W' }, W: { primary: 'W', secondary: 'F' } },
   stage1Temple: { F: [], E: [], W: [] },
-  temple: { 2: { F: ['limit', 'hp', 'mana'], E: ['limit', 'hp', 'mana'], W: ['limit', 'hp', 'mana'] }, 3: { F: ['limit', 'hp', 'hp', 'hp', 'hp', 'mana'], E: ['limit', 'hp', 'hp', 'hp', 'hp', 'mana'], W: ['limit', 'hp', 'hp', 'hp', 'hp', 'mana'] } },   // Schritte je Stufe (Stufe III kommt auf Stufe II obendrauf): II = Limit 3, 4 HP, Mana 5; III = Limit 4, 8 HP, Mana 6
+  temple: { 2: { F: ['limit', 'hp', 'mana'], E: ['limit', 'hp', 'mana'], W: ['limit', 'hp', 'mana'] }, 3: { F: ['limit', 'hp', 'hp', 'mana'], E: ['limit', 'hp', 'hp', 'mana'], W: ['limit', 'hp', 'hp', 'mana'] } },   // Schritte je Stufe (Stufe III kommt auf Stufe II obendrauf): II = Limit 3, 4 HP, Mana 5; III = Limit 4, 6 HP, Mana 6
   magic: { 2: [3, 2, 1], 3: [3, 2, 1] },                                  // Stufen von Haupt-, Neben- und drittem Element
   deck: {
     2: (P, S, T) => [P + '3', P + '2', P + '2', P + '2', S + '2', S + '2', T + '1', T + '1', P + '1'],
@@ -25,7 +25,7 @@ const MONSTER = {
     },
     temple: {   // Stufe II/III: Grundform, dazu ohne das Mana-Extra, dafür 1 HP mehr (ruhiger), und mit einem Mana mehr, dafür 1 HP weniger (zielt auf Dauerdruck); gemessen gleich oft Niederlage für den Angreifer (24/24/22 % in Stufe II, 40/41/37 % in Stufe III)
       2: { F: [['limit', 'hp', 'mana'], ['limit', 'hp', 'hp'], ['limit', 'mana', 'mana']], E: [['limit', 'hp', 'mana'], ['limit', 'hp', 'hp'], ['limit', 'mana', 'mana']], W: [['limit', 'hp', 'mana'], ['limit', 'hp', 'hp'], ['limit', 'mana', 'mana']] },
-      3: { F: [['limit', 'hp', 'hp', 'hp', 'hp', 'mana'], ['limit', 'hp', 'hp', 'hp', 'hp', 'hp'], ['limit', 'hp', 'hp', 'hp', 'mana', 'mana']], E: [['limit', 'hp', 'hp', 'hp', 'hp', 'mana'], ['limit', 'hp', 'hp', 'hp', 'hp', 'hp'], ['limit', 'hp', 'hp', 'hp', 'mana', 'mana']], W: [['limit', 'hp', 'hp', 'hp', 'hp', 'mana'], ['limit', 'hp', 'hp', 'hp', 'hp', 'hp'], ['limit', 'hp', 'hp', 'hp', 'mana', 'mana']] },
+      3: { F: [['limit', 'hp', 'hp', 'mana'], ['limit', 'hp', 'hp', 'hp'], ['limit', 'hp', 'mana', 'mana']], E: [['limit', 'hp', 'hp', 'mana'], ['limit', 'hp', 'hp', 'hp'], ['limit', 'hp', 'mana', 'mana']], W: [['limit', 'hp', 'hp', 'mana'], ['limit', 'hp', 'hp', 'hp'], ['limit', 'hp', 'mana', 'mana']] },
     },
     swap: { F: { primary: 'F', secondary: 'W' }, E: { primary: 'E', secondary: 'F' }, W: { primary: 'W', secondary: 'E' } },   // Neben- und drittes Element getauscht
     deck: {   // Deckformen: Grundform, breit (mehr Nebenelement), spitz (stärkere Spitze, schwächere Basis)

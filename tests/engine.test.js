@@ -93,7 +93,7 @@ test('Rückwurf ist durch den eingehenden Schaden gedeckelt', () => {
 
 test('Monsterwerte je Stufe (Zäh, Limit, Beute)', () => {
   const s = M.newGame({ seed: 3, ai: [true, true], first: 0 });
-  const hp = [3, 4, 8], limit = [2, 3, 4], gold = [1, 2, 3];
+  const hp = [3, 4, 6], limit = [2, 3, 4], gold = [1, 2, 3];
   [1, 2, 3].forEach((st, i) => {
     const r = M.spawnMonsters(st, s.rng);
     for (const el of Object.keys(r)) {
@@ -107,7 +107,7 @@ test('Monsterwerte je Stufe (Zäh, Limit, Beute)', () => {
 test('Siegpunkte: Monsterkampf +1 / -1 (nie unter 0), keine Beute, kein Trostpreis, Ende ab 4 nach Showdown 2', () => {
   let decided = 0, floored = 0;
   for (let seed = 7000; seed < 7040; seed++) {
-    const s = M.newGame({ seed, ai: [true, true], first: seed & 1, rules: { surplusSp: 0 } });   // ohne Überschusspunkte, damit nur der Kampf Siegpunkte bewegt
+    const s = M.newGame({ seed, ai: [true, true], first: seed & 1, rules: { surplusSp: 0, startSp: 0 } });   // ohne Überschusspunkte und Start-Siegpunkte, damit nur der Kampf Siegpunkte bewegt und die Untergrenze 0 vorkommt
     let steps = 0, last = null;
     while (!s.over && steps++ < 20000) {
       const before = s.players.map(p => ({ sp: p.sp, gold: p.stats.goldGot }));
@@ -306,7 +306,7 @@ test('KI meidet Nachziehen bei rotem Nachziehmarker (Weltphase: Gold opfern stat
   }
 });
 
-test('Nachziehlimit: Kauf kostet 1 Gold (keine Upgrade-Punkte), beendet den Zug, höchstens Stufe 3', () => {
+test('Nachziehlimit: Kauf kostet Gold (1, dann 2, keine Upgrade-Punkte), beendet den Zug, höchstens Stufe 3', () => {
   const s = M.newGame({ seed: 5, ai: [false, false], first: 0 }), me = s.players[0].stats;
   assert.equal(me.drawLimit, 1);
   me.gold = 0; me.pending = 5; assert.equal(M.apply(s, { pid: 0, type: 'drawlimit' }).ok, false, 'ohne Gold nicht möglich, auch mit Upgrade-Punkten');
@@ -315,9 +315,9 @@ test('Nachziehlimit: Kauf kostet 1 Gold (keine Upgrade-Punkte), beendet den Zug,
   assert.equal(me.drawLimit, 2); assert.equal(me.gold, 4); assert.equal(me.pending, 5, 'Upgrade-Punkte bleiben'); assert.equal(s.turn, 1, 'Zug beendet');
   assert.ok(M.apply(s, { pid: 1, type: 'draw' }).ok);
   assert.ok(M.apply(s, { pid: 0, type: 'drawlimit' }).ok);
-  assert.equal(me.drawLimit, 3); assert.equal(me.gold, 3);
+  assert.equal(me.drawLimit, 3); assert.equal(me.gold, 2, 'zweiter Kauf 2 Gold (Preis steigt um den Grundpreis)');
   s.players[1].stats.gold = 5; assert.ok(M.apply(s, { pid: 1, type: 'temple', amount: 1 }).ok);   // (zweimal hintereinander nachziehen würde dem Spieler 0 Gold schenken)
-  assert.equal(M.apply(s, { pid: 0, type: 'drawlimit' }).ok, false, 'Maximum 3'); assert.equal(me.gold, 3);
+  assert.equal(M.apply(s, { pid: 0, type: 'drawlimit' }).ok, false, 'Maximum 3'); assert.equal(me.gold, 2);
 });
 
 test('Nachziehlimit Weltphase: so viele Nachziehvorgänge hintereinander sind frei, danach wird der Marker rot und das nächste Nachziehen kostet Gold', () => {
@@ -407,7 +407,7 @@ test('Überschusspunkte: Sind alle Magien auf Stufe 3, werden Upgrade-Punkte (ni
   assert.ok(M.apply(s, { pid: 0, type: 'magic', elem: 'W' }).ok);   // kostet 3 Punkte, 1 bleibt übrig, nun ist alles auf Stufe 3
   assert.deepEqual([me.pending, p.sp, me.gold], [0, 3, 5], '1 Überschusspunkt = 1 Siegpunkt (2 Start), Gold bleibt');
   s.turn = 1; s.players[1].stats.gold = 3; assert.ok(M.apply(s, { pid: 1, type: 'temple', amount: 2 }).ok);   // Gegner ohne volle Magie behält seine Punkte
-  assert.equal(s.players[1].stats.pending, 3, '1 Bonuspunkt + 2 aus dem Tempel'); assert.equal(s.players[1].sp, 2);
+  assert.equal(s.players[1].stats.pending, 4, '2 Bonuspunkte + 2 aus dem Tempel'); assert.equal(s.players[1].sp, 2);
   const t = M.newGame({ seed: 5, ai: [false, false], first: 0, rules: { surplusSp: 0 } }); t.players[0].stats.mag = { F: 3, E: 3, W: 3 }; t.players[0].stats.pending = 2; t.players[0].stats.gold = 0;
   assert.ok(M.apply(t, { pid: 0, type: 'draw' }).ok); assert.deepEqual([t.players[0].stats.pending, t.players[0].sp], [2, 2], 'ohne Regel bleibt es');
 });
@@ -419,7 +419,7 @@ test('Ausspiellimit startet bei 2 (startLimit), mit startLimit 0 wie früher bei
 });
 
 test('Monster-Varianten tauschen: „ausdauernd“ = 1 Mana mehr, dafür 1 HP weniger; nie nur mehr (Stufe I bis III)', () => {
-  const base = { 1: { F: [3, 5], E: [3, 6], W: [3, 5] }, 2: { F: [4, 5], E: [4, 5], W: [4, 5] }, 3: { F: [8, 6], E: [8, 6], W: [8, 6] } };
+  const base = { 1: { F: [3, 5], E: [3, 6], W: [3, 5] }, 2: { F: [4, 5], E: [4, 5], W: [4, 5] }, 3: { F: [6, 6], E: [6, 6], W: [6, 6] } };
   const seen = { zäh: 0, ausdauernd: 0, gleich: 0 };
   for (const st of [1, 2, 3]) for (let seed = 1; seed <= 80; seed++) {
     const r = M.spawnMonsters(st, M.newGame({ seed }).rng);
@@ -440,4 +440,27 @@ test('Start-HP der Spieler 4 (startHp), Monster beginnen weiter mit eigenen Wert
   assert.deepEqual(s.players.map(p => [p.stats.hp, p.stats.maxHp]), [[4, 4], [4, 4]]);
   assert.deepEqual(M.newGame({ seed: 5, rules: { startHp: 0 } }).players.map(p => p.stats.maxHp), [3, 3]);
   assert.equal(M.spawnMonsters(1, s.rng).F.stats.maxHp >= 2, true);
+});
+
+test('Steigende Preise (priceRise): jeder Kauf einer Kategorie verteuert die nächste Stufe um den Grundpreis; Einnahmen je Abschnitt 2/3/4', () => {
+  assert.deepEqual(M.DEFAULT_RULES.stageGold, [0, 2, 3, 4]); assert.deepEqual(M.DEFAULT_RULES.stagePoints, [0, 2, 3, 4]); assert.equal(M.DEFAULT_RULES.priceRise, 1);
+  const s = M.newGame({ seed: 5, ai: [false, false], first: 0 }), p = s.players[0], st = p.stats;
+  assert.deepEqual([st.gold, st.pending], [2, 2], 'Start: 2 Gold und 2 Upgrade-Punkte');
+  const prices = fn => [0, 1, 2].map(() => { const c = fn(); st.buys = st.buys || {}; return c; });
+  const seq = (cat, fn) => { const out = []; for (let i = 0; i < 3; i++) { out.push(fn()); st.buys = st.buys || {}; st.buys[cat] = (st.buys[cat] || 0) + 1; } st.buys[cat] = 0; return out; };
+  assert.deepEqual(seq('hp', () => M.hpStepCost(s, st)), [1, 2, 3], 'HP: 1, 2, 3');
+  assert.deepEqual(seq('mana', () => M.manaStepCost(s, st)), [1, 2, 3], 'Mana: 1, 2, 3');
+  assert.deepEqual(seq('slot', () => M.slotStepCost(s, st)), [1, 2, 3], 'Handplätze: 1, 2, 3');
+  assert.deepEqual(seq('limit', () => M.limitStepCost(s, st)), [2, 4, 6], 'Ausspiellimit: 2, 4, 6');
+  assert.deepEqual(seq('m2', () => M.magicCost(s, 1, st)), [1, 2, 3], 'Magie auf Stufe 2: 1, 2, 3');
+  assert.deepEqual(seq('m3', () => M.magicCost(s, 2, st)), [3, 6, 9], 'Magie auf Stufe 3: 3, 6, 9');
+  // tatsächliche Käufe zählen
+  st.gold = 20; st.pending = 20;
+  for (const [need, what] of [[1, 'hp'], [2, 'hp'], [3, 'hp']]) { const g = st.gold; s.turn = 0; assert.ok(M.apply(s, { pid: 0, type: 'spend', what }).ok); assert.equal(g - st.gold, need, what + ' kostet ' + need); }
+  const pn = st.pending; s.turn = 0; assert.ok(M.apply(s, { pid: 0, type: 'magic', elem: 'F' }).ok); assert.equal(pn - st.pending, 1);
+  s.turn = 0; const pn2 = st.pending; assert.ok(M.apply(s, { pid: 0, type: 'magic', elem: 'E' }).ok); assert.equal(pn2 - st.pending, 2, 'zweiter Kauf auf Stufe 2 kostet 2');
+  s.turn = 0; const pn3 = st.pending; assert.ok(M.apply(s, { pid: 0, type: 'magic', elem: 'F' }).ok); assert.equal(pn3 - st.pending, 3, 'Stufe 3 kostet 3 (erster Kauf auf Stufe 3)');
+  // ohne priceRise bleibt alles beim Grundpreis
+  const t = M.newGame({ seed: 5, rules: { priceRise: 0 } }), ts = t.players[0].stats; ts.gold = 9; t.turn = 0;
+  for (let i = 0; i < 3; i++) { t.turn = 0; assert.ok(M.apply(t, { pid: 0, type: 'spend', what: 'hp' }).ok); } assert.equal(ts.gold, 6);
 });

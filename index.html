@@ -465,7 +465,7 @@ function toggleLock(d, slot) {
 /* Magus – Regelkern (Teil 2): Werte, Upgrade-Kosten, Tempel. */
 
 function newStats() {
-  return { gold: 3, hp: 3, maxHp: 3, mana: 4, maxMana: 4, limit: 1, drawLimit: 1, mag: { F: 1, E: 1, W: 1 }, pending: 0, freeDraws: 0, goldGot: 0, upGot: 0 };   // goldGot/upGot: insgesamt erhaltenes Gold und Upgrade-Punkte (für die Statistik)
+  return { gold: 3, hp: 3, maxHp: 3, mana: 4, maxMana: 4, limit: 1, drawLimit: 1, mag: { F: 1, E: 1, W: 1 }, pending: 0, buys: {}, freeDraws: 0, goldGot: 0, upGot: 0 };   // goldGot/upGot: insgesamt erhaltenes Gold und Upgrade-Punkte (für die Statistik)
 }
 function regen(stats, n) {   // n = Gewinn an HP und Mana (Regel regenByStage: je Abschnitt 1/2/3)
   n = n || 1;
@@ -474,15 +474,22 @@ function regen(stats, n) {   // n = Gewinn an HP und Mana (Regel regenByStage: j
 }
 function regenGain(state) { const r = state.rules.regenByStage; return r ? (r[Math.min(r.length, Math.max(1, state.stage)) - 1] || 1) : 1; }
 // Kosten (in Upgrade-Punkten) für jeden Schritt des Ausspiellimits: limitCost (Standard 2). Ohne limitCost gilt die ältere Staffelung (erster Schritt limitFirstStepCost, danach 1).
-function limitStepCost(state, s) { return state.rules.limitCost > 0 ? state.rules.limitCost : (s.limit <= 1 ? state.rules.limitFirstStepCost : 1); }
-function manaStepCost() { return 1; }
+// Steigende Preise (Regel priceRise, seit 0.3.2): Jeder Kauf in einer Kategorie verteuert die nächste Stufe dieser Kategorie um deren Grundpreis (Preis = Grundpreis × (1 + priceRise × bisherige Käufe)).
+// Kategorien: hp, mana, limit, slot, draw (Nachziehlimit) und je Zielstufe der Magie m2 / m3; s.buys zählt die Käufe des Spielers.
+function bought(s, k) { return (s && s.buys && s.buys[k]) || 0; }
+function risen(state, base, s, k) { return base * (1 + (state.rules.priceRise || 0) * bought(s, k)); }
+function buyCount(s, k) { s.buys = s.buys || {}; s.buys[k] = (s.buys[k] || 0) + 1; }
+function limitStepCost(state, s) { return risen(state, state.rules.limitCost > 0 ? state.rules.limitCost : (s.limit <= 1 ? state.rules.limitFirstStepCost : 1), s, 'limit'); }
+function manaStepCost(state, s) { return risen(state, 1, s, 'mana'); }
+function hpStepCost(state, s) { return risen(state, 1, s, 'hp'); }
+function slotStepCost(state, s) { return risen(state, 1, s, 'slot'); }
 // Bezahlung (Regel swapCosts, seit 0.3 Standard): Magie kostet Upgrade-Punkte (Feld pending), alle übrigen Verbesserungen kosten Gold. Ohne swapCosts umgekehrt (Magie Gold, Verbesserungen Upgrade-Punkte). Tempel und Einnahmen bleiben unverändert.
 function upField(state) { return state.rules.swapCosts ? 'gold' : 'pending'; }
 function magicField(state) { return state.rules.swapCosts ? 'pending' : 'gold'; }
 function payTxt(state, field, n) { return field === 'gold' ? n + ' Gold' : n + ' Upgrade-Punkt' + (n > 1 ? 'e' : ''); }
 // Preis der nächsten Magiestufe (in Gold, mit swapCosts in Upgrade-Punkten): Index = aktuelle Stufe (Stufe 1 → 2 kostet 1, Stufe 2 → 3 kostet 3).
 // Gold für die nächste Magiestufe: Index = aktuelle Stufe (Stufe 1 → 2 kostet 1 Gold, Stufe 2 → 3 kostet 3 Gold).
-function magicCost(state, lv) { const t = state.rules.magicCost || [0, 1, 2]; return t[lv] === undefined ? lv : t[lv]; }
+function magicCost(state, lv, s) { const t = state.rules.magicCost || [0, 1, 2], base = t[lv] === undefined ? lv : t[lv]; return s ? risen(state, base, s, 'm' + (lv + 1)) : base; }   // mit s: aktueller Preis einschließlich der Verteuerung durch frühere Käufe der Zielstufe
 // Tempel: n Gold ergeben n(n+1)/2 Punkte; die Stufe k+1 kostet k+1 Punkte und gibt einen Upgrade-Punkt.
 function pointsForGold(n) { return n * (n + 1) / 2; }
 function nextLevelCost(level) { return level + 1; }
@@ -507,12 +514,12 @@ function magicProgress(p) { return (p.stats.mag.F - 1) + (p.stats.mag.E - 1) + (
 // Werte je Stufe (Version 0.3.1, neu abgestimmt auf Spieler mit Ausspiellimit 2 von Anfang an; Messung mit tools/balance/monster-tune.js):
 //   Stufe I   3 HP, Mana 5 (Erdmonster 6), Limit 2; Variante: ausdauernd (+1 Mana, −1 HP) (wie die Spieler), Startdeck mit 3 Karten des eigenen Elements auf Stufe 2
 //   Stufe II  4 HP, Mana 5 (Varianten 4/6), Limit 3
-//   Stufe III 8 HP, Mana 6 (Varianten 5/7), Limit 4
+//   Stufe III 6 HP, Mana 6 (Varianten 5/7), Limit 4 (0.3.2: 8 HP waren mit den höheren Einnahmen zu hart, 48 % Niederlagen)
 // Das Limit steigt nur dort, wo es gewollt ist: Ein Monster mit Limit 2 und vielen HP verwickelt den Angreifer in endlose Angriffe und Fluchten (bis 27 Angriffe je Partie), erst Limit 3 gibt ihm die nötige Gefahr.
 const MONSTER = {
   profile: { F: { primary: 'F', secondary: 'E' }, E: { primary: 'E', secondary: 'W' }, W: { primary: 'W', secondary: 'F' } },
   stage1Temple: { F: [], E: [], W: [] },
-  temple: { 2: { F: ['limit', 'hp', 'mana'], E: ['limit', 'hp', 'mana'], W: ['limit', 'hp', 'mana'] }, 3: { F: ['limit', 'hp', 'hp', 'hp', 'hp', 'mana'], E: ['limit', 'hp', 'hp', 'hp', 'hp', 'mana'], W: ['limit', 'hp', 'hp', 'hp', 'hp', 'mana'] } },   // Schritte je Stufe (Stufe III kommt auf Stufe II obendrauf): II = Limit 3, 4 HP, Mana 5; III = Limit 4, 8 HP, Mana 6
+  temple: { 2: { F: ['limit', 'hp', 'mana'], E: ['limit', 'hp', 'mana'], W: ['limit', 'hp', 'mana'] }, 3: { F: ['limit', 'hp', 'hp', 'mana'], E: ['limit', 'hp', 'hp', 'mana'], W: ['limit', 'hp', 'hp', 'mana'] } },   // Schritte je Stufe (Stufe III kommt auf Stufe II obendrauf): II = Limit 3, 4 HP, Mana 5; III = Limit 4, 6 HP, Mana 6
   magic: { 2: [3, 2, 1], 3: [3, 2, 1] },                                  // Stufen von Haupt-, Neben- und drittem Element
   deck: {
     2: (P, S, T) => [P + '3', P + '2', P + '2', P + '2', S + '2', S + '2', T + '1', T + '1', P + '1'],
@@ -525,7 +532,7 @@ const MONSTER = {
     },
     temple: {   // Stufe II/III: Grundform, dazu ohne das Mana-Extra, dafür 1 HP mehr (ruhiger), und mit einem Mana mehr, dafür 1 HP weniger (zielt auf Dauerdruck); gemessen gleich oft Niederlage für den Angreifer (24/24/22 % in Stufe II, 40/41/37 % in Stufe III)
       2: { F: [['limit', 'hp', 'mana'], ['limit', 'hp', 'hp'], ['limit', 'mana', 'mana']], E: [['limit', 'hp', 'mana'], ['limit', 'hp', 'hp'], ['limit', 'mana', 'mana']], W: [['limit', 'hp', 'mana'], ['limit', 'hp', 'hp'], ['limit', 'mana', 'mana']] },
-      3: { F: [['limit', 'hp', 'hp', 'hp', 'hp', 'mana'], ['limit', 'hp', 'hp', 'hp', 'hp', 'hp'], ['limit', 'hp', 'hp', 'hp', 'mana', 'mana']], E: [['limit', 'hp', 'hp', 'hp', 'hp', 'mana'], ['limit', 'hp', 'hp', 'hp', 'hp', 'hp'], ['limit', 'hp', 'hp', 'hp', 'mana', 'mana']], W: [['limit', 'hp', 'hp', 'hp', 'hp', 'mana'], ['limit', 'hp', 'hp', 'hp', 'hp', 'hp'], ['limit', 'hp', 'hp', 'hp', 'mana', 'mana']] },
+      3: { F: [['limit', 'hp', 'hp', 'mana'], ['limit', 'hp', 'hp', 'hp'], ['limit', 'hp', 'mana', 'mana']], E: [['limit', 'hp', 'hp', 'mana'], ['limit', 'hp', 'hp', 'hp'], ['limit', 'hp', 'mana', 'mana']], W: [['limit', 'hp', 'hp', 'mana'], ['limit', 'hp', 'hp', 'hp'], ['limit', 'hp', 'mana', 'mana']] },
     },
     swap: { F: { primary: 'F', secondary: 'W' }, E: { primary: 'E', secondary: 'F' }, W: { primary: 'W', secondary: 'E' } },   // Neben- und drittes Element getauscht
     deck: {   // Deckformen: Grundform, breit (mehr Nebenelement), spitz (stärkere Spitze, schwächere Basis)
@@ -1118,33 +1125,39 @@ function execSpend(state, pid, what) {
   const f = upField(state);
   if (s[f] <= 0) return fail(f === 'gold' ? 'Du hast kein Gold.' : 'Keine offenen Upgrade-Punkte.');
   let cost = 1;
-  if (what === 'hp') { const n = state.rules.hpPerPoint || 1; s.maxHp += n; }   // Upgrade erhöht nur das Maximum, die aktuellen HP bleiben
+  if (what === 'hp') {
+    cost = hpStepCost(state, s);
+    if (s[f] < cost) return fail('Die nächsten HP kosten ' + payTxt(state, f, cost) + '.');
+    const n = state.rules.hpPerPoint || 1; s.maxHp += n; buyCount(s, 'hp');   // Upgrade erhöht nur das Maximum, die aktuellen HP bleiben
+  }
   else if (what === 'mana') {
-    cost = manaStepCost();
+    cost = manaStepCost(state, s);
     if (s[f] < cost) return fail('Der nächste Mana-Schritt kostet ' + payTxt(state, f, cost) + '.');
-    s.maxMana++;   // nur das Maximum steigt, das aktuelle Mana bleibt
+    s.maxMana++; buyCount(s, 'mana');   // nur das Maximum steigt, das aktuelle Mana bleibt
   } else if (what === 'limit') {
     if (s.limit >= MAX_LIMIT) return fail('Das Ausspiellimit ist am Maximum (' + MAX_LIMIT + ').');
     cost = limitStepCost(state, s);
     if (s[f] < cost) return fail('Das nächste Limit kostet ' + payTxt(state, f, cost) + '.');
-    s.limit++;
+    s.limit++; buyCount(s, 'limit');
   } else if (what === 'slot') {
     if (p.slots >= MAX_SLOTS) return fail('Du hast schon ' + MAX_SLOTS + ' Handplätze.');
-    p.slots++; d.hand.push(null);
+    cost = slotStepCost(state, s);
+    if (s[f] < cost) return fail('Der nächste Handplatz kostet ' + payTxt(state, f, cost) + '.');
+    p.slots++; d.hand.push(null); buyCount(s, 'slot');
   } else return fail('Unbekanntes Upgrade.');
   s[f] -= cost;
   log(state, p.name + ' verbessert ' + { hp: 'max. HP', mana: 'max. Mana', limit: 'das Ausspiellimit', slot: 'die Handplätze' }[what] + '.', pid);
   return { ok: true };
 }
 // Nachziehlimit steigern (kostet Upgrade-Punkte aus dem Tempel, mit swapCosts Gold; drawLimitCost je Schritt): so oft darf man hintereinander nachziehen, bevor der Nachziehmarker auf Rot springt.
-function drawLimitCost(state, s) { const c = state.rules.drawLimitCost; return Array.isArray(c) ? (c[s.drawLimit - 1] != null ? c[s.drawLimit - 1] : c[c.length - 1]) : (c == null ? 1 : c); }
+function drawLimitCost(state, s) { const c = state.rules.drawLimitCost, base = Array.isArray(c) ? (c[s.drawLimit - 1] != null ? c[s.drawLimit - 1] : c[c.length - 1]) : (c == null ? 1 : c); return risen(state, base, s, 'draw'); }
 function execDrawLimit(state, pid) {
   const p = state.players[pid], s = p.stats;
   if (!state.rules.drawMarker) return fail('Ohne Nachziehmarker gibt es kein Nachziehlimit.');
   if (s.drawLimit >= MAX_DRAW_LIMIT) return fail('Das Nachziehlimit ist am Maximum (' + MAX_DRAW_LIMIT + ').');
   const cost = drawLimitCost(state, s), f = upField(state);
   if (s[f] < cost) return fail('Du brauchst ' + payTxt(state, f, cost) + '.');
-  s[f] -= cost; s.drawLimit++;
+  s[f] -= cost; s.drawLimit++; buyCount(s, 'draw');
   log(state, p.name + ' steigert das Nachziehlimit auf ' + s.drawLimit + ' (' + payTxt(state, f, cost) + ').', pid);
   return { ok: true };
 }
@@ -1161,9 +1174,9 @@ function execMagic(state, pid, e) {
   const p = state.players[pid], s = p.stats;
   if (!ELEMENTS.includes(e)) return fail('Unbekanntes Element.');
   if (s.mag[e] >= MAX_MAGIC) return fail(NAMES[e] + ' ist schon auf Stufe ' + MAX_MAGIC + '.');
-  const cost = magicCost(state, s.mag[e]), f = magicField(state);
+  const cost = magicCost(state, s.mag[e], s), f = magicField(state);
   if (s[f] < cost) return fail('Du brauchst ' + payTxt(state, f, cost) + '.');
-  s[f] -= cost; s.mag[e]++;
+  s[f] -= cost; buyCount(s, 'm' + (s.mag[e] + 1)); s.mag[e]++;
   log(state, p.name + ' steigert ' + NAMES[e] + ' auf Stufe ' + s.mag[e] + ' (' + payTxt(state, f, cost) + ').', pid);
   return { ok: true };
 }
@@ -1212,7 +1225,7 @@ function applyWorld(state, a) {
 /* Magus – Regelkern (Teil 8): Spielstart und Schnittstelle nach außen. */
 
 // Regelwerte (Abstimmungs- und Variantenschalter). ‚curses‘: Fluchsystem, siehe 30-curses.js.
-const DEFAULT_RULES = { startHp: 4, startLimit: 2, startSp: 2, surplusSp: 1, swapCosts: 1, magicCost: [0, 1, 3], limitCost: 2, limitFirstStepCost: 2, hpPerPoint: 2, stagePoints: [0, 1, 2, 3], stageGold: [0, 1, 2, 3], loserUp: 0, loserUp2: 0, winSp: 4, winSpFromShowdown: 2, monsterSp: 1, monsterLoot: 0, idleLimit: 0, drawMarker: 1, drawPenaltyGold: 1, drawLimitCost: [1, 1], lossHelp: 1, showdownSp: 1, lootBoth: true, recoverByStage: [1, 2, 3], regenByStage: [1, 2, 3], supply: 8, supply2: 6, supply3: 4, startCards: 0 };   // Jede gespielte Karte (auch Kombokarten) kostet 1 Mana, nur Verteidigung in der überlegenen Farbe ist gratis. recoverByStage: Mana-Gewinn von „Erholen“ im Kampf je Abschnitt
+const DEFAULT_RULES = { priceRise: 1, startHp: 4, startLimit: 2, startSp: 2, surplusSp: 1, swapCosts: 1, magicCost: [0, 1, 3], limitCost: 2, limitFirstStepCost: 2, hpPerPoint: 2, stagePoints: [0, 2, 3, 4], stageGold: [0, 2, 3, 4], loserUp: 0, loserUp2: 0, winSp: 4, winSpFromShowdown: 2, monsterSp: 1, monsterLoot: 0, idleLimit: 0, drawMarker: 1, drawPenaltyGold: 1, drawLimitCost: [1, 1], lossHelp: 1, showdownSp: 1, lootBoth: true, recoverByStage: [1, 2, 3], regenByStage: [1, 2, 3], supply: 8, supply2: 6, supply3: 4, startCards: 0 };   // Jede gespielte Karte (auch Kombokarten) kostet 1 Mana, nur Verteidigung in der überlegenen Farbe ist gratis. recoverByStage: Mana-Gewinn von „Erholen“ im Kampf je Abschnitt
 
 function newPlayer(state, name, ai, startIds) {
   const p = { name, ai: !!ai, stats: newStats(), temple: { points: 0, level: 0 }, sp: state.rules.startSp || 0, slots: MIN_SLOTS, drawRed: false, drawN: 0 };   // drawN: Nachziehvorgänge seit der letzten anderen Aktion (höchstens Nachziehlimit), drawRed: Marker rot
@@ -1317,7 +1330,7 @@ function handCounts(d) { const c = {}; d.hand.forEach(x => { if (x) c[x.id] = (c
 
 return { ELEMENTS, SUPERIOR, NAMES, START_DECK, MAX_MAGIC, MAX_SLOTS, MIN_SLOTS, MAX_LIMIT, MAX_DRAW_LIMIT, DEFAULT_RULES, MONSTER,
   makeRng, parseCard, selection, newGame, apply, record, prim, actor, other, regen, handCounts,
-  vendorOffers, vendorPlans, previewTemple, pointsForGold, nextLevelCost, limitStepCost, manaStepCost, magicCost, drawLimitCost, upField, magicField, payTxt,
+  vendorOffers, vendorPlans, previewTemple, pointsForGold, nextLevelCost, limitStepCost, manaStepCost, hpStepCost, slotStepCost, magicCost, drawLimitCost, upField, magicField, payTxt,
   evalAttack, evalDefense, canFlee, stockOf, recoverGain, regenGain, comboLevels, levelsFor,
   mirrorOf, monsterAlive, allMonstersDead, magicProgress, spawnMonsters, spawnForGame };
 }));</script>
@@ -1331,14 +1344,14 @@ return { ELEMENTS, SUPERIOR, NAMES, START_DECK, MAX_MAGIC, MAX_SLOTS, MIN_SLOTS,
 /* ---------- Stellschrauben ---------- */
 // Alle Gewichte der KI an einer Stelle (abgestimmt per Selbstspiel: Änderungen wurden nur übernommen, wenn sie sich in 800 Partien mit getauschten Plätzen klar durchsetzten). Pro Platz überschreibbar (setParams), damit Varianten gegeneinander spielen können.
 const DEFAULTS = {
-  limitA: 1, slotA: 5, manaA: 4, hpA: 6, limitB: 3, slotB: 5,          // Ausbaureihenfolge der Upgrade-Punkte
+  limitA: 1, slotA: 5, manaA: 5, hpA: 6, limitB: 3, slotB: 5,          // Ausbaureihenfolge der Upgrade-Punkte
   cBase: 34, cHp: 3, cMana: 1.5, cWt: 2.8, cMon: 0.8, minHp: 1, minMana: 3,   // Lust, ein Monster anzugreifen
   dRed: 10, dTmp: 10, dVen: 5, rBroke: 400, cRed: 1, cRedA: 0,   // Nachziehmarker rot (Nachziehen schenkt dem Gegner Gold bzw. ein Nachziehtoken): dRed Abschlag auf das Nachziehen in der Weltphase, dTmp Lust, stattdessen 1 Gold im Tempel zu opfern, dVen Lust, ohne Gold stattdessen gratis beim Händler zu tauschen, rBroke Bonus für einen Monsterangriff, wenn sonst nur das Strafnachziehen bleibt; im Kampf cRed 1: erholen statt nachziehen (auch bei vollem Mana), cRedA: Angriffsschwelle sinkt um so viel
   sacG: 0, mgGoal: 6, sacRes: 0,   // swapCosts (0.3): Magie kostet Upgrade-Punkte, die es nur aus dem Tempel gibt. sacG 1: Gold opfern, wenn die Punkte für die nächste Magiestufe nicht reichen; mgGoal: nur solange der Magiefortschritt (Summe der Stufen über 1, höchstens 6) darunter liegt; sacRes: Gold, das dabei übrig bleiben muss (Vorrang der Verbesserungen)
   dlMax: 0, dlPos: 4, tKeep: 0, cRedE: 0, dFree: 0, rAtk: 0,   // rAtk: Angriffslust auf ein Monster, solange der Marker rot ist (statt nachzuziehen und dem Gegner Gold zu schenken); Nachziehlimit (Upgrade-Punkte): dlMax bis zu welcher Stufe die KI es kauft (0 = nie), dlPos Stelle in der Ausbaureihenfolge von pickSpend (0 = vor allem anderen, 4 = nach den A-Zielen, 9 = zuletzt); tKeep: Gold, das beim Tempel-Opfern zurückbleibt (Notgroschen gegen die Strafe, siehe dTmp); cRedE 1: mit leerer Hand bei Rot erst erholen (Marker auf Grün), dann nachziehen; dFree: Bonus aufs Nachziehen in der Weltphase, solange der Marker noch grün ist
   dBase: 7, dCurse: 4, dEmpty: 12, dSlot: 1, dNorm: 5,                    // Lust, nachzuziehen
-  vUp: 8.85, vUpW: 1.4,                                                       // Händler-Aufwertung
-  smart: 1, wMark: 0.5, keepB: 3, keepOn: 0, wDeath: 6, wDraw: 1.6, wFW: 1.3, wFE: 0.9, wEW: 2.8, aDmg: 1.5, aCost: 1.5, aCurse: 1.6, aThr: 0.5, oHits: 4, oFree: 4, stallDec: 0.05, stallFrom: 24, pasDec: 1,   // Angriffsbewertung; pasDec: die Angriffsschwelle sinkt um so viel je Passen-Zug des Gegners in Folge
+  vUp: 10.35, vUpW: 1.4,                                                       // Händler-Aufwertung
+  smart: 1, wMark: 0.5, keepB: 3, keepOn: 0, wDeath: 6, wDraw: 1.6, wFW: 1.3, wFE: 0.9, wEW: 2.8, aDmg: 1.5, aCost: 1.5, aCurse: 1.6, aThr: 0.5, oHits: 4, oFree: 4, stallDec: -0.05, stallFrom: 24, pasDec: 1,   // Angriffsbewertung; pasDec: die Angriffsschwelle sinkt um so viel je Passen-Zug des Gegners in Folge
   rW: 0, rRef: 3, dRec: 0, dU: 2,                                                 // Erholen als Manaquelle: Angriffsschwelle steigt bei wenig Mana, Verzicht auf Verteidigung bringt Mana
   dLeth: 40, dPend: 6, dCost: 1.4, dKeep: 0.9, mirW: 4, mirKeep: 3, mirAvoid: 2, lfOpp: 2, lfOppW: 0.8,                            // Verteidigungsbewertung
   mBase: 14, mCost: 2.1, mCnt: 0.7, mTop: 2,
@@ -1407,19 +1420,19 @@ function pickSpend(p, state, pid) {
   const s = p.stats, Q = P(pid);
   const lc = M.limitStepCost(state, s);
   const canL = lc <= upv(state, s);
-  const canM = M.manaStepCost(state, s) <= upv(state, s);
+  const canM = M.manaStepCost(state, s) <= upv(state, s), canH = M.hpStepCost(state, s) <= upv(state, s), canS = p.slots < M.MAX_SLOTS && M.slotStepCost(state, s) <= upv(state, s);   // seit 0.3.2 steigen alle Preise mit jedem Kauf
   const pl = stratPlan(state, pid);
   if (pl.st === 1 && s.limit < 2) return canL ? 'limit' : null;   // auf Ausspiellimit 2 sparen
   const noSlot = stratSlotLock(state, p, pid);
   const canD = !!state.rules.drawMarker && s.drawLimit < Math.min(Q.dlMax, M.MAX_DRAW_LIMIT) && M.drawLimitCost(state, s) <= upv(state, s);   // Nachziehlimit (Upgrade-Punkte) bis Stufe dlMax, an Stelle dlPos der Reihenfolge
   const order = [
-    ['limit', s.limit < Q.limitA && canL], ['slot', p.slots < Q.slotA], ['mana', s.maxMana < Q.manaA && canM], ['hp', s.maxHp < Q.hpA],
-    ['limit', s.limit < Q.limitB && canL], ['slot', p.slots < Q.slotB], ['hp', true], ['mana', canM], ['limit', s.limit < M.MAX_LIMIT && canL],
+    ['limit', s.limit < Q.limitA && canL], ['slot', p.slots < Q.slotA && canS], ['mana', s.maxMana < Q.manaA && canM], ['hp', s.maxHp < Q.hpA && canH],
+    ['limit', s.limit < Q.limitB && canL], ['slot', p.slots < Q.slotB && canS], ['hp', canH], ['mana', canM], ['limit', s.limit < M.MAX_LIMIT && canL],
   ];
   order.splice(Math.max(0, Math.min(order.length, Q.dlPos)), 0, ['drawlimit', canD]);
   if (s.limit < Q.limitA && !canL && upv(state, s) < lc) return null;   // auf den Limit-Schritt sparen
   for (const [w, ok] of order) if (ok && !(w === 'slot' && noSlot)) return w;
-  return 'hp';
+  return null;   // nichts Bezahlbares: sparen
 }
 const spendAct = (A, w) => w === 'drawlimit' ? A({ type: 'drawlimit' }) : A({ type: 'spend', what: w });   // Nachziehlimit ist eine eigene Aktion, die übrigen Punkte gehen über 'spend'
 // Wirtschaftsaktion (Punkte ausgeben, Magie kaufen, Gold opfern); sie zählt als Aktion und beendet den Zug.
@@ -1439,10 +1452,10 @@ function ecoStep(state, pid) {
     const want = pl.st === 2 ? 1 : 2;
     if (pl.els.length < want && mgv(state, s) >= 1) {
       const ranked = M.ELEMENTS.filter(e => !pl.els.includes(e) && s.mag[e] < 2).sort((x, y) => focusScore(state, pid, y) - focusScore(state, pid, x));
-      if (ranked.length && mgv(state, s) >= M.magicCost(state, s.mag[ranked[0]])) { pl.els.push(ranked[0]); return A({ type: 'magic', elem: ranked[0] }); }
+      if (ranked.length && mgv(state, s) >= M.magicCost(state, s.mag[ranked[0]], s)) { pl.els.push(ranked[0]); return A({ type: 'magic', elem: ranked[0] }); }
     }
     const foc = pl.st === 2 ? pl.els[0] : null;   // Fokus: danach weiter in dieselbe Farbe (Stufe 3)
-    if (foc && s.mag[foc] < M.MAX_MAGIC && mgv(state, s) >= M.magicCost(state, s.mag[foc])) return A({ type: 'magic', elem: foc });
+    if (foc && s.mag[foc] < M.MAX_MAGIC && mgv(state, s) >= M.magicCost(state, s.mag[foc], s)) return A({ type: 'magic', elem: foc });
     if (sw) { const a = spendStep(); if (a) return a; }
     if (s.gold >= 2) return A({ type: 'temple', amount: Math.min(s.gold, 3) });
     return null;
@@ -1450,12 +1463,12 @@ function ecoStep(state, pid) {
   const opp = state.players[1 - pid].stats, oppTop = M.ELEMENTS.slice().sort((x, y) => opp.mag[y] - opp.mag[x])[0];   // Aufbau des Gegners: seine stärkste Magie, und welche Farbe ihr überlegen ist
   const planEl = planElement(state, pid);
   let best = null;
-  for (const e of M.ELEMENTS) { const cost = M.magicCost(state, s.mag[e]); if (s.mag[e] < M.MAX_MAGIC && mgv(state, s) >= cost) { const sc = Q.mBase - cost * Q.mCost + countEl(e) * Q.mCnt + (s.mag[e] === Math.max(s.mag.F, s.mag.E, s.mag.W) ? Q.mTop : 0) + (e === M.SUPERIOR[oppTop] ? Q.mCounter * opp.mag[oppTop] : 0) + (e === planEl ? Q.mPlan : 0) + Q.mCatch * Math.max(0, opp.mag[e] - s.mag[e]); if (!best || sc > best.sc) best = { sc, a: A({ type: 'magic', elem: e }) }; } }
+  for (const e of M.ELEMENTS) { const cost = M.magicCost(state, s.mag[e], s); if (s.mag[e] < M.MAX_MAGIC && mgv(state, s) >= cost) { const sc = Q.mBase - cost * Q.mCost + countEl(e) * Q.mCnt + (s.mag[e] === Math.max(s.mag.F, s.mag.E, s.mag.W) ? Q.mTop : 0) + (e === M.SUPERIOR[oppTop] ? Q.mCounter * opp.mag[oppTop] : 0) + (e === planEl ? Q.mPlan : 0) + Q.mCatch * Math.max(0, opp.mag[e] - s.mag[e]); if (!best || sc > best.sc) best = { sc, a: A({ type: 'magic', elem: e }) }; } }
   if (best) return best.a;
   if (sw) {   // swapCosts: Magie kostet Punkte, die nur der Tempel liefert (Gold opfern); Verbesserungen kosten Gold
     if (Q.sacG && M.magicProgress(p) < Q.mgGoal) {
       let tgt = null;
-      for (const e of M.ELEMENTS) if (s.mag[e] < M.MAX_MAGIC) { const cost = M.magicCost(state, s.mag[e]), sc = -cost * Q.mCost + countEl(e) * Q.mCnt + (e === planEl ? Q.mPlan : 0) + (e === M.SUPERIOR[oppTop] ? Q.mCounter * opp.mag[oppTop] : 0); if (!tgt || sc > tgt.sc) tgt = { sc, cost }; }
+      for (const e of M.ELEMENTS) if (s.mag[e] < M.MAX_MAGIC) { const cost = M.magicCost(state, s.mag[e], s), sc = -cost * Q.mCost + countEl(e) * Q.mCnt + (e === planEl ? Q.mPlan : 0) + (e === M.SUPERIOR[oppTop] ? Q.mCounter * opp.mag[oppTop] : 0); if (!tgt || sc > tgt.sc) tgt = { sc, cost }; }
       if (tgt) { const need = tgt.cost - s.pending; for (let n = 1; n <= s.gold - Q.sacRes; n++) if (M.previewTemple(p, n).gained >= need) return A({ type: 'temple', amount: n }); }
     }
     return spendStep();   // Gold geht in Verbesserungen (oder wird fürs Limit gespart)
@@ -1543,7 +1556,7 @@ function worldPlan(state, pid) {
     const plans = M.vendorPlans(state, pid), mk = o => o.slots.map(sl => A({ type: 'mark', slot: sl }));
     // Wirksamer Wert einer Aufwertung: Eine Karte zählt höchstens mit dem Magielevel ihrer Farbe. Darüber (ohne bald erschwingliche Magie) kostet die Aufwertung nur Zeit.
     const planEl = planElement(state, pid);
-    const worth = o => { const e = o.result[0], t = +o.result[1], soon = Q.vFut > 0 && mgv(state, s) >= M.magicCost(state, s.mag[e]) && s.mag[e] < M.MAX_MAGIC; return t * (t <= s.mag[e] || soon ? 1 : Q.vOver) * (e === planEl || !planEl ? 1 : Q.vOff); };
+    const worth = o => { const e = o.result[0], t = +o.result[1], soon = Q.vFut > 0 && mgv(state, s) >= M.magicCost(state, s.mag[e], s) && s.mag[e] < M.MAX_MAGIC; return t * (t <= s.mag[e] || soon ? 1 : Q.vOver) * (e === planEl || !planEl ? 1 : Q.vOff); };
     const ups = plans.filter(o => !o.free).sort((a, b) => worth(b) - worth(a));
     if (ups.length) cands.push({ score: Q.vUp + worth(ups[0]) * Q.vUpW + R(), acts: [...mk(ups[0]), A({ type: 'vendor', result: ups[0].result, cost: ups[0].cost })] });
     else if (normals.length >= 1 && normals.length < 2 && allIds.length < 12) {
@@ -2144,12 +2157,12 @@ function renderCards() {
     const lf = lfCtx(), sel = lf ? lf.picks.filter(p => p === 'ot').length : 0, pos = 'left:' + L_OP.draw.x + 'px;top:' + (L_OP.draw.y + CH * L_OP.ps + (G.rules.drawMarker ? 48 : 22)) + 'px', inner = '<img src="' + IMG.gratis + '">' + (cx.oppStats.freeDraws > 1 ? '<b class="mul">×' + cx.oppStats.freeDraws + '</b>' : '') + (sel ? '<i class="lfb">✓' + sel + '</i>' : '');
     ph += lf ? '<button class="freedraw opp lf' + (sel ? ' sel' : '') + '" data-act="lfm" data-k="ot" title="Läuterung: gegnerische Nachziehtokens zerstören (Klick: einen mehr, nach dem Maximum wieder alle weg). Sie werden nicht gutgeschrieben." style="' + pos + '">' + inner + '</button>' : '<div class="freedraw opp" title="Gratis-Nachziehen des Gegners: ' + cx.oppStats.freeDraws + 'x" style="' + pos + '">' + inner + '</div>';
   }
-  const pnd = G.players[ME].stats[M.upField(G)];
-  if (!cx.combat && pnd > 0 && G.players[ME].slots < M.MAX_SLOTS) {
+  const pnd = G.players[ME].stats[M.upField(G)], slotC = M.slotStepCost(G, G.players[ME].stats);
+  if (!cx.combat && pnd >= slotC && G.players[ME].slots < M.MAX_SLOTS) {
     const canSlot = myTurn();
     const stp = n > 1 ? Math.min(L_MY.gap, (L_MY.span - CW * L_MY.s) / (n - 1)) : L_MY.gap, nx = slotX(n - 1, n, L_MY) + stp;   // Platz des nächsten Handplatzes
     ph += '<div class="slotgh" style="left:' + nx + 'px;top:' + L_MY.y + 'px"></div>' +
-      '<div class="upgpts" style="left:' + (nx + CW * L_MY.s / 2 - 17) + 'px;top:' + (L_MY.y + CH * L_MY.s / 2 - 19) + 'px">' + (canSlot ? '<button class="up ' + (M.upField(G) === 'gold' ? 'gc' : 'pt') + '" style="width:34px;height:38px;margin:0" data-act="spend" data-w="slot" title="+1 Handplatz (' + M.payTxt(G, M.upField(G), 1) + ')"></button>' : '') + '</div>';
+      '<div class="upgpts" style="left:' + (nx + CW * L_MY.s / 2 - 17) + 'px;top:' + (L_MY.y + CH * L_MY.s / 2 - 19) + 'px">' + (canSlot ? '<button class="up ' + (M.upField(G) === 'gold' ? 'gc' : 'pt') + (slotC > 1 ? ' costly' : '') + '" style="width:34px;height:38px;margin:0" data-act="spend" data-w="slot"' + (slotC > 1 ? ' data-c="' + slotC + '"' : '') + ' title="+1 Handplatz (' + M.payTxt(G, M.upField(G), slotC) + ')"></button>' : '') + '</div>';
   }
   if (cx.combat) {
     ph += mirrorStack(cx.myStats, slotX(n - 1, n, L_MY) + CW * L_MY.s + 10, L_MY.y + 20, 's');
@@ -2204,11 +2217,11 @@ function statsBlock(name, s, p, size, up, full) {
   const img = k => '<img src="' + IMG[k] + '">', compact = !full;
   const lfc = lfCtx(), who = lfc ? (s === lfc.cx.myStats ? 's' : s === lfc.cx.oppStats ? 'o' : null) : null;
   const mk = markCol(s, who), mr = '';
-  const my = myTurn(), anyT = my, UF = M.upField(G), UC = UF === 'gold' ? 'gc' : 'pt', one = M.payTxt(G, UF, 1), pend = up ? s[UF] : 0, lc = up ? M.limitStepCost(G, s) : 1, mc = up ? M.manaStepCost(G, s) : 1;
+  const my = myTurn(), anyT = my, UF = M.upField(G), UC = UF === 'gold' ? 'gc' : 'pt', one = M.payTxt(G, UF, 1), pend = up ? s[UF] : 0, lc = up ? M.limitStepCost(G, s) : 1, mc = up ? M.manaStepCost(G, s) : 1, hc = up ? M.hpStepCost(G, s) : 1;
   const pl = (ok, w, title, attr) => ok ? '<button class="up ' + UC + '" data-act="' + (attr || 'spend') + '" ' + (attr ? 'data-e' : 'data-w') + '="' + w + '" title="' + title + '"></button>' : '';
-  const hpPl = pl(up && anyT && pend > 0, 'hp', '+' + (G.rules.hpPerPoint || 1) + ' max. HP (' + one + ')');
   // Schritte, die mehr als 1 Upgrade-Punkt kosten, bleiben sichtbar (abgedunkelt, solange die Punkte fehlen) und tragen eine Kostenzahl.
   const plc = (show, afford, w, label, c) => !show ? '' : '<button class="up ' + UC + (c > 1 ? ' costly' : '') + (afford ? '' : ' off') + '" data-act="spend" data-w="' + w + '"' + (c > 1 ? ' data-c="' + c + '"' : '') + (afford ? '' : ' disabled') + ' title="' + label + ' (' + M.payTxt(G, UF, c) + (afford ? '' : UF === 'gold' ? ', dir fehlt Gold' : ', dir fehlen Punkte') + ')"></button>';
+  const hpPl = hc > 1 ? plc(up && anyT && pend > 0, pend >= hc, 'hp', '+' + (G.rules.hpPerPoint || 1) + ' max. HP', hc) : pl(up && anyT && pend > 0, 'hp', '+' + (G.rules.hpPerPoint || 1) + ' max. HP (' + one + ')');
   const manaPl = mc > 1 ? plc(up && anyT && pend > 0, pend >= mc, 'mana', '+1 max. Mana', mc) : pl(up && anyT && pend > 0, 'mana', '+1 max. Mana (' + one + ')');
   const limPl = lc > 1 ? plc(up && anyT && pend > 0 && s.limit < M.MAX_LIMIT, pend >= lc, 'limit', '+1 Ausspiellimit', lc) : pl(up && anyT && pend >= lc && s.limit < M.MAX_LIMIT, 'limit', '+1 Ausspiellimit (' + one + ')');
   const sbar = (v, mx, cls) => '<div class="bar sb ' + cls + '"><i style="width:' + Math.max(0, v) / mx * 100 + '%"></i></div>';
@@ -2249,7 +2262,7 @@ function statsBlock(name, s, p, size, up, full) {
     const dir = { F: -90, E: 30, W: 150 }, diam = 26;   // Richtung wie die Ringe auf dem Brett (Linie von der Mitte durch die Magie); die Scheibe misst 26 px und liegt ganz auf dem äußeren Randband des Bretts (Band von 0,431 bis 0,475 der Bildgröße)
     let btn = '';
     for (const e of M.ELEMENTS) {
-      const MF = M.magicField(G), lv = s.mag[e], mc = M.magicCost(G, lv), ok = s[MF] >= mc; if (lv >= M.MAX_MAGIC || s[MF] <= 0) continue;   // wie die Upgrade-Knöpfe: sichtbar, sobald die Währung (Gold, mit swapCosts Upgrade-Punkte) da ist; zu teure Stufen durchscheinend und gesperrt
+      const MF = M.magicField(G), lv = s.mag[e], mc = M.magicCost(G, lv, s), ok = s[MF] >= mc; if (lv >= M.MAX_MAGIC || s[MF] <= 0) continue;   // wie die Upgrade-Knöpfe: sichtbar, sobald die Währung (Gold, mit swapCosts Upgrade-Punkte) da ist; zu teure Stufen durchscheinend und gesperrt
       const ang = dir[e] * Math.PI / 180, r = bsz * 0.431 + diam / 2;   // innere Kante der Scheibe liegt auf der inneren Kante des Randbands (0,431 der Bildgröße): sie berührt nur den äußeren Rand, nicht das Innere
       const x = bsz / 2 + Math.cos(ang) * r, y = bsz / 2 + Math.sin(ang) * r;
       btn += '<button class="up mg ' + (MF === 'gold' ? 'gd' : 'pt') + (mc > 1 ? ' costly' : '') + (ok ? '' : ' off') + '"' + (mc > 1 ? ' data-c="' + mc + '"' : '') + (ok ? '' : ' disabled') + ' style="' + discBox(MF === 'gold', x, y, diam) + '" data-act="magic" data-e="' + e + '" title="' + NAMES[e] + ' Stufe ' + (lv + 1) + ' kaufen (' + M.payTxt(G, MF, mc) + (ok ? '' : ', du hast ' + s[MF]) + ')"></button>';
@@ -3250,7 +3263,7 @@ function showStart() {
   setCursor('human');
   overlay.style.display = 'flex'; overlay.className = 'overlay';
   overlay.innerHTML = '<div class="box start"><h1>Magus</h1>' +
-    '<p class="note intro" style="margin-top:-2px"><b>Neu in Version 0.3.1:</b> Alle <b>Monster</b> sind neu abgestimmt. Sie sind von Stufe zu Stufe gefährlicher: Ausspiellimit 2, 3 und 4, mehr Lebenspunkte und Mana in den späteren Abschnitten, in Abschnitt I ein Startdeck mit drei Karten der Stufe 2. Das Risiko einer Niederlage wächst mit der Stufe. <b>Seit 0.3:</b> Du startest mit <b>Ausspiellimit 2</b> und <b>2 Siegpunkten</b>. <b>Magie</b> kaufst du mit <b>Upgrade-Punkten</b> (Stufe 2: 1, Stufe 3: 3), alle anderen Verbesserungen (HP, Mana, Ausspiellimit, Handplätze, Nachziehlimit) mit <b>Gold</b>; im Tempel wandelst du Gold in Upgrade-Punkte. Stehen alle drei Magien auf Stufe 3, werden übrige Upgrade-Punkte sofort zu Siegpunkten (Gold nicht). <b>Nachziehmarker:</b> Wer nachzieht, dreht seinen Marker auf Rot, jede andere Aktion zurück auf Grün; wer bei Rot nachzieht, gibt dem Gegner 1 Gold (Weltphase) bzw. ein Nachziehtoken (Kampf). Das <b>Nachziehlimit</b> (1 Gold je Stufe, bis 3) erlaubt öfter hintereinander nachzuziehen, bevor der Marker auf Rot springt.</p>' +
+    '<p class="note intro" style="margin-top:-2px"><b>Neu in Version 0.3.2:</b> Mehr Einnahmen, dafür steigende Preise. Der Bonus zu Beginn jedes Abschnitts (und die Hilfe nach einer Niederlage gegen ein Monster) beträgt <b>2, 3 und 4</b> Gold und Upgrade-Punkte. <b>Jeder Kauf verteuert die nächste Stufe seiner Kategorie um den Grundpreis</b>: HP, Mana und Handplatz kosten 1, 2, 3 Gold, das Ausspiellimit 2, 4, 6, die Magie auf Stufe 2 kostet 1, 2, 3 Punkte, auf Stufe 3 kostet sie 3, 6, 9. Stufe III der Monster ist etwas milder. <b>Version 0.3.1:</b> Alle <b>Monster</b> sind neu abgestimmt. Sie sind von Stufe zu Stufe gefährlicher: Ausspiellimit 2, 3 und 4, mehr Lebenspunkte und Mana in den späteren Abschnitten, in Abschnitt I ein Startdeck mit drei Karten der Stufe 2. Das Risiko einer Niederlage wächst mit der Stufe. <b>Seit 0.3:</b> Du startest mit <b>Ausspiellimit 2</b> und <b>2 Siegpunkten</b>. <b>Magie</b> kaufst du mit <b>Upgrade-Punkten</b> (Stufe 2: 1, Stufe 3: 3), alle anderen Verbesserungen (HP, Mana, Ausspiellimit, Handplätze, Nachziehlimit) mit <b>Gold</b>; im Tempel wandelst du Gold in Upgrade-Punkte. Stehen alle drei Magien auf Stufe 3, werden übrige Upgrade-Punkte sofort zu Siegpunkten (Gold nicht). <b>Nachziehmarker:</b> Wer nachzieht, dreht seinen Marker auf Rot, jede andere Aktion zurück auf Grün; wer bei Rot nachzieht, gibt dem Gegner 1 Gold (Weltphase) bzw. ein Nachziehtoken (Kampf). Das <b>Nachziehlimit</b> (1 Gold je Stufe, bis 3) erlaubt öfter hintereinander nachzuziehen, bevor der Marker auf Rot springt.</p>' +
     '<img class="logo" alt="" src="assets/img/bg-9c4789d6.webp">' +
     (G && !G.over && !MP && started ? '<button class="btn primary" style="font-size:22px;padding:10px 28px;flex:none;align-self:center;margin-bottom:8px" data-act="resume">Spiel fortsetzen</button>' : '') + '<button class="btn' + (G && !G.over && !MP && started ? '' : ' primary') + '" style="font-size:22px;padding:10px 28px;flex:none;align-self:center" data-act="newgame">' + (G && !G.over && !MP && started ? 'Neues Spiel gegen den Computer' : 'Gegen den Computer spielen') + '</button>' +
     '<button class="btn" style="font-size:18px;padding:8px 22px;flex:none;align-self:center;margin-top:8px" data-act="newspec" title="Zwei Computerspieler spielen gegeneinander, du schaust zu (für Spielablauf und Statistik)">Zwei Computern zuschauen</button>' +
@@ -3647,9 +3660,9 @@ function pvShow(b) {
     if (el && pv.gained > 0) { const old = el.innerHTML; el.innerHTML = '<span class="pvnew">' + (st.pending + pv.gained) + '</span>'; undos.push(() => { el.innerHTML = old; }); }
     const fr = stage.querySelector('[data-pv="frac"]');
     if (fr) { const old = fr.innerHTML; fr.innerHTML = '<span class="pvnew">' + fracHTML(pv.pool, pv.level) + '</span>'; undos.push(() => { fr.innerHTML = old; }); }
-  } else if (act === 'magic') redo(M.magicField(G) === 'gold' ? 'gold' : 'pts', M.magicCost(G, st.mag[b.dataset.e]));
+  } else if (act === 'magic') redo(M.magicField(G) === 'gold' ? 'gold' : 'pts', M.magicCost(G, st.mag[b.dataset.e], st));
   else if (act === 'drawlimit') redo(UK, M.drawLimitCost(G, st));
-  else if (act === 'spend') redo(UK, w === 'limit' ? M.limitStepCost(G, st) : w === 'mana' ? M.manaStepCost(G, st) : 1);
+  else if (act === 'spend') redo(UK, w === 'limit' ? M.limitStepCost(G, st) : w === 'mana' ? M.manaStepCost(G, st) : w === 'hp' ? M.hpStepCost(G, st) : w === 'slot' ? M.slotStepCost(G, st) : 1);
   if (act === 'magic') {
     const el = b.dataset.e, dot = b.parentElement.querySelector('.rg[data-e="' + el + '"][data-lv="' + (st.mag[el] + 1) + '"]');
     if (dot) { dot.classList.add('pv'); undos.push(() => dot.classList.remove('pv')); }
