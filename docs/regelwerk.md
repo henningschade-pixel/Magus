@@ -106,8 +106,8 @@ Variante je Monster wird beim Erscheinen gewürfelt (seit 0.4: Deckform und zwei
 | Stufe | HP | Mana | Limit | Magie (Haupt/Neben/dritte) | Startdeck |
 |---|---|---|---|---|---|
 | I | 3 | 5 (Erdmonster 6) | 2 | 2 im eigenen Element | Startdeck, 3 Karten des eigenen Elements auf Stufe 2 |
-| II | 4 | 5 | 3 | 3 / 2 / 1 | siehe `MONSTER.deck` |
-| III | 5 | 6 | 4 | 3 / 2 / 1 | siehe `MONSTER.deck` |
+| II | 4 | 4 | 3 | 3 / 2 / 1 | siehe `MONSTER.deck` |
+| III | 5 | 5 | 4 | 3 / 2 / 1 | siehe `MONSTER.deck` |
 
 Die Tabelle zeigt die Grundform (`spawnMonsters` ohne Zufall); im Spiel kommen Deckform und Würfel dazu.
 
@@ -246,7 +246,7 @@ Jedes Monster hat eine **Deckform** und wird von **zwei Würfeln** verändert. A
 | a | +2 HP | −2 HP | maximale Lebenspunkte (mindestens 1) |
 | b | +1 Mana | −1 Mana | maximales Mana (mindestens 1) |
 | c | +1 Limit | −1 Limit | Ausspiellimit (mindestens 1, höchstens 5) |
-| d | +1 Ziehen | −1 Ziehen | Gratis-Nachziehen zu Kampfbeginn (Grundwert 1, nie unter 0) |
+| d | +1 Ziehen | −1 Ziehen | Gratis-Nachziehen zu Kampfbeginn (Grundwert 2, nie unter 0) |
 | e | +1 Hand | −1 Hand | Handkarten des Monsters (mindestens 2) |
 | f | leer | leer | keine Wirkung, wird nicht angezeigt |
 
@@ -254,8 +254,8 @@ Würfelt man denselben Wert auf beiden Würfeln (zum Beispiel +HP und −HP), he
 
 **Beschriftung:** Unter dem Namen steht, was gewürfelt wurde, zum Beispiel „Wassermonster II“ und darunter *spitz, +Mana, −HP*; beim Darüberfahren erklärt ein Hinweis die genauen Zahlen. Die Monsterkarte zeigt die tatsächlichen Werte.
 
-**Ziehen:** Jedes Monster beginnt den Kampf mit 1 Gratis-Nachziehen (`startDraws`, ein Nachziehtoken wie bei den Spielern). Dafür hat Stufe III 5 statt 6 HP. Auf der Monsterkarte stehen unten „Limit · Hand · Ziehen“.
+**Ziehen:** Jedes Monster beginnt den Kampf mit 2 Gratis-Nachziehen (`startDraws`, Nachziehtokens wie bei den Spielern); Grundwert 2, damit auch der Minuswürfel (−1) immer wirkt. Zum Ausgleich haben die Monster der Stufen II und III 1 Mana weniger (4 und 5) und Stufe III 5 statt 6 HP; sonst waren sie um 5 und 7 Punkte zu stark. Auf der Monsterkarte stehen unten „Limit · Hand · Ziehen“.
 
 **Limit bis auf 1:** Der Minuswürfel darf das Limit eines Stufe-I-Monsters von 2 auf 1 senken (nie auf 0). Bekannte Nebenwirkung: Ein Monster mit Limit 1 ist für die KI kaum zu besiegen, in Stufe I endeten 4,7 % der Kämpfe in Erschöpfung (Patt), und die längsten Partien dauerten bis 7800 Aktionen (Median 398, 99. Perzentil 2750 statt 350 und 980 mit Untergrenze 2). Bewusst so gewählt.
 
-**Messung (`tools/balance/monster-dice.js`, 5000 Partien KI gegen KI; Angreifer: Sieg / Niederlage je Angriff):** Stufe I 30,9 / 14,8 % ohne und 25,9 / 16,6 % mit Würfeln, Stufe II 44,5 / 22,6 % und 46,1 / 22,8 %, Stufe III 38,2 / 37,9 % und 40,1 / 36,4 %. Die festen Beträge machen Stufe I gefährlicher (+7 Punkte, Niederlagen minus Siege des Angreifers; +5 mit Untergrenze 2 beim Limit), Stufe II bleibt gleich, Stufe III wird etwas schwächer (−3 Punkte), weil +2 HP bei 3 HP viel und bei 5 HP weniger wiegt. Die Gefahr steigt weiter von Stufe zu Stufe.
+**Messung (`tools/balance/monster-dice.js`, 5000 Partien KI gegen KI; Angreifer: Sieg / Niederlage je Angriff):** ohne Würfel Stufe I 30,8 / 17,0 %, II 42,4 / 20,4 %, III 36,8 / 37,3 %; mit Würfeln I 25,7 / 18,5 %, II 45,1 / 20,1 %, III 39,1 / 35,7 %. Die festen Beträge machen Stufe I gefährlicher (+7 Punkte, Niederlagen minus Siege des Angreifers), Stufe II etwas schwächer (−3), Stufe III etwas schwächer (−3), weil +2 HP bei 3 HP viel und bei 5 HP weniger wiegt. Die Gefahr steigt weiter von Stufe zu Stufe.
