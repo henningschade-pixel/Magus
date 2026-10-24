@@ -237,3 +237,25 @@ test('Schild-Effekt: Der Rückwurf startet dort, wo das Schild angezeigt wurde, 
     assert.deepEqual(errs, []);
   } finally { await b.close(); }
 });
+
+test('Upgrade-Knöpfe bleiben im Zug des Gegners sichtbar, sind aber abgedunkelt und gesperrt', { skip: !chromium && 'Playwright nicht installiert', timeout: 60000 }, async () => {
+  const b = await chromium.launch({ executablePath: exe });
+  try {
+    const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
+    p.on('pageerror', e => errs.push(e.message));
+    await p.goto(url); await p.waitForTimeout(500);
+    await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
+    const r = await p.evaluate(async () => {
+      const mg = window.__magus, G = mg.state, st = G.players[0].stats, wait = ms => new Promise(r => setTimeout(r, ms)), out = {};
+      st.gold = 6; st.pending = 6; st.drawLimit = 1;
+      const info = () => { const bs = [...document.querySelectorAll('.up')]; return { n: bs.length, gesperrt: bs.filter(x => x.disabled).length, magie: document.querySelectorAll('.up.mg').length }; };
+      G.turn = 0; mg.pump(); await wait(300); out.eigen = info();
+      G.turn = 1; mg.pump(); await wait(300); out.gegner = info();
+      return out;
+    });
+    assert.ok(r.eigen.n >= 7 && r.eigen.gesperrt === 0, 'im eigenen Zug alle bedienbar: ' + JSON.stringify(r.eigen));
+    assert.equal(r.gegner.n, r.eigen.n, 'im Zug des Gegners dieselben Knöpfe sichtbar');
+    assert.equal(r.gegner.gesperrt, r.gegner.n, 'alle gesperrt');
+    assert.deepEqual(errs, []);
+  } finally { await b.close(); }
+});
