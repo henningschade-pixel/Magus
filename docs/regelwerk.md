@@ -209,4 +209,4 @@ Siehe Abschnitt „Monster“ (Werte je Stufe) und `tools/balance/README.md` (Me
 ## Start-HP 4 (Version 0.3.1, Schalter `startHp`, Standard 4)
 
 Die Spieler beginnen mit 4 HP (vorher 3), damit sie dem Angriff der Stufe-I-Monster etwas entgegensetzen können. Die Monster behalten ihre eigenen Werte (Stufe I: 3 HP). Wirkung auf die Monster (KI-Selbstspiel, 1500 Partien, Niederlagen des Angreifers): Stufe I 12 % (vorher 16), Stufe II 20 % (20), Stufe III 34 % (39); das Risiko steigt weiter von Stufe zu Stufe. Die KI bleibt am Optimum ihrer Stellschrauben (`hpA`, `slotA`, `manaA`, `minMana`, `oHits` geprüft, keine Verbesserung).
-Anzeige: Auf den Monsterkarten steht unten „HP · Limit“ als tatsächlicher Wert; das Mana steht schon am Balken.
+Anzeige: Auf den Monsterkarten stehen HP und Mana an den Balken, unten steht nur das Limit (es hat keinen Balken).
