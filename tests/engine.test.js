@@ -131,10 +131,10 @@ test('Monster-Würfel (0.4): Deckform spitz/breit, ein Plus- und ein Minuswürfe
   assert.equal(Object.keys(seenForm).length, 2); assert.equal(seenPlus.size, 6); assert.equal(seenMinus.size, 6);
 });
 
-test('Monster-Würfel: sechs Seiten (HP 2, Mana 1, Limit 1, Ziehen 1, Hand 1, leer), gleich groß auf beiden Würfeln, in allen Stufen gleich', () => {
+test('Monster-Würfel: sechs Seiten (HP 1, Mana 1, Limit 1, Ziehen 1, Hand 1, leer), gleich groß auf beiden Würfeln, in allen Stufen gleich', () => {
   const D = M.MONSTER.variants.dice;
   assert.equal(D.plus.length, 6); assert.equal(D.minus.length, 6);
-  assert.deepEqual(D.plus.map(f => [f.k, f.n[0]]), [['hp', 2], ['mana', 1], ['limit', 1], ['draws', 1], ['hand', 1], ['none', 0]]);
+  assert.deepEqual(D.plus.map(f => [f.k, f.n[0]]), [['hp', 1], ['mana', 1], ['limit', 1], ['draws', 1], ['hand', 1], ['none', 0]]);
   assert.deepEqual(D.minus, D.plus);
   for (const f of D.plus) assert.ok(f.n[0] === f.n[1] && f.n[1] === f.n[2], 'stufenunabhängig: ' + f.k);
 });

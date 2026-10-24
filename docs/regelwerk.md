@@ -243,7 +243,7 @@ Jedes Monster hat eine **Deckform** und wird von **zwei Würfeln** verändert. A
 
 | Seite | Pluswürfel | Minuswürfel | Wirkung |
 |---|---|---|---|
-| a | +2 HP | −2 HP | maximale Lebenspunkte (mindestens 1) |
+| a | +1 HP | −1 HP | maximale Lebenspunkte (mindestens 1) |
 | b | +1 Mana | −1 Mana | maximales Mana (mindestens 1) |
 | c | +1 Limit | −1 Limit | Ausspiellimit (mindestens 1, höchstens 5) |
 | d | +1 Ziehen | −1 Ziehen | Nachziehlimit des Monsters (Grundwert 2, zwischen 1 und 3) |

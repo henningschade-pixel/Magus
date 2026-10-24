@@ -28,8 +28,8 @@ const MONSTER = {
     },
     // Die Würfel: sechs Seiten je Würfel, jede Seite ein Wert und sein Ausschlag je Stufe (n: Stufe I, II, III).
     dice: {   // k: Wert, n: Ausschlag je Stufe (seit der Überarbeitung in allen Stufen gleich). Beide Würfel haben dieselben sechs Seiten, der Minuswürfel dreht das Vorzeichen um; die sechste Seite ist leer
-      plus:  [{ k: 'hp', n: [2, 2, 2] }, { k: 'mana', n: [1, 1, 1] }, { k: 'limit', n: [1, 1, 1] }, { k: 'draws', n: [1, 1, 1] }, { k: 'hand', n: [1, 1, 1] }, { k: 'none', n: [0, 0, 0] }],
-      minus: [{ k: 'hp', n: [2, 2, 2] }, { k: 'mana', n: [1, 1, 1] }, { k: 'limit', n: [1, 1, 1] }, { k: 'draws', n: [1, 1, 1] }, { k: 'hand', n: [1, 1, 1] }, { k: 'none', n: [0, 0, 0] }],
+      plus:  [{ k: 'hp', n: [1, 1, 1] }, { k: 'mana', n: [1, 1, 1] }, { k: 'limit', n: [1, 1, 1] }, { k: 'draws', n: [1, 1, 1] }, { k: 'hand', n: [1, 1, 1] }, { k: 'none', n: [0, 0, 0] }],
+      minus: [{ k: 'hp', n: [1, 1, 1] }, { k: 'mana', n: [1, 1, 1] }, { k: 'limit', n: [1, 1, 1] }, { k: 'draws', n: [1, 1, 1] }, { k: 'hand', n: [1, 1, 1] }, { k: 'none', n: [0, 0, 0] }],
     },
     diceNames: { hp: 'HP', mana: 'Mana', limit: 'Limit', hand: 'Hand', draws: 'Ziehen' },
     diceHints: {
