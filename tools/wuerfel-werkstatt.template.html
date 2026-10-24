@@ -93,6 +93,7 @@ textarea{width:100%;height:150px;font:500 12px/1.4 var(--f-mono);resize:vertical
       <h2>Export / Import</h2>
       <textarea id="json" spellcheck="false"></textarea>
       <div class="transport" style="margin-top:8px"><button class="btn" id="copy">Kopieren</button><button class="btn" id="apply">Aus Feld übernehmen</button><button class="btn" id="reset">Standard</button></div>
+      <p class="note" id="msg" role="status" style="margin:8px 0 0"></p>
     </div>
   </div>
 </div>
@@ -196,8 +197,8 @@ function buildGallery() {
     const c = document.createElement('figcaption'); c.textContent = (sign > 0 ? '+' : '−') + FACE_TXT[i] + (AMOUNTS[i] ? ' ' + AMOUNTS[i] : ''); f.appendChild(c); g.appendChild(f);
   }));
 }
-$('copy').addEventListener('click', () => { const t = $('json'); t.select(); try { navigator.clipboard.writeText(t.value); } catch (e) { document.execCommand('copy'); } });
-$('apply').addEventListener('click', () => { try { Object.assign(DiceKit.P, JSON.parse($('json').value)); syncCtl(); buildDice(false); buildGallery(); } catch (e) { alert('Kein gültiges JSON.'); } });
+$('copy').addEventListener('click', () => { const t = $('json'); t.select(); try { navigator.clipboard.writeText(t.value).then(() => { $('msg').textContent = 'Kopiert.'; }, () => { document.execCommand('copy'); $('msg').textContent = 'Markiert: mit Strg+C kopieren.'; }); } catch (e) { document.execCommand('copy'); } });
+$('apply').addEventListener('click', () => { try { Object.assign(DiceKit.P, JSON.parse($('json').value)); syncCtl(); buildDice(false); buildGallery(); $('msg').textContent = 'Übernommen.'; } catch (e) { $('msg').textContent = 'Kein gültiges JSON: nichts geändert.'; } });
 $('reset').addEventListener('click', () => { Object.assign(DiceKit.P, DEF); syncCtl(); buildDice(false); buildGallery(); });
 
 syncCtl(); renderPicks(); buildDice(false); buildGallery();

@@ -1,6 +1,6 @@
 # Werkstätten
 
-Eigenständige HTML-Seiten zum Einstellen von Effekten (als Artifacts veröffentlicht). Der Export (JSON) wird ins Spiel übernommen.
+Eigenständige HTML-Seiten zum Einstellen von Effekten (als Artifacts veröffentlicht; die Würfel-Werkstatt: https://claude.ai/artifact/MbPGteEuJQDhNfBRXmpbKp). Der Export (JSON) wird ins Spiel übernommen.
 
 - `kampfeffekt-werkstatt.html` – Angriffs- und Verteidigungseffekte
 - `erd-werkstatt.html` – Erdmagie (Monolithe, Ranken)
