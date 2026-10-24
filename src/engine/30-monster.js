@@ -54,7 +54,7 @@ function applyDie(stats, face, sign, stage) {
   const n = face.n[stage - 1] * sign, k = face.k;
   if (k === 'hp') { stats.maxHp = Math.max(1, stats.maxHp + n); stats.hp = stats.maxHp; }
   else if (k === 'mana') { stats.maxMana = Math.max(1, stats.maxMana + n); stats.mana = stats.maxMana; }
-  else if (k === 'limit') stats.limit = Math.min(MAX_LIMIT, Math.max(2, stats.limit + n));   // nie unter 2: Limit 1 führte in Stufe I zu endlosen Patts
+  else if (k === 'limit') stats.limit = Math.min(MAX_LIMIT, Math.max(1, stats.limit + n));   // bis auf 1, nie auf 0 (Achtung: Limit 1 führt in Stufe I oft zu Patts, siehe Regelwerk)
   else if (k === 'hand') stats.handExtra = (stats.handExtra || 0) + n;
   else if (k === 'draws') stats.draws = Math.max(0, stats.draws + n);
 }

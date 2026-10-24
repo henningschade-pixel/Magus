@@ -245,7 +245,7 @@ Jedes Monster hat eine **Deckform** und wird von **zwei Würfeln** verändert. A
 |---|---|---|---|
 | a | +2 HP | −2 HP | maximale Lebenspunkte (mindestens 1) |
 | b | +1 Mana | −1 Mana | maximales Mana (mindestens 1) |
-| c | +1 Limit | −1 Limit | Ausspiellimit (mindestens 2, höchstens 5) |
+| c | +1 Limit | −1 Limit | Ausspiellimit (mindestens 1, höchstens 5) |
 | d | +1 Ziehen | −1 Ziehen | Gratis-Nachziehen zu Kampfbeginn (Grundwert 1, nie unter 0) |
 | e | +1 Hand | −1 Hand | Handkarten des Monsters (mindestens 2) |
 | f | leer | leer | keine Wirkung, wird nicht angezeigt |
@@ -256,6 +256,6 @@ Würfelt man denselben Wert auf beiden Würfeln (zum Beispiel +HP und −HP), he
 
 **Ziehen:** Jedes Monster beginnt den Kampf mit 1 Gratis-Nachziehen (`startDraws`, ein Nachziehtoken wie bei den Spielern). Dafür hat Stufe III 5 statt 6 HP. Auf der Monsterkarte stehen unten „Limit · Hand · Ziehen“.
 
-**Limit nie unter 2:** Mit Limit 1 war ein Stufe-I-Monster kaum zu besiegen (4,7 % der Kämpfe endeten in Erschöpfung, die längsten Partien über 7000 Aktionen); deshalb fällt das Limit durch den Minuswürfel nie unter 2, in Stufe I bleibt −Limit wirkungslos.
+**Limit bis auf 1:** Der Minuswürfel darf das Limit eines Stufe-I-Monsters von 2 auf 1 senken (nie auf 0). Bekannte Nebenwirkung: Ein Monster mit Limit 1 ist für die KI kaum zu besiegen, in Stufe I endeten 4,7 % der Kämpfe in Erschöpfung (Patt), und die längsten Partien dauerten bis 7800 Aktionen (Median 398, 99. Perzentil 2750 statt 350 und 980 mit Untergrenze 2). Bewusst so gewählt.
 
-**Messung (`tools/balance/monster-dice.js`, 5000 Partien KI gegen KI; Angreifer: Sieg / Niederlage je Angriff):** Stufe I 30,9 / 14,8 % ohne und 26,3 / 15,2 % mit Würfeln, Stufe II 44,5 / 22,6 % und 45,6 / 22,8 %, Stufe III 38,2 / 37,9 % und 40,3 / 36,1 %. Die festen Beträge machen Stufe I etwas gefährlicher (+5 Punkte, Niederlagen minus Siege des Angreifers), Stufe II bleibt gleich, Stufe III wird etwas schwächer (−4 Punkte), weil +2 HP bei 3 HP viel und bei 5 HP weniger wiegt. Die Gefahr steigt weiter von Stufe zu Stufe. Median 350 Aktionen je Partie.
+**Messung (`tools/balance/monster-dice.js`, 5000 Partien KI gegen KI; Angreifer: Sieg / Niederlage je Angriff):** Stufe I 30,9 / 14,8 % ohne und 25,9 / 16,6 % mit Würfeln, Stufe II 44,5 / 22,6 % und 46,1 / 22,8 %, Stufe III 38,2 / 37,9 % und 40,1 / 36,4 %. Die festen Beträge machen Stufe I gefährlicher (+7 Punkte, Niederlagen minus Siege des Angreifers; +5 mit Untergrenze 2 beim Limit), Stufe II bleibt gleich, Stufe III wird etwas schwächer (−3 Punkte), weil +2 HP bei 3 HP viel und bei 5 HP weniger wiegt. Die Gefahr steigt weiter von Stufe zu Stufe.

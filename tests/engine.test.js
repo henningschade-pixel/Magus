@@ -122,7 +122,7 @@ test('Monster-Würfel (0.4): Deckform spitz/breit, ein Plus- und ein Minuswürfe
       const d = (k) => same ? 0 : (pl.k === k ? pl.n[st - 1] : 0) - (mi.k === k ? mi.n[st - 1] : 0);
       assert.equal(m.stats.maxHp, Math.max(1, bh + d('hp')), 'HP ' + m.label);
       assert.equal(m.stats.maxMana, Math.max(1, bm + d('mana')), 'Mana ' + m.label);
-      assert.equal(m.stats.limit, Math.min(M.MAX_LIMIT, Math.max(2, limit[st] + d('limit'))), 'Limit ' + m.label);
+      assert.equal(m.stats.limit, Math.min(M.MAX_LIMIT, Math.max(1, limit[st] + d('limit'))), 'Limit ' + m.label);
       assert.equal(m.stats.handExtra || 0, d('hand')); assert.equal(m.stats.draws, Math.max(0, 1 + d('draws')));
       seenForm[v.d] = 1; seenPlus.add(v.pl); seenMinus.add(v.mi);
     }
