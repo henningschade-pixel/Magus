@@ -197,16 +197,18 @@ test('Nachziehlimit: drei Kreise am Stapel, Plus-Knopf erscheint erst mit Gold u
   } finally { await b.close(); }
 });
 
-test('Magie-Knöpfe: zu teure Stufen durchscheinend und gesperrt, ohne Upgrade-Punkte keine Knöpfe', { skip: !chromium && 'Playwright nicht installiert', timeout: 60000 }, async () => {
+test('Magie-Knöpfe: zu teure Käufe durchscheinend und gesperrt, ohne Upgrade-Punkte keine Knöpfe', { skip: !chromium && 'Playwright nicht installiert', timeout: 60000 }, async () => {
   const b = await chromium.launch({ executablePath: exe });
   try {
     const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
     p.on('pageerror', e => errs.push(e.message));
     await p.goto(url); await p.waitForTimeout(500);
     await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
-    await p.evaluate(() => { const s = window.__magus.state.players[0].stats; s.pending = 2; s.mag = { F: 2, E: 1, W: 1 }; window.__magus.pump(); });
-    assert.equal(await p.locator('[data-act="magic"][data-e="F"].off[disabled]').count(), 1, 'Feuer Stufe 3 (3 Punkte) gesperrt');
-    assert.equal(await p.locator('[data-act="magic"]:not(.off)').count(), 2, 'Erde und Wasser Stufe 2 (1 Punkt) kaufbar');
+    await p.evaluate(() => { const s = window.__magus.state.players[0].stats; s.pending = 2; s.buys = { mag: 2 }; window.__magus.state.turn = 0; window.__magus.pump(); });   // dritter Magiekauf: Preis 3
+    assert.equal(await p.locator('[data-act="magic"].off[disabled]').count(), 3, 'alle drei Farben kosten 3 und sind gesperrt, bei 2 Punkten');
+    assert.equal(await p.locator('[data-act="magic"]:not(.off)').count(), 0);
+    await p.evaluate(() => { window.__magus.state.players[0].stats.pending = 3; window.__magus.pump(); });
+    assert.equal(await p.locator('[data-act="magic"]:not(.off)').count(), 3, 'mit 3 Punkten kaufbar (gleicher Preis für jede Farbe)');
     await p.evaluate(() => { window.__magus.state.players[0].stats.pending = 0; window.__magus.pump(); });
     assert.equal(await p.locator('[data-act="magic"]').count(), 0);
     assert.deepEqual(errs, []);

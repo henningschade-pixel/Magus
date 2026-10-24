@@ -25,7 +25,11 @@ function magicField(state) { return state.rules.swapCosts ? 'pending' : 'gold'; 
 function payTxt(state, field, n) { return field === 'gold' ? n + ' Gold' : n + ' Upgrade-Punkt' + (n > 1 ? 'e' : ''); }
 // Preis der nächsten Magiestufe (in Gold, mit swapCosts in Upgrade-Punkten): Index = aktuelle Stufe (Stufe 1 → 2 kostet 1, Stufe 2 → 3 kostet 3).
 // Gold für die nächste Magiestufe: Index = aktuelle Stufe (Stufe 1 → 2 kostet 1 Gold, Stufe 2 → 3 kostet 3 Gold).
-function magicCost(state, lv, s) { const t = state.rules.magicCost || [0, 1, 2], base = t[lv] === undefined ? lv : t[lv]; return s ? risen(state, base, s, 'm' + (lv + 1)) : base; }   // mit s: aktueller Preis einschließlich der Verteuerung durch frühere Käufe der Zielstufe
+// Magie (Regel magicCount, seit 0.3.2 nach Wunsch): ein gemeinsamer Zähler über alle Farben und Stufen, der Preis zählt ab 1 hoch (1, 2, 3, … für den 1., 2., 3. Magiekauf). Ohne magicCount gilt der Preis je Zielstufe (magicCost: Stufe 2 / 3) mit Verteuerung je Zielstufe.
+function magicCost(state, lv, s) {
+  if (state.rules.magicCount) return 1 + (s ? bought(s, 'mag') : 0);   // mit s: aktueller Preis nach den bisherigen Magiekäufen
+  const t = state.rules.magicCost || [0, 1, 2], base = t[lv] === undefined ? lv : t[lv]; return s ? risen(state, base, s, 'm' + (lv + 1)) : base;
+}
 // Tempel: n Gold ergeben n(n+1)/2 Punkte; die Stufe k+1 kostet k+1 Punkte und gibt einen Upgrade-Punkt.
 function pointsForGold(n) { return n * (n + 1) / 2; }
 function nextLevelCost(level) { return level + 1; }

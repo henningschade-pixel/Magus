@@ -49,7 +49,7 @@ Die bezahlten Karten werden aus dem Deck entfernt, nur die gekaufte kommt auf de
 
 **Tempel:** n Gold opfern ergibt n·(n+1)/2 Tempelpunkte; die nächste Tempelstufe kostet (aktuelle Stufe + 1) Punkte, jede erreichte Stufe gibt einen Upgrade-Punkt. Die Tempelstufe ist die Zahl der durch Opfer erlangten Upgrades (kostet die nächste Stufe 4 Punkte, hat man Stufe 3) und zählt als drittes Kriterium der Siegbedingung (nach Siegpunkten und Gold). Die Vorschau (Gold, Punkte, Bruch) zeigt sich schon beim Einstellen mit den Pfeilen.
 
-**Magie kaufen:** Stufe 2 kostet 1, Stufe 3 kostet 3 **Upgrade-Punkte** (seit 0.3, vorher Gold; siehe „Getauschte Kosten“).
+**Magie kaufen:** mit **Upgrade-Punkten** (seit 0.3, vorher Gold). Seit 0.3.2 zählt der Preis über alle Käufe hoch, unabhängig von Farbe und Stufe: der 1. Magiekauf kostet 1, der 2. kostet 2, … der 6. kostet 6 (21 Punkte für volle Magie; siehe „Mehr Einnahmen, steigende Preise“).
 
 ## Monsterkampf
 
@@ -222,10 +222,13 @@ Mehr Aktionspotential: Der Abschnittsbonus (und damit die Hilfe nach einer Niede
 | Handplatz, Gold | 1 | 2 | 3 | – |
 | Ausspiellimit, Gold | 2 | 4 | 6 | – |
 | Nachziehlimit, Gold | 1 | 2 | – | – |
-| Magie auf Stufe 2 (beliebige Farbe), Upgrade-Punkte | 1 | 2 | 3 | – |
-| Magie auf Stufe 3 (beliebige Farbe), Upgrade-Punkte | 3 | 6 | 9 | – |
+| Magie (jeder Kauf, beliebige Farbe und Stufe), Upgrade-Punkte | 1 | 2 | 3 | 4 (5. = 5, 6. = 6) |
 
 Gezählt werden die Käufe jedes Spielers, nicht der Wert selbst. Der Tempel (Gold → Punkte) und die Monster sind unverändert. `priceRise` 0 schaltet die Verteuerung ab (alle Preise bleiben beim Grundpreis).
-Folge: Volle Magie (24 Punkte) ist kaum erreichbar, die Umwandlung von Überschusspunkten in Siegpunkte greift selten. Die Anzeige nennt immer den aktuellen Preis (Kostenzahl am Knopf, Hinweis beim Darüberfahren, rote Vorschau).
+Folge: Volle Magie kostet 21 Punkte (1 + 2 + … + 6), die Umwandlung von Überschusspunkten in Siegpunkte greift selten. Schalter `magicCount` 1 (gemeinsamer Zähler, Standard); mit 0 gilt der Preis je Zielstufe (Stufe 2: 1, Stufe 3: 3, je mit eigener Verteuerung). Die Anzeige nennt immer den aktuellen Preis (Kostenzahl am Knopf, Hinweis beim Darüberfahren, rote Vorschau).
 Monster Stufe III neu abgestimmt (6 statt 8 HP): mit den höheren Einnahmen verloren die Angreifer sonst 48 % der Kämpfe; jetzt Niederlagen des Angreifers Stufe I 15 %, II 20 %, III 37 %.
 KI nachgestimmt (`manaA` 5, `vUp` 10,35, `stallDec` −0,05; 60 % gegen die KI davor). Selbstspiel (1500 Partien): Beginner 47 % / Zweiter 48 % / Unentschieden 5 %, Median 299 Aktionen, keine festgefahrene Partie.
+
+### Einfarbigkeit (Version 0.3.2)
+
+Gleiche Magiepreise für jede Farbe und Stufe machen eine einfarbige Magie billig (Stufe 3 in einer Farbe: 1 + 2 = 3 Punkte statt 1 + 3 vorher mit 6 durch die Verteuerung). Gemessen mit einer KI, die Magie nur in einer Farbe kauft (Stellschraube `mono` 1, KI gegen KI): **sie verliert** (44,9 % ±1,8 gegen die normale KI, 38,7 % gegen früh angreifende, 45,4 % gegen die dritte Gegnergruppe; mit den alten Preisen je Zielstufe 46,1 %). Die normale KI endet mit Magie 3/2/1 (42 % der Spieler) oder 3/3/1 (33 %), im Mittel höchste/mittlere/niedrigste Farbe 3,0 / 2,4 / 1,25. Gründe, warum Einfarbigkeit nicht dominiert: Der Elementkreis (jede Farbe wird von einer anderen übertroffen, die der Gegner mit denselben Preisen kaufen kann), Kombos brauchen zwei Farben, die Verteidigung in der überlegenen Farbe (gratis) braucht deren Magie, und Karten einer Stufe sind nur mit der Magie ihrer Farbe kaufbar. Ein menschlicher Spieler könnte das besser spielen; beobachten.

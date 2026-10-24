@@ -383,8 +383,8 @@ test('Kosten getauscht (swapCosts): Magie kostet Upgrade-Punkte, alle anderen Ve
   let g = mk({});   // Standard seit 0.3: getauscht
   assert.equal(M.DEFAULT_RULES.swapCosts, 1);
   assert.ok(go(g, { type: 'magic', elem: 'F' }).ok); assert.deepEqual([g.st.gold, g.st.pending, g.st.mag.F], [4, 3, 2], 'Magie Stufe 2: 1 Upgrade-Punkt');
-  nxt(g); assert.ok(go(g, { type: 'magic', elem: 'F' }).ok); assert.deepEqual([g.st.gold, g.st.pending, g.st.mag.F], [4, 0, 3], 'Magie Stufe 3: 3 Upgrade-Punkte');
-  nxt(g); assert.ok(go(g, { type: 'spend', what: 'hp' }).ok); assert.deepEqual([g.st.gold, g.st.pending, g.st.maxHp], [3, 0, 6], 'HP: 1 Gold (+2, Start 4)');
+  nxt(g); assert.ok(go(g, { type: 'magic', elem: 'F' }).ok); assert.deepEqual([g.st.gold, g.st.pending, g.st.mag.F], [4, 1, 3], 'zweiter Magiekauf: 2 Upgrade-Punkte (Preis zählt ab 1 hoch)');
+  nxt(g); assert.ok(go(g, { type: 'spend', what: 'hp' }).ok); assert.deepEqual([g.st.gold, g.st.pending, g.st.maxHp], [3, 1, 6], 'HP: 1 Gold (+2, Start 4)');
   nxt(g); assert.ok(go(g, { type: 'spend', what: 'limit' }).ok); assert.deepEqual([g.st.gold, g.st.limit], [1, 3], 'Limit 2 → 3: 2 Gold');
   nxt(g); assert.equal(go(g, { type: 'spend', what: 'limit' }).ok, false, 'Limit 4 braucht 2 Gold, es ist nur noch 1 da'); assert.equal(g.st.limit, 3);
   nxt(g); assert.ok(go(g, { type: 'spend', what: 'slot' }).ok); assert.deepEqual([g.st.gold, g.s.players[0].slots], [0, 4], 'Handplatz: 1 Gold');
@@ -403,9 +403,9 @@ test('Startsiegpunkte: jeder Spieler beginnt mit 2 Siegpunkten (startSp), eine f
 
 test('Überschusspunkte: Sind alle Magien auf Stufe 3, werden Upgrade-Punkte (nicht Gold) sofort zu Siegpunkten', () => {
   const s = M.newGame({ seed: 5, ai: [false, false], first: 0 }), p = s.players[0], me = p.stats;
-  me.mag = { F: 3, E: 3, W: 2 }; me.pending = 4; me.gold = 5;
-  assert.ok(M.apply(s, { pid: 0, type: 'magic', elem: 'W' }).ok);   // kostet 3 Punkte, 1 bleibt übrig, nun ist alles auf Stufe 3
-  assert.deepEqual([me.pending, p.sp, me.gold], [0, 3, 5], '1 Überschusspunkt = 1 Siegpunkt (2 Start), Gold bleibt');
+  me.mag = { F: 3, E: 3, W: 2 }; me.buys = { mag: 5 }; me.pending = 8; me.gold = 5;
+  assert.ok(M.apply(s, { pid: 0, type: 'magic', elem: 'W' }).ok);   // sechster Magiekauf kostet 6 Punkte, 2 bleiben übrig, nun ist alles auf Stufe 3
+  assert.deepEqual([me.pending, p.sp, me.gold], [0, 4, 5], '2 Überschusspunkte = 2 Siegpunkte (2 Start), Gold bleibt');
   s.turn = 1; s.players[1].stats.gold = 3; assert.ok(M.apply(s, { pid: 1, type: 'temple', amount: 2 }).ok);   // Gegner ohne volle Magie behält seine Punkte
   assert.equal(s.players[1].stats.pending, 4, '2 Bonuspunkte + 2 aus dem Tempel'); assert.equal(s.players[1].sp, 2);
   const t = M.newGame({ seed: 5, ai: [false, false], first: 0, rules: { surplusSp: 0 } }); t.players[0].stats.mag = { F: 3, E: 3, W: 3 }; t.players[0].stats.pending = 2; t.players[0].stats.gold = 0;
@@ -452,14 +452,16 @@ test('Steigende Preise (priceRise): jeder Kauf einer Kategorie verteuert die nä
   assert.deepEqual(seq('mana', () => M.manaStepCost(s, st)), [1, 2, 3], 'Mana: 1, 2, 3');
   assert.deepEqual(seq('slot', () => M.slotStepCost(s, st)), [1, 2, 3], 'Handplätze: 1, 2, 3');
   assert.deepEqual(seq('limit', () => M.limitStepCost(s, st)), [2, 4, 6], 'Ausspiellimit: 2, 4, 6');
-  assert.deepEqual(seq('m2', () => M.magicCost(s, 1, st)), [1, 2, 3], 'Magie auf Stufe 2: 1, 2, 3');
-  assert.deepEqual(seq('m3', () => M.magicCost(s, 2, st)), [3, 6, 9], 'Magie auf Stufe 3: 3, 6, 9');
+  assert.deepEqual(seq('mag', () => M.magicCost(s, 1, st)), [1, 2, 3], 'Magie: gemeinsamer Zähler, 1, 2, 3 …');
+  assert.equal(M.magicCost(s, 2, Object.assign({}, st, { buys: { mag: 5 } })), 6, 'unabhängig von Farbe und Stufe: 6. Kauf = 6');
+  const old = M.newGame({ seed: 5, rules: { magicCount: 0 } }), os = old.players[0].stats; os.buys = { m3: 1 };
+  assert.deepEqual([M.magicCost(old, 1, os), M.magicCost(old, 2, os)], [1, 6], 'ohne magicCount: Preis je Zielstufe (Stufe 2: 1, Stufe 3: 3 × 2)');
   // tatsächliche Käufe zählen
   st.gold = 20; st.pending = 20;
   for (const [need, what] of [[1, 'hp'], [2, 'hp'], [3, 'hp']]) { const g = st.gold; s.turn = 0; assert.ok(M.apply(s, { pid: 0, type: 'spend', what }).ok); assert.equal(g - st.gold, need, what + ' kostet ' + need); }
   const pn = st.pending; s.turn = 0; assert.ok(M.apply(s, { pid: 0, type: 'magic', elem: 'F' }).ok); assert.equal(pn - st.pending, 1);
-  s.turn = 0; const pn2 = st.pending; assert.ok(M.apply(s, { pid: 0, type: 'magic', elem: 'E' }).ok); assert.equal(pn2 - st.pending, 2, 'zweiter Kauf auf Stufe 2 kostet 2');
-  s.turn = 0; const pn3 = st.pending; assert.ok(M.apply(s, { pid: 0, type: 'magic', elem: 'F' }).ok); assert.equal(pn3 - st.pending, 3, 'Stufe 3 kostet 3 (erster Kauf auf Stufe 3)');
+  s.turn = 0; const pn2 = st.pending; assert.ok(M.apply(s, { pid: 0, type: 'magic', elem: 'E' }).ok); assert.equal(pn2 - st.pending, 2, 'zweiter Magiekauf kostet 2');
+  s.turn = 0; const pn3 = st.pending; assert.ok(M.apply(s, { pid: 0, type: 'magic', elem: 'F' }).ok); assert.equal(pn3 - st.pending, 3, 'dritter Magiekauf kostet 3');
   // ohne priceRise bleibt alles beim Grundpreis
   const t = M.newGame({ seed: 5, rules: { priceRise: 0 } }), ts = t.players[0].stats; ts.gold = 9; t.turn = 0;
   for (let i = 0; i < 3; i++) { t.turn = 0; assert.ok(M.apply(t, { pid: 0, type: 'spend', what: 'hp' }).ok); } assert.equal(ts.gold, 6);

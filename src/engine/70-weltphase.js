@@ -80,7 +80,7 @@ function execMagic(state, pid, e) {
   if (s.mag[e] >= MAX_MAGIC) return fail(NAMES[e] + ' ist schon auf Stufe ' + MAX_MAGIC + '.');
   const cost = magicCost(state, s.mag[e], s), f = magicField(state);
   if (s[f] < cost) return fail('Du brauchst ' + payTxt(state, f, cost) + '.');
-  s[f] -= cost; buyCount(s, 'm' + (s.mag[e] + 1)); s.mag[e]++;
+  s[f] -= cost; buyCount(s, state.rules.magicCount ? 'mag' : 'm' + (s.mag[e] + 1)); s.mag[e]++;
   log(state, p.name + ' steigert ' + NAMES[e] + ' auf Stufe ' + s.mag[e] + ' (' + payTxt(state, f, cost) + ').', pid);
   return { ok: true };
 }

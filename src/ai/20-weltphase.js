@@ -77,7 +77,8 @@ function ecoStep(state, pid) {
   const opp = state.players[1 - pid].stats, oppTop = M.ELEMENTS.slice().sort((x, y) => opp.mag[y] - opp.mag[x])[0];   // Aufbau des Gegners: seine stärkste Magie, und welche Farbe ihr überlegen ist
   const planEl = planElement(state, pid);
   let best = null;
-  for (const e of M.ELEMENTS) { const cost = M.magicCost(state, s.mag[e], s); if (s.mag[e] < M.MAX_MAGIC && mgv(state, s) >= cost) { const sc = Q.mBase - cost * Q.mCost + countEl(e) * Q.mCnt + (s.mag[e] === Math.max(s.mag.F, s.mag.E, s.mag.W) ? Q.mTop : 0) + (e === M.SUPERIOR[oppTop] ? Q.mCounter * opp.mag[oppTop] : 0) + (e === planEl ? Q.mPlan : 0) + Q.mCatch * Math.max(0, opp.mag[e] - s.mag[e]); if (!best || sc > best.sc) best = { sc, a: A({ type: 'magic', elem: e }) }; } }
+  const monoEl = Q.mono ? (pl.els[0] || planEl) : null;   // Stellschraube mono: Magie nur in der Fokusfarbe kaufen (Einfarbig-Test)
+  for (const e of M.ELEMENTS) { if (monoEl && e !== monoEl) continue; const cost = M.magicCost(state, s.mag[e], s); if (s.mag[e] < M.MAX_MAGIC && mgv(state, s) >= cost) { const sc = Q.mBase - cost * Q.mCost + countEl(e) * Q.mCnt + (s.mag[e] === Math.max(s.mag.F, s.mag.E, s.mag.W) ? Q.mTop : 0) + (e === M.SUPERIOR[oppTop] ? Q.mCounter * opp.mag[oppTop] : 0) + (e === planEl ? Q.mPlan : 0) + Q.mCatch * Math.max(0, opp.mag[e] - s.mag[e]); if (!best || sc > best.sc) best = { sc, a: A({ type: 'magic', elem: e }) }; } }
   if (best) return best.a;
   if (sw) {   // swapCosts: Magie kostet Punkte, die nur der Tempel liefert (Gold opfern); Verbesserungen kosten Gold
     if (Q.sacG && M.magicProgress(p) < Q.mgGoal) {
