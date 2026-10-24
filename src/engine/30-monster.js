@@ -26,7 +26,6 @@ const MONSTER = {
       2: [null, (P, S, T) => [P + '3', P + '2', P + '2', S + '2', S + '2', S + '2', T + '1', T + '1', P + '1'], (P, S, T) => [P + '3', P + '3', P + '1', P + '1', S + '2', S + '2', S + '2', T + '1', T + '1']],
       3: [null, (P, S, T) => [P + '3', P + '3', P + '3', P + '2', S + '3', S + '3', S + '2', T + '2', T + '1'], (P, S, T) => [P + '3', P + '3', P + '3', P + '3', P + '1', S + '3', S + '3', T + '2', T + '1']],
     },
-    deckNames: ['', 'breit', 'spitz'],
     // Die Würfel: sechs Seiten je Würfel, jede Seite ein Wert und sein Ausschlag je Stufe (n: Stufe I, II, III).
     dice: {   // k: Wert, n: Ausschlag je Stufe (seit der Überarbeitung in allen Stufen gleich). Beide Würfel haben dieselben sechs Seiten, der Minuswürfel dreht das Vorzeichen um; die sechste Seite ist leer
       plus:  [{ k: 'hp', n: [2, 2, 2] }, { k: 'mana', n: [1, 1, 1] }, { k: 'limit', n: [1, 1, 1] }, { k: 'draws', n: [1, 1, 1] }, { k: 'hand', n: [1, 1, 1] }, { k: 'none', n: [0, 0, 0] }],
@@ -45,7 +44,8 @@ const MONSTER = {
   startDraws: 2,                                                          // Ziehen: Gratis-Nachziehen (Tokens) je Monster zu Kampfbeginn; Grundwert, die Würfel verändern ihn
   startLimit: 2,                                                          // Ausspiellimit aller Monster vor den Tempel-Schritten (Spieler starten seit 0.3 mit 2; hier wird neu abgestimmt)
   gold: { 1: 1, 2: 2, 3: 3 },                                              // Beute
-  names: { F: 'Feuermonster', E: 'Erdmonster', W: 'Wassermonster' },
+  names: { F: 'Feuermonster', E: 'Erdmonster', W: 'Wassermonster' },   // Grundform (ohne Würfel)
+  formNames: { F: ['', 'Feuergeneralist', 'Feuerspezialist'], E: ['', 'Erdgeneralist', 'Erdspezialist'], W: ['', 'Wassergeneralist', 'Wasserspezialist'] },   // Index = Deckform: 1 breit (Generalist), 2 spitz (Spezialist)
 };
 const STAGE_NUMERAL = ['', 'I', 'II', 'III'];
 
@@ -86,8 +86,7 @@ function spawnOne(el, stage, rng, v) {
   finalDeck = finalDeck.slice();
   const tags = [], hints = [];
   if (v.d) {
-    tags.push(V.deckNames[v.d]);
-    hints.push(v.d === 1 ? 'breit: mehr Karten im Nebenelement, dafür weniger im Hauptelement. Vielseitiger, aber mit schwächerer Spitze.' : 'spitz: stärkere Spitze (mehr Karten der höchsten Stufe), dafür eine schwächere Basis (mehr Stufe-1-Karten).');
+    hints.push(v.d === 1 ? 'Generalist (breit): mehr Karten im Nebenelement, dafür weniger im Hauptelement. Vielseitiger, aber mit schwächerer Spitze.' : 'Spezialist (spitz): stärkere Spitze (mehr Karten der höchsten Stufe), dafür eine schwächere Basis (mehr Stufe-1-Karten).');
   }
   const same = v.pl >= 0 && v.mi >= 0 && V.dice.plus[v.pl].k === V.dice.minus[v.mi].k;   // gleicher Wert auf beiden Würfeln: die Ausschläge heben sich auf, sie werden weder angewendet noch gezeigt
   [[v.pl, 1, V.dice.plus], [v.mi, -1, V.dice.minus]].forEach(([i, sign, die]) => {
@@ -99,7 +98,7 @@ function spawnOne(el, stage, rng, v) {
   });
   finalDeck = finalDeck.map(id => id[0] !== 'C' && +id[1] > stats.mag[id[0]] ? id[0] + stats.mag[id[0]] : id);   // Eine Karte wirkt höchstens mit der Magie ihrer Farbe: die Anzeige soll das zeigen
   rng.shuffle(finalDeck);
-  return { el, name: M.names[el] + ' ' + STAGE_NUMERAL[stage], label: tags.join(', '), hints, variant: v, stage, stats, deckIds: finalDeck };
+  return { el, name: (v.d ? M.formNames[el][v.d] : M.names[el]) + ' ' + STAGE_NUMERAL[stage], label: tags.join(', '), hints, variant: v, stage, stats, deckIds: finalDeck };
 }
 // Mit ‚rng‘ (aus dem Spiel abgeleitet) werden Monster, Deckform und beide Würfel gewürfelt; ohne bleibt es die feste Grundform.
 function spawnMonsters(stage, rng) {
@@ -131,6 +130,6 @@ function spawnForGame(state, stage) {
   return spawnMonsters(stage, makeRng(((state.seed ^ 0x9e3779b1) + stage * 7919) >>> 0));
 }
 function variantLog(state) {
-  const t = ELEMENTS.map(e => state.monsters[e]).filter(m => m.label).map(m => m.name + ' (' + m.label + ')');
+  const t = ELEMENTS.map(e => state.monsters[e]).filter(m => m.label).map(m => m.name + ' (' + m.label + ')');   // nur Monster mit gewürfeltem Effekt
   return t.length ? ' Besonderheiten: ' + t.join('; ') + '.' : '';
 }

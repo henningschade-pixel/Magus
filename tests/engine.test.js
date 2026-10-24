@@ -108,7 +108,7 @@ test('Monsterwerte je Stufe: Grundform ohne Würfel, mit Würfeln höchstens die
   });
 });
 
-test('Monster-Würfel (0.4): Deckform spitz/breit, ein Plus- und ein Minuswürfel, Etikett „Form, +X, −Y“, Werte folgen den Seiten', () => {
+test('Monster-Würfel (0.4): Deckform spitz/breit, ein Plus- und ein Minuswürfel, Name Spezialist/Generalist, Etikett „+X, −Y“, Werte folgen den Seiten', () => {
   const D = M.MONSTER.variants.dice, base = { 1: { F: [3, 5], E: [3, 6], W: [3, 5] }, 2: { F: [4, 4], E: [4, 4], W: [4, 4] }, 3: { F: [5, 5], E: [5, 5], W: [5, 5] } }, limit = [0, 2, 3, 4];
   const seenForm = {}, seenPlus = new Set(), seenMinus = new Set();
   for (const st of [1, 2, 3]) for (let seed = 1; seed <= 120; seed++) {
@@ -117,7 +117,8 @@ test('Monster-Würfel (0.4): Deckform spitz/breit, ein Plus- und ein Minuswürfe
       const m = r[el], v = m.variant, pl = D.plus[v.pl], mi = D.minus[v.mi], [bh, bm] = base[st][m.el];
       assert.ok(v.d === 1 || v.d === 2, 'Deckform spitz oder breit');
       const blank = pl.k === 'none' || mi.k === 'none', same = pl.k === mi.k;   // gleicher Wert auf beiden Würfeln: hebt sich auf und wird nicht gezeigt
-      assert.equal(m.label, [v.d === 1 ? 'breit' : 'spitz'].concat(same ? [] : [pl.k === 'none' ? null : '+' + M.MONSTER.variants.diceNames[pl.k], mi.k === 'none' ? null : '\u2212' + M.MONSTER.variants.diceNames[mi.k]].filter(Boolean)).join(', '));
+      assert.equal(m.name, M.MONSTER.formNames[m.el][v.d] + ' ' + ['', 'I', 'II', 'III'][st]);
+      assert.equal(m.label, [].concat(same ? [] : [pl.k === 'none' ? null : '+' + M.MONSTER.variants.diceNames[pl.k], mi.k === 'none' ? null : '\u2212' + M.MONSTER.variants.diceNames[mi.k]].filter(Boolean)).join(', '));
       assert.equal(m.hints.length, same ? 1 : 3 - (pl.k === 'none' ? 1 : 0) - (mi.k === 'none' ? 1 : 0));
       const d = (k) => same ? 0 : (pl.k === k ? pl.n[st - 1] : 0) - (mi.k === k ? mi.n[st - 1] : 0);
       assert.equal(m.stats.maxHp, Math.max(1, bh + d('hp')), 'HP ' + m.label);

@@ -533,7 +533,6 @@ const MONSTER = {
       2: [null, (P, S, T) => [P + '3', P + '2', P + '2', S + '2', S + '2', S + '2', T + '1', T + '1', P + '1'], (P, S, T) => [P + '3', P + '3', P + '1', P + '1', S + '2', S + '2', S + '2', T + '1', T + '1']],
       3: [null, (P, S, T) => [P + '3', P + '3', P + '3', P + '2', S + '3', S + '3', S + '2', T + '2', T + '1'], (P, S, T) => [P + '3', P + '3', P + '3', P + '3', P + '1', S + '3', S + '3', T + '2', T + '1']],
     },
-    deckNames: ['', 'breit', 'spitz'],
     // Die Würfel: sechs Seiten je Würfel, jede Seite ein Wert und sein Ausschlag je Stufe (n: Stufe I, II, III).
     dice: {   // k: Wert, n: Ausschlag je Stufe (seit der Überarbeitung in allen Stufen gleich). Beide Würfel haben dieselben sechs Seiten, der Minuswürfel dreht das Vorzeichen um; die sechste Seite ist leer
       plus:  [{ k: 'hp', n: [2, 2, 2] }, { k: 'mana', n: [1, 1, 1] }, { k: 'limit', n: [1, 1, 1] }, { k: 'draws', n: [1, 1, 1] }, { k: 'hand', n: [1, 1, 1] }, { k: 'none', n: [0, 0, 0] }],
@@ -552,7 +551,8 @@ const MONSTER = {
   startDraws: 2,                                                          // Ziehen: Gratis-Nachziehen (Tokens) je Monster zu Kampfbeginn; Grundwert, die Würfel verändern ihn
   startLimit: 2,                                                          // Ausspiellimit aller Monster vor den Tempel-Schritten (Spieler starten seit 0.3 mit 2; hier wird neu abgestimmt)
   gold: { 1: 1, 2: 2, 3: 3 },                                              // Beute
-  names: { F: 'Feuermonster', E: 'Erdmonster', W: 'Wassermonster' },
+  names: { F: 'Feuermonster', E: 'Erdmonster', W: 'Wassermonster' },   // Grundform (ohne Würfel)
+  formNames: { F: ['', 'Feuergeneralist', 'Feuerspezialist'], E: ['', 'Erdgeneralist', 'Erdspezialist'], W: ['', 'Wassergeneralist', 'Wasserspezialist'] },   // Index = Deckform: 1 breit (Generalist), 2 spitz (Spezialist)
 };
 const STAGE_NUMERAL = ['', 'I', 'II', 'III'];
 
@@ -593,8 +593,7 @@ function spawnOne(el, stage, rng, v) {
   finalDeck = finalDeck.slice();
   const tags = [], hints = [];
   if (v.d) {
-    tags.push(V.deckNames[v.d]);
-    hints.push(v.d === 1 ? 'breit: mehr Karten im Nebenelement, dafür weniger im Hauptelement. Vielseitiger, aber mit schwächerer Spitze.' : 'spitz: stärkere Spitze (mehr Karten der höchsten Stufe), dafür eine schwächere Basis (mehr Stufe-1-Karten).');
+    hints.push(v.d === 1 ? 'Generalist (breit): mehr Karten im Nebenelement, dafür weniger im Hauptelement. Vielseitiger, aber mit schwächerer Spitze.' : 'Spezialist (spitz): stärkere Spitze (mehr Karten der höchsten Stufe), dafür eine schwächere Basis (mehr Stufe-1-Karten).');
   }
   const same = v.pl >= 0 && v.mi >= 0 && V.dice.plus[v.pl].k === V.dice.minus[v.mi].k;   // gleicher Wert auf beiden Würfeln: die Ausschläge heben sich auf, sie werden weder angewendet noch gezeigt
   [[v.pl, 1, V.dice.plus], [v.mi, -1, V.dice.minus]].forEach(([i, sign, die]) => {
@@ -606,7 +605,7 @@ function spawnOne(el, stage, rng, v) {
   });
   finalDeck = finalDeck.map(id => id[0] !== 'C' && +id[1] > stats.mag[id[0]] ? id[0] + stats.mag[id[0]] : id);   // Eine Karte wirkt höchstens mit der Magie ihrer Farbe: die Anzeige soll das zeigen
   rng.shuffle(finalDeck);
-  return { el, name: M.names[el] + ' ' + STAGE_NUMERAL[stage], label: tags.join(', '), hints, variant: v, stage, stats, deckIds: finalDeck };
+  return { el, name: (v.d ? M.formNames[el][v.d] : M.names[el]) + ' ' + STAGE_NUMERAL[stage], label: tags.join(', '), hints, variant: v, stage, stats, deckIds: finalDeck };
 }
 // Mit ‚rng‘ (aus dem Spiel abgeleitet) werden Monster, Deckform und beide Würfel gewürfelt; ohne bleibt es die feste Grundform.
 function spawnMonsters(stage, rng) {
@@ -638,7 +637,7 @@ function spawnForGame(state, stage) {
   return spawnMonsters(stage, makeRng(((state.seed ^ 0x9e3779b1) + stage * 7919) >>> 0));
 }
 function variantLog(state) {
-  const t = ELEMENTS.map(e => state.monsters[e]).filter(m => m.label).map(m => m.name + ' (' + m.label + ')');
+  const t = ELEMENTS.map(e => state.monsters[e]).filter(m => m.label).map(m => m.name + ' (' + m.label + ')');   // nur Monster mit gewürfeltem Effekt
   return t.length ? ' Besonderheiten: ' + t.join('; ') + '.' : '';
 }
 /* Magus – Regelkern (Teil 4): Flüche.
@@ -2346,7 +2345,7 @@ function monsterCards() {
     const m = G.monsters[e], alive = M.monsterAlive(m), st = m.stats;
     const gone = !alive && m.retreated, img = alive || gone ? IMG['m_' + m.el.toLowerCase() + m.stage] : IMG['d_' + m.el.toLowerCase()];   // zurückgezogenes Monster: eigenes Bild, durchscheinend
     h += '<div class="mon ' + (alive ? '' : gone ? 'dead gone' : 'dead') + '" style="left:' + (R.left + i * R.step) + 'px;top:' + R.top + 'px;width:' + R.w + 'px;height:' + R.h + 'px;padding:10px 8px"><img class="pic" src="' + img + '" style="width:172px;height:196px">' +
-      '<div class="nm ' + m.el + '">' + esc(m.name) + '</div>' + (alive ? '<div class="sm' + (m.label ? ' mlabel' : '') + '" ' + (m.label ? 'title="' + esc((m.hints || []).join('\n')) + '" ' : '') + 'style="color:var(--gold);margin-top:-2px;height:18px;line-height:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (m.label ? esc(m.label) : '&nbsp;') + '</div>' : '');
+      '<div class="nm ' + m.el + '">' + esc(m.name) + '</div>' + (alive ? '<div class="sm' + (m.hints && m.hints.length ? ' mlabel' : '') + '" ' + (m.hints && m.hints.length ? 'title="' + esc((m.hints || []).join('\n')) + '" ' : '') + 'style="color:var(--gold);margin-top:-2px;height:18px;line-height:18px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">' + (m.label ? esc(m.label) : '&nbsp;') + '</div>' : '');
     if (alive) {
       h += '<div class="sm">HP ' + st.hp + '/' + st.maxHp + '</div><div class="bar"><i style="width:' + st.hp / st.maxHp * 100 + '%"></i></div>' +
         '<div class="sm">Mana ' + st.mana + '/' + st.maxMana + '</div><div class="bar mana"><i style="width:' + st.mana / st.maxMana * 100 + '%"></i></div>' +
@@ -3289,7 +3288,7 @@ function showStart() {
   setCursor('human');
   overlay.style.display = 'flex'; overlay.className = 'overlay';
   overlay.innerHTML = '<div class="box start"><h1>Magus</h1>' +
-    '<p class="note intro" style="margin-top:-2px"><b>Neu in Version 0.4:</b> Die <b>Monster</b> sind variabel. Zu jedem Monster gibt es eine <b>spitze</b> Form (stärkere Spitze, schwächere Basis) und eine <b>breite</b> Form (vielseitiger, schwächere Spitze); je Stufe sind das 6 mögliche Monster, davon werden <b>drei ausgelost</b> (ein Element kann also doppelt vorkommen, ein anderes fehlen). Dazu kommen <b>zwei Würfel</b>: Der <b>Pluswürfel</b> macht ein Monster in einem Wert stärker, der <b>Minuswürfel</b> schwächer. Beide haben dieselben sechs Seiten: <b>2 HP, 1 Mana, 1 Limit, 1 Ziehen</b> (Gratis-Nachziehen), <b>1 Hand</b> (Handkarte) und eine <b>leere Seite</b>; die Beträge gelten in allen Stufen. Unter dem Namen steht, was gewürfelt wurde, zum Beispiel <i>spitz, +Mana, −HP</i>; heben sich beide Würfel auf, steht dort nur die Form. Jedes Monster bringt 2 Gratis-Nachziehen mit, dafür haben die Monster der Stufen II und III 1 Mana weniger (und Stufe III 5 statt 6 HP). <b>Version 0.3.2:</b> Mehr Einnahmen, dafür steigende Preise. Der Bonus zu Beginn jedes Abschnitts (und die Hilfe nach einer Niederlage gegen ein Monster) beträgt <b>2, 3 und 4</b> Gold und Upgrade-Punkte. <b>Jeder Kauf verteuert die nächste Stufe seiner Kategorie um den Grundpreis</b>: HP, Mana und Handplatz kosten 1, 2, 3 Gold, das Ausspiellimit 2, 4, 6, die Magie auf Stufe 2 kostet 1, 2, 3 Punkte, auf Stufe 3 kostet sie 3, 6, 9. Stufe III der Monster ist etwas milder. <b>Version 0.3.1:</b> Alle <b>Monster</b> sind neu abgestimmt. Sie sind von Stufe zu Stufe gefährlicher: Ausspiellimit 2, 3 und 4, mehr Lebenspunkte und Mana in den späteren Abschnitten, in Abschnitt I ein Startdeck mit drei Karten der Stufe 2. Das Risiko einer Niederlage wächst mit der Stufe. <b>Seit 0.3:</b> Du startest mit <b>Ausspiellimit 2</b> und <b>2 Siegpunkten</b>. <b>Magie</b> kaufst du mit <b>Upgrade-Punkten</b> (Stufe 2: 1, Stufe 3: 3), alle anderen Verbesserungen (HP, Mana, Ausspiellimit, Handplätze, Nachziehlimit) mit <b>Gold</b>; im Tempel wandelst du Gold in Upgrade-Punkte. Stehen alle drei Magien auf Stufe 3, werden übrige Upgrade-Punkte sofort zu Siegpunkten (Gold nicht). <b>Nachziehmarker:</b> Wer nachzieht, dreht seinen Marker auf Rot, jede andere Aktion zurück auf Grün; wer bei Rot nachzieht, gibt dem Gegner 1 Gold (Weltphase) bzw. ein Nachziehtoken (Kampf). Das <b>Nachziehlimit</b> (1 Gold je Stufe, bis 3) erlaubt öfter hintereinander nachzuziehen, bevor der Marker auf Rot springt.</p>' +
+    '<p class="note intro" style="margin-top:-2px"><b>Neu in Version 0.4:</b> Die <b>Monster</b> sind variabel. Zu jedem Element gibt es einen <b>Spezialisten</b> (stärkere Spitze, schwächere Basis) und einen <b>Generalisten</b> (vielseitiger, schwächere Spitze), zum Beispiel „Feuerspezialist“ und „Feuergeneralist“; je Stufe sind das 6 mögliche Monster, davon werden <b>drei ausgelost</b> (ein Element kann also doppelt vorkommen, ein anderes fehlen). Dazu kommen <b>zwei Würfel</b>: Der <b>Pluswürfel</b> macht ein Monster in einem Wert stärker, der <b>Minuswürfel</b> schwächer. Beide haben dieselben sechs Seiten: <b>2 HP, 1 Mana, 1 Limit, 1 Ziehen</b> (Gratis-Nachziehen), <b>1 Hand</b> (Handkarte) und eine <b>leere Seite</b>; die Beträge gelten in allen Stufen. Unter dem Namen steht, was gewürfelt wurde, zum Beispiel <i>+Mana, −HP</i>; heben sich beide Würfel auf, bleibt die Zeile frei. Jedes Monster bringt 2 Gratis-Nachziehen mit, dafür haben die Monster der Stufen II und III 1 Mana weniger (und Stufe III 5 statt 6 HP). <b>Version 0.3.2:</b> Mehr Einnahmen, dafür steigende Preise. Der Bonus zu Beginn jedes Abschnitts (und die Hilfe nach einer Niederlage gegen ein Monster) beträgt <b>2, 3 und 4</b> Gold und Upgrade-Punkte. <b>Jeder Kauf verteuert die nächste Stufe seiner Kategorie um den Grundpreis</b>: HP, Mana und Handplatz kosten 1, 2, 3 Gold, das Ausspiellimit 2, 4, 6, die Magie auf Stufe 2 kostet 1, 2, 3 Punkte, auf Stufe 3 kostet sie 3, 6, 9. Stufe III der Monster ist etwas milder. <b>Version 0.3.1:</b> Alle <b>Monster</b> sind neu abgestimmt. Sie sind von Stufe zu Stufe gefährlicher: Ausspiellimit 2, 3 und 4, mehr Lebenspunkte und Mana in den späteren Abschnitten, in Abschnitt I ein Startdeck mit drei Karten der Stufe 2. Das Risiko einer Niederlage wächst mit der Stufe. <b>Seit 0.3:</b> Du startest mit <b>Ausspiellimit 2</b> und <b>2 Siegpunkten</b>. <b>Magie</b> kaufst du mit <b>Upgrade-Punkten</b> (Stufe 2: 1, Stufe 3: 3), alle anderen Verbesserungen (HP, Mana, Ausspiellimit, Handplätze, Nachziehlimit) mit <b>Gold</b>; im Tempel wandelst du Gold in Upgrade-Punkte. Stehen alle drei Magien auf Stufe 3, werden übrige Upgrade-Punkte sofort zu Siegpunkten (Gold nicht). <b>Nachziehmarker:</b> Wer nachzieht, dreht seinen Marker auf Rot, jede andere Aktion zurück auf Grün; wer bei Rot nachzieht, gibt dem Gegner 1 Gold (Weltphase) bzw. ein Nachziehtoken (Kampf). Das <b>Nachziehlimit</b> (1 Gold je Stufe, bis 3) erlaubt öfter hintereinander nachzuziehen, bevor der Marker auf Rot springt.</p>' +
     '<img class="logo" alt="" src="assets/img/bg-9c4789d6.webp">' +
     (G && !G.over && !MP && started ? '<button class="btn primary" style="font-size:22px;padding:10px 28px;flex:none;align-self:center;margin-bottom:8px" data-act="resume">Spiel fortsetzen</button>' : '') + '<button class="btn' + (G && !G.over && !MP && started ? '' : ' primary') + '" style="font-size:22px;padding:10px 28px;flex:none;align-self:center" data-act="newgame">' + (G && !G.over && !MP && started ? 'Neues Spiel gegen den Computer' : 'Gegen den Computer spielen') + '</button>' +
     '<button class="btn" style="font-size:18px;padding:8px 22px;flex:none;align-self:center;margin-top:8px" data-act="newspec" title="Zwei Computerspieler spielen gegeneinander, du schaust zu (für Spielablauf und Statistik)">Zwei Computern zuschauen</button>' +
