@@ -4,7 +4,7 @@ Dies ist die maßgebliche Fassung der Regeln. Sie ersetzt das Claude-Docs-Dokume
 
 ## Spielidee und Ablauf
 
-Duellspiel für zwei Personen: Deck und Magie ausbauen, Monster besiegen und in bis zu drei Showdowns Siegpunkte holen. Wer nach dem zweiten Showdown mindestens 4 Siegpunkte hat, gewinnt sofort (Abschnitt 3 entfällt), sonst entscheidet nach dem dritten Showdown, wer mehr hat (bei Gleichstand das Gold, danach die Tempelstufe, danach unentschieden).
+Duellspiel für zwei Personen: Deck und Magie ausbauen, Monster besiegen und in bis zu drei Showdowns Siegpunkte holen. Nach dem dritten Showdown entscheidet, wer mehr hat (bei Gleichstand das Gold, danach die Tempelstufe, danach unentschieden).
 
 **Siegpunkte im Überblick (seit v8):** Monsterkampf: besiegt der Angreifer das Monster, erhält er +1; verliert der Angreifer, verliert er 1 (nie unter 0); der Monsterführer gewinnt und verliert dabei nie Siegpunkte. Flucht und Unentschieden zählen nicht. Showdown: Sieger +1, Verlierer −1 (nie unter 0), Unentschieden und Flucht 0/0, kein Trostpreis. Je Abschnitt sind damit höchstens 4 Siegpunkte möglich (drei Monsterkämpfe und der Showdown), nach zwei Abschnitten 8 (`showdownSp`).
 
@@ -123,7 +123,7 @@ Beginnt sofort nach dem dritten Monster eines Abschnitts. Vorher erscheint ein A
 
 - Sieger: +1 Siegpunkt, Verlierer −1 (nie unter 0), kein Goldraub. Kein Sieger (beide fallen): 0/0. **Fliehen** zählt nie als Sieg oder Niederlage: weder Siegpunkte noch Gold (auch im Showdown).
 - Nach dem Showdown sind HP und Mana voll. Der Verlierer beginnt die nächste Weltphase. Den **Trostpreis gibt es nicht mehr** (`loserUp` und `loserUp2` stehen auf 0).
-- **Vorzeitiges Ende:** Hat nach dem zweiten Showdown ein Spieler mindestens 4 Siegpunkte (`winSp`, geprüft ab `winSpFromShowdown` 2), gewinnt er sofort und Abschnitt 3 entfällt. Nach Showdown 1 wird noch nicht geprüft (dort wären bis zu 4 Siegpunkte möglich).
+- **Vorzeitiges Ende:** vorerst deaktiviert (`winSp` 0, vorher 4 ab `winSpFromShowdown` 2). Das Spiel endet immer nach dem dritten Showdown; mit `winSp` > 0 gewinnt sofort, wer ab Showdown 2 diese Siegpunkte erreicht.
 - Der Ergebnis-Bildschirm nennt Sieger, Siegpunkte und den nächsten Abschnitt.
 
 ## Zugwechsel (Oberfläche)

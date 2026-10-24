@@ -1251,7 +1251,7 @@ function applyWorld(state, a) {
 /* Magus – Regelkern (Teil 8): Spielstart und Schnittstelle nach außen. */
 
 // Regelwerte (Abstimmungs- und Variantenschalter). ‚curses‘: Fluchsystem, siehe 30-curses.js.
-const DEFAULT_RULES = { priceRise: 1, startHp: 4, startLimit: 2, startSp: 2, surplusSp: 1, swapCosts: 1, magicCost: [0, 1, 3], limitCost: 2, limitFirstStepCost: 2, hpPerPoint: 2, stagePoints: [0, 2, 3, 4], stageGold: [0, 2, 3, 4], loserUp: 0, loserUp2: 0, winSp: 4, winSpFromShowdown: 2, monsterSp: 1, monsterLoot: 0, idleLimit: 0, drawMarker: 1, drawPenaltyGold: 1, drawLimitCost: [1, 1], lossHelp: 1, showdownSp: 1, lootBoth: true, recoverByStage: [1, 2, 3], regenByStage: [1, 2, 3], supply: 8, supply2: 6, supply3: 4, startCards: 0 };   // Jede gespielte Karte (auch Kombokarten) kostet 1 Mana, nur Verteidigung in der überlegenen Farbe ist gratis. recoverByStage: Mana-Gewinn von „Erholen“ im Kampf je Abschnitt
+const DEFAULT_RULES = { priceRise: 1, startHp: 4, startLimit: 2, startSp: 2, surplusSp: 1, swapCosts: 1, magicCost: [0, 1, 3], limitCost: 2, limitFirstStepCost: 2, hpPerPoint: 2, stagePoints: [0, 2, 3, 4], stageGold: [0, 2, 3, 4], loserUp: 0, loserUp2: 0, winSp: 0, winSpFromShowdown: 2, monsterSp: 1, monsterLoot: 0, idleLimit: 0, drawMarker: 1, drawPenaltyGold: 1, drawLimitCost: [1, 1], lossHelp: 1, showdownSp: 1, lootBoth: true, recoverByStage: [1, 2, 3], regenByStage: [1, 2, 3], supply: 8, supply2: 6, supply3: 4, startCards: 0 };   // Jede gespielte Karte (auch Kombokarten) kostet 1 Mana, nur Verteidigung in der überlegenen Farbe ist gratis. recoverByStage: Mana-Gewinn von „Erholen“ im Kampf je Abschnitt
 
 function newPlayer(state, name, ai, startIds) {
   const p = { name, ai: !!ai, stats: newStats(), temple: { points: 0, level: 0 }, sp: state.rules.startSp || 0, slots: MIN_SLOTS, drawRed: false, drawN: 0 };   // drawN: Nachziehvorgänge seit der letzten anderen Aktion (höchstens Nachziehlimit), drawRed: Marker rot
@@ -3413,7 +3413,7 @@ function checkShowdownIntro() {
   if (FAST || !G || G.over || endView || modal || G.phase !== 'combat' || G.combat.mode !== 'showdown' || introSeen === G.showdown) return;
   introSeen = G.showdown; Snd.play('showdown_start');
   const first = G.log.slice().reverse().find(e => /^Showdown \d/.test(e.txt));
-  modal = { title: 'Showdown ' + (G.showdown + 1) + ' von 3', sub: 'Alle Monster sind besiegt: Duell Spieler gegen Spieler', lines: [first ? first.txt : '', 'Wer gewinnt, erhält 1 Siegpunkt, der Verlierer verliert 1 (nie unter 0); bei Gleichstand oder Flucht gibt es keine. Es gewinnt, wer nach dem zweiten Showdown 4 Siegpunkte hat oder nach drei Showdowns vorn liegt.'].filter(Boolean) };
+  modal = { title: 'Showdown ' + (G.showdown + 1) + ' von 3', sub: 'Alle Monster sind besiegt: Duell Spieler gegen Spieler', lines: [first ? first.txt : '', 'Wer gewinnt, erhält 1 Siegpunkt, der Verlierer verliert 1 (nie unter 0); bei Gleichstand oder Flucht gibt es keine. Es gewinnt, wer nach drei Showdowns vorn liegt.'].filter(Boolean) };
 }
 // Töne zu eigenen Weltphasen-Aktionen (Tempel, Upgrades, Magie, Händler)
 function worldSound(type, gainedUp, magNow, cardLv) {

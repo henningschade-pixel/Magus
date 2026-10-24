@@ -61,7 +61,7 @@ function checkShowdownIntro() {
   if (FAST || !G || G.over || endView || modal || G.phase !== 'combat' || G.combat.mode !== 'showdown' || introSeen === G.showdown) return;
   introSeen = G.showdown; Snd.play('showdown_start');
   const first = G.log.slice().reverse().find(e => /^Showdown \d/.test(e.txt));
-  modal = { title: 'Showdown ' + (G.showdown + 1) + ' von 3', sub: 'Alle Monster sind besiegt: Duell Spieler gegen Spieler', lines: [first ? first.txt : '', 'Wer gewinnt, erhält 1 Siegpunkt, der Verlierer verliert 1 (nie unter 0); bei Gleichstand oder Flucht gibt es keine. Es gewinnt, wer nach dem zweiten Showdown 4 Siegpunkte hat oder nach drei Showdowns vorn liegt.'].filter(Boolean) };
+  modal = { title: 'Showdown ' + (G.showdown + 1) + ' von 3', sub: 'Alle Monster sind besiegt: Duell Spieler gegen Spieler', lines: [first ? first.txt : '', 'Wer gewinnt, erhält 1 Siegpunkt, der Verlierer verliert 1 (nie unter 0); bei Gleichstand oder Flucht gibt es keine. Es gewinnt, wer nach drei Showdowns vorn liegt.'].filter(Boolean) };
 }
 // Töne zu eigenen Weltphasen-Aktionen (Tempel, Upgrades, Magie, Händler)
 function worldSound(type, gainedUp, magNow, cardLv) {
