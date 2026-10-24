@@ -591,6 +591,7 @@ function spawnOne(el, stage, rng, v) {
     stats.gold = M.gold[st];
   }
   finalDeck = finalDeck.slice();
+  const base = { maxHp: stats.maxHp, maxMana: stats.maxMana, limit: stats.limit, drawLimit: stats.drawLimit, hand: Math.max(2, Math.max(MIN_SLOTS, stats.limit + 2)) };   // Standardwerte vor den Würfeln (die Weltphase zeigt sie, im Kampf gelten die veränderten)
   const tags = [], hints = [];
   if (v.d) {
     hints.push(v.d === 1 ? 'Generalist (breit): mehr Karten im Nebenelement, dafür weniger im Hauptelement. Vielseitiger, aber mit schwächerer Spitze.' : 'Spezialist (spitz): stärkere Spitze (mehr Karten der höchsten Stufe), dafür eine schwächere Basis (mehr Stufe-1-Karten).');
@@ -605,7 +606,7 @@ function spawnOne(el, stage, rng, v) {
   });
   finalDeck = finalDeck.map(id => id[0] !== 'C' && +id[1] > stats.mag[id[0]] ? id[0] + stats.mag[id[0]] : id);   // Eine Karte wirkt höchstens mit der Magie ihrer Farbe: die Anzeige soll das zeigen
   rng.shuffle(finalDeck);
-  return { el, name: (v.d ? M.formNames[el][v.d] : M.names[el]) + ' ' + STAGE_NUMERAL[stage], label: tags.join(', '), hints, variant: v, stage, stats, deckIds: finalDeck };
+  return { el, name: (v.d ? M.formNames[el][v.d] : M.names[el]) + ' ' + STAGE_NUMERAL[stage], label: tags.join(', '), hints, variant: v, stage, base, stats, deckIds: finalDeck };
 }
 // Mit ‚rng‘ (aus dem Spiel abgeleitet) werden Monster, Deckform und beide Würfel gewürfelt; ohne bleibt es die feste Grundform.
 function spawnMonsters(stage, rng) {
@@ -2351,15 +2352,15 @@ function monsterCards() {
   let h = '';
   const my = myTurn(), R = LAYOUT.monsters;
   M.ELEMENTS.forEach((e, i) => {
-    const m = G.monsters[e], alive = M.monsterAlive(m), st = m.stats;
+    const m = G.monsters[e], alive = M.monsterAlive(m), st = m.stats, b = m.base || { maxHp: st.maxHp, maxMana: st.maxMana, limit: st.limit, drawLimit: st.drawLimit || 1, hand: M.monsterHand(m) };   // Weltphase: unveränderte Standardwerte, die Würfel liegen darüber; im Kampf gelten die veränderten Werte
     const gone = !alive && m.retreated, img = alive || gone ? IMG['m_' + m.el.toLowerCase() + m.stage] : IMG['d_' + m.el.toLowerCase()];   // zurückgezogenes Monster: eigenes Bild, durchscheinend
     h += '<div class="mon ' + (alive ? '' : gone ? 'dead gone' : 'dead') + '" style="left:' + (R.left + i * R.step) + 'px;top:' + R.top + 'px;width:' + R.w + 'px;height:' + R.h + 'px;padding:10px 8px"><img class="pic" src="' + img + '" style="width:172px;height:196px">' +
       '<div class="nm ' + m.el + '"' + (m.hints && m.hints.length ? ' title="' + esc(m.hints.join('\n')) + '"' : '') + '>' + esc(m.name) + '</div>' + (alive ? '<div class="sm" style="height:18px;margin-top:-2px">&nbsp;</div>' : '');   // früher stand hier die Beschriftung der Würfel; jetzt liegen die Würfel über der Karte (DiceBoard)
     if (alive) {
-      h += '<div class="sm">HP ' + st.hp + '/' + st.maxHp + '</div><div class="bar"><i style="width:' + st.hp / st.maxHp * 100 + '%"></i></div>' +
-        '<div class="sm">Mana ' + st.mana + '/' + st.maxMana + '</div><div class="bar mana"><i style="width:' + st.mana / st.maxMana * 100 + '%"></i></div>' +
+      h += '<div class="sm">HP ' + Math.min(st.hp, b.maxHp) + '/' + b.maxHp + '</div><div class="bar"><i style="width:' + Math.min(st.hp, b.maxHp) / b.maxHp * 100 + '%"></i></div>' +
+        '<div class="sm">Mana ' + Math.min(st.mana, b.maxMana) + '/' + b.maxMana + '</div><div class="bar mana"><i style="width:' + Math.min(st.mana, b.maxMana) / b.maxMana * 100 + '%"></i></div>' +
         '<div class="sm"><span class="dots F">' + dots(st.mag.F) + '</span> <span class="dots E">' + dots(st.mag.E) + '</span> <span class="dots W">' + dots(st.mag.W) + '</span></div>' +
-        '<div class="sm vals" style="font-size:15px;white-space:nowrap" title="Die tatsächlichen Werte dieses Monsters: Ausspiellimit, Handkarten, Nachziehlimit">Limit ' + st.limit + ' · Hand ' + M.monsterHand(m) + ' · Ziehen ' + (st.drawLimit || 1) + '</div>' +
+        '<div class="sm vals" style="font-size:15px;white-space:nowrap" title="Standardwerte ohne Würfel: Ausspiellimit, Handkarten, Nachziehlimit. Im Kampf gelten die Werte mit den Würfeln.">Limit ' + b.limit + ' · Hand ' + b.hand + ' · Ziehen ' + b.drawLimit + '</div>' +
         '<button class="btn small" data-act="combat" data-e="' + e + '" ' + (my ? '' : 'disabled') + '>Kämpfen</button>';
     } else h += '<div class="sm" style="margin-top:12px">' + (gone ? 'hat gewonnen und sich zurückgezogen' : 'besiegt') + '</div>';
     h += '</div>';
@@ -3926,7 +3927,7 @@ function fightView(i) {
     '<div class="note" style="margin:4px 0 8px">' + res + ' · ' + (st.length - 1) + ' Schritte · Spielzug ' + i + ' der Partie</div><div id="stplot">' + svg + '</div>' +
     '<div class="note stkey">' + sum(0) + sum(1) + '<div style="margin-top:6px">Rot: HP, Blau: Mana (durchgezogen: ' + esc(lab(0)) + ', gestrichelt: ' + esc(lab(1)) + ') · ▲ Angriff mit Schaden, ◆ Verteidigung mit Block</div></div></div>';
 }
-/* ---------- Monster-Würfel (seit 0.4): ein grüner Pluswürfel und ein roter Minuswürfel je Monster ----------
+/* ---------- Monster-Würfel (seit 0.4): ein roter Pluswürfel (stärkt das Monster, Nachteil für den Spieler) und ein grüner Minuswürfel (schwächt es, Vorteil) je Monster ----------
    Sie werden zu Beginn jedes Abschnitts auf die Monsterkarten geworfen und bleiben dort liegen (statt der benannten Effekte unter dem Namen).
    DiceKit (zwischen den Markierungen) steht unverändert auch in werkstatt/wuerfel-werkstatt.html; dort lassen sich alle Werte einstellen,
    der Export (JSON) wird in DiceKit.P übernommen. Ein Test prüft, dass beide Fassungen gleich sind. */
@@ -3935,7 +3936,7 @@ const DiceKit = (() => {
   const KINDS = ['hp', 'mana', 'limit', 'draws', 'hand', 'none'];   // Reihenfolge wie MONSTER.variants.dice (Seite 0 bis 5)
   const NAMES = { hp: 'HP', mana: 'Mana', limit: 'Limit', draws: 'Ziehen', hand: 'Hand', none: 'leer' };
   // Einstellungen (Werkstatt: Export einfügen). tiltX/tiltY: Kippung im Flug, restTiltX/restTiltY: Kippung in Ruhe (0 = die Symbole stehen gerade); vary: Stärke der Abweichung je Monster (0 = keine)
-  const P = { size: 46, duration: 1.45, spins: 2, bounces: 3, hop: 38, fromX: -300, fromY: -230, tiltX: -24, tiltY: 20, restTiltX: 0, restTiltY: 0, vary: 1, stagger: 0.16, monsterStagger: 0.5, glyph: 0.6, numbers: 1, shadow: 0.5, plus: '#3f9d4d', minus: '#c0392b', gap: 8, y: 6 };
+  const P = { size: 46, duration: 1.45, spins: 2, bounces: 3, hop: 38, fromX: -300, fromY: -230, tiltX: -24, tiltY: 20, restTiltX: 0, restTiltY: 0, vary: 1, stagger: 0.16, monsterStagger: 0.5, glyph: 0.6, numbers: 1, shadow: 0.5, plus: '#c0392b', minus: '#3f9d4d', gap: 8, y: 6 };
   const GLYPH = {   // Symbole (48 × 48), Farbe über currentColor
     hp: '<path d="M24 42C11 31 6 23 6 16.5A9.5 9.5 0 0 1 24 12a9.5 9.5 0 0 1 18 4.5C42 23 37 31 24 42Z" fill="currentColor"/>',
     mana: '<path d="M24 5C32 16 38 23.5 38 30.5a14 14 0 0 1-28 0C10 23.5 16 16 24 5Z" fill="currentColor"/><path d="M17.5 31a6.5 6.5 0 0 0 5 6.2" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="3" stroke-linecap="round"/>',

@@ -84,6 +84,7 @@ function spawnOne(el, stage, rng, v) {
     stats.gold = M.gold[st];
   }
   finalDeck = finalDeck.slice();
+  const base = { maxHp: stats.maxHp, maxMana: stats.maxMana, limit: stats.limit, drawLimit: stats.drawLimit, hand: Math.max(2, Math.max(MIN_SLOTS, stats.limit + 2)) };   // Standardwerte vor den Würfeln (die Weltphase zeigt sie, im Kampf gelten die veränderten)
   const tags = [], hints = [];
   if (v.d) {
     hints.push(v.d === 1 ? 'Generalist (breit): mehr Karten im Nebenelement, dafür weniger im Hauptelement. Vielseitiger, aber mit schwächerer Spitze.' : 'Spezialist (spitz): stärkere Spitze (mehr Karten der höchsten Stufe), dafür eine schwächere Basis (mehr Stufe-1-Karten).');
@@ -98,7 +99,7 @@ function spawnOne(el, stage, rng, v) {
   });
   finalDeck = finalDeck.map(id => id[0] !== 'C' && +id[1] > stats.mag[id[0]] ? id[0] + stats.mag[id[0]] : id);   // Eine Karte wirkt höchstens mit der Magie ihrer Farbe: die Anzeige soll das zeigen
   rng.shuffle(finalDeck);
-  return { el, name: (v.d ? M.formNames[el][v.d] : M.names[el]) + ' ' + STAGE_NUMERAL[stage], label: tags.join(', '), hints, variant: v, stage, stats, deckIds: finalDeck };
+  return { el, name: (v.d ? M.formNames[el][v.d] : M.names[el]) + ' ' + STAGE_NUMERAL[stage], label: tags.join(', '), hints, variant: v, stage, base, stats, deckIds: finalDeck };
 }
 // Mit ‚rng‘ (aus dem Spiel abgeleitet) werden Monster, Deckform und beide Würfel gewürfelt; ohne bleibt es die feste Grundform.
 function spawnMonsters(stage, rng) {

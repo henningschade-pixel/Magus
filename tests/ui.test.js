@@ -262,7 +262,7 @@ test('Lähmung: die Flüche erscheinen erst im Ablagestapel, wenn die Animation 
   } finally { await b.close(); }
 });
 
-test('Monsterwürfel: je lebendem Monster ein grüner und ein roter Würfel über der Karte, nach dem Wurf mit der gewürfelten Seite oben', { skip: !chromium && 'Playwright nicht installiert', timeout: 60000 }, async () => {
+test('Monsterwürfel: je lebendem Monster ein roter Pluswürfel und ein grüner Minuswürfel über der Karte, nach dem Wurf mit der gewürfelten Seite oben', { skip: !chromium && 'Playwright nicht installiert', timeout: 60000 }, async () => {
   const b = await chromium.launch({ executablePath: exe });
   try {
     const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
