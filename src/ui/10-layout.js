@@ -6,7 +6,7 @@ const LAYOUT = {
   mePanel:   { left: 920, top: 610, w: 336, h: 176 },       // eigener Spielerstatus (unten rechts)
   vendor:    { left: 920, top: 182, w: 336, h: 408 },       // Händler
   logPanel:  { left: 24,  top: 182, w: 260, h: 408 },       // Protokoll (Weltphase)
-  monsters:  { left: 296, top: 182, step: 212, w: 188, h: 408 },
+  monsters:  { left: 296, top: 182, step: 212, w: 188, h: 408, diceY: 312 },   // diceY: Oberkante der Würfel, von der Kartenoberkante aus (direkt über dem Kämpfen-Knopf)
   banner:    { left: 372, top: 230, w: 536 },
   turnflag:  { left: 372, top: 126, w: 536 },
   combat:    { left: 372, top: 182, w: 536, h: 310 },       // Kampfmitte

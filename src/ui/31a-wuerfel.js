@@ -97,7 +97,7 @@ const DiceKit = (() => {
 })();
 /* DICEKIT END */
 
-// Spielbrett: legt die Würfel der drei Monster über die Monsterkarten der Weltphase. Die Würfel liegen in einer eigenen Ebene (die Karten werden bei jedem Zeichnen neu gebaut).
+// Spielbrett: legt die Würfel der drei Monster auf die Monsterkarten, direkt über den Kämpfen-Knopf der Weltphase. Die Würfel liegen in einer eigenen Ebene (die Karten werden bei jedem Zeichnen neu gebaut).
 const DiceBoard = (() => {
   let layer = null, mons = null, items = [], thrown = false;
   const V = () => M.MONSTER.variants;
@@ -115,7 +115,7 @@ const DiceBoard = (() => {
       if (!v || !(v.pl >= 0) || !(v.mi >= 0)) { items.push(null); return; }
       const P = DiceKit.P, cx = R.left + i * R.step + R.w / 2, same = D.plus[v.pl].k === D.minus[v.mi].k, vr = DiceKit.vary((G.seed || 0) * 7 + G.stage * 131 + i * 17 + 1);   // je Monster leicht andere Würfel, bei allen Spielern gleich (aus dem Spielzufall)
       const pl = DiceKit.make(1, amounts(D.plus, m.stage), vr.plus), mi = DiceKit.make(-1, amounts(D.minus, m.stage), vr.minus);
-      pl.style.left = (cx - P.gap / 2 - vr.plus.size + vr.plus.dx) + 'px'; mi.style.left = (cx + P.gap / 2 + vr.minus.dx) + 'px'; pl.style.top = (R.top + P.y + vr.plus.dy) + 'px'; mi.style.top = (R.top + P.y + vr.minus.dy) + 'px';
+      pl.style.left = (cx - P.gap / 2 - vr.plus.size + vr.plus.dx) + 'px'; mi.style.left = (cx + P.gap / 2 + vr.minus.dx) + 'px'; pl.style.top = (R.top + R.diceY + P.y + vr.plus.dy) + 'px'; mi.style.top = (R.top + R.diceY + P.y + vr.minus.dy) + 'px';
       pl.style.pointerEvents = mi.style.pointerEvents = 'auto';
       pl.title = tip(1, D.plus[v.pl], D.plus[v.pl].n[m.stage - 1], same); mi.title = tip(-1, D.minus[v.mi], D.minus[v.mi].n[m.stage - 1], same);
       if (same) { pl.classList.add('dk-off'); mi.classList.add('dk-off'); }
