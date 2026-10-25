@@ -183,9 +183,8 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .mon .sm{font-size:15px;color:var(--mute);line-height:1.2}
 .mon .sm.vals{color:var(--text,#e6e1d6);font-size:15px;font-weight:700;margin-top:2px}
 .mon.gone img.pic{opacity:.3}
-.mon.hid{background-color:#000;background-size:112% 110%;background-position:center;background-repeat:no-repeat}
-.mon.rev{animation:monrev .55s ease-out}
-@keyframes monrev{from{transform:perspective(700px) rotateY(88deg);opacity:.2}to{transform:none;opacity:1}}
+.introcover{position:absolute;z-index:50;box-sizing:border-box;border:1px solid var(--line);border-radius:12px;background-color:#000;background-size:auto 108%;background-position:center;background-repeat:no-repeat;transition:transform .45s ease-in,opacity .45s;transform:perspective(800px) rotateY(0);pointer-events:none}
+.introcover.open{transform:perspective(800px) rotateY(90deg);opacity:.4}
 #introhint{position:absolute;left:50%;top:6px;transform:translateX(-50%);z-index:90;padding:3px 12px;border-radius:9px;background:rgba(0,0,0,.6);color:var(--mute);font-size:14px;pointer-events:none}
 .mon .loot{color:var(--gold);font-size:16px}
 .mon .btn{margin-top:auto;width:100%;padding:3px 10px;flex:none}
@@ -2364,10 +2363,9 @@ function monsterCards() {
   let h = '';
   const my = myTurn(), R = LAYOUT.monsters;
   M.ELEMENTS.forEach((e, i) => {
-    if (Intro.on && i >= Intro.monRev) { h += '<div class="mon hid" style="left:' + (R.left + i * R.step) + 'px;top:' + R.top + 'px;width:' + R.w + 'px;height:' + R.h + 'px;background-image:url(' + IMG.back + ')"></div>'; return; }   // Spielstart: noch verdeckt
     const m = G.monsters[e], alive = M.monsterAlive(m), st = m.stats, b = m.base || { maxHp: st.maxHp, maxMana: st.maxMana, limit: st.limit, drawLimit: st.drawLimit || 1, hand: M.monsterHand(m) };   // Weltphase: unveränderte Standardwerte, die Würfel liegen darüber; im Kampf gelten die veränderten Werte
     const gone = !alive && m.retreated, img = alive || gone ? IMG['m_' + m.el.toLowerCase() + m.stage] : IMG['d_' + m.el.toLowerCase()];   // zurückgezogenes Monster: eigenes Bild, durchscheinend
-    h += '<div class="mon ' + (alive ? '' : gone ? 'dead gone' : 'dead') + (Intro.on && Intro.fresh === i ? ' rev' : '') + '" style="left:' + (R.left + i * R.step) + 'px;top:' + R.top + 'px;width:' + R.w + 'px;height:' + R.h + 'px;padding:4px 8px 10px"><img class="pic" src="' + img + '" style="width:156px;height:178px">' +
+    h += '<div class="mon ' + (alive ? '' : gone ? 'dead gone' : 'dead') + '" style="left:' + (R.left + i * R.step) + 'px;top:' + R.top + 'px;width:' + R.w + 'px;height:' + R.h + 'px;padding:4px 8px 10px"><img class="pic" src="' + img + '" style="width:156px;height:178px">' +
       '<div class="nm ' + m.el + '"' + (m.hints && m.hints.length ? ' title="' + esc(m.hints.join('\n')) + '"' : '') + '>' + esc(m.name) + '</div>';   // die Würfel liegen über dem Kämpfen-Knopf (DiceBoard, LAYOUT.monsters.diceY)
     if (alive) {
       const hpNow = Math.max(1, b.maxHp - (st.maxHp - st.hp)), manaNow = Math.max(0, b.maxMana - (st.maxMana - st.mana));   // Würfel ändern die Höchstwerte; ein erlittener Verlust (Höchstwert minus Stand) wird auf die Standardwerte übertragen, ein unversehrtes Monster zeigt also volle Standardwerte
@@ -4097,17 +4095,19 @@ const DiceBoard = (() => {
 // mischt sie, legt sie auf den Nachziehstapel und teilt von dort die Hand aus. view() liefert dafür einen gedachten Kartenstand der Decks; Eingaben und Computerzüge warten bis zum Ende (Klick überspringt).
 const Intro = (() => {
   const T = { mon: 300, monStep: 1900, dice: 350, players: 6200, plStep: 2900, deal: 1250, dealStep: 240, end: 500 };
-  let on = false, timers = [], monRev = 0, fresh = -1, pl = {}, hint = null;
+  let on = false, timers = [], monRev = 0, pl = {}, hint = null, covers = [];   // covers: verdeckte Monsterkarten als eigene Elemente (bleiben beim Neuzeichnen bestehen, die Dreh-Animation läuft ungestört)
   const later = (ms, fn) => timers.push(setTimeout(() => { if (on) { fn(); render(); } }, ms));
-  function stop() { timers.forEach(clearTimeout); timers = []; on = false; monRev = 0; fresh = -1; pl = {}; if (hint) { hint.remove(); hint = null; } }
+  function stop() { timers.forEach(clearTimeout); timers = []; on = false; monRev = 0; pl = {}; covers.forEach(c => c.remove()); covers = []; if (hint) { hint.remove(); hint = null; } }
   function start() {
     stop();
     if (!G || FAST || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) || (navigator.webdriver && !/[?&]intro/.test(location.search))) return;   // Testläufe (Playwright, außer mit ?intro) und reduzierte Bewegung: ohne Vorführung
+    const R = LAYOUT.monsters;
+    covers = M.ELEMENTS.map((e, i) => { const d = document.createElement('div'); d.className = 'introcover'; d.style.cssText = 'left:' + (R.left + i * R.step) + 'px;top:' + R.top + 'px;width:' + R.w + 'px;height:' + R.h + 'px;background-image:url(' + IMG.back + ')'; stage.appendChild(d); return d; });
     on = true; monRev = 0; pl = { [ME]: { st: 'disc', k: 0 }, [OPP]: { st: 'disc', k: 0 } };
     const n = G.players[ME].deck.hand.length, order = [ME, OPP];
     M.ELEMENTS.forEach((e, i) => {
       const t = T.mon + i * T.monStep;
-      later(t, () => { monRev = i + 1; fresh = i; Snd.play('flip', 0, .8); setTimeout(() => { if (fresh === i) fresh = -1; }, 700); });
+      later(t, () => { monRev = i + 1; Snd.play('flip', 0, .8); const c = covers[i]; if (c) { c.classList.add('open'); setTimeout(() => c.remove(), 500); } });
       later(t + T.dice, () => DiceBoard.throwItem(i));
     });
     order.forEach((p, j) => {
@@ -4123,7 +4123,7 @@ const Intro = (() => {
   function skip() {   // alles sofort in den Endstand; die Karten springen, ohne Töne zu erzeugen (erst ein stummes Zeichnen, dann Ende)
     if (!on) return;
     timers.forEach(clearTimeout); timers = [];
-    monRev = 3; fresh = -1; Object.keys(pl).forEach(p => { pl[p].st = 'deal'; pl[p].k = 99; });
+    monRev = 3; covers.forEach(c => c.remove()); covers = []; Object.keys(pl).forEach(p => { pl[p].st = 'deal'; pl[p].k = 99; });
     DiceBoard.throwRest(); render();
     finish();
   }
@@ -4135,7 +4135,7 @@ const Intro = (() => {
     return Object.assign({}, deck, { draw: deck.draw.concat(hc.slice(k).reverse()), discard: deck.discard, hand: deck.hand.map(x => (x && c++ < k ? x : null)), marks: [] });
   }
   document.addEventListener('pointerdown', e => { if (on) { e.stopPropagation(); e.preventDefault(); skip(); } }, true);
-  return { start, stop, skip, view, get on() { return on; }, get monRev() { return monRev; }, get fresh() { return fresh; } };
+  return { start, stop, skip, view, get on() { return on; }, get monRev() { return monRev; } };
 })();
 /* ---------- Spiellog-Export (jederzeit, auch am Spielende) ---------- */
 function buildExport() {

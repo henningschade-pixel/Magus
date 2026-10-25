@@ -3,17 +3,19 @@
 // mischt sie, legt sie auf den Nachziehstapel und teilt von dort die Hand aus. view() liefert dafür einen gedachten Kartenstand der Decks; Eingaben und Computerzüge warten bis zum Ende (Klick überspringt).
 const Intro = (() => {
   const T = { mon: 300, monStep: 1900, dice: 350, players: 6200, plStep: 2900, deal: 1250, dealStep: 240, end: 500 };
-  let on = false, timers = [], monRev = 0, fresh = -1, pl = {}, hint = null;
+  let on = false, timers = [], monRev = 0, pl = {}, hint = null, covers = [];   // covers: verdeckte Monsterkarten als eigene Elemente (bleiben beim Neuzeichnen bestehen, die Dreh-Animation läuft ungestört)
   const later = (ms, fn) => timers.push(setTimeout(() => { if (on) { fn(); render(); } }, ms));
-  function stop() { timers.forEach(clearTimeout); timers = []; on = false; monRev = 0; fresh = -1; pl = {}; if (hint) { hint.remove(); hint = null; } }
+  function stop() { timers.forEach(clearTimeout); timers = []; on = false; monRev = 0; pl = {}; covers.forEach(c => c.remove()); covers = []; if (hint) { hint.remove(); hint = null; } }
   function start() {
     stop();
     if (!G || FAST || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) || (navigator.webdriver && !/[?&]intro/.test(location.search))) return;   // Testläufe (Playwright, außer mit ?intro) und reduzierte Bewegung: ohne Vorführung
+    const R = LAYOUT.monsters;
+    covers = M.ELEMENTS.map((e, i) => { const d = document.createElement('div'); d.className = 'introcover'; d.style.cssText = 'left:' + (R.left + i * R.step) + 'px;top:' + R.top + 'px;width:' + R.w + 'px;height:' + R.h + 'px;background-image:url(' + IMG.back + ')'; stage.appendChild(d); return d; });
     on = true; monRev = 0; pl = { [ME]: { st: 'disc', k: 0 }, [OPP]: { st: 'disc', k: 0 } };
     const n = G.players[ME].deck.hand.length, order = [ME, OPP];
     M.ELEMENTS.forEach((e, i) => {
       const t = T.mon + i * T.monStep;
-      later(t, () => { monRev = i + 1; fresh = i; Snd.play('flip', 0, .8); setTimeout(() => { if (fresh === i) fresh = -1; }, 700); });
+      later(t, () => { monRev = i + 1; Snd.play('flip', 0, .8); const c = covers[i]; if (c) { c.classList.add('open'); setTimeout(() => c.remove(), 500); } });
       later(t + T.dice, () => DiceBoard.throwItem(i));
     });
     order.forEach((p, j) => {
@@ -29,7 +31,7 @@ const Intro = (() => {
   function skip() {   // alles sofort in den Endstand; die Karten springen, ohne Töne zu erzeugen (erst ein stummes Zeichnen, dann Ende)
     if (!on) return;
     timers.forEach(clearTimeout); timers = [];
-    monRev = 3; fresh = -1; Object.keys(pl).forEach(p => { pl[p].st = 'deal'; pl[p].k = 99; });
+    monRev = 3; covers.forEach(c => c.remove()); covers = []; Object.keys(pl).forEach(p => { pl[p].st = 'deal'; pl[p].k = 99; });
     DiceBoard.throwRest(); render();
     finish();
   }
@@ -41,5 +43,5 @@ const Intro = (() => {
     return Object.assign({}, deck, { draw: deck.draw.concat(hc.slice(k).reverse()), discard: deck.discard, hand: deck.hand.map(x => (x && c++ < k ? x : null)), marks: [] });
   }
   document.addEventListener('pointerdown', e => { if (on) { e.stopPropagation(); e.preventDefault(); skip(); } }, true);
-  return { start, stop, skip, view, get on() { return on; }, get monRev() { return monRev; }, get fresh() { return fresh; } };
+  return { start, stop, skip, view, get on() { return on; }, get monRev() { return monRev; } };
 })();
