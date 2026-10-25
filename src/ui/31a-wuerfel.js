@@ -132,7 +132,7 @@ const DiceBoard = (() => {
       if (!it) return;
       const P = DiceKit.P, d0 = i * P.monsterStagger * 1000;
       if (!FAST) Snd.play('dice', d0 / 1000, .6);   // Würfelrollen auf dem Tisch, je Monsterkarte einmal beim Wurf
-      [it.pl, it.mi].forEach((el, j) => { const k = j ? it.v.mi : it.v.pl; DiceKit.roll(el, k, d0 + j * P.stagger * 1000, () => { if (!FAST) Snd.play('flip', 0, .5); }, (j ? it.vr.minus : it.vr.plus).roll); });
+      [it.pl, it.mi].forEach((el, j) => { const k = j ? it.v.mi : it.v.pl; DiceKit.roll(el, k, d0 + j * P.stagger * 1000, null, (j ? it.vr.minus : it.vr.plus).roll); });
     });
   }
   // Nach jedem Zeichnen: neue Monster -> neue Würfel; sichtbar nur in der Weltphase ohne Überlagerung; geworfen wird, sobald sie sichtbar sind
