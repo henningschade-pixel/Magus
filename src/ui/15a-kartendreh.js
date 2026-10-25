@@ -3,7 +3,7 @@
 // Gebaut als Web-Animation auf dem 3D-Element der Karte (.inner bei Handkarten, .mc bei den Monsterkarten zum Spielstart); danach gilt wieder der Stand aus dem Stylesheet.
 const CardFlip = (() => {
   const MON = { extra: 0, persp: 800, heben: 30, skal: 1.06, kipp: 4, huepf: 6, nach: 8, schatten: .5, glanz: .5, leucht: .4, dauer: 900 };   // Monsterkarten (Export der Werkstatt)
-  const HAND = { extra: 0, persp: 800, heben: 14, skal: 1.06, kipp: 3, huepf: 3, nach: 6, dauer: 650 };   // Handkarten: kleiner und schneller, weil oft mehrere nacheinander gedreht werden
+  const HAND = { extra: 0, persp: 500, heben: 60, skal: 1.18, kipp: 8, huepf: 8, nach: 14, leucht: 1, dauer: 800 };   // Handkarten: die Karten sind klein und fliegen zugleich, deshalb deutlicher als bei den Monsterkarten
   const bez = (x1, y1, x2, y2) => t => { let a = 0, b = 1, u = t; for (let k = 0; k < 24; k++) { u = (a + b) / 2; const x = 3 * (1 - u) * (1 - u) * u * x1 + 3 * (1 - u) * u * u * x2 + u * u * u; if (x < t) a = u; else b = u; } return 3 * (1 - u) * (1 - u) * u * y1 + 3 * (1 - u) * u * u * y2 + u * u * u; };
   const ease = bez(.4, 0, .2, 1);
   function pose(P, t, a0, a1) {
@@ -21,6 +21,7 @@ const CardFlip = (() => {
   function hand(inner, from, to) {   // Handkarte: .inner von from nach to (0 = Vorderseite, 180 = Rückseite)
     if (!inner.animate) return 0;
     run(inner, frames(HAND, from, to, p => ({ transform: tf(HAND, p) })), HAND.dauer);
+    inner.querySelectorAll('.face').forEach(f => run(f, frames(HAND, from, to, p => ({ boxShadow: '0 3px 9px rgba(0,0,0,.55), 0 0 ' + 26 * HAND.leucht * p.sinT + 'px ' + 3 * HAND.leucht * p.sinT + 'px rgba(255,226,150,' + .9 * p.sinT + ')' })), HAND.dauer));   // goldener Schein, solange die Karte in der Luft ist
     return HAND.dauer;
   }
   function monster(mc, col, done) {   // Monsterkarte zum Spielstart: .mc (verdeckt 0° -> offen 180°) mit Schatten, Glanz und Leuchten; done() am Ende
