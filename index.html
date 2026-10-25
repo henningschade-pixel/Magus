@@ -304,9 +304,9 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 @media (prefers-reduced-motion:reduce){#stage.turn-me::after,#stage.turn-opp::after{animation:none}}
 /* Startseite */
 .overlay .box.start{align-items:center;padding:34px 44px 30px}
-.overlay .box.start .logo{width:auto;height:190px;object-fit:contain;margin:6px 0 12px;mix-blend-mode:lighten}   /* neues Logo (0.5): schwarzer Grund, keine Randmaske nötig */
+.overlay .box.start .logo{width:auto;height:150px;object-fit:contain;margin:6px 0 12px;mix-blend-mode:lighten}   /* neues Logo (0.5): schwarzer Grund, keine Randmaske nötig */
 .overlay .box.start .mpbox{align-self:stretch}
-.overlay .box.start .note.intro{flex:0 1 auto;min-height:64px;overflow-y:auto;padding-right:10px}   /* langer Einleitungstext: schrumpft und scrollt, Logo und Knöpfe bleiben sichtbar */
+.overlay .box.start .note.intro{flex:0 1 auto;min-height:150px;overflow-y:auto;padding-right:10px}   /* langer Einleitungstext: schrumpft und scrollt, Logo und Knöpfe bleiben sichtbar */
 .overlay .box.start .note.intro::-webkit-scrollbar{width:8px}.overlay .box.start .note.intro::-webkit-scrollbar-thumb{background:var(--gold);border-radius:4px}.overlay .box.start .note.intro::-webkit-scrollbar-track{background:rgba(255,255,255,.06);border-radius:4px}
 #log.logpanel h3{display:flex;align-items:center}
 .logdl{order:2;margin-left:auto;width:26px;height:26px;border-radius:50%;border:1px solid var(--line);background:rgba(10,8,14,.55);color:var(--mute);font-size:14px;line-height:1;cursor:var(--cp);padding:0;opacity:.7}.logdl:hover{opacity:1;border-color:var(--gold);color:var(--gold)}
@@ -331,6 +331,13 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 #dimdeck{position:absolute;left:0;top:0;width:var(--sw,1280px);height:800px;z-index:140;background:rgba(0,0,0,.45);opacity:0;pointer-events:none;transition:opacity .35s;cursor:var(--cp)}#dimdeck.on{opacity:1;pointer-events:auto}
 
 .panel[style*="scrollbar-width:none"]::-webkit-scrollbar{display:none}
+
+/* Lautstärkeregler (Menü und Hauptmenü) */
+.volbox{align-self:stretch;display:flex;flex-direction:column;gap:6px;margin:10px 0 2px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:rgba(0,0,0,.25)}
+.volrow{display:flex;align-items:center;gap:10px;font-size:18px;cursor:var(--cp)}
+.volrow span{width:72px;text-align:left}
+.volrow output{width:34px;text-align:right;color:var(--mute);font-size:16px}
+.volrow input[type=range]{flex:1;min-width:0;height:22px;accent-color:var(--gold);cursor:var(--cp)}
 
 </style>
 </head>
@@ -2040,8 +2047,13 @@ function drawTurn(c, up, t, done) {
 function myTurn() { return !G.over && M.actor(G) === ME; }
 /* ---------- Sound ---------- */
 const Snd = (() => {
-  let ctx = null, bufs = {}, urls = {}, on = true, last = {};
+  let ctx = null, bufs = {}, urls = {}, on = true, last = {}, sfxBus = null, musBus = null, musicOn = false;
+  let sfxVol = 1, musVol = .5;   // Lautstärkeregler (0 bis 1) für Effekte und Hintergrundmusik
+  const rd = (k, d) => { try { const v = localStorage.getItem(k); return v === null ? d : Math.min(1, Math.max(0, +v)); } catch (e) { return d; } };
   try { on = localStorage.getItem('magus_sound') !== '0'; } catch (e) {}
+  sfxVol = rd('magus_sfx', 1); musVol = rd('magus_music', .5);
+  // Angleichung der Dateipegel (tools/sounds-angleichen.sh): diese Effekte wurden auf -20 dB mittleren Pegel angehoben; der Faktor erhält die bisherige Mischung
+  const TRIM = { flip: .275, play: .345, ui_click: .25, dice: .37, coin_sacrifice: .335, shuffle: .53, ruin: .57, win: .77, mirror_reflect: .82, aggro: .88, break: .9, turn_change: .94 };
   // Einzeldatei-Build: data:-URIs direkt dekodieren (ohne fetch, das in eingebetteten Seiten blockiert sein kann); sonst Datei laden
   function bytes(u) { const b = atob(u.slice(u.indexOf(',') + 1)), a = new Uint8Array(b.length); for (let i = 0; i < b.length; i++) a[i] = b.charCodeAt(i); return a.buffer; }
   function load(k, u) {
@@ -2054,6 +2066,8 @@ const Snd = (() => {
     if (ctx || !window.SND) return;
     try {
       const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return; ctx = new AC();
+      ctx.onstatechange = () => musicSync(); sfxBus = ctx.createGain(); sfxBus.gain.value = sfxVol; sfxBus.connect(ctx.destination);
+      musBus = ctx.createGain(); musBus.gain.value = musVol * musVol * .5; musBus.connect(ctx.destination);
       for (const k of Object.keys(window.SND)) {
         load(k, window.SND[k]);   // Dateien aus assets/audio (oder data:-URIs im Einzeldatei-Build)
       }
@@ -2066,20 +2080,57 @@ const Snd = (() => {
     if (!on || !ctx || (!bufs[k] && !urls[k])) return;
     if (ctx.state === 'suspended') ctx.resume();
     if (!bufs[k]) {
-      try { const a = new Audio(urls[k]); a.volume = Math.min(1, (vol === undefined ? (VOL[k] || 0.55) : vol) * 1.35); if (delay) setTimeout(() => a.play().catch(() => {}), delay * 1000); else a.play().catch(() => {}); } catch (e) {}
+      try { const a = new Audio(urls[k]); a.volume = Math.min(1, (vol === undefined ? (VOL[k] || 0.55) : vol) * 1.35 * (TRIM[k] || 1) * sfxVol); if (delay) setTimeout(() => a.play().catch(() => {}), delay * 1000); else a.play().catch(() => {}); } catch (e) {}
       return;
     }
-    try { const s = ctx.createBufferSource(), g = ctx.createGain(); s.buffer = bufs[k]; g.gain.value = Math.min(1.25, (vol === undefined ? (VOL[k] || 0.55) : vol) * 1.35); s.connect(g); g.connect(ctx.destination); s.start(ctx.currentTime + (delay || 0)); } catch (e) {}
+    try { const s = ctx.createBufferSource(), g = ctx.createGain(); s.buffer = bufs[k]; g.gain.value = Math.min(1.25, (vol === undefined ? (VOL[k] || 0.55) : vol) * 1.35 * (TRIM[k] || 1)); s.connect(g); g.connect(sfxBus); s.start(ctx.currentTime + (delay || 0)); } catch (e) {}
   }
+  // Hintergrundmusik: dunkler Drone mit langsamem Akkordwechsel (Am - F - G - Em, je 8 s), von Webaudio erzeugt und endlos wiederholt
+  const CH = [[57, 60, 64], [53, 57, 60], [55, 59, 62], [52, 55, 59]], CHORD_S = 8;
+  let musNext = 0, musStep = 0, musTimer = null, drone = null;
+  const hz = m => 440 * Math.pow(2, (m - 69) / 12);
+  function note(m, t, dur, peak, type, bus) {
+    const o = ctx.createOscillator(), f = ctx.createBiquadFilter(), g = ctx.createGain();
+    o.type = type; o.frequency.value = hz(m); o.detune.value = (Math.random() - .5) * 12;
+    f.type = 'lowpass'; f.frequency.value = 900; g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(peak, t + dur * .35); g.gain.linearRampToValueAtTime(0, t + dur);
+    o.connect(f); f.connect(g); g.connect(bus); o.start(t); o.stop(t + dur + .1);
+  }
+  function musSched() {
+    if (!musicOn || !ctx) return;
+    while (musNext < ctx.currentTime + 2) {
+      const c = CH[musStep % CH.length], t = musNext;
+      c.forEach((m, i) => { note(m, t + i * .15, CHORD_S + 1.5, .05, 'triangle', musBus); note(m + 12, t + i * .15, CHORD_S + 1.5, .018, 'sine', musBus); });
+      note(c[0] - 24, t, CHORD_S + 1, .09, 'sine', musBus);
+      if (musStep % 2) note(c[(musStep >> 1) % 3] + 24, t + 2.5, 3.5, .012, 'sine', musBus);   // zarte hohe Note
+      musNext += CHORD_S; musStep++;
+    }
+  }
+  function musicStart() {
+    if (musicOn || !ctx || !on || musVol <= 0) return;
+    musicOn = true; musNext = ctx.currentTime + .1; musSched(); musTimer = setInterval(musSched, 1000);
+    if (!drone) {   // Grundton, Quinte und Oktave mit langsam wandernder Filterfrequenz
+      const f = ctx.createBiquadFilter(), g = ctx.createGain(), lfo = ctx.createOscillator(), lg = ctx.createGain(); f.type = 'lowpass'; f.frequency.value = 260; g.gain.value = .05;
+      lfo.frequency.value = .07; lg.gain.value = 140; lfo.connect(lg); lg.connect(f.frequency); lfo.start();
+      [[33, 'sawtooth'], [40.02, 'sawtooth'], [45, 'sine']].forEach(([m, ty]) => { const o = ctx.createOscillator(); o.type = ty; o.frequency.value = hz(m); o.connect(f); o.start(); });
+      f.connect(g); g.connect(musBus); drone = g;
+    }
+    drone.gain.cancelScheduledValues(ctx.currentTime); drone.gain.setTargetAtTime(.05, ctx.currentTime, 2);
+  }
+  function musicStop() { musicOn = false; clearInterval(musTimer); if (drone && ctx) { drone.gain.cancelScheduledValues(ctx.currentTime); drone.gain.setTargetAtTime(0, ctx.currentTime, .3); } }
+  function musicSync() { if (on && musVol > 0 && ctx && ctx.state === 'running') musicStart(); else if (musicOn) musicStop(); }
   // Browser (vor allem Safari/iOS) geben Ton erst frei, wenn im Klick/Tippen resume() und ein Ton gestartet werden
   function unlock() {
     init(); if (!ctx) return;
     try { if (ctx.state !== 'running') ctx.resume(); const s = ctx.createBufferSource(); s.buffer = ctx.createBuffer(1, 1, 22050); s.connect(ctx.destination); s.start(0); } catch (e) {}
+    musicSync();
   }
   const info = () => ({ on, state: ctx ? ctx.state : 'nicht gestartet', loaded: Object.keys(bufs).length + Object.keys(urls).length, total: Object.keys(window.SND || {}).length });
   return {
     init, play, unlock, info, get on() { return on; },
-    toggle() { on = !on; try { localStorage.setItem('magus_sound', on ? '1' : '0'); } catch (e) {} init(); return on; },
+    toggle() { on = !on; try { localStorage.setItem('magus_sound', on ? '1' : '0'); } catch (e) {} init(); musicSync(); return on; },
+    get sfx() { return sfxVol; }, get music() { return musVol; },
+    setSfx(v) { sfxVol = Math.min(1, Math.max(0, v)); try { localStorage.setItem('magus_sfx', sfxVol); } catch (e) {} if (sfxBus) sfxBus.gain.value = sfxVol; },
+    setMusic(v) { musVol = Math.min(1, Math.max(0, v)); try { localStorage.setItem('magus_music', musVol); } catch (e) {} if (musBus) musBus.gain.value = musVol * musVol * .5; musicSync(); },
   };
 })();
 ['pointerdown', 'touchend', 'click', 'keydown'].forEach(ev => document.addEventListener(ev, () => Snd.unlock(), { capture: true }));
@@ -3367,10 +3418,11 @@ function showStart() {
   setCursor('human');
   overlay.style.display = 'flex'; overlay.className = 'overlay';
   overlay.innerHTML = '<div class="box start"><h1>Magus</h1>' +
-    '<p class="note intro" style="margin-top:-2px"><b>Danke, dass du Magus testest!</b> Der Schwerpunkt von <b>Version 0.5</b> ist das <b>Balancing</b> und die neue <b>Darstellung des Spielstarts</b> samt Würfel-Overlay. <b>Balancing:</b> Der Bonus zu Beginn jedes Abschnitts (und die Hilfe nach einer Niederlage gegen ein Monster) entspricht der Stufe: <b>1, 2 und 3</b> Gold und Upgrade-Punkte. Der Preis der <b>Magie</b> steigt mit jedem Kauf, unabhängig von der Stufe: das erste Upgrade kostet 1, das zweite 2, das dritte 3 Upgrade-Punkte. Bei den übrigen Verbesserungen (HP, Mana, Handplatz 1, 2, 3 Gold, Ausspiellimit 2, 4, 6) verteuert jeder Kauf die nächste Stufe seiner Kategorie um den Grundpreis. Das Ausspiellimit der Monster beträgt <b>2, 3 und 4</b> in Stufe I, II und III. Der <b>rote Pluswürfel</b> trägt statt „Limit“ nun einen <b>Pfeil nach oben</b>: eine Magiestufe mehr auf der Folgemagie des Monsters (Feuer → Erde, Erde → Wasser, Wasser → Feuer). Bei der <b>Ultimate</b> zählen mehrere Karten einer Farbe zusammen (E2, F2, W1, W1 ergibt Ultimate 2); ihr <b>Todes-Fluch</b> wirkt erst in der nächsten Angriffsphase des Verfluchten. Die <b>Läuterung</b> darf jeden Marker und Token auf dem Brett wählen, auch eigene, und spielt für jeden zerstörten den Splitter-Sound. Achte beim Testen vor allem darauf, ob die Schwierigkeit von Stufe zu Stufe angemessen steigt und ob die Einnahmen und Preise zusammenpassen. <b>Spielstart und Würfel:</b> Zu Beginn werden die <b>drei Monsterkarten nacheinander aufgedeckt</b> und ihre Würfel geworfen. Danach nimmt jeder Spieler seine Karten von der Ablage, <b>mischt</b> sie, legt sie auf den Stapel und <b>teilt die Hand aus</b>, mit Tönen; ein Klick überspringt den Ablauf. Der <b>Pluswürfel</b> (rot, mit „+“) macht ein Monster in einem Wert stärker, der <b>Minuswürfel</b> (grün, mit „−“) schwächer; eine leere Seite hat keine Grafik und wird wie aufgehobene Würfel durchscheinend dargestellt. Die Seiten sind <b>HP, Mana, Limit, Ziehen</b> (Nachziehlimit), <b>Hand</b> (Handkarte) und leer. Zeigen beide Würfel denselben Wert, werden sie abgedunkelt; der Mauszeiger über einem Würfel erklärt die Wirkung. <b>Monster (seit 0.4):</b> Zu jedem Element gibt es einen <b>Spezialisten</b> (stärkere Spitze, schwächere Basis) und einen <b>Generalisten</b> (vielseitiger, schwächere Spitze), zum Beispiel „Feuer-Spezialist“ und „Feuer-Generalist“; je Stufe werden <b>drei von sechs möglichen Monstern ausgelost</b>. <b>Grundregeln:</b> Du startest mit Ausspiellimit 2 und 2 Siegpunkten. Magie kaufst du mit Upgrade-Punkten, alle anderen Verbesserungen mit Gold; im Tempel wandelst du Gold in Upgrade-Punkte. Stehen alle drei Magien auf Stufe 3, werden übrige Upgrade-Punkte sofort zu Siegpunkten. <b>Nachziehmarker:</b> Wer nachzieht, dreht seinen Marker auf Rot, jede andere Aktion zurück auf Grün; wer bei Rot nachzieht, gibt dem Gegner 1 Gold (Weltphase) bzw. ein Nachziehtoken (Kampf). Das <b>Nachziehlimit</b> erlaubt öfter hintereinander nachzuziehen, bevor der Marker auf Rot springt.</p>' +
+    '<p class="note intro" style="margin-top:-2px"><b>Danke, dass du Magus testest!</b> Der Schwerpunkt von <b>Version 0.7</b> ist der <b>Ton</b>. <b>Hintergrundmusik:</b> Eine ruhige, dunkle Klangfläche läuft im Hintergrund als Endlosschleife, sobald der Ton an ist. <b>Lautstärke:</b> Im Hauptmenü und im Spielmenü (Haus-Symbol) stellst du <b>Effekte</b> und <b>Musik</b> getrennt mit Reglern ein; die Werte bleiben gespeichert, und Musik auf 0 schaltet sie ganz ab. <b>Angeglichene Effekte:</b> Alle Effekte liegen jetzt auf einem ähnlichen mittleren Pegel (etwa −20 dB); besonders leise Klänge wie Kartenwenden, Karte legen, Würfeln, Klick, Münzen und Mischen wurden angehoben, und das Spiel hat seine Mischung entsprechend angepasst. Nur Ultimate und Todes-Fluch sind absichtlich lauter. Sag mir bitte, ob dir ein Effekt noch zu laut oder zu leise vorkommt. <b>Version 0.6:</b> Das Spielfeld nutzt jetzt die <b>volle Fensterbreite</b>: Die Höhe bleibt gleich, die Breite folgt dem Seitenverhältnis des Fensters; die Statusfelder und die Bibliothek sitzen am rechten Rand, Monster und Kampfmitte bleiben mittig.</p>' +
     '<img class="logo" alt="" src="assets/img/logo.webp">' +
     (G && !G.over && !MP && started ? '<button class="btn primary" style="font-size:22px;padding:10px 28px;flex:none;align-self:center;margin-bottom:8px" data-act="resume">Spiel fortsetzen</button>' : '') + '<button class="btn' + (G && !G.over && !MP && started ? '' : ' primary') + '" style="font-size:22px;padding:10px 28px;flex:none;align-self:center" data-act="newgame">' + (G && !G.over && !MP && started ? 'Neues Spiel gegen den Computer' : 'Gegen den Computer spielen') + '</button>' +
     '<button class="btn" style="font-size:18px;padding:8px 22px;flex:none;align-self:center;margin-top:8px" data-act="newspec" title="Zwei Computerspieler spielen gegeneinander, du schaust zu (für Spielablauf und Statistik)">Zwei Computern zuschauen</button>' +
+    volHTML() +
     '<div id="mpbox" class="mpbox" style="display:none"><b>Mehrspieler</b> <span class="note">zwei Geräte, ein Raum</span><div class="mprow"><button class="btn" data-act="mphost">Raum erstellen</button><input id="mpcode" maxlength="5" placeholder="Code" autocomplete="off" spellcheck="false"><button class="btn" data-act="mpjoin">Beitreten</button></div><div id="mpmsg" class="note"></div></div></div>';
   mpOffer();
 }
@@ -3791,12 +3843,24 @@ function homeMenu() {
   overlay.style.display = 'flex'; overlay.className = 'overlay soft';   // Menü: Spielfeld sanft abdunkeln wie beim Schild-Effekt
   homeMenuDraw();
 }
+/* Lautstärkeregler (Effekte, Hintergrundmusik); gilt im Menü und im Hauptmenü */
+function volHTML() {
+  const row = (k, name, v) => '<label class="volrow"><span>' + name + '</span><input type="range" class="vol" data-vol="' + k + '" min="0" max="100" step="1" value="' + Math.round(v * 100) + '" aria-label="' + name + '"><output>' + Math.round(v * 100) + '</output></label>';
+  return '<div class="volbox">' + row('sfx', 'Effekte', Snd.sfx) + row('music', 'Musik', Snd.music) + '</div>';
+}
+document.addEventListener('input', e => {
+  const t = e.target; if (!t.dataset || !t.dataset.vol) return;
+  const v = t.value / 100; if (t.dataset.vol === 'sfx') Snd.setSfx(v); else Snd.setMusic(v);
+  if (t.nextElementSibling) t.nextElementSibling.textContent = t.value;
+  if (t.dataset.vol === 'music' && v > 0 && !Snd.on) { Snd.toggle(); }
+});
+document.addEventListener('change', e => { const t = e.target; if (t.dataset && t.dataset.vol === 'sfx') Snd.play('ui_click', 0, .8); });
 function homeMenuDraw() {
   const si = Snd.info();
   overlay.innerHTML = '<div class="box start" style="width:420px"><h1 style="font-size:44px">Menü</h1>' + (MP ? '<div id="mproom" style="font-size:19px;color:var(--mute);margin-top:-4px"></div>' : '') + '<div style="display:flex;flex-direction:column;gap:10px;align-self:stretch;margin-top:10px">' +
     '<button class="btn primary" style="font-size:21px;padding:10px" data-act="resume">Fortsetzen</button>' +
     '<button class="btn" style="font-size:21px;padding:10px" data-act="stopen" title="Verlauf über die Züge">📈 Statistik</button>' +
-    '<button class="btn" style="font-size:21px;padding:10px" data-act="sndtoggle" title="Ton an oder aus">' + (si.on ? '🔊 Ton: an' : '🔇 Ton: aus') + (si.on && si.state !== 'nicht gestartet' ? '<small style="display:block;font-size:14px;color:var(--mute)">' + si.loaded + '/' + si.total + ' Sounds geladen · Audio ' + si.state + '</small>' : '') + '</button>' +
+    '<button class="btn" style="font-size:21px;padding:10px" data-act="sndtoggle" title="Ton an oder aus">' + (si.on ? '🔊 Ton: an' : '🔇 Ton: aus') + (si.on && si.state !== 'nicht gestartet' ? '<small style="display:block;font-size:14px;color:var(--mute)">' + si.loaded + '/' + si.total + ' Sounds geladen · Audio ' + si.state + '</small>' : '') + '</button>' + volHTML() +
     (MP ? '' : '<button class="btn" style="font-size:21px;padding:10px" data-act="restart" title="Beginnt eine neue Partie (gleiche Art)">Neu starten</button>') +
     '<button class="btn" style="font-size:21px;padding:10px" data-act="leave">' + (MP ? 'Partie verlassen' : 'Spiel verlassen') + '</button></div></div>';
   mpChip();

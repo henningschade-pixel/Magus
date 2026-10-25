@@ -18,3 +18,14 @@ test('Sounds sind hörbar (mittlerer Pegel über -45 dB), nicht stumm', { skip: 
     assert.ok(m && +m[1] > -45, n + ' ist zu leise oder stumm: ' + (m && m[1]) + ' dB');
   }
 });
+
+test('Effekte sind normalisiert: mittlerer Pegel um -20 dB (±3), Spitze nicht über 0 dB; Ultimate und Todes-Fluch sind absichtlich lauter', { skip: spawnSync('ffmpeg', ['-version']).status !== 0 && 'ffmpeg fehlt' }, () => {
+  const LOUD = new Set(['ultimate', 'curse']);
+  for (const n of names) {
+    const r = spawnSync('ffmpeg', ['-nostats', '-i', path.join(dir, n + '.mp3'), '-af', 'volumedetect', '-f', 'null', '-'], { encoding: 'utf8' });
+    const mean = +/mean_volume: (-?[\d.]+) dB/.exec(r.stderr)[1], max = +/max_volume: (-?[\d.]+) dB/.exec(r.stderr)[1];
+    if (LOUD.has(n)) assert.ok(mean > -14, n + ' soll lauter sein als die übrigen: ' + mean + ' dB');
+    else assert.ok(Math.abs(mean + 20) <= 3, n + ' ist nicht normalisiert: mittlerer Pegel ' + mean + ' dB');
+    assert.ok(max <= 0.2, n + ' übersteuert: Spitze ' + max + ' dB');
+  }
+});

@@ -122,12 +122,24 @@ function homeMenu() {
   overlay.style.display = 'flex'; overlay.className = 'overlay soft';   // Menü: Spielfeld sanft abdunkeln wie beim Schild-Effekt
   homeMenuDraw();
 }
+/* Lautstärkeregler (Effekte, Hintergrundmusik); gilt im Menü und im Hauptmenü */
+function volHTML() {
+  const row = (k, name, v) => '<label class="volrow"><span>' + name + '</span><input type="range" class="vol" data-vol="' + k + '" min="0" max="100" step="1" value="' + Math.round(v * 100) + '" aria-label="' + name + '"><output>' + Math.round(v * 100) + '</output></label>';
+  return '<div class="volbox">' + row('sfx', 'Effekte', Snd.sfx) + row('music', 'Musik', Snd.music) + '</div>';
+}
+document.addEventListener('input', e => {
+  const t = e.target; if (!t.dataset || !t.dataset.vol) return;
+  const v = t.value / 100; if (t.dataset.vol === 'sfx') Snd.setSfx(v); else Snd.setMusic(v);
+  if (t.nextElementSibling) t.nextElementSibling.textContent = t.value;
+  if (t.dataset.vol === 'music' && v > 0 && !Snd.on) { Snd.toggle(); }
+});
+document.addEventListener('change', e => { const t = e.target; if (t.dataset && t.dataset.vol === 'sfx') Snd.play('ui_click', 0, .8); });
 function homeMenuDraw() {
   const si = Snd.info();
   overlay.innerHTML = '<div class="box start" style="width:420px"><h1 style="font-size:44px">Menü</h1>' + (MP ? '<div id="mproom" style="font-size:19px;color:var(--mute);margin-top:-4px"></div>' : '') + '<div style="display:flex;flex-direction:column;gap:10px;align-self:stretch;margin-top:10px">' +
     '<button class="btn primary" style="font-size:21px;padding:10px" data-act="resume">Fortsetzen</button>' +
     '<button class="btn" style="font-size:21px;padding:10px" data-act="stopen" title="Verlauf über die Züge">📈 Statistik</button>' +
-    '<button class="btn" style="font-size:21px;padding:10px" data-act="sndtoggle" title="Ton an oder aus">' + (si.on ? '🔊 Ton: an' : '🔇 Ton: aus') + (si.on && si.state !== 'nicht gestartet' ? '<small style="display:block;font-size:14px;color:var(--mute)">' + si.loaded + '/' + si.total + ' Sounds geladen · Audio ' + si.state + '</small>' : '') + '</button>' +
+    '<button class="btn" style="font-size:21px;padding:10px" data-act="sndtoggle" title="Ton an oder aus">' + (si.on ? '🔊 Ton: an' : '🔇 Ton: aus') + (si.on && si.state !== 'nicht gestartet' ? '<small style="display:block;font-size:14px;color:var(--mute)">' + si.loaded + '/' + si.total + ' Sounds geladen · Audio ' + si.state + '</small>' : '') + '</button>' + volHTML() +
     (MP ? '' : '<button class="btn" style="font-size:21px;padding:10px" data-act="restart" title="Beginnt eine neue Partie (gleiche Art)">Neu starten</button>') +
     '<button class="btn" style="font-size:21px;padding:10px" data-act="leave">' + (MP ? 'Partie verlassen' : 'Spiel verlassen') + '</button></div></div>';
   mpChip();
