@@ -88,7 +88,7 @@ function spawnOne(el, stage, rng, v) {
     stats.gold = M.gold[st];
   }
   finalDeck = finalDeck.slice();
-  const base = { maxHp: stats.maxHp, maxMana: stats.maxMana, limit: stats.limit, drawLimit: stats.drawLimit, hand: Math.min(MAX_SLOTS, Math.max(2, Math.max(MIN_SLOTS, stats.limit + 2))) };   // Standardwerte vor den Würfeln (die Weltphase zeigt sie, im Kampf gelten die veränderten)
+  const base = { mag: Object.assign({}, stats.mag), maxHp: stats.maxHp, maxMana: stats.maxMana, limit: stats.limit, drawLimit: stats.drawLimit, hand: Math.min(MAX_SLOTS, Math.max(2, Math.max(MIN_SLOTS, stats.limit + 2))) };   // Standardwerte vor den Würfeln (die Weltphase zeigt sie, im Kampf gelten die veränderten)
   const tags = [], hints = [];
   if (v.d) {
     hints.push(v.d === 1 ? 'Generalist (breit): mehr Karten im Nebenelement, dafür weniger im Hauptelement. Vielseitiger, aber mit schwächerer Spitze.' : 'Spezialist (spitz): stärkere Spitze (mehr Karten der höchsten Stufe), dafür eine schwächere Basis (mehr Stufe-1-Karten).');

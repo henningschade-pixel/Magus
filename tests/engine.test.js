@@ -549,3 +549,13 @@ test('Monster-Hand ist höchstens so groß wie die der Spieler (Stufe III: Limit
   const r = M.spawnMonsters(3);
   for (const k of Object.keys(r)) { assert.equal(M.monsterHand(r[k]), M.MAX_SLOTS); assert.equal(r[k].stats.maxHp, 7); assert.equal(r[k].stats.limit, 4); }
 });
+
+test('Monsterkarte (Weltphase): die Standardwerte base enthalten auch die Magie ohne Würfelbonus', () => {
+  const D = M.MONSTER.variants.dice, st = M.newGame({ seed: 9, ai: [true, true] });
+  const save = D.plus.slice(), mag = D.plus.find(f => f.k === 'mag'), none = D.minus.find(f => f.k === 'none');
+  D.plus.fill(mag); D.minus.fill(none);
+  try {
+    const r = M.spawnMonsters(2, st.rng);
+    for (const k of Object.keys(r)) { const m = r[k], S = M.MONSTER.profile[m.el].secondary; assert.equal(m.stats.mag[S], m.base.mag[S] + 1, 'mit Würfel +1'); assert.deepEqual(m.base.mag, { F: m.el === 'F' ? 3 : m.el === 'W' ? 2 : 1, E: m.el === 'E' ? 3 : m.el === 'F' ? 2 : 1, W: m.el === 'W' ? 3 : m.el === 'E' ? 2 : 1 }); }
+  } finally { D.plus.splice(0, 6, ...save); }
+});
