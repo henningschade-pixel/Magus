@@ -15,8 +15,10 @@ async function mpRoomApi() {
 let offerTries = 0;
 async function mpOffer() {   // Startbildschirm: Mehrspielerbereich nur zeigen, wenn die Raum-Funktion da ist
   const api = await mpRoomApi(), box = document.getElementById('mpbox');
-  if (box && api) box.style.display = 'block';
-  else if (box && !(window.claude && window.claude.use) && ++offerTries < 8) setTimeout(mpOffer, 1000);   // PeerJS kommt evtl. verzögert vom Ausweich-Anbieter
+  const na = document.getElementById('mpna');
+  if (box && api) { box.style.display = 'block'; if (na) na.style.display = 'none'; }
+  else if (box && !(window.claude && window.claude.use) && ++offerTries < 8) setTimeout(mpOffer, 1000);
+  else if (na) na.textContent = 'Mehrspieler ist in dieser Umgebung nicht verfügbar.';   // PeerJS kommt evtl. verzögert vom Ausweich-Anbieter
 }
 function mpMsg(t, bad) { const m = document.getElementById('mpmsg'); if (m) { m.textContent = t || ''; m.style.color = bad ? 'var(--bad)' : ''; } }
 function mpCode() { const a = 'abcdefghjkmnpqrstuvwxyz23456789'; let s = ''; for (let i = 0; i < 5; i++) s += a[Math.random() * a.length | 0]; return s; }

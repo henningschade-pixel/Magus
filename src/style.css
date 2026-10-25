@@ -328,3 +328,11 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .volrow span{width:72px;text-align:left}
 .volrow output{width:34px;text-align:right;color:var(--mute);font-size:16px}
 .volrow input[type=range]{flex:1;min-width:0;height:22px;accent-color:var(--gold);cursor:var(--cp)}
+
+/* Hauptmenü: Liste breiter Knöpfe */
+.menulist{align-self:stretch;display:flex;flex-direction:column;gap:10px;align-items:stretch;margin:6px auto 0;width:340px;max-width:100%}
+.menulist .btn{font-size:22px;padding:11px 28px}
+.menulist .mpbox{border:0;margin:0;padding:0}
+.overlay .box.start h2{margin:0 0 4px;font-size:30px;color:var(--gold);font-variant:small-caps;text-align:center}
+.menufoot{margin-top:14px;text-align:center}
+.btn.link{background:none;border:0;box-shadow:none;color:var(--mute);font-size:16px;text-decoration:underline;padding:4px 8px}

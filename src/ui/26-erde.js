@@ -348,17 +348,43 @@ function renderInner() {
   if (G.over && !endView && !modal) { if (endSnd !== G) { endSnd = G; Snd.play(G.winner === ME ? 'win' : G.winner === null ? 'draw' : 'lose'); } showEnd(); }
   endTick(); specAdvance();
 }
-function showStart() {
-  setCursor('human');
+let menuView = null;   // zeichnet das gerade offene Menü neu (Ton-Schalter, Regler)
+const menuBtn = (act, txt, extra, cls) => '<button class="btn' + (cls ? ' ' + cls : '') + '" data-act="' + act + '"' + (extra || '') + '>' + txt + '</button>';
+const menuTo = (pg, txt, cls) => menuBtn('menu', txt, ' data-p="' + pg + '"', cls);
+function settingsHTML() {   // Einstellungen: Ton an/aus und die beiden Regler (Hauptmenü und Spielmenü)
+  const si = Snd.info();
+  return menuBtn('sndtoggle', (si.on ? '🔊 Ton: an' : '🔇 Ton: aus'), ' title="Ton an oder aus"') + volHTML();
+}
+function showStart(pg) {
+  pg = pg || 'main'; setCursor('human');
   overlay.style.display = 'flex'; overlay.className = 'overlay';
-  overlay.innerHTML = '<div class="box start"><h1>Magus</h1>' +
-    '<p class="note intro" style="margin-top:-2px"><b>Danke, dass du Magus testest!</b> Der Schwerpunkt von <b>Version 0.7</b> ist der <b>Ton</b>. <b>Hintergrundmusik:</b> Eine ruhige Musik läuft im Hintergrund als Endlosschleife, sobald der Ton an ist. <b>Lautstärke:</b> Im Hauptmenü und im Spielmenü (Haus-Symbol) stellst du <b>Effekte</b> und <b>Musik</b> getrennt mit Reglern ein; die Werte bleiben gespeichert, und Musik auf 0 schaltet sie ganz ab. <b>Angeglichene Effekte:</b> Alle Effekte liegen jetzt auf einem ähnlichen mittleren Pegel (etwa −20 dB); besonders leise Klänge wie Kartenwenden, Karte legen, Würfeln, Klick, Münzen und Mischen wurden angehoben, und das Spiel hat seine Mischung entsprechend angepasst. Nur Ultimate und Todes-Fluch sind absichtlich lauter. Sag mir bitte, ob dir ein Effekt noch zu laut oder zu leise vorkommt. <b>Version 0.6:</b> Das Spielfeld nutzt jetzt die <b>volle Fensterbreite</b>: Die Höhe bleibt gleich, die Breite folgt dem Seitenverhältnis des Fensters; die Statusfelder und die Bibliothek sitzen am rechten Rand, Monster und Kampfmitte bleiben mittig.</p>' +
-    '<img class="logo" alt="" src="assets/img/logo.webp">' +
-    (G && !G.over && !MP && started ? '<button class="btn primary" style="font-size:22px;padding:10px 28px;flex:none;align-self:center;margin-bottom:8px" data-act="resume">Spiel fortsetzen</button>' : '') + '<button class="btn' + (G && !G.over && !MP && started ? '' : ' primary') + '" style="font-size:22px;padding:10px 28px;flex:none;align-self:center" data-act="newgame">' + (G && !G.over && !MP && started ? 'Neues Spiel gegen den Computer' : 'Gegen den Computer spielen') + '</button>' +
-    '<button class="btn" style="font-size:18px;padding:8px 22px;flex:none;align-self:center;margin-top:8px" data-act="newspec" title="Zwei Computerspieler spielen gegeneinander, du schaust zu (für Spielablauf und Statistik)">Zwei Computern zuschauen</button>' +
-    volHTML() +
-    '<div id="mpbox" class="mpbox" style="display:none"><b>Mehrspieler</b> <span class="note">zwei Geräte, ein Raum</span><div class="mprow"><button class="btn" data-act="mphost">Raum erstellen</button><input id="mpcode" maxlength="5" placeholder="Code" autocomplete="off" spellcheck="false"><button class="btn" data-act="mpjoin">Beitreten</button></div><div id="mpmsg" class="note"></div></div></div>';
-  mpOffer();
+  menuView = () => showStart(pg);
+  const run = G && !G.over && !MP && started;
+  const back = menuTo('main', 'Zurück');
+  let h = '<div class="box start"><h1>Magus</h1>';
+  if (pg === 'main') {
+    h += '<img class="logo" alt="" src="assets/img/logo.webp"><div class="menulist">' +
+      (run ? menuBtn('resume', 'Spiel fortsetzen', '', 'primary') : '') +
+      menuTo('single', 'Einzelspieler', run ? '' : 'primary') + menuTo('multi', 'Mehrspieler') + menuTo('settings', 'Einstellungen') + menuBtn('quit', 'Beenden') + '</div>' +
+      '<div class="menufoot">' + menuTo('about', 'Neu in Version 0.8', 'link') + '</div>';
+  } else if (pg === 'single') {
+    h += '<h2>Einzelspieler</h2><div class="menulist">' +
+      menuBtn('newgame', run ? 'Neues Spiel gegen den Computer' : 'Gegen den Computer spielen', '', run ? '' : 'primary') +
+      menuBtn('newspec', 'Zwei Computern zuschauen', ' title="Zwei Computerspieler spielen gegeneinander, du schaust zu (für Spielablauf und Statistik)"') + back + '</div>';
+  } else if (pg === 'multi') {
+    offerTries = 0;
+    h += '<h2>Mehrspieler</h2><p class="note" style="text-align:center">Zwei Geräte, ein Raum</p><div class="menulist">' +
+      '<p id="mpna" class="note" style="text-align:center">Verbindung wird geprüft …</p>' +
+      '<div id="mpbox" class="mpbox" style="display:none"><div class="mprow">' + menuBtn('mphost', 'Raum erstellen') + '<input id="mpcode" maxlength="5" placeholder="Code" autocomplete="off" spellcheck="false">' + menuBtn('mpjoin', 'Beitreten') + '</div><div id="mpmsg" class="note"></div></div>' + back + '</div>';
+  } else if (pg === 'settings') {
+    h += '<h2>Einstellungen</h2><div class="menulist">' + settingsHTML() + back + '</div>';
+  } else if (pg === 'about') {
+    h += '<p class="note intro" style="margin-top:-2px"><b>Danke, dass du Magus testest!</b> Der Schwerpunkt von <b>Version 0.8</b> ist die <b>Menüführung</b>. <b>Hauptmenü:</b> Es gibt jetzt die üblichen Einträge <b>Einzelspieler</b> (gegen den Computer oder zwei Computern zuschauen), <b>Mehrspieler</b> (Raum erstellen oder mit Code beitreten), <b>Einstellungen</b> und <b>Beenden</b>. Läuft gerade eine Partie, steht oben zusätzlich <b>Spiel fortsetzen</b>. <b>Einstellungen:</b> Ton an oder aus sowie die Regler für <b>Effekte</b> und <b>Musik</b>; sie sind auch im Spielmenü (Haus-Symbol) erreichbar, das jetzt Fortsetzen, Neu starten, Statistik, Einstellungen und <b>Zum Hauptmenü</b> enthält. <b>Version 0.7:</b> Es läuft <b>Hintergrundmusik</b> als Endlosschleife; <b>Effekte und Musik</b> haben getrennte Lautstärkeregler, die Einstellung bleibt gespeichert. Alle Effekte liegen auf einem ähnlichen mittleren Pegel (etwa −20 dB), nur Ultimate und Todes-Fluch sind absichtlich lauter. Sag mir bitte, wenn dir die Musik oder ein Effekt zu laut oder zu leise vorkommt.</p><div class="menulist">' + back + '</div>';
+  } else if (pg === 'quit') {
+    h += '<p class="note" style="text-align:center;font-size:19px">Danke fürs Spielen!<br>Ein Browser-Tab lässt sich vom Spiel aus nicht immer schließen. Schließe diesen Tab oder dieses Fenster einfach selbst.</p><div class="menulist">' + back + '</div>';
+  }
+  overlay.innerHTML = h + '</div>';
+  if (pg === 'multi') mpOffer();
 }
 function showEnd() {
   const w = G.winner, a = G.players[ME].sp, b = G.players[OPP].sp;

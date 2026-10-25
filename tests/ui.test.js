@@ -12,7 +12,7 @@ test('Spiel startet, Kampf endet mit Ergebnis-Bildschirm, Klick führt zurück i
     const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
     p.on('pageerror', e => errs.push(e.message));
     await p.goto(url); await p.waitForTimeout(500);
-    await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
+    await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
     // Kampf gegen das Feuermonster mit angeschlagenem Gegner herbeiführen
     await p.evaluate(() => {
       const G = window.__magus.state, M = window.Magus;
@@ -37,7 +37,7 @@ test('Statistikseite öffnet, zeigt den Verlauf und lässt sich filtern und schl
     const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
     p.on('pageerror', e => errs.push(e.message));
     await p.goto(url); await p.waitForTimeout(500);
-    await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
+    await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
     assert.equal(await p.locator('#log .logdl').count(), 1);
     await p.click('#homebtn'); await p.click('text=Statistik');
     await p.waitForSelector('.box.stats svg');
@@ -61,7 +61,7 @@ test('Zuschauermodus: zwei Computer spielen gegeneinander, Eingaben sind gesperr
     const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
     p.on('pageerror', e => errs.push(e.message));
     await p.goto(url); await p.waitForTimeout(500);
-    await p.click('text=Zwei Computern zuschauen'); await p.waitForTimeout(500);
+    await p.click('text=Einzelspieler'); await p.click('text=Zwei Computern zuschauen'); await p.waitForTimeout(500);
     const n0 = await p.evaluate(() => window.__magus.state.logN);
     await p.evaluate(() => window.__magus.act({ type: 'temple', amount: 1 }));   // Eingabe eines Menschen: wird ignoriert
     await p.waitForTimeout(6000);
@@ -78,7 +78,7 @@ test('Am Partieende lassen sich Statistik und Protokoll öffnen und die Statisti
     const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
     p.on('pageerror', e => errs.push(e.message));
     await p.goto(url); await p.waitForTimeout(500);
-    await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(500);
+    await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(500);
     await p.evaluate(() => { const G = window.__magus.state; G.over = true; G.winner = 0; G.players[0].sp = 4; window.__magus.pump(); });
     await p.waitForSelector('#overlay [data-act="stend"]', { timeout: 5000 });
     assert.ok(await p.$('#overlay [data-act="logdl"]'), 'Protokoll-Knopf am Ende');
@@ -94,7 +94,7 @@ test('Statistik: ein Kampf lässt sich anklicken und zeigt seinen Verlauf', { sk
     const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
     p.on('pageerror', e => errs.push(e.message));
     await p.goto(url + '?fast'); await p.waitForTimeout(500);
-    await p.click('text=Zwei Computern zuschauen');
+    await p.click('text=Einzelspieler'); await p.click('text=Zwei Computern zuschauen');
     await p.waitForFunction(() => window.__magus.state.hist.some(h => h.ev && h.ev.trace), null, { timeout: 60000 });
     await p.evaluate(() => { window.__magus.stats(); });
     await p.waitForSelector('#overlay [data-act="stfight"]', { timeout: 5000 });
@@ -112,7 +112,7 @@ test('Fliehen: Knopf ist nur bei Monster ohne Mana bedienbar und beendet den Kam
     const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
     p.on('pageerror', e => errs.push(e.message));
     await p.goto(url); await p.waitForTimeout(500);
-    await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
+    await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
     await p.evaluate(() => { const G = window.__magus.state; window.Magus.apply(G, { pid: 0, type: 'combat', elem: 'F' }); window.__magus.pump(); });
     await p.waitForSelector('[data-act="fleeask"]');
     assert.equal(await p.getAttribute('[data-act="fleeask"]', 'disabled') !== null, true, 'mit Monster-Mana gesperrt');
@@ -135,7 +135,7 @@ test('Läuterung: Todesmarker beider Seiten sind im Kampfbildschirm anklickbar',
     const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
     p.on('pageerror', e => errs.push(e.message));
     await p.goto(url); await p.waitForTimeout(500);
-    await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(1000);
+    await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(1000);
     await p.evaluate(() => {
       const G = window.__magus.state, M = window.Magus; G.turn = 0; M.apply(G, { pid: 0, type: 'combat', elem: 'F' });
       const me = G.combat.sides.a, op = G.combat.sides.b; me.stats.limit = 3; me.stats.mag = { F: 3, E: 3, W: 3 }; me.stats.mana = me.stats.maxMana = 9;
@@ -158,7 +158,7 @@ test('Läuterung: eigene und gegnerische Spiegelmarker sind im Kampfbildschirm a
     const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
     p.on('pageerror', e => errs.push(e.message));
     await p.goto(url); await p.waitForTimeout(500);
-    await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(1000);
+    await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(1000);
     await p.evaluate(() => {
       const G = window.__magus.state, M = window.Magus; G.turn = 0; M.apply(G, { pid: 0, type: 'combat', elem: 'F' });
       const me = G.combat.sides.a, op = G.combat.sides.b; me.stats.limit = 3; me.stats.mag = { F: 3, E: 3, W: 3 }; me.stats.mana = me.stats.maxMana = 9;
@@ -183,7 +183,7 @@ test('Nachziehlimit: drei Kreise am Stapel, Plus-Knopf erscheint erst mit Gold u
     const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
     p.on('pageerror', e => errs.push(e.message));
     await p.goto(url); await p.waitForTimeout(500);
-    await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
+    await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
     await p.evaluate(() => { const st = window.__magus.state.players[0].stats; st.gold = 0; st.pending = 3; window.__magus.pump(); });
     assert.equal(await p.locator('[data-act="drawlimit"]').count(), 0, 'ohne Gold kein Plus-Knopf, auch mit Upgrade-Punkten');
     await p.evaluate(() => { window.__magus.state.players[0].stats.gold = 3; window.__magus.pump(); });
@@ -203,7 +203,7 @@ test('Magie-Knöpfe: zu teure Stufen durchscheinend und gesperrt, ohne Upgrade-P
     const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
     p.on('pageerror', e => errs.push(e.message));
     await p.goto(url); await p.waitForTimeout(500);
-    await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
+    await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
     await p.evaluate(() => { const s = window.__magus.state.players[0].stats; s.pending = 1; s.buys = { mag: 1 }; s.mag = { F: 2, E: 1, W: 1 }; window.__magus.pump(); });
     assert.equal(await p.locator('[data-act="magic"].off[disabled]').count(), 3, 'zweiter Magie-Kauf kostet 2 Punkte: alle gesperrt');
     assert.equal(await p.locator('[data-act="magic"]:not(.off)').count(), 0);
@@ -219,7 +219,7 @@ test('Schild-Effekt: Der Rückwurf startet dort, wo das Schild angezeigt wurde, 
     const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
     p.on('pageerror', e => errs.push(e.message));
     await p.goto(url); await p.waitForTimeout(500);
-    await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
+    await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
     const r = await p.evaluate(async () => {
       const mg = window.__magus, G = mg.state, M = window.Magus, out = {}, wait = ms => new Promise(r => setTimeout(r, ms));
       M.apply(G, { pid: 0, type: 'combat', elem: 'F' });
@@ -244,7 +244,7 @@ test('Lähmung: die Flüche erscheinen erst im Ablagestapel, wenn die Animation 
     const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
     p.on('pageerror', e => errs.push(e.message));
     await p.goto(url); await p.waitForTimeout(500);
-    await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
+    await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
     await p.evaluate(() => { const G = window.__magus.state; window.Magus.apply(G, { pid: 0, type: 'combat', elem: 'F' }); window.__magus.pump(); });
     await p.waitForTimeout(600);
     const ablage = () => p.evaluate(() => [...document.querySelectorAll('*')].filter(e => e.children.length === 0 && /^Ablage \d+$/.test(e.textContent.trim())).map(e => +e.textContent.replace(/\D/g, '')));
@@ -268,7 +268,7 @@ test('Monsterwürfel: je lebendem Monster ein roter Pluswürfel und ein grüner 
     const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
     p.on('pageerror', e => errs.push(e.message));
     await p.goto(url); await p.waitForTimeout(500);
-    await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(3500);   // Wurf (ca. 1,5 s + Versatz) ist vorbei
+    await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(3500);   // Wurf (ca. 1,5 s + Versatz) ist vorbei
     const r = await p.evaluate(() => {
       const G = window.__magus.state, dice = [...document.querySelectorAll('#dicelayer .dk-die')];
       return { n: dice.length, visible: dice.every(d => d.style.visibility !== 'hidden' && d.offsetParent !== null), faces: dice.map(d => d.title.split(':')[0]), expect: G.monsters.F && ['F', 'E', 'W'].map(e => [G.monsters[e].variant.pl, G.monsters[e].variant.mi]).flat() };
@@ -277,6 +277,27 @@ test('Monsterwürfel: je lebendem Monster ein roter Pluswürfel und ein grüner 
     assert.deepEqual(r.faces, ['Pluswürfel', 'Minuswürfel', 'Pluswürfel', 'Minuswürfel', 'Pluswürfel', 'Minuswürfel']);
     assert.equal(r.expect.length, 6);
     assert.equal(await p.evaluate(() => document.querySelectorAll('.mon .mlabel').length), 0, 'keine benannten Effekte mehr unter dem Namen');
+    assert.deepEqual(errs, []);
+  } finally { await b.close(); }
+});
+
+test('Hauptmenü: Einzelspieler, Mehrspieler, Einstellungen, Beenden; Einstellungen mit Reglern; Spielmenü führt zurück ins Hauptmenü', { skip: !chromium && 'Playwright nicht installiert', timeout: 60000 }, async () => {
+  const b = await chromium.launch({ executablePath: exe });
+  try {
+    const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
+    p.on('pageerror', e => errs.push(e.message));
+    await p.goto(url); await p.waitForTimeout(500);
+    const txt = () => p.evaluate(() => document.getElementById('overlay').innerText);
+    let t = await txt();
+    for (const w of ['Einzelspieler', 'Mehrspieler', 'Einstellungen', 'Beenden']) assert.ok(t.includes(w), w + ' fehlt im Hauptmenü');
+    assert.ok(!t.includes('Gegen den Computer'), 'Spielstart gehört ins Untermenü');
+    await p.click('text=Einstellungen'); assert.equal(await p.locator('input[data-vol]').count(), 2, 'zwei Regler');
+    await p.click('text=Zurück'); await p.click('text=Mehrspieler'); assert.ok((await txt()).includes('Mehrspieler')); await p.click('text=Zurück');
+    await p.click('text=Beenden'); await p.waitForTimeout(400); assert.ok((await txt()).includes('Danke fürs Spielen')); await p.click('text=Zurück');
+    await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
+    await p.click('#homebtn'); t = await txt(); for (const w of ['Fortsetzen', 'Neu starten', 'Statistik', 'Einstellungen', 'Zum Hauptmenü']) assert.ok(t.includes(w), w + ' fehlt im Spielmenü');
+    await p.click('text=Einstellungen'); assert.equal(await p.locator('input[data-vol]').count(), 2); await p.click('text=Zurück');
+    await p.click('text=Zum Hauptmenü'); t = await txt(); assert.ok(t.includes('Spiel fortsetzen') && t.includes('Einzelspieler'));
     assert.deepEqual(errs, []);
   } finally { await b.close(); }
 });
