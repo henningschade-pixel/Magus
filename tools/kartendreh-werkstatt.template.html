@@ -1,0 +1,237 @@
+<title>Kartendreh-Werkstatt</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+SC:wght@400;700&family=Alegreya+Sans:wght@400;500;700&family=Cinzel:wght@500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Links die Bühne mit den drei Monsterkarten in Spielgröße (188 x 408), rechts die Regler; darunter Export. Dunkle Optik wie im Spiel. */
+:root{
+  --ink:#141416; --panel:#232327; --panel2:#2e2e33; --line:#4d4d55; --gold:#d2ad4f; --bone:#efe6d2; --mute:#aaaab2; --water:#52a6f5; --good:#7fd08a;
+  --f-display:"Cinzel",Georgia,serif; --f-body:"Alegreya Sans","Segoe UI",system-ui,sans-serif; --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--ink);color:var(--bone);font:16px/1.45 var(--f-body);margin:0;padding-block:20px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+h1{font:700 26px/1.1 var(--f-display);letter-spacing:.06em;margin:0;color:var(--gold)}
+header p{margin:6px 0 0;color:var(--mute);max-width:70ch}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--water);outline-offset:2px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:18px;align-items:start}
+@media(max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+.left{display:flex;flex-direction:column;gap:12px;min-width:0}
+.viewport{position:relative;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#0c0c0e;aspect-ratio:8/5}
+/* feste Spielbühne 1280 x 800, per Skalierung in die Breite eingepasst */
+.stage{position:absolute;left:0;top:0;width:1280px;height:800px;transform-origin:top left;background:radial-gradient(ellipse at 50% 40%,#2a2a30,#0c0c0e 75%)}
+.hud{position:absolute;left:10px;top:8px;z-index:5;font:500 11px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--mute);background:rgba(12,12,14,.7);padding:3px 8px;border-radius:4px;pointer-events:none}
+.slot{position:absolute;width:188px;height:408px;perspective:var(--persp,800px)}
+.mc{position:absolute;inset:0;transform-style:preserve-3d;will-change:transform}
+.face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border:1px solid var(--line);border-radius:12px;background:#000;overflow:hidden}
+.face.back{background:#000 center/88% auto no-repeat}
+.face.front.turned{transform:rotateY(180deg)}
+.under{display:none}
+.blende .under{display:flex}
+.blende .turned{display:none}
+.face.front{display:flex;flex-direction:column;text-align:center;padding:4px 8px 10px}
+.face.front img{object-fit:contain;display:block;margin:-20px auto 2px;width:156px;height:178px}
+.face .nm{font-family:'Alegreya SC',serif;font-size:18px}
+.face .sm{font-size:15px;color:var(--mute);line-height:1.2}
+.face .sm.v{color:#e6e1d6;font-weight:700;margin-top:2px}
+.face .bar{height:8px;background:#141416;border-radius:5px;overflow:hidden;border:1px solid #44444c;margin:3px 4px}
+.face .bar i{display:block;height:100%;width:70%;background:linear-gradient(90deg,#c9484c,#ea7a6d)}
+.face .fake{margin-top:auto;border:1px solid var(--line);border-radius:9px;padding:3px 10px;background:linear-gradient(180deg,#3d3d44,#2b2b30);font-size:18px}
+.glint{position:absolute;inset:0;pointer-events:none;mix-blend-mode:screen;border-radius:12px}
+.shadow{position:absolute;left:8%;right:8%;bottom:-18px;height:26px;border-radius:50%;background:rgba(0,0,0,.6);filter:blur(10px);pointer-events:none}
+.transport{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+.btn{font:500 14px var(--f-body);background:var(--panel2);color:var(--bone);border:1px solid var(--line);border-radius:6px;padding:7px 14px;cursor:pointer}
+.btn:hover{border-color:var(--gold)}
+.btn.primary{background:var(--gold);color:var(--ink);border-color:var(--gold);font-weight:700}
+.opt{display:flex;align-items:center;gap:6px;color:var(--mute);font-size:14px}
+select{background:var(--panel2);color:var(--bone);border:1px solid var(--line);border-radius:6px;padding:5px 8px;font:inherit;min-width:0}
+input[type=range]{width:100%;accent-color:var(--gold);margin:0}
+h2{font:700 13px var(--f-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--mute);margin:0 0 8px}
+.side{display:flex;flex-direction:column;gap:14px;min-width:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.row{display:grid;gap:2px}
+.row .top{display:flex;justify-content:space-between;gap:8px;font-size:14px}
+.row .top output{font:400 12px var(--f-mono);color:var(--gold)}
+.note{font-size:13px;color:var(--mute);margin:0}
+.curve{display:block;width:100%;height:90px;background:#0e0e10;border:1px solid var(--line);border-radius:6px}
+textarea{width:100%;min-height:110px;background:#0e0e10;color:var(--bone);border:1px solid var(--line);border-radius:6px;font:400 12px/1.4 var(--f-mono);padding:8px;resize:vertical}
+.ok{color:var(--good);font-size:13px;min-height:18px}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+</style>
+<div class="wrap">
+<header>
+  <h1>Kartendreh-Werkstatt</h1>
+  <p>So werden die drei Monsterkarten zu Spielbeginn aufgedeckt (<code>Intro</code> in <code>src/ui/31b-start.js</code>). Im Spiel kippt bisher nur die verdeckte Karte (Logo) um 90° und blendet aus; die Monsterkarte liegt schon darunter. Hier probierst du eine echte Drehung um 180° mit Vorder- und Rückseite aus. Rechts einstellen, links beurteilen, am Ende den Export an Claude schicken.</p>
+</header>
+<div class="grid">
+  <div class="left">
+    <div class="viewport" id="vp"><div class="stage" id="stage"></div><div class="hud" id="hud"></div></div>
+    <div class="transport">
+      <button class="btn primary" id="go" type="button">Aufdecken</button>
+      <button class="btn" id="reset" type="button">Zurück auf verdeckt</button>
+      <label class="opt"><input type="checkbox" id="auto" checked> automatisch wiederholen</label>
+      <label class="opt">Tempo <select id="speed"><option value="1">normal</option><option value="2">halb so schnell</option><option value="4">Zeitlupe</option></select></label>
+    </div>
+    <p class="note">Ein Klick auf eine Karte deckt nur diese auf. Die „Aktuell"-Vorlage zeigt das heutige Verhalten (Kippen um 90°, Ausblenden).</p>
+  </div>
+  <div class="side">
+    <div class="card"><h2>Vorlagen</h2><div class="transport" id="presets"></div></div>
+    <div class="card" id="c-dreh"><h2>Drehung</h2></div>
+    <div class="card" id="c-heb"><h2>Heben und Kippen</h2></div>
+    <div class="card" id="c-licht"><h2>Licht und Schatten</h2></div>
+    <div class="card" id="c-zeit"><h2>Zeit</h2><canvas class="curve" id="curve" width="600" height="180"></canvas></div>
+    <div class="card">
+      <h2>Export</h2>
+      <p class="note">Schick den Text an Claude, zum Beispiel mit „Übernehmen:" davor. Import: Text einfügen und „Laden".</p>
+      <textarea id="out"></textarea>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn primary" id="copy" type="button">Kopieren</button><button class="btn" id="load" type="button">Laden</button><span class="ok" id="ok"></span></div>
+    </div>
+  </div>
+</div>
+</div>
+<script>
+const IMG = /*IMG*/;
+const LAYOUT = { left: 296, top: 182, step: 212, w: 188, h: 408 };   // wie LAYOUT.monsters im Spiel
+const MONS = [
+  { img: IMG.m_f1, name: 'Feuer', col: '#ff6b3d' },
+  { img: IMG.m_e1, name: 'Erde', col: '#8bc34a' },
+  { img: IMG.m_w1, name: 'Wasser', col: '#52a6f5' }
+];
+const EASES = {
+  weich: 'cubic-bezier(.4,0,.2,1)', schnellaus: 'cubic-bezier(.1,.7,.2,1)', langsamaus: 'cubic-bezier(.7,0,.9,.4)', linear: 'cubic-bezier(0,0,1,1)', federnd: 'back'
+};
+// Regler: key, Beschriftung, min, max, Schritt, Einheit
+const SL = {
+  'c-dreh': [
+    ['extra', 'Zusätzliche volle Umdrehungen', 0, 3, 1, '×'],
+    ['achse', 'Achse: 0 senkrecht, 90 waagerecht', 0, 90, 5, '°'],
+    ['persp', 'Perspektive (klein = stark)', 300, 2400, 50, ' px'],
+    ['stufe', 'Versatz je Karte', 0, 1500, 50, ' ms']
+  ],
+  'c-heb': [
+    ['heben', 'Heben (Karte kommt näher)', 0, 200, 5, ' px'],
+    ['skal', 'Vergrößerung in der Mitte', 1, 1.4, .02, '×'],
+    ['kipp', 'Seitliches Kippen (Z)', 0, 20, .5, '°'],
+    ['huepf', 'Hüpfer am Ende', 0, 30, 1, ' px'],
+    ['nach', 'Überdrehen und Zurückfedern', 0, 30, 1, '°']
+  ],
+  'c-licht': [
+    ['schatten', 'Schattenstärke', 0, 1, .05, ''],
+    ['glanz', 'Glanzstreifen', 0, 1, .05, ''],
+    ['leucht', 'Leuchten in Elementfarbe beim Aufdecken', 0, 1, .05, '']
+  ],
+  'c-zeit': [
+    ['dauer', 'Dauer einer Drehung', 200, 2500, 50, ' ms']
+  ]
+};
+const DEF = { extra: 0, achse: 0, persp: 800, stufe: 300, heben: 30, skal: 1.06, kipp: 4, huepf: 6, nach: 8, schatten: .5, glanz: .5, leucht: .4, dauer: 900, kurve: 'weich', blende: 0 };
+const PRE = {
+  'Aktuell': { extra: 0, achse: 0, persp: 800, stufe: 0, heben: 0, skal: 1, kipp: 0, huepf: 0, nach: 0, schatten: 0, glanz: 0, leucht: 0, dauer: 450, kurve: 'langsamaus', blende: 1 },
+  'Volle Drehung': { },
+  'Wuchtig': { extra: 1, heben: 70, skal: 1.15, kipp: 8, huepf: 12, nach: 0, schatten: .8, glanz: .7, leucht: .6, dauer: 1300, kurve: 'schnellaus', persp: 600 },
+  'Federnd': { heben: 20, nach: 18, huepf: 4, dauer: 800, kurve: 'federnd' },
+  'Kippend': { achse: 25, kipp: 10, heben: 40, persp: 500, dauer: 1000 }
+};
+let P = Object.assign({}, DEF), cardState = [0, 0, 0], running = [null, null, null];
+const $ = id => document.getElementById(id);
+const stage = $('stage'), vp = $('vp');
+
+/* Aufbau der Karten */
+const slots = MONS.map((m, i) => {
+  const s = document.createElement('div'); s.className = 'slot';
+  s.style.cssText = 'left:' + (LAYOUT.left + i * LAYOUT.step) + 'px;top:' + LAYOUT.top + 'px';
+  const fr = '<img src="' + m.img + '" alt=""><div class="nm">' + m.name + 'golem</div><div class="sm">Stufe 1</div><div class="bar"><i></i></div><div class="sm v">Angriff 3 · Abwehr 2</div><div class="fake">Kämpfen</div><div class="glint"></div>';
+  s.innerHTML = '<div class="shadow"></div><div class="face front under">' + fr + '</div><div class="mc"><div class="face back"></div><div class="face front turned">' + fr + '</div></div>';
+  s.querySelector('.back').style.backgroundImage = 'url(' + IMG.logo + ')';
+  s.addEventListener('click', () => flip(i, 0));
+  stage.appendChild(s); return s;
+});
+function fit() { const k = vp.clientWidth / 1280; stage.style.transform = 'scale(' + k + ')'; }
+new ResizeObserver(fit).observe(vp); fit();
+
+/* Kurven */
+function bez(x1, y1, x2, y2) {   // CSS-cubic-bezier als Funktion t -> Wert
+  return t => { let a = 0, b = 1, u = t; for (let k = 0; k < 24; k++) { u = (a + b) / 2; const x = 3 * (1 - u) * (1 - u) * u * x1 + 3 * (1 - u) * u * u * x2 + u * u * u; if (x < t) a = u; else b = u; } return 3 * (1 - u) * (1 - u) * u * y1 + 3 * (1 - u) * u * u * y2 + u * u * u; };
+}
+function easeFn(name) {
+  if (name === 'back') return t => { const c = 1.9; return 1 + (c + 1) * Math.pow(t - 1, 3) + c * Math.pow(t - 1, 2); };
+  const m = /cubic-bezier\(([^)]+)\)/.exec(EASES[name]).slice(1)[0].split(',').map(Number); return bez(m[0], m[1], m[2], m[3]);
+}
+
+/* Pose zum Zeitpunkt t (0..1) der Drehung */
+function pose(t, back) {
+  const e = easeFn(P.kurve)(t), sinT = Math.sin(Math.PI * t);
+  const over = P.nach ? P.nach * Math.sin(Math.PI * Math.min(1, Math.max(0, (t - .6) / .4))) * (P.kurve === 'federnd' ? 0 : 1) : 0;
+  const ang = (P.blende ? 90 : 180 + 360 * P.extra) * e + over * (t > .6 ? 1 : 0);
+  const lift = P.heben * sinT, sc = 1 + (P.skal - 1) * sinT, z = P.kipp * Math.sin(2 * Math.PI * t) * (1 - t);
+  const hop = t > .85 ? -P.huepf * Math.sin(Math.PI * (t - .85) / .15) : 0;
+  return { ang, lift, sc, z, hop, sinT };
+}
+function apply(i, t) {
+  const s = slots[i], mc = s.querySelector('.mc'), sh = s.querySelector('.shadow'), p = pose(t);
+  s.style.setProperty('--persp', P.persp + 'px');
+  const ax = P.achse * Math.PI / 180, ux = Math.sin(ax), uy = Math.cos(ax);   // Drehachse in der Ebene: 0° = senkrecht (Y)
+  mc.style.transform = 'translateY(' + p.hop + 'px) translateZ(' + p.lift + 'px) rotateZ(' + p.z + 'deg) scale(' + p.sc + ') rotate3d(' + ux + ',' + uy + ',0,' + p.ang + 'deg)';
+  mc.style.opacity = P.blende ? (1 - .6 * t) : 1;
+  sh.style.opacity = P.schatten * (1 - .6 * p.sinT); sh.style.transform = 'scale(' + (1 + .15 * p.sinT) + ')';
+  const f = s.querySelector('.turned'), g = f.querySelector('.glint');
+  s.classList.toggle('blende', !!P.blende);
+  const gl = P.glanz * p.sinT, gx = -30 + 160 * t;
+  g.style.background = 'linear-gradient(105deg,transparent ' + (gx - 18) + '%,rgba(255,255,255,' + (.55 * gl) + ') ' + gx + '%,transparent ' + (gx + 18) + '%)';
+  f.style.boxShadow = P.leucht ? '0 0 ' + (40 * P.leucht * p.sinT) + 'px ' + (4 * P.leucht * p.sinT) + 'px ' + MONS[i].col : 'none';
+}
+function rest(i, open) { apply(i, open ? 1 : 0); slots[i].querySelector('.mc').style.opacity = P.blende && open ? 0 : 1; }
+
+function flip(i, delay) {
+  cancelAnimationFrame(running[i]); const k = +$('speed').value, dur = P.dauer * k, t0 = performance.now() + delay * k;
+  const step = now => {
+    const t = Math.min(1, Math.max(0, (now - t0) / dur));
+    if (now >= t0) apply(i, t);
+    if (t < 1) running[i] = requestAnimationFrame(step); else { cardState[i] = 1; rest(i, true); finished(); }
+  };
+  slots.forEach(() => 0); apply(i, 0); running[i] = requestAnimationFrame(step); cardState[i] = 0.5;
+}
+function playAll() { reset(); [0, 1, 2].forEach(i => flip(i, i * P.stufe)); }
+function reset() { running.forEach(cancelAnimationFrame); cardState = [0, 0, 0]; [0, 1, 2].forEach(i => rest(i, false)); }
+let autoTimer = 0;
+function finished() { if (cardState.every(s => s === 1) && $('auto').checked) { clearTimeout(autoTimer); autoTimer = setTimeout(playAll, 1400); } }
+
+/* Statuszeile */
+function note() {
+  $('hud').textContent = P.blende ? 'Kippen um 90° und Ausblenden (wie im Spiel)' : 'Drehung um ' + (180 + 360 * P.extra) + '°, endet auf der Vorderseite';
+}
+
+/* Regler */
+const rowEls = {};
+for (const [cid, list] of Object.entries(SL)) for (const [key, lab, mn, mx, st, unit] of list) {
+  const r = document.createElement('div'); r.className = 'row';
+  r.innerHTML = '<div class="top"><span>' + lab + '</span><output></output></div><input type="range" min="' + mn + '" max="' + mx + '" step="' + st + '">';
+  const inp = r.querySelector('input'), out = r.querySelector('output');
+  inp.addEventListener('input', () => { P[key] = +inp.value; sync(); });
+  rowEls[key] = { inp, out, unit }; $(cid).appendChild(r);
+}
+const kr = document.createElement('div'); kr.className = 'row';
+kr.innerHTML = '<div class="top"><span>Kurve</span></div><select id="kurve">' + Object.keys(EASES).map(k => '<option>' + k + '</option>').join('') + '</select>';
+$('c-zeit').appendChild(kr); $('kurve').addEventListener('change', e => { P.kurve = e.target.value; sync(); });
+const br = document.createElement('label'); br.className = 'opt';
+br.innerHTML = '<input type="checkbox" id="blende"> Heute: ausblenden statt zeigen (alte Art)'; $('c-dreh').appendChild(br); $('blende').addEventListener('change', e => { P.blende = e.target.checked ? 1 : 0; sync(); });
+
+function drawCurve() {
+  const c = $('curve'), g = c.getContext('2d'), w = c.width, h = c.height; g.clearRect(0, 0, w, h);
+  g.strokeStyle = '#4d4d55'; g.beginPath(); g.moveTo(0, h - 20); g.lineTo(w, h - 20); g.stroke();
+  const max = Math.max((P.blende ? 90 : 180 + 360 * P.extra) + P.nach, 90); g.strokeStyle = '#d2ad4f'; g.lineWidth = 2; g.beginPath();
+  for (let i = 0; i <= 120; i++) { const t = i / 120, a = pose(t).ang; const x = t * w, y = h - 20 - a / max * (h - 36); i ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke();
+}
+function sync() {
+  for (const k in rowEls) { const r = rowEls[k]; r.inp.value = P[k]; r.out.textContent = (+P[k]).toString().replace('.', ',') + r.unit; }
+  $('kurve').value = P.kurve; $('blende').checked = !!P.blende;
+  $('out').value = JSON.stringify(P); note(); drawCurve(); if (!running.some(Boolean) || cardState.every(s => s !== .5)) [0, 1, 2].forEach(i => rest(i, cardState[i] === 1));
+}
+Object.keys(PRE).forEach(n => { const b = document.createElement('button'); b.className = 'btn'; b.type = 'button'; b.textContent = n; b.onclick = () => { P = Object.assign({}, DEF, PRE[n]); sync(); playAll(); }; $('presets').appendChild(b); });
+$('go').onclick = playAll; $('reset').onclick = reset;
+$('copy').onclick = () => { $('out').select(); (navigator.clipboard ? navigator.clipboard.writeText($('out').value) : Promise.reject()).catch(() => document.execCommand('copy')).finally(() => { $('ok').textContent = 'Kopiert.'; setTimeout(() => $('ok').textContent = '', 1600); }); };
+$('load').onclick = () => { try { P = Object.assign({}, DEF, JSON.parse($('out').value)); sync(); playAll(); $('ok').textContent = 'Geladen.'; } catch (e) { $('ok').textContent = 'Kein gültiger Export.'; } };
+sync(); reset(); setTimeout(playAll, 500);
+</script>
