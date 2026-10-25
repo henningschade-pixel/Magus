@@ -10,6 +10,7 @@ function newGame(spec) {
   M.record(G); G.keepSnap = true;
   seenCombat = null; upSeen = null; endView = null; modal = null; introSeen = -1; hold = 0; started = true;
   overlay.style.display = 'none'; overlay.innerHTML = '';
+  Intro.start();
   pump();
 }
 function snapStats(c) { return { a: JSON.parse(JSON.stringify(c.sides.a.stats)), b: JSON.parse(JSON.stringify(c.sides.b.stats)) }; }
@@ -72,7 +73,7 @@ function worldSound(type, gainedUp, magNow, cardLv) {
   else if (type === 'vendor' && cardLv >= 2) Snd.play('card_lv' + cardLv);   // Karte auf Stufe 2 bzw. 3 aufgewertet
 }
 function act(a) {
-  if (!G || G.over || endView || modal || SPEC) return;   // beim Zuschauen gibt es keine Eingaben
+  if (!G || G.over || endView || modal || SPEC || Intro.on) return;   // beim Zuschauen gibt es keine Eingaben
   if (markerOnWay()) { toast('Der Zugmarker ist noch unterwegs.'); return; }
   const full = Object.assign({ pid: ME }, a), prev = G.logN, up0 = G.players[ME].stats.upGot, r = M.apply(G, full);
   if (!r.ok) { toast(r.error); return; }

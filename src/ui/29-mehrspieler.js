@@ -52,7 +52,7 @@ function mpStart(seed, first, rules) {
   M.record(G); G.keepSnap = true;
   seenCombat = null; endView = null; modal = null; introSeen = -1; hold = 0; started = true;
   overlay.style.display = 'none'; overlay.innerHTML = '';
-  mpChip(); pump();
+  Intro.start(); mpChip(); pump();
 }
 function mpBegin() {   // Gastgeber: Spiel anlegen
   const rules = Object.assign({}, M.DEFAULT_RULES);

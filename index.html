@@ -183,6 +183,10 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .mon .sm{font-size:15px;color:var(--mute);line-height:1.2}
 .mon .sm.vals{color:var(--text,#e6e1d6);font-size:15px;font-weight:700;margin-top:2px}
 .mon.gone img.pic{opacity:.3}
+.mon.hid{background-size:cover;background-position:center;opacity:.95}
+.mon.rev{animation:monrev .55s ease-out}
+@keyframes monrev{from{transform:perspective(700px) rotateY(88deg);opacity:.2}to{transform:none;opacity:1}}
+#introhint{position:absolute;left:50%;top:6px;transform:translateX(-50%);z-index:90;padding:3px 12px;border-radius:9px;background:rgba(0,0,0,.6);color:var(--mute);font-size:14px;pointer-events:none}
 .mon .loot{color:var(--gold);font-size:16px}
 .mon .btn{margin-top:auto;width:100%;padding:3px 10px;flex:none}
 .mon>*{flex:none}
@@ -2165,6 +2169,7 @@ function drawTrack(L, mine) {
 function renderCards() {
   frame++; const quiet = els.size === 0; firstFrame = quiet;
   const cx = ctx();
+  if (Intro.on) { cx.myDeck = Intro.view(cx.myDeck, ME); cx.oppDeck = Intro.view(cx.oppDeck, OPP); }   // Spielstart: gedachter Kartenstand
   layoutDeck(cx.myDeck, L_MY, true);
   layoutDeck(cx.oppDeck, L_OP, false);
   for (const [uid, rec] of els) if (rec.frame !== frame) {
@@ -2172,7 +2177,7 @@ function renderCards() {
     if (back) { d.style.pointerEvents = 'none'; d.style.zIndex = 400; d.style.transform = 'translate(' + back.x + 'px,' + back.y + 'px) scale(' + back.sc + ')'; cardsUntil = Math.max(cardsUntil, Date.now() + 520); setTimeout(() => d.remove(), 520); }
     else { d.classList.add('fadeout'); cardsUntil = Math.max(cardsUntil, Date.now() + 1200); setTimeout(() => d.remove(), 1200); }
   }
-  flushSound(quiet);
+  flushSound(quiet || Intro.on);
   // Platzhalter, Stapel-Beschriftungen, Klickflächen
   let ph = '';
   const n = cx.myDeck.hand.length;
@@ -2359,9 +2364,10 @@ function monsterCards() {
   let h = '';
   const my = myTurn(), R = LAYOUT.monsters;
   M.ELEMENTS.forEach((e, i) => {
+    if (Intro.on && i >= Intro.monRev) { h += '<div class="mon hid" style="left:' + (R.left + i * R.step) + 'px;top:' + R.top + 'px;width:' + R.w + 'px;height:' + R.h + 'px;background-image:url(' + IMG.back + ')"></div>'; return; }   // Spielstart: noch verdeckt
     const m = G.monsters[e], alive = M.monsterAlive(m), st = m.stats, b = m.base || { maxHp: st.maxHp, maxMana: st.maxMana, limit: st.limit, drawLimit: st.drawLimit || 1, hand: M.monsterHand(m) };   // Weltphase: unveränderte Standardwerte, die Würfel liegen darüber; im Kampf gelten die veränderten Werte
     const gone = !alive && m.retreated, img = alive || gone ? IMG['m_' + m.el.toLowerCase() + m.stage] : IMG['d_' + m.el.toLowerCase()];   // zurückgezogenes Monster: eigenes Bild, durchscheinend
-    h += '<div class="mon ' + (alive ? '' : gone ? 'dead gone' : 'dead') + '" style="left:' + (R.left + i * R.step) + 'px;top:' + R.top + 'px;width:' + R.w + 'px;height:' + R.h + 'px;padding:4px 8px 10px"><img class="pic" src="' + img + '" style="width:156px;height:178px">' +
+    h += '<div class="mon ' + (alive ? '' : gone ? 'dead gone' : 'dead') + (Intro.on && Intro.fresh === i ? ' rev' : '') + '" style="left:' + (R.left + i * R.step) + 'px;top:' + R.top + 'px;width:' + R.w + 'px;height:' + R.h + 'px;padding:4px 8px 10px"><img class="pic" src="' + img + '" style="width:156px;height:178px">' +
       '<div class="nm ' + m.el + '"' + (m.hints && m.hints.length ? ' title="' + esc(m.hints.join('\n')) + '"' : '') + '>' + esc(m.name) + '</div>';   // die Würfel liegen über dem Kämpfen-Knopf (DiceBoard, LAYOUT.monsters.diceY)
     if (alive) {
       const hpNow = Math.max(1, b.maxHp - (st.maxHp - st.hp)), manaNow = Math.max(0, b.maxMana - (st.maxMana - st.mana));   // Würfel ändern die Höchstwerte; ein erlittener Verlust (Höchstwert minus Stand) wird auf die Standardwerte übertragen, ein unversehrtes Monster zeigt also volle Standardwerte
@@ -3370,6 +3376,7 @@ function newGame(spec) {
   M.record(G); G.keepSnap = true;
   seenCombat = null; upSeen = null; endView = null; modal = null; introSeen = -1; hold = 0; started = true;
   overlay.style.display = 'none'; overlay.innerHTML = '';
+  Intro.start();
   pump();
 }
 function snapStats(c) { return { a: JSON.parse(JSON.stringify(c.sides.a.stats)), b: JSON.parse(JSON.stringify(c.sides.b.stats)) }; }
@@ -3432,7 +3439,7 @@ function worldSound(type, gainedUp, magNow, cardLv) {
   else if (type === 'vendor' && cardLv >= 2) Snd.play('card_lv' + cardLv);   // Karte auf Stufe 2 bzw. 3 aufgewertet
 }
 function act(a) {
-  if (!G || G.over || endView || modal || SPEC) return;   // beim Zuschauen gibt es keine Eingaben
+  if (!G || G.over || endView || modal || SPEC || Intro.on) return;   // beim Zuschauen gibt es keine Eingaben
   if (markerOnWay()) { toast('Der Zugmarker ist noch unterwegs.'); return; }
   const full = Object.assign({ pid: ME }, a), prev = G.logN, up0 = G.players[ME].stats.upGot, r = M.apply(G, full);
   if (!r.ok) { toast(r.error); return; }
@@ -3579,7 +3586,7 @@ function mpStart(seed, first, rules) {
   M.record(G); G.keepSnap = true;
   seenCombat = null; endView = null; modal = null; introSeen = -1; hold = 0; started = true;
   overlay.style.display = 'none'; overlay.innerHTML = '';
-  mpChip(); pump();
+  Intro.start(); mpChip(); pump();
 }
 function mpBegin() {   // Gastgeber: Spiel anlegen
   const rules = Object.assign({}, M.DEFAULT_RULES);
@@ -4064,15 +4071,14 @@ const DiceBoard = (() => {
     });
     thrown = false;
   }
-  function throwAll() {
-    thrown = true;
-    items.forEach((it, i) => {
-      if (!it) return;
-      const P = DiceKit.P, d0 = i * P.monsterStagger * 1000;
-      if (!FAST) Snd.play('dice', d0 / 1000, .6);   // Würfelrollen auf dem Tisch, je Monsterkarte einmal beim Wurf
-      [it.pl, it.mi].forEach((el, j) => { const k = j ? it.v.mi : it.v.pl; DiceKit.roll(el, k, d0 + j * P.stagger * 1000, null, (j ? it.vr.minus : it.vr.plus).roll); });
-    });
+  function throwItem(i, d0) {   // Wurf der beiden Würfel einer Monsterkarte (einmal je Karte)
+    const it = items[i]; if (!it || it.thrown) return; it.thrown = true;
+    const P = DiceKit.P; d0 = d0 || 0;
+    if (!FAST) Snd.play('dice', d0 / 1000, .6);   // Würfelrollen auf dem Tisch, je Monsterkarte einmal beim Wurf
+    [it.pl, it.mi].forEach((el, j) => { const k = j ? it.v.mi : it.v.pl; DiceKit.roll(el, k, d0 + j * P.stagger * 1000, null, (j ? it.vr.minus : it.vr.plus).roll); });
   }
+  function throwAll() { thrown = true; items.forEach((it, i) => throwItem(i, i * DiceKit.P.monsterStagger * 1000)); }
+  function throwRest() { if (!FAST && items.length) { thrown = true; items.forEach((it, i) => throwItem(i, 0)); } }   // Spielstart beendet oder übersprungen: alle noch nicht geworfenen Würfel
   // Nach jedem Zeichnen: neue Monster -> neue Würfel; sichtbar nur in der Weltphase ohne Überlagerung; geworfen wird, sobald sie sichtbar sind
   function sync() {
     if (!G || FAST) return;
@@ -4082,9 +4088,54 @@ const DiceBoard = (() => {
     layer.style.display = visible ? '' : 'none';
     if (!visible) return;
     items.forEach(it => { if (!it) return; const alive = M.monsterAlive(G.monsters[it.slot]); it.pl.style.display = it.mi.style.display = alive ? '' : 'none'; });
-    if (!thrown) throwAll();
+    if (!thrown && !Intro.on) throwAll();
   }
-  return { sync };
+  return { sync, throwItem, throwRest };
+})();
+/* ---------- Spielstart: Monster aufdecken und würfeln, dann Karten mischen und austeilen ---------- */
+// Die Engine hat zu Beginn schon alles ausgeteilt; der Spielstart wird nur gezeigt: Monsterkarte 1, 2, 3 werden aufgedeckt und ihre Würfel geworfen, danach nimmt jeder Spieler seine Karten von der Ablage,
+// mischt sie, legt sie auf den Nachziehstapel und teilt von dort die Hand aus. view() liefert dafür einen gedachten Kartenstand der Decks; Eingaben und Computerzüge warten bis zum Ende (Klick überspringt).
+const Intro = (() => {
+  const T = { mon: 300, monStep: 1900, dice: 350, players: 6200, plStep: 2900, deal: 1250, dealStep: 240, end: 500 };
+  let on = false, timers = [], monRev = 0, fresh = -1, pl = {}, hint = null;
+  const later = (ms, fn) => timers.push(setTimeout(() => { if (on) { fn(); render(); } }, ms));
+  function stop() { timers.forEach(clearTimeout); timers = []; on = false; monRev = 0; fresh = -1; pl = {}; if (hint) { hint.remove(); hint = null; } }
+  function start() {
+    stop();
+    if (!G || FAST || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) || (navigator.webdriver && !/[?&]intro/.test(location.search))) return;   // Testläufe (Playwright, außer mit ?intro) und reduzierte Bewegung: ohne Vorführung
+    on = true; monRev = 0; pl = { [ME]: { st: 'disc', k: 0 }, [OPP]: { st: 'disc', k: 0 } };
+    const n = G.players[ME].deck.hand.length, order = [ME, OPP];
+    M.ELEMENTS.forEach((e, i) => {
+      const t = T.mon + i * T.monStep;
+      later(t, () => { monRev = i + 1; fresh = i; Snd.play('flip', 0, .8); setTimeout(() => { if (fresh === i) fresh = -1; }, 700); });
+      later(t + T.dice, () => DiceBoard.throwItem(i));
+    });
+    order.forEach((p, j) => {
+      const t = T.players + j * T.plStep;
+      later(t, () => { pl[p].st = 'draw'; Snd.play('shuffle', 0, .8); });
+      for (let k = 1; k <= n; k++) later(t + T.deal + (k - 1) * T.dealStep, () => { pl[p].st = 'deal'; pl[p].k = k; Snd.play('flip', 0, .7); });
+    });
+    later(T.players + 2 * T.plStep + T.end, finish);
+    hold = Date.now() + T.players + 2 * T.plStep + T.end + 200;   // der Computer wartet
+    hint = document.createElement('div'); hint.id = 'introhint'; hint.textContent = 'Klick: Spielstart überspringen'; stage.appendChild(hint);
+  }
+  function finish() { stop(); hold = 0; DiceBoard.throwRest(); pump(); }
+  function skip() {   // alles sofort in den Endstand; die Karten springen, ohne Töne zu erzeugen (erst ein stummes Zeichnen, dann Ende)
+    if (!on) return;
+    timers.forEach(clearTimeout); timers = [];
+    monRev = 3; fresh = -1; Object.keys(pl).forEach(p => { pl[p].st = 'deal'; pl[p].k = 99; });
+    DiceBoard.throwRest(); render();
+    finish();
+  }
+  function view(deck, p) {   // gedachter Kartenstand des Decks: alle Karten auf der Ablage, dann auf dem Stapel, dann nach und nach in der Hand
+    const s = pl[p]; if (!on || !s) return deck;
+    const hc = deck.hand.filter(Boolean), n = deck.hand.length, all = hc.concat(deck.draw, deck.discard);
+    if (s.st === 'disc') return Object.assign({}, deck, { draw: [], discard: all, hand: Array(n).fill(null), marks: [] });
+    const k = s.st === 'deal' ? s.k : 0; let c = 0;
+    return Object.assign({}, deck, { draw: deck.draw.concat(hc.slice(k).reverse()), discard: deck.discard, hand: deck.hand.map(x => (x && c++ < k ? x : null)), marks: [] });
+  }
+  document.addEventListener('pointerdown', e => { if (on) { e.stopPropagation(); e.preventDefault(); skip(); } }, true);
+  return { start, stop, skip, view, get on() { return on; }, get monRev() { return monRev; }, get fresh() { return fresh; } };
 })();
 /* ---------- Spiellog-Export (jederzeit, auch am Spielende) ---------- */
 function buildExport() {

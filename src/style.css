@@ -173,6 +173,10 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .mon .sm{font-size:15px;color:var(--mute);line-height:1.2}
 .mon .sm.vals{color:var(--text,#e6e1d6);font-size:15px;font-weight:700;margin-top:2px}
 .mon.gone img.pic{opacity:.3}
+.mon.hid{background-size:cover;background-position:center;opacity:.95}
+.mon.rev{animation:monrev .55s ease-out}
+@keyframes monrev{from{transform:perspective(700px) rotateY(88deg);opacity:.2}to{transform:none;opacity:1}}
+#introhint{position:absolute;left:50%;top:6px;transform:translateX(-50%);z-index:90;padding:3px 12px;border-radius:9px;background:rgba(0,0,0,.6);color:var(--mute);font-size:14px;pointer-events:none}
 .mon .loot{color:var(--gold);font-size:16px}
 .mon .btn{margin-top:auto;width:100%;padding:3px 10px;flex:none}
 .mon>*{flex:none}

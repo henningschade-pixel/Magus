@@ -126,15 +126,14 @@ const DiceBoard = (() => {
     });
     thrown = false;
   }
-  function throwAll() {
-    thrown = true;
-    items.forEach((it, i) => {
-      if (!it) return;
-      const P = DiceKit.P, d0 = i * P.monsterStagger * 1000;
-      if (!FAST) Snd.play('dice', d0 / 1000, .6);   // Würfelrollen auf dem Tisch, je Monsterkarte einmal beim Wurf
-      [it.pl, it.mi].forEach((el, j) => { const k = j ? it.v.mi : it.v.pl; DiceKit.roll(el, k, d0 + j * P.stagger * 1000, null, (j ? it.vr.minus : it.vr.plus).roll); });
-    });
+  function throwItem(i, d0) {   // Wurf der beiden Würfel einer Monsterkarte (einmal je Karte)
+    const it = items[i]; if (!it || it.thrown) return; it.thrown = true;
+    const P = DiceKit.P; d0 = d0 || 0;
+    if (!FAST) Snd.play('dice', d0 / 1000, .6);   // Würfelrollen auf dem Tisch, je Monsterkarte einmal beim Wurf
+    [it.pl, it.mi].forEach((el, j) => { const k = j ? it.v.mi : it.v.pl; DiceKit.roll(el, k, d0 + j * P.stagger * 1000, null, (j ? it.vr.minus : it.vr.plus).roll); });
   }
+  function throwAll() { thrown = true; items.forEach((it, i) => throwItem(i, i * DiceKit.P.monsterStagger * 1000)); }
+  function throwRest() { if (!FAST && items.length) { thrown = true; items.forEach((it, i) => throwItem(i, 0)); } }   // Spielstart beendet oder übersprungen: alle noch nicht geworfenen Würfel
   // Nach jedem Zeichnen: neue Monster -> neue Würfel; sichtbar nur in der Weltphase ohne Überlagerung; geworfen wird, sobald sie sichtbar sind
   function sync() {
     if (!G || FAST) return;
@@ -144,7 +143,7 @@ const DiceBoard = (() => {
     layer.style.display = visible ? '' : 'none';
     if (!visible) return;
     items.forEach(it => { if (!it) return; const alive = M.monsterAlive(G.monsters[it.slot]); it.pl.style.display = it.mi.style.display = alive ? '' : 'none'; });
-    if (!thrown) throwAll();
+    if (!thrown && !Intro.on) throwAll();
   }
-  return { sync };
+  return { sync, throwItem, throwRest };
 })();

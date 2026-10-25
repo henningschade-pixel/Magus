@@ -92,6 +92,7 @@ function drawTrack(L, mine) {
 function renderCards() {
   frame++; const quiet = els.size === 0; firstFrame = quiet;
   const cx = ctx();
+  if (Intro.on) { cx.myDeck = Intro.view(cx.myDeck, ME); cx.oppDeck = Intro.view(cx.oppDeck, OPP); }   // Spielstart: gedachter Kartenstand
   layoutDeck(cx.myDeck, L_MY, true);
   layoutDeck(cx.oppDeck, L_OP, false);
   for (const [uid, rec] of els) if (rec.frame !== frame) {
@@ -99,7 +100,7 @@ function renderCards() {
     if (back) { d.style.pointerEvents = 'none'; d.style.zIndex = 400; d.style.transform = 'translate(' + back.x + 'px,' + back.y + 'px) scale(' + back.sc + ')'; cardsUntil = Math.max(cardsUntil, Date.now() + 520); setTimeout(() => d.remove(), 520); }
     else { d.classList.add('fadeout'); cardsUntil = Math.max(cardsUntil, Date.now() + 1200); setTimeout(() => d.remove(), 1200); }
   }
-  flushSound(quiet);
+  flushSound(quiet || Intro.on);
   // Platzhalter, Stapel-Beschriftungen, Klickflächen
   let ph = '';
   const n = cx.myDeck.hand.length;
