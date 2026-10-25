@@ -93,7 +93,7 @@ test('Rückwurf ist durch den eingehenden Schaden gedeckelt', () => {
 
 test('Monsterwerte je Stufe: Grundform ohne Würfel, mit Würfeln höchstens die Ausschläge der Seiten', () => {
   const s = M.newGame({ seed: 3, ai: [true, true], first: 0 });
-  const hp = [3, 4, 6], limit = [2, 3, 4], gold = [1, 2, 3], D = M.MONSTER.variants.dice, maxN = (k, st) => Math.max(...D.plus.concat(D.minus).filter(f => f.k === k).map(f => f.n[st - 1]));
+  const hp = [3, 4, 6], limit = [2, 2, 3], gold = [1, 2, 3], D = M.MONSTER.variants.dice, maxN = (k, st) => Math.max(...D.plus.concat(D.minus).filter(f => f.k === k).map(f => f.n[st - 1]));
   [1, 2, 3].forEach((st, i) => {
     const base = M.spawnMonsters(st);
     for (const el of Object.keys(base)) { assert.equal(base[el].stats.maxHp, hp[i]); assert.equal(base[el].stats.limit, limit[i]); assert.equal(base[el].label, ''); }
@@ -109,7 +109,7 @@ test('Monsterwerte je Stufe: Grundform ohne Würfel, mit Würfeln höchstens die
 });
 
 test('Monster-Würfel (0.4): Deckform spitz/breit, ein Plus- und ein Minuswürfel, Name Spezialist/Generalist, Etikett „+X, −Y“, Werte folgen den Seiten', () => {
-  const D = M.MONSTER.variants.dice, base = { 1: { F: [3, 5], E: [3, 6], W: [3, 5] }, 2: { F: [4, 5], E: [4, 5], W: [4, 5] }, 3: { F: [6, 6], E: [6, 6], W: [6, 6] } }, limit = [0, 2, 3, 4];
+  const D = M.MONSTER.variants.dice, base = { 1: { F: [3, 5], E: [3, 6], W: [3, 5] }, 2: { F: [4, 5], E: [4, 5], W: [4, 5] }, 3: { F: [6, 6], E: [6, 6], W: [6, 6] } }, limit = [0, 2, 2, 3];
   const seenForm = {}, seenPlus = new Set(), seenMinus = new Set();
   for (const st of [1, 2, 3]) for (let seed = 1; seed <= 120; seed++) {
     const r = M.spawnMonsters(st, M.newGame({ seed }).rng);
@@ -143,7 +143,7 @@ test('Monster-Hand folgt den Würfeln', () => {
   const D = M.MONSTER.variants.dice, st = M.newGame({ seed: 9, ai: [true, true] });
   const mk = (kPlus, kMinus) => { const save = [D.plus.slice(), D.minus.slice()]; D.plus.fill(D.plus.find(f => f.k === kPlus)); D.minus.fill(D.minus.find(f => f.k === kMinus)); const r = M.spawnMonsters(2, st.rng); D.plus.splice(0, 6, ...save[0]); D.minus.splice(0, 6, ...save[1]); return r.F; };
   assert.equal(mk('hand', 'hp').stats.handExtra, 1); assert.equal(mk('hp', 'hand').stats.handExtra, -1);
-  assert.equal(M.monsterHand(mk('hand', 'hp')), 6); assert.equal(M.monsterHand(mk('hp', 'hand')), 4);   // Stufe II: Limit 3 + 2 Handplätze, plus oder minus 1
+  assert.equal(M.monsterHand(mk('hand', 'hp')), 5); assert.equal(M.monsterHand(mk('hp', 'hand')), 3);   // Stufe II: Limit 2 + 2 Handplätze, plus oder minus 1
 });
 
 test('Siegpunkte: Monsterkampf +1 / -1 (nie unter 0), keine Beute, kein Trostpreis, Ende ab 4 nach Showdown 2', () => {
@@ -449,7 +449,7 @@ test('Überschusspunkte: Sind alle Magien auf Stufe 3, werden Upgrade-Punkte (ni
   assert.ok(M.apply(s, { pid: 0, type: 'magic', elem: 'W' }).ok);   // erster Magie-Kauf kostet 1 Punkt, 3 bleiben übrig, nun ist alles auf Stufe 3
   assert.deepEqual([me.pending, p.sp, me.gold], [0, 5, 5], '1 Überschusspunkt = 1 Siegpunkt (2 Start), Gold bleibt');
   s.turn = 1; s.players[1].stats.gold = 3; assert.ok(M.apply(s, { pid: 1, type: 'temple', amount: 2 }).ok);   // Gegner ohne volle Magie behält seine Punkte
-  assert.equal(s.players[1].stats.pending, 4, '2 Bonuspunkte + 2 aus dem Tempel'); assert.equal(s.players[1].sp, 2);
+  assert.equal(s.players[1].stats.pending, 3, '1 Bonuspunkt + 2 aus dem Tempel'); assert.equal(s.players[1].sp, 2);
   const t = M.newGame({ seed: 5, ai: [false, false], first: 0, rules: { surplusSp: 0 } }); t.players[0].stats.mag = { F: 3, E: 3, W: 3 }; t.players[0].stats.pending = 2; t.players[0].stats.gold = 0;
   assert.ok(M.apply(t, { pid: 0, type: 'draw' }).ok); assert.deepEqual([t.players[0].stats.pending, t.players[0].sp], [2, 2], 'ohne Regel bleibt es');
 });
@@ -469,9 +469,9 @@ test('Start-HP der Spieler 4 (startHp), Monster beginnen weiter mit eigenen Wert
 });
 
 test('Steigende Preise (priceRise): jeder Kauf einer Kategorie verteuert die nächste Stufe um den Grundpreis; Einnahmen je Abschnitt 2/3/4', () => {
-  assert.deepEqual(M.DEFAULT_RULES.stageGold, [0, 2, 3, 4]); assert.deepEqual(M.DEFAULT_RULES.stagePoints, [0, 2, 3, 4]); assert.equal(M.DEFAULT_RULES.priceRise, 1);
+  assert.deepEqual(M.DEFAULT_RULES.stageGold, [0, 1, 2, 3]); assert.deepEqual(M.DEFAULT_RULES.stagePoints, [0, 1, 2, 3]); assert.equal(M.DEFAULT_RULES.priceRise, 1);
   const s = M.newGame({ seed: 5, ai: [false, false], first: 0 }), p = s.players[0], st = p.stats;
-  assert.deepEqual([st.gold, st.pending], [2, 2], 'Start: 2 Gold und 2 Upgrade-Punkte');
+  assert.deepEqual([st.gold, st.pending], [1, 1], 'Start: 1 Gold und 1 Upgrade-Punkt (Stufe I)');
   const prices = fn => [0, 1, 2].map(() => { const c = fn(); st.buys = st.buys || {}; return c; });
   const seq = (cat, fn) => { const out = []; for (let i = 0; i < 3; i++) { out.push(fn()); st.buys = st.buys || {}; st.buys[cat] = (st.buys[cat] || 0) + 1; } st.buys[cat] = 0; return out; };
   assert.deepEqual(seq('hp', () => M.hpStepCost(s, st)), [1, 2, 3], 'HP: 1, 2, 3');
