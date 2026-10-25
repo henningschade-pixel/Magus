@@ -4356,7 +4356,8 @@ const Intro = (() => {
     const real = stage.querySelector('.mon[data-i="' + i + '"]'), ff = c.querySelector('.cffront');
     if (real) { const cl = real.cloneNode(true); cl.style.left = cl.style.top = '0'; ff.insertBefore(cl, ff.firstChild); }   // die Kopie liegt in der Abdeckung, nicht an der Kartenposition
     const end = () => { c.remove(); stage.dataset.hm = (stage.dataset.hm || '').split(' ').filter(x => x !== String(i)).join(' '); };
-    if (!real || FAST) end(); else CardFlip.monster(c.querySelector('.mc'), ({ F: '#ff6b3d', E: '#8bc34a', W: '#52a6f5' })[M.ELEMENTS[i]] || '#d2ad4f', end);
+    // Schein in der Farbe des Monsters in diesem Feld (Feld und Element stimmen nicht immer überein)
+    if (!real || FAST) end(); else CardFlip.monster(c.querySelector('.mc'), ({ F: '#ff6b3d', E: '#8bc34a', W: '#52a6f5' })[G.monsters[M.ELEMENTS[i]].el] || '#d2ad4f', end);
   }
   function finish() { stop(); hold = 0; DiceBoard.throwRest(); pump(); }
   function skip() {   // alles sofort in den Endstand; die Karten springen, ohne Töne zu erzeugen (erst ein stummes Zeichnen, dann Ende)
