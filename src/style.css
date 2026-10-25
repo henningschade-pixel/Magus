@@ -86,7 +86,8 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .freedraw .mul{position:absolute;right:-7px;bottom:-4px;font:700 20px Alegreya,serif;color:#f2d27a;text-shadow:0 0 2px #000,0 0 3px #000,0 0 6px #000}
 .freedraw.opp{cursor:default;pointer-events:none;font-size:15px;color:inherit;font-family:inherit}
 .freedraw.opp.lf{pointer-events:auto;cursor:var(--cp);transition:transform .12s}.freedraw.opp.lf:hover{transform:scale(1.08)}
-.freedraw.opp.lf.sel{filter:drop-shadow(0 0 7px #f2d27a) drop-shadow(0 0 3px #f2d27a)}
+.freedraw.lf{transition:transform .12s}.freedraw.lf:hover{transform:scale(1.08)}
+.freedraw.lf.sel,.freedraw.opp.lf.sel{filter:drop-shadow(0 0 7px #f2d27a) drop-shadow(0 0 3px #f2d27a)}
 .freedraw.opp .lfb{font-style:normal;font-size:12px;color:var(--gold)}
 /* Panels, Spielerstatus, Händler, Monster */
 .panel{position:absolute;background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:12px;padding:12px 14px;overflow:hidden}

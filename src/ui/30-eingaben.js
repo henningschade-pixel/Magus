@@ -45,7 +45,7 @@ function onAct(d) {
     case 'lfm': {
       const L = lfCtx(); if (!L) break;
       const k = d.k, e = d.e || '', key = e ? k + ':' + e : k, have = lfHave(L.cx, k, e), n = L.picks.filter(x => x === key).length;
-      let m = (e || k === 'ot') ? (n + 1 <= Math.min(have, L.lvl) ? n + 1 : 0) : (n > +d.i ? +d.i : +d.i + 1);   // Spiegelstein: einen mehr, nach dem Maximum alle weg; Totenkopf: bis hierhin wählen oder ab hier abwählen
+      let m = (e || k === 'ot' || k === 'st') ? (n + 1 <= Math.min(have, L.lvl) ? n + 1 : 0) : (n > +d.i ? +d.i : +d.i + 1);   // Spiegelstein: einen mehr, nach dem Maximum alle weg; Totenkopf: bis hierhin wählen oder ab hier abwählen
       m = Math.min(m, have, L.lvl);
       const others = L.picks.filter(x => x !== key);
       while (others.length + m > L.lvl && others.length) others.shift();   // voll: die älteste andere Wahl weicht

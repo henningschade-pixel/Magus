@@ -54,6 +54,7 @@ test('Ultimate in der Verteidigung: alle drei Farben erlaubt, Todes-Fluch für d
   [1, 0, 2].forEach(i => assert.ok(M.apply(s, { pid: op.ctrl, type: 'mark', slot: i }).ok));
   assert.ok(M.apply(s, { pid: op.ctrl, type: 'defend' }).ok);
   assert.ok(me.stats.death >= 1, 'Angreifer trägt einen Todesmarker');
+  assert.equal(me.stats.deathPhase, undefined, 'Der frisch gesprochene Fluch hat in dieser Phase nicht getickt (Marker verbraucht)');
 });
 
 // Spiegel: Verteidiger op mit Feuer-Spiegel der Stufe lvl, Angreifer me schlägt mit F2 zu; def = Verteidigungskarte (oder null = Erholen)
@@ -503,4 +504,25 @@ test('Ultimate: mehrere Karten einer Farbe ergeben zusammen die Stufe (E2, F2, W
   const lv = M.comboLevels({ F: [2], E: [2], W: [1, 1] }, { F: 3, E: 3, W: 3 }, 'E');
   assert.equal(lv.ulti, 2);
   assert.equal(M.comboLevels({ F: [2], E: [2], W: [1] }, { F: 3, E: 3, W: 3 }, 'E').ulti, 1);
+});
+
+test('Läuterung kann auch eigene Nachziehtokens zerstören (ohne Gutschrift)', () => {
+  const { s, me } = combatSetup(11, ['E1', 'F1']);
+  me.stats.freeDraws = 2;
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
+  assert.ok(M.apply(s, { pid: 0, type: 'lfp', pick: ['st'] }).ok);
+  assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+  assert.equal(me.stats.freeDraws, 1, 'ein eigener Token zerstört, kein neuer gutgeschrieben');
+});
+
+test('Todes-Fluch aus der Verteidigung wirkt nicht sofort, sondern erst in der nächsten Angriffsphase des Verfluchten', () => {
+  const { s, me, op } = combatSetup(11, ['F1']);
+  op.stats.limit = 3; op.stats.mana = 9;
+  op.deck.hand.forEach((x, i) => { if (x) op.deck.hand[i] = Object.assign({}, x, { id: ['F3', 'W2', 'E2'][i] || x.id }); });
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+  const hp0 = me.stats.hp;
+  [1, 0, 2].forEach(i => assert.ok(M.apply(s, { pid: op.ctrl, type: 'mark', slot: i }).ok));
+  assert.ok(M.apply(s, { pid: op.ctrl, type: 'defend' }).ok);
+  assert.ok(me.stats.death >= 1);
+  assert.ok(me.stats.hp >= hp0 - 5 && !s.log.slice(-6).some(e => /Todes-Fluch: /.test(e.txt)), 'kein Fluchschaden am Ende dieser Phase');
 });
