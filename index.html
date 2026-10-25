@@ -2392,7 +2392,10 @@ const CardFlip = (() => {
     run(mc, frames(P, 0, 180, p => ({ transform: tf(P, p) })), P.dauer).onfinish = done;
     if (sh) run(sh, frames(P, 0, 180, p => ({ opacity: P.schatten * (1 - .6 * p.sinT), transform: 'scale(' + (1 + .15 * p.sinT) + ')' })), P.dauer);
     if (gl) run(gl, frames(P, 0, 180, (p, t) => ({ opacity: P.glanz * p.sinT, transform: 'translateX(' + (-60 + 360 * t) + '%) skewX(-15deg)' })), P.dauer);
-    if (fr) run(fr, frames(P, 0, 180, p => ({ boxShadow: '0 0 ' + 40 * P.leucht * p.sinT + 'px ' + 4 * P.leucht * p.sinT + 'px ' + col })), P.dauer);
+    const rim = p => '0 0 0 2px rgba(239,230,210,' + .75 * p.sinT + ')';   // heller Rand: die schwarze Karte steht sonst nicht vom dunklen Steinhintergrund ab, besonders in der Kantenstellung
+    const bk = slot.querySelector('.cfback');
+    if (bk) run(bk, frames(P, 0, 180, p => ({ boxShadow: rim(p) })), P.dauer);
+    if (fr) run(fr, frames(P, 0, 180, p => ({ boxShadow: rim(p) + ', 0 0 ' + 40 * P.leucht * p.sinT + 'px ' + 4 * P.leucht * p.sinT + 'px ' + col })), P.dauer);
     return P.dauer;
   }
   return { hand, monster, MON, HAND };
