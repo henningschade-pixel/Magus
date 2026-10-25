@@ -11,7 +11,7 @@ function regen(stats, n) {   // n = Gewinn an HP und Mana (Regel regenByStage: j
 function regenGain(state) { const r = state.rules.regenByStage; return r ? (r[Math.min(r.length, Math.max(1, state.stage)) - 1] || 1) : 1; }
 // Kosten (in Upgrade-Punkten) für jeden Schritt des Ausspiellimits: limitCost (Standard 2). Ohne limitCost gilt die ältere Staffelung (erster Schritt limitFirstStepCost, danach 1).
 // Steigende Preise (Regel priceRise, seit 0.3.2): Jeder Kauf in einer Kategorie verteuert die nächste Stufe dieser Kategorie um deren Grundpreis (Preis = Grundpreis × (1 + priceRise × bisherige Käufe)).
-// Kategorien: hp, mana, limit, slot, draw (Nachziehlimit) und je Zielstufe der Magie m2 / m3; s.buys zählt die Käufe des Spielers.
+// Kategorien: hp, mana, limit, slot, draw (Nachziehlimit) und mag (Magie, alle drei Richtungen zusammen, unabhängig von der Stufe); s.buys zählt die Käufe des Spielers.
 function bought(s, k) { return (s && s.buys && s.buys[k]) || 0; }
 function risen(state, base, s, k) { return base * (1 + (state.rules.priceRise || 0) * bought(s, k)); }
 function buyCount(s, k) { s.buys = s.buys || {}; s.buys[k] = (s.buys[k] || 0) + 1; }
@@ -23,9 +23,8 @@ function slotStepCost(state, s) { return risen(state, 1, s, 'slot'); }
 function upField(state) { return state.rules.swapCosts ? 'gold' : 'pending'; }
 function magicField(state) { return state.rules.swapCosts ? 'pending' : 'gold'; }
 function payTxt(state, field, n) { return field === 'gold' ? n + ' Gold' : n + ' Upgrade-Punkt' + (n > 1 ? 'e' : ''); }
-// Preis der nächsten Magiestufe (in Gold, mit swapCosts in Upgrade-Punkten): Index = aktuelle Stufe (Stufe 1 → 2 kostet 1, Stufe 2 → 3 kostet 3).
-// Gold für die nächste Magiestufe: Index = aktuelle Stufe (Stufe 1 → 2 kostet 1 Gold, Stufe 2 → 3 kostet 3 Gold).
-function magicCost(state, lv, s) { const t = state.rules.magicCost || [0, 1, 2], base = t[lv] === undefined ? lv : t[lv]; return s ? risen(state, base, s, 'm' + (lv + 1)) : base; }   // mit s: aktueller Preis einschließlich der Verteuerung durch frühere Käufe der Zielstufe
+// Preis der nächsten Magiestufe (in Gold, mit swapCosts in Upgrade-Punkten): unabhängig von der Stufe, nur die Zahl der bisherigen Magie-Käufe zählt (erstes Upgrade 1, zweites 2, drittes 3 usw.).
+function magicCost(state, lv, s) { return risen(state, 1, s, 'mag'); }   // lv bleibt aus Kompatibilitätsgründen Parameter; ohne s der Grundpreis
 // Tempel: n Gold ergeben n(n+1)/2 Punkte; die Stufe k+1 kostet k+1 Punkte und gibt einen Upgrade-Punkt.
 function pointsForGold(n) { return n * (n + 1) / 2; }
 function nextLevelCost(level) { return level + 1; }

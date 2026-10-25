@@ -204,9 +204,9 @@ test('Magie-Knöpfe: zu teure Stufen durchscheinend und gesperrt, ohne Upgrade-P
     p.on('pageerror', e => errs.push(e.message));
     await p.goto(url); await p.waitForTimeout(500);
     await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
-    await p.evaluate(() => { const s = window.__magus.state.players[0].stats; s.pending = 2; s.mag = { F: 2, E: 1, W: 1 }; window.__magus.pump(); });
-    assert.equal(await p.locator('[data-act="magic"][data-e="F"].off[disabled]').count(), 1, 'Feuer Stufe 3 (3 Punkte) gesperrt');
-    assert.equal(await p.locator('[data-act="magic"]:not(.off)').count(), 2, 'Erde und Wasser Stufe 2 (1 Punkt) kaufbar');
+    await p.evaluate(() => { const s = window.__magus.state.players[0].stats; s.pending = 1; s.buys = { mag: 1 }; s.mag = { F: 2, E: 1, W: 1 }; window.__magus.pump(); });
+    assert.equal(await p.locator('[data-act="magic"].off[disabled]').count(), 3, 'zweiter Magie-Kauf kostet 2 Punkte: alle gesperrt');
+    assert.equal(await p.locator('[data-act="magic"]:not(.off)').count(), 0);
     await p.evaluate(() => { window.__magus.state.players[0].stats.pending = 0; window.__magus.pump(); });
     assert.equal(await p.locator('[data-act="magic"]').count(), 0);
     assert.deepEqual(errs, []);
