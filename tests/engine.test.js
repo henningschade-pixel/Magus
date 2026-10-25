@@ -94,7 +94,7 @@ test('Rückwurf ist durch den eingehenden Schaden gedeckelt', () => {
 
 test('Monsterwerte je Stufe: Grundform ohne Würfel, mit Würfeln höchstens die Ausschläge der Seiten', () => {
   const s = M.newGame({ seed: 3, ai: [true, true], first: 0 });
-  const hp = [3, 4, 6], limit = [2, 2, 3], gold = [1, 2, 3], D = M.MONSTER.variants.dice, maxN = (k, st) => Math.max(...D.plus.concat(D.minus).filter(f => f.k === k).map(f => f.n[st - 1]));
+  const hp = [3, 4, 6], limit = [2, 3, 4], gold = [1, 2, 3], D = M.MONSTER.variants.dice, maxN = (k, st) => Math.max(...D.plus.concat(D.minus).filter(f => f.k === k).map(f => f.n[st - 1]));
   [1, 2, 3].forEach((st, i) => {
     const base = M.spawnMonsters(st);
     for (const el of Object.keys(base)) { assert.equal(base[el].stats.maxHp, hp[i]); assert.equal(base[el].stats.limit, limit[i]); assert.equal(base[el].label, ''); }
@@ -110,7 +110,7 @@ test('Monsterwerte je Stufe: Grundform ohne Würfel, mit Würfeln höchstens die
 });
 
 test('Monster-Würfel (0.4): Deckform spitz/breit, ein Plus- und ein Minuswürfel, Name Spezialist/Generalist, Etikett „+X, −Y“, Werte folgen den Seiten', () => {
-  const D = M.MONSTER.variants.dice, base = { 1: { F: [3, 5], E: [3, 6], W: [3, 5] }, 2: { F: [4, 5], E: [4, 5], W: [4, 5] }, 3: { F: [6, 6], E: [6, 6], W: [6, 6] } }, limit = [0, 2, 2, 3];
+  const D = M.MONSTER.variants.dice, base = { 1: { F: [3, 5], E: [3, 6], W: [3, 5] }, 2: { F: [4, 5], E: [4, 5], W: [4, 5] }, 3: { F: [6, 6], E: [6, 6], W: [6, 6] } }, limit = [0, 2, 3, 4];
   const seenForm = {}, seenPlus = new Set(), seenMinus = new Set();
   for (const st of [1, 2, 3]) for (let seed = 1; seed <= 120; seed++) {
     const r = M.spawnMonsters(st, M.newGame({ seed }).rng);
@@ -132,11 +132,11 @@ test('Monster-Würfel (0.4): Deckform spitz/breit, ein Plus- und ein Minuswürfe
   assert.equal(Object.keys(seenForm).length, 2); assert.equal(seenPlus.size, 6); assert.equal(seenMinus.size, 6);
 });
 
-test('Monster-Würfel: sechs Seiten (HP 1, Mana 1, Limit 1, Ziehen 1, Hand 1, leer), gleich groß auf beiden Würfeln, in allen Stufen gleich', () => {
+test('Monster-Würfel: sechs Seiten (Plus: HP, Mana, Magie, Ziehen, Hand, leer; Minus: Limit statt Magie), je 1, in allen Stufen gleich', () => {
   const D = M.MONSTER.variants.dice;
   assert.equal(D.plus.length, 6); assert.equal(D.minus.length, 6);
-  assert.deepEqual(D.plus.map(f => [f.k, f.n[0]]), [['hp', 1], ['mana', 1], ['limit', 1], ['draws', 1], ['hand', 1], ['none', 0]]);
-  assert.deepEqual(D.minus, D.plus);
+  assert.deepEqual(D.plus.map(f => [f.k, f.n[0]]), [['hp', 1], ['mana', 1], ['mag', 1], ['draws', 1], ['hand', 1], ['none', 0]]);
+  assert.deepEqual(D.minus.map(f => [f.k, f.n[0]]), [['hp', 1], ['mana', 1], ['limit', 1], ['draws', 1], ['hand', 1], ['none', 0]]);
   for (const f of D.plus) assert.ok(f.n[0] === f.n[1] && f.n[1] === f.n[2], 'stufenunabhängig: ' + f.k);
 });
 
@@ -144,7 +144,7 @@ test('Monster-Hand folgt den Würfeln', () => {
   const D = M.MONSTER.variants.dice, st = M.newGame({ seed: 9, ai: [true, true] });
   const mk = (kPlus, kMinus) => { const save = [D.plus.slice(), D.minus.slice()]; D.plus.fill(D.plus.find(f => f.k === kPlus)); D.minus.fill(D.minus.find(f => f.k === kMinus)); const r = M.spawnMonsters(2, st.rng); D.plus.splice(0, 6, ...save[0]); D.minus.splice(0, 6, ...save[1]); return r.F; };
   assert.equal(mk('hand', 'hp').stats.handExtra, 1); assert.equal(mk('hp', 'hand').stats.handExtra, -1);
-  assert.equal(M.monsterHand(mk('hand', 'hp')), 5); assert.equal(M.monsterHand(mk('hp', 'hand')), 3);   // Stufe II: Limit 2 + 2 Handplätze, plus oder minus 1
+  assert.equal(M.monsterHand(mk('hand', 'hp')), 6); assert.equal(M.monsterHand(mk('hp', 'hand')), 4);   // Stufe II: Limit 3 + 2 Handplätze, plus oder minus 1
 });
 
 test('Siegpunkte: Monsterkampf +1 / -1 (nie unter 0), keine Beute, kein Trostpreis, Ende ab 4 nach Showdown 2', () => {
@@ -525,4 +525,21 @@ test('Todes-Fluch aus der Verteidigung wirkt nicht sofort, sondern erst in der n
   assert.ok(M.apply(s, { pid: op.ctrl, type: 'defend' }).ok);
   assert.ok(me.stats.death >= 1);
   assert.ok(me.stats.hp >= hp0 - 5 && !s.log.slice(-6).some(e => /Todes-Fluch: /.test(e.txt)), 'kein Fluchschaden am Ende dieser Phase');
+});
+
+test('Pluswürfel „Magie“: eine Magiestufe mehr auf der Folgemagie des Monsters (Feuer → Erde, Erde → Wasser, Wasser → Feuer), mit passender Karte', () => {
+  const D = M.MONSTER.variants.dice, st = M.newGame({ seed: 9, ai: [true, true] });
+  const save = D.plus.slice(), mag = D.plus.find(f => f.k === 'mag'), none = D.minus.find(f => f.k === 'none');
+  D.plus.fill(mag); D.minus.fill(none);
+  try {
+    for (const stage of [1, 2]) {
+      const r = M.spawnMonsters(stage, st.rng);
+      for (const k of Object.keys(r)) {
+        const m = r[k], S = M.MONSTER.profile[m.el].secondary, b = M.spawnMonsters(stage)[m.el];   // b: feste Grundform ohne Würfel desselben Elements
+        assert.equal(m.stats.mag[S], Math.min(3, b.stats.mag[S] + 1), 'Stufe ' + stage + ' ' + m.el + ': Folgemagie ' + S + ' +1');
+        assert.ok(m.deckIds.some(id => id === S + m.stats.mag[S]), 'eine Karte der neuen Stufe ist im Deck');
+        assert.equal(m.stats.limit, b.stats.limit, 'das Limit bleibt unberührt');
+      }
+    }
+  } finally { D.plus.splice(0, 6, ...save); }
 });

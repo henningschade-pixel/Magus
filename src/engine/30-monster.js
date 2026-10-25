@@ -12,7 +12,7 @@
 const MONSTER = {
   profile: { F: { primary: 'F', secondary: 'E' }, E: { primary: 'E', secondary: 'W' }, W: { primary: 'W', secondary: 'F' } },
   stage1Temple: { F: ['mana'], E: ['mana', 'mana'], W: ['mana'] },   // Stufe I: Mana 5 (Erdmonster 6; sonst verlor es die Angreifer nur halb so oft)
-  temple: { 2: { F: ['hp', 'mana'], E: ['hp', 'mana'], W: ['hp', 'mana'] }, 3: { F: ['limit', 'hp', 'hp', 'mana'], E: ['limit', 'hp', 'hp', 'mana'], W: ['limit', 'hp', 'hp', 'mana'] } },   // Schritte je Stufe (Stufe III kommt auf Stufe II obendrauf): II = Limit 2, 4 HP, Mana 5; III = Limit 3, 6 HP, Mana 6
+  temple: { 2: { F: ['limit', 'hp', 'mana'], E: ['limit', 'hp', 'mana'], W: ['limit', 'hp', 'mana'] }, 3: { F: ['limit', 'hp', 'hp', 'mana'], E: ['limit', 'hp', 'hp', 'mana'], W: ['limit', 'hp', 'hp', 'mana'] } },   // Schritte je Stufe (Stufe III kommt auf Stufe II obendrauf): II = Limit 3, 4 HP, Mana 5; III = Limit 4, 6 HP, Mana 6
   magic: { 2: [3, 2, 1], 3: [3, 2, 1] },                                  // Stufen von Haupt-, Neben- und drittem Element
   deck: {
     2: (P, S, T) => [P + '3', P + '2', P + '2', P + '2', S + '2', S + '2', T + '1', T + '1', P + '1'],
@@ -27,15 +27,16 @@ const MONSTER = {
       3: [null, (P, S, T) => [P + '3', P + '3', P + '3', P + '2', S + '3', S + '3', S + '2', T + '2', T + '1'], (P, S, T) => [P + '3', P + '3', P + '3', P + '3', P + '1', S + '3', S + '3', T + '2', T + '1']],
     },
     // Die Würfel: sechs Seiten je Würfel, jede Seite ein Wert und sein Ausschlag je Stufe (n: Stufe I, II, III).
-    dice: {   // k: Wert, n: Ausschlag je Stufe (seit der Überarbeitung in allen Stufen gleich). Beide Würfel haben dieselben sechs Seiten, der Minuswürfel dreht das Vorzeichen um; die sechste Seite ist leer
-      plus:  [{ k: 'hp', n: [1, 1, 1] }, { k: 'mana', n: [1, 1, 1] }, { k: 'limit', n: [1, 1, 1] }, { k: 'draws', n: [1, 1, 1] }, { k: 'hand', n: [1, 1, 1] }, { k: 'none', n: [0, 0, 0] }],
+    dice: {   // k: Wert, n: Ausschlag je Stufe (seit der Überarbeitung in allen Stufen gleich). Der Minuswürfel dreht das Vorzeichen um; die sechste Seite ist leer. Seit 0.5 trägt der Pluswürfel statt „Limit“ die Seite „mag“: eine Magiestufe mehr auf der Folgemagie des Monsters (Nebenelement seines Profils: Feuer → Erde, Erde → Wasser, Wasser → Feuer)
+      plus:  [{ k: 'hp', n: [1, 1, 1] }, { k: 'mana', n: [1, 1, 1] }, { k: 'mag', n: [1, 1, 1] }, { k: 'draws', n: [1, 1, 1] }, { k: 'hand', n: [1, 1, 1] }, { k: 'none', n: [0, 0, 0] }],
       minus: [{ k: 'hp', n: [1, 1, 1] }, { k: 'mana', n: [1, 1, 1] }, { k: 'limit', n: [1, 1, 1] }, { k: 'draws', n: [1, 1, 1] }, { k: 'hand', n: [1, 1, 1] }, { k: 'none', n: [0, 0, 0] }],
     },
-    diceNames: { hp: 'HP', mana: 'Mana', limit: 'Limit', hand: 'Hand', draws: 'Ziehen' },
+    diceNames: { hp: 'HP', mana: 'Mana', limit: 'Limit', mag: 'Magie', hand: 'Hand', draws: 'Ziehen' },
     diceHints: {
       hp: 'maximale Lebenspunkte',
       mana: 'maximales Mana',
       limit: 'Ausspiellimit (Karten je Zug)',
+      mag: 'Magiestufe der Folgemagie des Monsters: Feuer → Erde, Erde → Wasser, Wasser → Feuer',
       hand: 'Handkarten',
       draws: 'Ziehen: Nachziehlimit (so oft hintereinander nachziehen, bevor der Marker auf Rot springt)',
     },
@@ -50,11 +51,12 @@ const MONSTER = {
 const STAGE_NUMERAL = ['', 'I', 'II', 'III'];
 
 // Würfelseite auf ein Monster anwenden (sign +1 = Pluswürfel, −1 = Minuswürfel). ‚ids‘ ist das Deck (wird verändert).
-function applyDie(stats, face, sign, stage) {
+function applyDie(stats, face, sign, stage, el) {
   const n = face.n[stage - 1] * sign, k = face.k;
   if (k === 'hp') { stats.maxHp = Math.max(1, stats.maxHp + n); stats.hp = stats.maxHp; }
   else if (k === 'mana') { stats.maxMana = Math.max(1, stats.maxMana + n); stats.mana = stats.maxMana; }
   else if (k === 'limit') stats.limit = Math.min(MAX_LIMIT, Math.max(1, stats.limit + n));   // bis auf 1, nie auf 0 (Achtung: Limit 1 führt in Stufe I oft zu Patts, siehe Regelwerk)
+  else if (k === 'mag') { const e = MONSTER.profile[el].secondary; stats.mag[e] = Math.min(MAX_MAGIC, Math.max(1, stats.mag[e] + n)); }   // Folgemagie des Monsters (Nebenelement seines Profils)
   else if (k === 'hand') stats.handExtra = (stats.handExtra || 0) + n;
   else if (k === 'draws') stats.drawLimit = Math.min(MAX_DRAW_LIMIT, Math.max(1, stats.drawLimit + n));
 }
@@ -89,14 +91,18 @@ function spawnOne(el, stage, rng, v) {
   if (v.d) {
     hints.push(v.d === 1 ? 'Generalist (breit): mehr Karten im Nebenelement, dafür weniger im Hauptelement. Vielseitiger, aber mit schwächerer Spitze.' : 'Spezialist (spitz): stärkere Spitze (mehr Karten der höchsten Stufe), dafür eine schwächere Basis (mehr Stufe-1-Karten).');
   }
+  const magBefore = stats.mag[S];
   const same = v.pl >= 0 && v.mi >= 0 && V.dice.plus[v.pl].k === V.dice.minus[v.mi].k;   // gleicher Wert auf beiden Würfeln: die Ausschläge heben sich auf, sie werden weder angewendet noch gezeigt
   [[v.pl, 1, V.dice.plus], [v.mi, -1, V.dice.minus]].forEach(([i, sign, die]) => {
     if (i === undefined || i < 0 || same || die[i].k === 'none') return;
     const face = die[i], n = face.n[stage - 1];
-    applyDie(stats, face, sign, stage);
+    applyDie(stats, face, sign, stage, el);
     tags.push((sign > 0 ? '+' : '−') + V.diceNames[face.k]);
     hints.push((sign > 0 ? 'Pluswürfel' : 'Minuswürfel') + ': ' + (sign > 0 ? '+' : '−') + n + ' ' + V.diceNames[face.k] + ' (' + (sign > 0 ? 'mehr ' : 'weniger ') + V.diceHints[face.k] + ').');
   });
+  { const e = P === el ? S : null, bonus = e && stats.mag[e] > magBefore; if (bonus && !finalDeck.some(id => id === e + stats.mag[e])) {   // Magiestufen-Bonus des Pluswürfels: eine passende Karte rückt auf die neue Stufe (sonst bliebe die Magie wirkungslos)
+      let bi = -1; finalDeck.forEach((id, i) => { if (id[0] === e && +id[1] < stats.mag[e] && (bi < 0 || +id[1] > +finalDeck[bi][1])) bi = i; });
+      if (bi >= 0) { finalDeck = finalDeck.slice(); finalDeck[bi] = e + stats.mag[e]; } } }
   finalDeck = finalDeck.map(id => id[0] !== 'C' && +id[1] > stats.mag[id[0]] ? id[0] + stats.mag[id[0]] : id);   // Eine Karte wirkt höchstens mit der Magie ihrer Farbe: die Anzeige soll das zeigen
   rng.shuffle(finalDeck);
   return { el, name: (v.d ? M.formNames[el][v.d] : M.names[el]) + ' ' + STAGE_NUMERAL[stage], label: tags.join(', '), hints, variant: v, stage, base, stats, deckIds: finalDeck };

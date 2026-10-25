@@ -4,8 +4,8 @@
    der Export (JSON) wird in DiceKit.P übernommen. Ein Test prüft, dass beide Fassungen gleich sind. */
 /* DICEKIT BEGIN */
 const DiceKit = (() => {
-  const KINDS = ['hp', 'mana', 'limit', 'draws', 'hand', 'none'];   // Reihenfolge wie MONSTER.variants.dice (Seite 0 bis 5)
-  const NAMES = { hp: 'HP', mana: 'Mana', limit: 'Limit', draws: 'Ziehen', hand: 'Hand', none: 'leer' };
+  const KINDS = ['hp', 'mana', 'limit', 'draws', 'hand', 'none'];   // Standardreihenfolge der Seiten 0 bis 5 (der Pluswürfel trägt seit 0.5 an Stelle 2 „mag“ statt „limit“, siehe MONSTER.variants.dice)
+  const NAMES = { hp: 'HP', mana: 'Mana', limit: 'Limit', mag: 'Magie', draws: 'Ziehen', hand: 'Hand', none: 'leer' };
   // Einstellungen (Werkstatt: Export einfügen). tiltX/tiltY: Kippung im Flug, restTiltX/restTiltY: Kippung in Ruhe (0 = die Symbole stehen gerade); vary: Stärke der Abweichung je Monster (0 = keine)
   const P = { size: 41, duration: 1.45, spins: 2, bounces: 3, hop: 38, fromX: -300, fromY: -230, tiltX: -24, tiltY: 20, restTiltX: 0, restTiltY: 0, vary: 1, stagger: 0.16, monsterStagger: 0.5, glyph: 0.6, numbers: 0, shadow: 0.5, plus: '#c0392b', minus: '#3f9d4d', gap: 8, y: 6 };
   const GLYPH = {   // Symbole (48 × 48), Farbe über currentColor
@@ -14,6 +14,7 @@ const DiceKit = (() => {
     limit: '<rect x="6" y="10" width="20" height="28" rx="3.5" fill="none" stroke="currentColor" stroke-width="3.4"/><path d="M30 24h13m-5.5-6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>',
     draws: '<rect x="14" y="11" width="20" height="27" rx="3.5" fill="currentColor"/><path d="M40 20a16.5 16.5 0 1 0 1.2 9" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/><path d="M42.5 12.5 40.5 21 32 19" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>',
     hand: '<g fill="currentColor"><rect x="7" y="13" width="17" height="25" rx="3" transform="rotate(-22 15 38)"/><rect x="15.5" y="9" width="17" height="25" rx="3" transform="rotate(0 24 38)" opacity=".92"/><rect x="24" y="13" width="17" height="25" rx="3" transform="rotate(22 33 38)"/></g>',
+    mag: '<path d="M24 42V11M11 24 24 11 37 24" fill="none" stroke="currentColor" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>',   // Magiestufe: Pfeil nach oben
     none: '',   // leere Seite: keine Grafik
   };
   // Welche Würfelseite zeigt zum Betrachter? [rotateX, rotateY] des Würfels in Ruhe
@@ -46,7 +47,7 @@ const DiceKit = (() => {
       const c = document.createElement('div'); c.style.cssText = 'position:absolute;left:0;top:0;width:' + S + 'px;height:' + S + 'px;background:' + shade(col, -.25) + ';backface-visibility:hidden;transform:' + t + ' translateZ(' + (S / 2 - 2) + 'px)';
       cube.appendChild(c);
     });
-    KINDS.forEach((k, i) => {
+    (o.kinds || KINDS).forEach((k, i) => {   // o.kinds: Seiten dieses Würfels (der Pluswürfel trägt „mag“ statt „limit“)
       const f = document.createElement('div'); f.className = 'dk-f'; f.style.cssText = 'width:' + S + 'px;height:' + S + 'px;border-radius:' + Math.round(S * .12) + 'px;transform:' + FACE_T[i] + ' translateZ(' + (S / 2) + 'px)';
       const g = Math.round(S * o.glyph * (k === 'none' ? 1 : .86)), n = amounts && amounts[i];
       const sgn = k === 'none' ? '' : '<svg class="dk-s" viewBox="0 0 12 12"><path d="' + (sign > 0 ? 'M6 1.5v9M1.5 6h9' : 'M1.5 6h9') + '" fill="none" stroke="#fff6df" stroke-width="2.2" stroke-linecap="round"/></svg>';   // Plus auf dem roten, Minus auf dem grünen Würfel; die leere Seite trägt nur einen Strich
@@ -118,7 +119,7 @@ const DiceBoard = (() => {
       const m = G.monsters[slot], v = m && m.variant;
       if (!v || !(v.pl >= 0) || !(v.mi >= 0)) { items.push(null); return; }
       const P = DiceKit.P, cx = R.left + i * R.step + R.w / 2, same = D.plus[v.pl].k === D.minus[v.mi].k, vr = DiceKit.vary((G.seed || 0) * 7 + G.stage * 131 + i * 17 + 1);   // je Monster leicht andere Würfel, bei allen Spielern gleich (aus dem Spielzufall)
-      const pl = DiceKit.make(1, amounts(D.plus, m.stage), vr.plus), mi = DiceKit.make(-1, amounts(D.minus, m.stage), vr.minus);
+      const pl = DiceKit.make(1, amounts(D.plus, m.stage), Object.assign({ kinds: D.plus.map(f => f.k) }, vr.plus)), mi = DiceKit.make(-1, amounts(D.minus, m.stage), Object.assign({ kinds: D.minus.map(f => f.k) }, vr.minus));
       pl.style.left = (cx - P.gap / 2 - vr.plus.size + vr.plus.dx) + 'px'; mi.style.left = Math.max(cx + P.gap / 2 + vr.minus.dx, cx - P.gap / 2 + vr.plus.dx + MIN_DICE_SEP) + 'px';   // Mindestabstand: auch bei Versatz und Verdrehung überlappen die Würfel nicht
        pl.style.top = (R.top + R.diceY + P.y + vr.plus.dy) + 'px'; mi.style.top = (R.top + R.diceY + P.y + vr.minus.dy) + 'px';
       pl.style.pointerEvents = mi.style.pointerEvents = 'auto';
