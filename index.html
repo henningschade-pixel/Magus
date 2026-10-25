@@ -1940,7 +1940,7 @@ LAYOUT.zoneLines.forEach(y => { const d = document.createElement('div'); d.class
 function fit() {
   const k = window.innerHeight / 800, W = Math.max(1280, Math.round(window.innerWidth / k));
   const changed = W !== SW;
-  if (changed) layoutFor(W);
+  if (changed) { layoutFor(W); try { DiceBoard.relayout(); } catch (e) { /* noch nicht geladen */ } }
   stage.style.transform = 'scale(' + k + ')';
   if (changed && typeof render === 'function' && G) render();
 }
@@ -4205,7 +4205,7 @@ const DiceKit = (() => {
 // Spielbrett: legt die Würfel der drei Monster auf die Monsterkarten, direkt über den Kämpfen-Knopf der Weltphase. Die Würfel liegen in einer eigenen Ebene (die Karten werden bei jedem Zeichnen neu gebaut).
 const DiceBoard = (() => {
   const MIN_DICE_SEP = 12;   // Mindestabstand der beiden Würfel einer Karte (px), größer als der Überstand der verdrehten Würfel
-  let layer = null, mons = null, items = [], thrown = false;
+  let layer = null, mons = null, items = [], thrown = false, builtLeft = 0;
   const V = () => M.MONSTER.variants;
   function ensure() { if (!layer) { layer = document.createElement('div'); layer.id = 'dicelayer'; layer.style.cssText = 'position:absolute;left:0;top:0;width:' + SW + 'px;height:800px;z-index:45;pointer-events:none'; stage.appendChild(layer); } return layer; }
   function tip(sign, face, n, same) {
@@ -4214,7 +4214,7 @@ const DiceBoard = (() => {
     return (sign > 0 ? 'Pluswürfel: +' : 'Minuswürfel: −') + n + ' ' + nm + ' (' + (sign > 0 ? 'mehr ' : 'weniger ') + V().diceHints[k] + ').' + (same ? ' Beide Würfel zeigen denselben Wert: die Wirkungen heben sich auf.' : '');
   }
   function build() {
-    items.forEach(it => { it.pl.remove(); it.mi.remove(); }); items = [];
+    items.forEach(it => { if (it) { it.pl.remove(); it.mi.remove(); } }); items = []; builtLeft = LAYOUT.monsters.left;
     const R = LAYOUT.monsters, D = V().dice, amounts = (die, stage) => DiceKit.KINDS.map((k, i) => (k === 'none' ? 0 : die[i].n[stage - 1]));
     M.ELEMENTS.forEach((slot, i) => {
       const m = G.monsters[slot], v = m && m.variant;
@@ -4250,7 +4250,13 @@ const DiceBoard = (() => {
     items.forEach(it => { if (!it) return; const alive = M.monsterAlive(G.monsters[it.slot]); it.pl.style.display = it.mi.style.display = alive ? '' : 'none'; });
     if (!thrown && !Intro.on) throwAll();
   }
-  return { sync, throwItem, throwRest };
+  // Fensterbreite geändert (Vollbild, Größenänderung): die Würfel wandern mit den Monsterkarten
+  function relayout() {
+    if (layer) layer.style.width = SW + 'px';
+    const d = LAYOUT.monsters.left - builtLeft; if (!d || !items.length) return;
+    items.forEach(it => { if (it) [it.pl, it.mi].forEach(el => { el.style.left = (parseFloat(el.style.left) + d) + 'px'; }); }); builtLeft += d;
+  }
+  return { sync, throwItem, throwRest, relayout };
 })();
 /* ---------- Spielstart: Monster aufdecken und würfeln, dann Karten mischen und austeilen ---------- */
 // Die Engine hat zu Beginn schon alles ausgeteilt; der Spielstart wird nur gezeigt: Monsterkarte 1, 2, 3 werden aufgedeckt und ihre Würfel geworfen, danach nimmt jeder Spieler seine Karten von der Ablage,

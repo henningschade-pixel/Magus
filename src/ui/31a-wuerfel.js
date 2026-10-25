@@ -104,7 +104,7 @@ const DiceKit = (() => {
 // Spielbrett: legt die Würfel der drei Monster auf die Monsterkarten, direkt über den Kämpfen-Knopf der Weltphase. Die Würfel liegen in einer eigenen Ebene (die Karten werden bei jedem Zeichnen neu gebaut).
 const DiceBoard = (() => {
   const MIN_DICE_SEP = 12;   // Mindestabstand der beiden Würfel einer Karte (px), größer als der Überstand der verdrehten Würfel
-  let layer = null, mons = null, items = [], thrown = false;
+  let layer = null, mons = null, items = [], thrown = false, builtLeft = 0;
   const V = () => M.MONSTER.variants;
   function ensure() { if (!layer) { layer = document.createElement('div'); layer.id = 'dicelayer'; layer.style.cssText = 'position:absolute;left:0;top:0;width:' + SW + 'px;height:800px;z-index:45;pointer-events:none'; stage.appendChild(layer); } return layer; }
   function tip(sign, face, n, same) {
@@ -113,7 +113,7 @@ const DiceBoard = (() => {
     return (sign > 0 ? 'Pluswürfel: +' : 'Minuswürfel: −') + n + ' ' + nm + ' (' + (sign > 0 ? 'mehr ' : 'weniger ') + V().diceHints[k] + ').' + (same ? ' Beide Würfel zeigen denselben Wert: die Wirkungen heben sich auf.' : '');
   }
   function build() {
-    items.forEach(it => { it.pl.remove(); it.mi.remove(); }); items = [];
+    items.forEach(it => { if (it) { it.pl.remove(); it.mi.remove(); } }); items = []; builtLeft = LAYOUT.monsters.left;
     const R = LAYOUT.monsters, D = V().dice, amounts = (die, stage) => DiceKit.KINDS.map((k, i) => (k === 'none' ? 0 : die[i].n[stage - 1]));
     M.ELEMENTS.forEach((slot, i) => {
       const m = G.monsters[slot], v = m && m.variant;
@@ -149,5 +149,11 @@ const DiceBoard = (() => {
     items.forEach(it => { if (!it) return; const alive = M.monsterAlive(G.monsters[it.slot]); it.pl.style.display = it.mi.style.display = alive ? '' : 'none'; });
     if (!thrown && !Intro.on) throwAll();
   }
-  return { sync, throwItem, throwRest };
+  // Fensterbreite geändert (Vollbild, Größenänderung): die Würfel wandern mit den Monsterkarten
+  function relayout() {
+    if (layer) layer.style.width = SW + 'px';
+    const d = LAYOUT.monsters.left - builtLeft; if (!d || !items.length) return;
+    items.forEach(it => { if (it) [it.pl, it.mi].forEach(el => { el.style.left = (parseFloat(el.style.left) + d) + 'px'; }); }); builtLeft += d;
+  }
+  return { sync, throwItem, throwRest, relayout };
 })();

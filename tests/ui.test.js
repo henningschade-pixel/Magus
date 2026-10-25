@@ -301,3 +301,20 @@ test('Hauptmenü: Einzelspieler, Mehrspieler, Einstellungen, Beenden; Einstellun
     assert.deepEqual(errs, []);
   } finally { await b.close(); }
 });
+
+test('Fenstergröße ändern (Vollbild): die Würfel wandern mit den Monsterkarten', { skip: !chromium && 'Playwright nicht installiert', timeout: 60000 }, async () => {
+  const b = await chromium.launch({ executablePath: exe });
+  try {
+    const p = await b.newPage({ viewport: { width: 1280, height: 800 } }), errs = [];
+    p.on('pageerror', e => errs.push(e.message));
+    await p.goto(url); await p.waitForTimeout(500);
+    await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(4000);
+    const rel = () => p.evaluate(() => { const sr = document.getElementById('stage').getBoundingClientRect(), k = sr.width / document.getElementById('stage').offsetWidth, d = document.querySelector('#dicelayer > *').getBoundingClientRect(), c = document.querySelector('.mon, .monster, [data-slot]'); return { dx: (d.left - sr.left) / k, sw: document.getElementById('stage').offsetWidth }; });
+    const a = await rel();
+    await p.setViewportSize({ width: 1920, height: 800 }); await p.waitForTimeout(600);
+    const c = await rel();
+    assert.ok(c.sw > a.sw, 'Bühne breiter');
+    assert.ok(Math.abs((c.dx - a.dx) - (c.sw - a.sw) / 2) < 2, 'Würfel um die halbe Mehrbreite verschoben: ' + (c.dx - a.dx));
+    assert.deepEqual(errs, []);
+  } finally { await b.close(); }
+});

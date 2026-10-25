@@ -2,7 +2,7 @@
 function fit() {
   const k = window.innerHeight / 800, W = Math.max(1280, Math.round(window.innerWidth / k));
   const changed = W !== SW;
-  if (changed) layoutFor(W);
+  if (changed) { layoutFor(W); try { DiceBoard.relayout(); } catch (e) { /* noch nicht geladen */ } }
   stage.style.transform = 'scale(' + k + ')';
   if (changed && typeof render === 'function' && G) render();
 }
