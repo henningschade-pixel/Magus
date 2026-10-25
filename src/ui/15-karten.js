@@ -24,6 +24,8 @@ function stockSpot(id) {
   const r = t.getBoundingClientRect(), sr = stage.getBoundingClientRect(), k = sr.width / stage.offsetWidth;
   return { x: (r.left - sr.left) / k, y: (r.top - sr.top) / k, sc: r.width / k / CW };
 }
+const DRAW_STEP = 150;   // Nachziehen: Abstand zwischen zwei Karten, die vom Stapel in die Hand kommen (ms)
+let drawFrame = -1, drawN = { true: 0, false: 0 };
 const reducedMotion = () => !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
 function place(card, s) {
   let rec = els.get(card.uid); const isNew = !rec;
@@ -46,14 +48,20 @@ function place(card, s) {
   const prevFinal = rec.final;
   rec.final = 'translate(' + s.x + 'px,' + s.y + 'px) rotate(' + (s.rot || 0) + 'deg) scale(' + s.sc + ')';
   if (rec.final !== prevFinal && prevFinal) cardsUntil = Math.max(cardsUntil, Date.now() + 450);
-  const held = rec.hold && Date.now() < rec.hold;   // gekaufte Karte wartet noch auf den Rückflug der bezahlten Karten
+  let wait = 0;   // Nachziehen: mehrere Karten kommen zügig nacheinander vom Stapel in die Hand, nicht alle zugleich
+  if (!isNew && prevZone === 'draw' && s.zone === 'hand' && !FAST && !reducedMotion()) {
+    if (drawFrame !== frame) { drawFrame = frame; drawN = { true: 0, false: 0 }; }
+    wait = DRAW_STEP * drawN[!!s.mine]++;
+    if (wait) { rec.hold = Date.now() + wait; setTimeout(() => { if (rec.final) d.style.transform = rec.final; }, wait); cardsUntil = Math.max(cardsUntil, Date.now() + wait + 450); }
+  }
+  const held = rec.hold && Date.now() < rec.hold;   // gekaufte Karte wartet noch auf den Rückflug der bezahlten Karten (oder auf ihren Platz in der Zugreihenfolge)
   if (!held) d.style.transform = rec.final;
   d.style.zIndex = held ? 400 : s.z;
   const wasDown = d.classList.contains('down'), flipped = !isNew && !!s.down !== wasDown && (s.zone === 'hand' || prevZone === 'hand') && !FAST && !reducedMotion();
   d.classList.toggle('down', !!s.down); d.classList.toggle('marked', !!s.marked); d.classList.toggle('first', !!s.first); d.classList.toggle('fd', !!s.fd); d.classList.toggle('locked', !!s.locked);
   d.classList.toggle('myhand', !!s.mine); d.dataset.slot = s.slot === undefined ? '' : s.slot;
   d.style.pointerEvents = s.mine ? 'auto' : 'none';
-  if (flipped) { const ms = CardFlip.hand(d.querySelector('.inner'), s.down ? 0 : 180, s.down ? 180 : 0); cardsUntil = Math.max(cardsUntil, Date.now() + ms); }   // Volle Drehung (Kartendreh-Werkstatt); nur Karten, die in die Hand kommen oder sie verlassen (Austeilen, Aufdecken); Mischen und Ablegen drehen ohne Animation
+  if (flipped) { const ms = CardFlip.hand(d.querySelector('.inner'), s.down ? 0 : 180, s.down ? 180 : 0, wait); cardsUntil = Math.max(cardsUntil, Date.now() + ms); }   // Volle Drehung (Kartendreh-Werkstatt); nur Karten, die in die Hand kommen oder sie verlassen (Austeilen, Aufdecken); Mischen und Ablegen drehen ohne Animation
 }
 function slotX(i, n, L) {
   const w = CW * L.s, step = n > 1 ? Math.min(L.gap, (L.span - w) / (n - 1)) : 0, total = w + step * (n - 1);

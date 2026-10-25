@@ -79,6 +79,6 @@ function flushSound(quiet) {
   const q = sndQ; sndQ = { flip: 0, place: 0, shuf: 0 };
   if (quiet) return;
   if (q.shuf >= 2) { Snd.play('shuffle', 0, 0.8); q.place = 0; }
-  for (let i = 0; i < Math.min(q.flip, 4); i++) Snd.play('flip', i * 0.09);
+  for (let i = 0; i < Math.min(q.flip, 4); i++) Snd.play('flip', i * 0.15);   // im Takt des Nachziehens (DRAW_STEP)
   for (let i = 0; i < Math.min(q.place, 4); i++) Snd.play('play', 0.05 + i * 0.09);
 }

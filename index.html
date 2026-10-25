@@ -2190,7 +2190,7 @@ function flushSound(quiet) {
   const q = sndQ; sndQ = { flip: 0, place: 0, shuf: 0 };
   if (quiet) return;
   if (q.shuf >= 2) { Snd.play('shuffle', 0, 0.8); q.place = 0; }
-  for (let i = 0; i < Math.min(q.flip, 4); i++) Snd.play('flip', i * 0.09);
+  for (let i = 0; i < Math.min(q.flip, 4); i++) Snd.play('flip', i * 0.15);   // im Takt des Nachziehens (DRAW_STEP)
   for (let i = 0; i < Math.min(q.place, 4); i++) Snd.play('play', 0.05 + i * 0.09);
 }
 /* ---------- Karten ---------- */
@@ -2219,6 +2219,8 @@ function stockSpot(id) {
   const r = t.getBoundingClientRect(), sr = stage.getBoundingClientRect(), k = sr.width / stage.offsetWidth;
   return { x: (r.left - sr.left) / k, y: (r.top - sr.top) / k, sc: r.width / k / CW };
 }
+const DRAW_STEP = 150;   // Nachziehen: Abstand zwischen zwei Karten, die vom Stapel in die Hand kommen (ms)
+let drawFrame = -1, drawN = { true: 0, false: 0 };
 const reducedMotion = () => !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
 function place(card, s) {
   let rec = els.get(card.uid); const isNew = !rec;
@@ -2241,14 +2243,20 @@ function place(card, s) {
   const prevFinal = rec.final;
   rec.final = 'translate(' + s.x + 'px,' + s.y + 'px) rotate(' + (s.rot || 0) + 'deg) scale(' + s.sc + ')';
   if (rec.final !== prevFinal && prevFinal) cardsUntil = Math.max(cardsUntil, Date.now() + 450);
-  const held = rec.hold && Date.now() < rec.hold;   // gekaufte Karte wartet noch auf den Rückflug der bezahlten Karten
+  let wait = 0;   // Nachziehen: mehrere Karten kommen zügig nacheinander vom Stapel in die Hand, nicht alle zugleich
+  if (!isNew && prevZone === 'draw' && s.zone === 'hand' && !FAST && !reducedMotion()) {
+    if (drawFrame !== frame) { drawFrame = frame; drawN = { true: 0, false: 0 }; }
+    wait = DRAW_STEP * drawN[!!s.mine]++;
+    if (wait) { rec.hold = Date.now() + wait; setTimeout(() => { if (rec.final) d.style.transform = rec.final; }, wait); cardsUntil = Math.max(cardsUntil, Date.now() + wait + 450); }
+  }
+  const held = rec.hold && Date.now() < rec.hold;   // gekaufte Karte wartet noch auf den Rückflug der bezahlten Karten (oder auf ihren Platz in der Zugreihenfolge)
   if (!held) d.style.transform = rec.final;
   d.style.zIndex = held ? 400 : s.z;
   const wasDown = d.classList.contains('down'), flipped = !isNew && !!s.down !== wasDown && (s.zone === 'hand' || prevZone === 'hand') && !FAST && !reducedMotion();
   d.classList.toggle('down', !!s.down); d.classList.toggle('marked', !!s.marked); d.classList.toggle('first', !!s.first); d.classList.toggle('fd', !!s.fd); d.classList.toggle('locked', !!s.locked);
   d.classList.toggle('myhand', !!s.mine); d.dataset.slot = s.slot === undefined ? '' : s.slot;
   d.style.pointerEvents = s.mine ? 'auto' : 'none';
-  if (flipped) { const ms = CardFlip.hand(d.querySelector('.inner'), s.down ? 0 : 180, s.down ? 180 : 0); cardsUntil = Math.max(cardsUntil, Date.now() + ms); }   // Volle Drehung (Kartendreh-Werkstatt); nur Karten, die in die Hand kommen oder sie verlassen (Austeilen, Aufdecken); Mischen und Ablegen drehen ohne Animation
+  if (flipped) { const ms = CardFlip.hand(d.querySelector('.inner'), s.down ? 0 : 180, s.down ? 180 : 0, wait); cardsUntil = Math.max(cardsUntil, Date.now() + ms); }   // Volle Drehung (Kartendreh-Werkstatt); nur Karten, die in die Hand kommen oder sie verlassen (Austeilen, Aufdecken); Mischen und Ablegen drehen ohne Animation
 }
 function slotX(i, n, L) {
   const w = CW * L.s, step = n > 1 ? Math.min(L.gap, (L.span - w) / (n - 1)) : 0, total = w + step * (n - 1);
@@ -2380,11 +2388,11 @@ const CardFlip = (() => {
     return out;
   }
   const tf = (P, p) => 'perspective(' + P.persp + 'px) translateY(' + p.hop + 'px) translateZ(' + p.lift + 'px) rotateZ(' + p.z + 'deg) scale(' + p.sc + ') rotateY(' + p.ang + 'deg)';
-  const run = (el, kf, dur) => el.animate(kf, { duration: dur, easing: 'linear' });
-  function hand(inner, from, to) {   // Handkarte: .inner von from nach to (0 = Vorderseite, 180 = Rückseite)
+  const run = (el, kf, dur, delay) => el.animate(kf, { duration: dur, easing: 'linear', delay: delay || 0, fill: delay ? 'backwards' : 'none' });
+  function hand(inner, from, to, delay) {   // Handkarte: .inner von from nach to (0 = Vorderseite, 180 = Rückseite)
     if (!inner.animate) return 0;
-    run(inner, frames(HAND, from, to, p => ({ transform: tf(HAND, p) })), HAND.dauer);
-    return HAND.dauer;
+    run(inner, frames(HAND, from, to, p => ({ transform: tf(HAND, p) })), HAND.dauer, delay);   // delay: wartet in der Anfangsstellung (Rückseite) auf seinen Zug
+    return HAND.dauer + (delay || 0);
   }
   function monster(mc, col, done) {   // Monsterkarte zum Spielstart: .mc (verdeckt 0° -> offen 180°) mit Schatten, Glanz und Leuchten; done() am Ende
     const P = MON, slot = mc.parentNode, sh = slot.querySelector('.cfshadow'), gl = slot.querySelector('.cfglint'), fr = slot.querySelector('.cffront');

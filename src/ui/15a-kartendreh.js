@@ -17,11 +17,11 @@ const CardFlip = (() => {
     return out;
   }
   const tf = (P, p) => 'perspective(' + P.persp + 'px) translateY(' + p.hop + 'px) translateZ(' + p.lift + 'px) rotateZ(' + p.z + 'deg) scale(' + p.sc + ') rotateY(' + p.ang + 'deg)';
-  const run = (el, kf, dur) => el.animate(kf, { duration: dur, easing: 'linear' });
-  function hand(inner, from, to) {   // Handkarte: .inner von from nach to (0 = Vorderseite, 180 = Rückseite)
+  const run = (el, kf, dur, delay) => el.animate(kf, { duration: dur, easing: 'linear', delay: delay || 0, fill: delay ? 'backwards' : 'none' });
+  function hand(inner, from, to, delay) {   // Handkarte: .inner von from nach to (0 = Vorderseite, 180 = Rückseite)
     if (!inner.animate) return 0;
-    run(inner, frames(HAND, from, to, p => ({ transform: tf(HAND, p) })), HAND.dauer);
-    return HAND.dauer;
+    run(inner, frames(HAND, from, to, p => ({ transform: tf(HAND, p) })), HAND.dauer, delay);   // delay: wartet in der Anfangsstellung (Rückseite) auf seinen Zug
+    return HAND.dauer + (delay || 0);
   }
   function monster(mc, col, done) {   // Monsterkarte zum Spielstart: .mc (verdeckt 0° -> offen 180°) mit Schatten, Glanz und Leuchten; done() am Ende
     const P = MON, slot = mc.parentNode, sh = slot.querySelector('.cfshadow'), gl = slot.querySelector('.cfglint'), fr = slot.querySelector('.cffront');
