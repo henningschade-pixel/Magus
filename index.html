@@ -525,15 +525,16 @@ const MONSTER = {
   temple: { 2: { F: ['limit', 'hp', 'mana'], E: ['limit', 'hp', 'mana'], W: ['limit', 'hp', 'mana'] }, 3: { F: ['limit', 'hp', 'hp', 'mana'], E: ['limit', 'hp', 'hp', 'mana'], W: ['limit', 'hp', 'hp', 'mana'] } },   // Schritte je Stufe (Stufe III kommt auf Stufe II obendrauf): II = Limit 3, 4 HP, Mana 5; III = Limit 4, 6 HP, Mana 6
   magic: { 2: [3, 2, 1], 3: [3, 2, 1] },                                  // Stufen von Haupt-, Neben- und drittem Element
   deck: {
-    2: (P, S, T) => [P + '3', P + '2', P + '2', P + '2', S + '2', S + '2', T + '1', T + '1', P + '1'],
+    2: (P, S, T) => [P + '3', P + '2', P + '2', P + '2', S + '3', S + '2', T + '1', T + '1', P + '1'],
     3: (P, S, T) => [P + '3', P + '3', P + '3', P + '2', P + '2', S + '3', S + '3', T + '2', T + '1'],
   },
   // Varianten (seit 0.4): Je Element gibt es zwei Formen, spitz und breit (6 mögliche Monster je Stufe, davon erscheinen drei: je Element eine Form, gewürfelt).
+  // Folgemagie (S): Jedes Deck enthält mindestens eine Karte der Folgemagie eine Stufe über der Magie des Monsters (Stufe I: S2 bei Magie 1, Stufe II/III: S3 bei Magie 2). Sie wirkt normalerweise nur mit der Magie (also wie die Stufe darunter) und wird erst durch die Magiestufe des Pluswürfels voll nutzbar.
   // Dazu kommen zwei Würfel: der Pluswürfel macht das Monster stärker, der Minuswürfel schwächer (gleich starke Ausschläge, die Gesamtstärke bleibt). Die Ausschläge wachsen mit der Stufe: Spalten = Stufe I, II, III.
   variants: {
     deck: {   // Deckformen. Index 0 = Grundform (nur für die feste Form ohne Würfel), 1 = breit (mehr Nebenelement), 2 = spitz (stärkere Spitze, schwächere Basis)
-      1: [null, (P, S, T) => [P + '2', P + '2', P + '1', P + '1', S + '1', S + '1', S + '1', T + '1', T + '1'], (P, S, T) => [P + '2', P + '2', P + '2', P + '2', P + '1', P + '1', S + '1', S + '1', S + '1']],
-      2: [null, (P, S, T) => [P + '3', P + '2', P + '2', S + '2', S + '2', S + '2', T + '1', T + '1', P + '1'], (P, S, T) => [P + '3', P + '3', P + '1', P + '1', S + '2', S + '2', S + '2', T + '1', T + '1']],
+      1: [null, (P, S, T) => [P + '2', P + '2', P + '1', P + '1', S + '2', S + '1', S + '1', T + '1', T + '1'], (P, S, T) => [P + '2', P + '2', P + '2', P + '2', P + '1', P + '1', S + '2', S + '1', S + '1']],
+      2: [null, (P, S, T) => [P + '3', P + '2', P + '2', S + '3', S + '2', S + '2', T + '1', T + '1', P + '1'], (P, S, T) => [P + '3', P + '3', P + '1', P + '1', S + '3', S + '2', S + '2', T + '1', T + '1']],
       3: [null, (P, S, T) => [P + '3', P + '3', P + '3', P + '2', S + '3', S + '3', S + '2', T + '2', T + '1'], (P, S, T) => [P + '3', P + '3', P + '3', P + '3', P + '1', S + '3', S + '3', T + '2', T + '1']],
     },
     // Die Würfel: sechs Seiten je Würfel, jede Seite ein Wert und sein Ausschlag je Stufe (n: Stufe I, II, III).
@@ -576,6 +577,7 @@ function spawnOne(el, stage, rng, v) {
   v = v || { d: 0, pl: -1, mi: -1 };
   for (let i = 0, src = SUPERIOR[el] + '1'; i < (M.upgrades[el] === undefined ? 2 : M.upgrades[el]); i++) { const idx = deck.indexOf(src); if (idx < 0) break; deck[idx] = el + '2'; }
   const stats = newStats();
+  { const sIdx = deck.indexOf(M.profile[el].secondary + '1'); if (sIdx >= 0) deck[sIdx] = M.profile[el].secondary + '2'; }   // Folgemagie: eine Karte eine Stufe über der Magie (wirkt erst mit dem Magiebonus des Pluswürfels)
   stats.limit = M.startLimit;
   stats.drawLimit = M.startDraws;
   stats.mag[el] = 2;
@@ -601,7 +603,6 @@ function spawnOne(el, stage, rng, v) {
   if (v.d) {
     hints.push(v.d === 1 ? 'Generalist (breit): mehr Karten im Nebenelement, dafür weniger im Hauptelement. Vielseitiger, aber mit schwächerer Spitze.' : 'Spezialist (spitz): stärkere Spitze (mehr Karten der höchsten Stufe), dafür eine schwächere Basis (mehr Stufe-1-Karten).');
   }
-  const magBefore = stats.mag[S];
   const same = v.pl >= 0 && v.mi >= 0 && V.dice.plus[v.pl].k === V.dice.minus[v.mi].k;   // gleicher Wert auf beiden Würfeln: die Ausschläge heben sich auf, sie werden weder angewendet noch gezeigt
   [[v.pl, 1, V.dice.plus], [v.mi, -1, V.dice.minus]].forEach(([i, sign, die]) => {
     if (i === undefined || i < 0 || same || die[i].k === 'none') return;
@@ -610,10 +611,7 @@ function spawnOne(el, stage, rng, v) {
     tags.push((sign > 0 ? '+' : '−') + V.diceNames[face.k]);
     hints.push((sign > 0 ? 'Pluswürfel' : 'Minuswürfel') + ': ' + (sign > 0 ? '+' : '−') + n + ' ' + V.diceNames[face.k] + ' (' + (sign > 0 ? 'mehr ' : 'weniger ') + V.diceHints[face.k] + ').');
   });
-  { const e = P === el ? S : null, bonus = e && stats.mag[e] > magBefore; if (bonus && !finalDeck.some(id => id === e + stats.mag[e])) {   // Magiestufen-Bonus des Pluswürfels: eine passende Karte rückt auf die neue Stufe (sonst bliebe die Magie wirkungslos)
-      let bi = -1; finalDeck.forEach((id, i) => { if (id[0] === e && +id[1] < stats.mag[e] && (bi < 0 || +id[1] > +finalDeck[bi][1])) bi = i; });
-      if (bi >= 0) { finalDeck = finalDeck.slice(); finalDeck[bi] = e + stats.mag[e]; } } }
-  finalDeck = finalDeck.map(id => id[0] !== 'C' && +id[1] > stats.mag[id[0]] ? id[0] + stats.mag[id[0]] : id);   // Eine Karte wirkt höchstens mit der Magie ihrer Farbe: die Anzeige soll das zeigen
+  finalDeck = finalDeck.map(id => id[0] !== 'C' && id[0] !== S && +id[1] > stats.mag[id[0]] ? id[0] + stats.mag[id[0]] : id);   // Eine Karte wirkt höchstens mit der Magie ihrer Farbe: die Anzeige soll das zeigen. Ausnahme: Karten der Folgemagie bleiben auf ihrer höheren Stufe (siehe oben, sie wirken erst mit dem Magiebonus des Pluswürfels)
   rng.shuffle(finalDeck);
   return { el, name: (v.d ? M.formNames[el][v.d] : M.names[el]) + ' ' + STAGE_NUMERAL[stage], label: tags.join(', '), hints, variant: v, stage, base, stats, deckIds: finalDeck };
 }

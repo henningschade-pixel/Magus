@@ -204,8 +204,9 @@ test('Monsterdecks passen zur Magie: zu jeder Magiestufe ab 2 eine Karte dieser 
       const m = r[el];
       for (const e of ['F', 'E', 'W']) {
         const tiers = m.deckIds.filter(id => id[0] === e).map(id => +id[1]), mag = m.stats.mag[e];
-        assert.ok(!tiers.some(t => t > mag), 'Abschnitt ' + st + ' ' + el + ': Karte über Magie ' + e + mag);
-        if (mag >= 2) assert.ok(tiers.includes(mag), 'Abschnitt ' + st + ' ' + el + ': keine ' + e + mag + '-Karte');
+        if (e !== M.MONSTER.profile[m.el].secondary) assert.ok(!tiers.some(t => t > mag), 'Abschnitt ' + st + ' ' + el + ': Karte über Magie ' + e + mag);   // Ausnahme: die Folgemagie trägt Karten über ihrer Stufe (erst mit dem Pluswürfel nutzbar)
+        else assert.ok(tiers.some(t => t > (st === 1 ? 1 : 2)), 'Abschnitt ' + st + ' ' + el + ': keine Karte der Folgemagie über ihrer Grundstufe ' + e);   // Grundstufe der Folgemagie: 1 (Abschnitt I), 2 (II, III)
+        if (mag >= 2) assert.ok(tiers.includes(mag) || (e === M.MONSTER.profile[m.el].secondary && tiers.some(t => t > mag)), 'Abschnitt ' + st + ' ' + el + ': keine ' + e + mag + '-Karte');
       }
     }
   }
@@ -537,7 +538,7 @@ test('Pluswürfel „Magie“: eine Magiestufe mehr auf der Folgemagie des Monst
       for (const k of Object.keys(r)) {
         const m = r[k], S = M.MONSTER.profile[m.el].secondary, b = M.spawnMonsters(stage)[m.el];   // b: feste Grundform ohne Würfel desselben Elements
         assert.equal(m.stats.mag[S], Math.min(3, b.stats.mag[S] + 1), 'Stufe ' + stage + ' ' + m.el + ': Folgemagie ' + S + ' +1');
-        assert.ok(m.deckIds.some(id => id === S + m.stats.mag[S]), 'eine Karte der neuen Stufe ist im Deck');
+        assert.ok(m.deckIds.some(id => id === S + m.stats.mag[S]), 'eine Karte der neuen Stufe ist ohnehin im Deck');
         assert.equal(m.stats.limit, b.stats.limit, 'das Limit bleibt unberührt');
       }
     }
