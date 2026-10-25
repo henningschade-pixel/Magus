@@ -7,12 +7,12 @@
 // Grundwerte je Stufe (Version 0.3.1, neu abgestimmt auf Spieler mit Ausspiellimit 2 von Anfang an; Messung mit tools/balance/monster-tune.js); seit 0.4 kommen Deckform und zwei Würfel dazu (variants):
 //   Stufe I   3 HP, Mana 5 (Erdmonster 6), Limit 2, Startdeck mit 3 Karten des eigenen Elements auf Stufe 2
 //   Stufe II  4 HP, Mana 5, Limit 3
-//   Stufe III 6 HP, Mana 6, Limit 4 (0.3.2: 8 HP waren mit den höheren Einnahmen zu hart, 48 % Niederlagen)
+//   Stufe III 7 HP, Mana 6, Limit 4, Hand 5 (Hand höchstens MAX_SLOTS; +1 HP statt der sechsten Handkarte; 0.3.2: 8 HP waren mit den höheren Einnahmen zu hart, 48 % Niederlagen)
 // Das Limit steigt nur dort, wo es gewollt ist: Ein Monster mit Limit 2 und vielen HP verwickelt den Angreifer in endlose Angriffe und Fluchten (bis 27 Angriffe je Partie), erst Limit 3 gibt ihm die nötige Gefahr.
 const MONSTER = {
   profile: { F: { primary: 'F', secondary: 'E' }, E: { primary: 'E', secondary: 'W' }, W: { primary: 'W', secondary: 'F' } },
   stage1Temple: { F: ['mana'], E: ['mana', 'mana'], W: ['mana'] },   // Stufe I: Mana 5 (Erdmonster 6; sonst verlor es die Angreifer nur halb so oft)
-  temple: { 2: { F: ['limit', 'hp', 'mana'], E: ['limit', 'hp', 'mana'], W: ['limit', 'hp', 'mana'] }, 3: { F: ['limit', 'hp', 'hp', 'mana'], E: ['limit', 'hp', 'hp', 'mana'], W: ['limit', 'hp', 'hp', 'mana'] } },   // Schritte je Stufe (Stufe III kommt auf Stufe II obendrauf): II = Limit 3, 4 HP, Mana 5; III = Limit 4, 6 HP, Mana 6
+  temple: { 2: { F: ['limit', 'hp', 'mana'], E: ['limit', 'hp', 'mana'], W: ['limit', 'hp', 'mana'] }, 3: { F: ['limit', 'hp', 'hp', 'hp', 'mana'], E: ['limit', 'hp', 'hp', 'hp', 'mana'], W: ['limit', 'hp', 'hp', 'hp', 'mana'] } },   // Schritte je Stufe (Stufe III kommt auf Stufe II obendrauf): II = Limit 3, 4 HP, Mana 5; III = Limit 4, 7 HP, Mana 6 (Hand höchstens 5, ein HP mehr als Ausgleich)
   magic: { 2: [3, 2, 1], 3: [3, 2, 1] },                                  // Stufen von Haupt-, Neben- und drittem Element
   deck: {
     2: (P, S, T) => [P + '3', P + '2', P + '2', P + '2', S + '3', S + '2', T + '1', T + '1', P + '1'],
@@ -88,7 +88,7 @@ function spawnOne(el, stage, rng, v) {
     stats.gold = M.gold[st];
   }
   finalDeck = finalDeck.slice();
-  const base = { maxHp: stats.maxHp, maxMana: stats.maxMana, limit: stats.limit, drawLimit: stats.drawLimit, hand: Math.max(2, Math.max(MIN_SLOTS, stats.limit + 2)) };   // Standardwerte vor den Würfeln (die Weltphase zeigt sie, im Kampf gelten die veränderten)
+  const base = { maxHp: stats.maxHp, maxMana: stats.maxMana, limit: stats.limit, drawLimit: stats.drawLimit, hand: Math.min(MAX_SLOTS, Math.max(2, Math.max(MIN_SLOTS, stats.limit + 2))) };   // Standardwerte vor den Würfeln (die Weltphase zeigt sie, im Kampf gelten die veränderten)
   const tags = [], hints = [];
   if (v.d) {
     hints.push(v.d === 1 ? 'Generalist (breit): mehr Karten im Nebenelement, dafür weniger im Hauptelement. Vielseitiger, aber mit schwächerer Spitze.' : 'Spezialist (spitz): stärkere Spitze (mehr Karten der höchsten Stufe), dafür eine schwächere Basis (mehr Stufe-1-Karten).');
@@ -124,7 +124,7 @@ function spawnMonsters(stage, rng) {
   return out;
 }
 // Handkarten eines Monsters: Limit + 2 (mindestens 3), dazu die Würfel-Seite „Hand“ (mindestens 2).
-function monsterHand(m) { return Math.max(2, Math.max(MIN_SLOTS, m.stats.limit + 2) + (m.stats.handExtra || 0)); }
+function monsterHand(m) { return Math.min(MAX_SLOTS, Math.max(2, Math.max(MIN_SLOTS, m.stats.limit + 2) + (m.stats.handExtra || 0))); }   // höchstens so viele Handkarten wie ein Spieler (MAX_SLOTS)
 function monsterAlive(m) { return m.stats.hp > 0; }
 // Monsterphase vorbei: alle drei Monster sind besiegt.
 function allMonstersDead(state) { return ELEMENTS.every(e => !monsterAlive(state.monsters[e])); }

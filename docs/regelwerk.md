@@ -265,3 +265,7 @@ Würfelt man denselben Wert auf beiden Würfeln (zum Beispiel +HP und −HP), he
 ## Anzeige der Kombo-Wirkung (0.4)
 
 Wie beim Angriff läuft bei den Kombos zuerst die Animation, dann erscheint die Wirkung: Die Flüche der Lähmung liegen erst im Ablagestapel des Gegners, wenn die Funken ankommen; die Abfrage der Zerrüttung (Karten abwerfen) und die Heilung und entfernten Marker der Läuterung erscheinen erst nach ihrer Animation. Die Engine wendet die Wirkung sofort an, nur die Anzeige hält den Stand davor zurück (`withComboHold` in `src/ui/26-erde.js`). Mehrere Karten derselben zweiten Farbe zählen für die Kombostufe zusammen (F2, W1, W1 = Zerrüttung 2; Test in `tests/engine.test.js`).
+
+## Monster-Hand höchstens 5, Stufe III mit 7 HP (0.5)
+
+Die Hand eines Monsters (Limit + 2, plus oder minus der Würfel) ist höchstens so groß wie die eines Spielers (`MAX_SLOTS`, 5). Das trifft die Monster der Stufe III (Limit 4, vorher Hand 6). Als Ausgleich haben sie 7 statt 6 HP. Messung (1200 Partien KI gegen KI, Siegquote der Spieler in Stufe III): vorher 58,6 %, nur Hand 5 ohne Ausgleich 63,8 %, mit +1 HP 57,2 %, mit +1 Mana 65,1 %. Mana bringt also kaum etwas.
