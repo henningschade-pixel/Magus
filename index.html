@@ -716,7 +716,8 @@ function comboLevels(tiers, mag, prim) {
   };
   const lv = { fw: pair('F', 'W'), fe: pair('F', 'E'), ew: pair('E', 'W'), ulti: 0 };
   if (tiers.F.length && tiers.E.length && tiers.W.length) {
-    lv.ulti = Math.max(0, Math.min(3, Math.min(mag.F, mag.E, mag.W, Math.max(...tiers.F), Math.max(...tiers.E), Math.max(...tiers.W))));
+    const sum = e => tiers[e].reduce((n, t) => n + Math.min(t, mag[e]), 0);   // wie bei den geordneten Kombos: mehrere Karten einer Farbe ergeben zusammen die Stufe (W1 + W1 = 2)
+    lv.ulti = Math.max(0, Math.min(3, sum('F'), sum('E'), sum('W')));
   }
   // Geordnete Kombos: Die Farbe der ersten Karte bestimmt die Rolle, die zweite Farbe die Wirkung. Bei allen drei Farben gilt nur die Ultimate.
   lv.ord = null;

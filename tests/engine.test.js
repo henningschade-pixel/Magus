@@ -498,3 +498,9 @@ test('Kombo mit mehreren Karten der zweiten Farbe: F2, W1, W1 ergibt Zerrüttung
   assert.deepEqual([ev(['W1', 'F2', 'W1']).ord.key, ev(['W1', 'F2', 'W1']).ord.lvl], ['bm', 2]);   // andere erste Farbe: Spiegel, ebenfalls Stufe 2
   assert.equal(ev(['F1', 'F1', 'E2']).ord.lvl, 2); assert.equal(ev(['F1', 'F1', 'E1']).ord.lvl, 1);
 });
+
+test('Ultimate: mehrere Karten einer Farbe ergeben zusammen die Stufe (E2, F2, W1, W1 = Ultimate 2)', () => {
+  const lv = M.comboLevels({ F: [2], E: [2], W: [1, 1] }, { F: 3, E: 3, W: 3 }, 'E');
+  assert.equal(lv.ulti, 2);
+  assert.equal(M.comboLevels({ F: [2], E: [2], W: [1] }, { F: 3, E: 3, W: 3 }, 'E').ulti, 1);
+});
