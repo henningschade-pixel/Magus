@@ -366,7 +366,7 @@ function showStart(pg) {
     h += '<img class="logo" alt="" src="assets/img/logo.webp"><div class="menulist">' +
       (run ? menuBtn('resume', 'Spiel fortsetzen', '', 'primary') : '') +
       menuTo('single', 'Einzelspieler', run ? '' : 'primary') + menuTo('multi', 'Mehrspieler') + menuTo('settings', 'Einstellungen') + menuBtn('quit', 'Beenden') + '</div>' +
-      '<div class="menufoot">' + menuTo('about', 'Neu in Version 0.8', 'link') + '</div>';
+      '<div class="menufoot">' + menuTo('about', 'Neu in Version 0.9', 'link') + '</div>';
   } else if (pg === 'single') {
     h += '<h2>Einzelspieler</h2><div class="menulist">' +
       menuBtn('newgame', run ? 'Neues Spiel gegen den Computer' : 'Gegen den Computer spielen', '', run ? '' : 'primary') +
@@ -379,7 +379,7 @@ function showStart(pg) {
   } else if (pg === 'settings') {
     h += '<h2>Einstellungen</h2><div class="menulist">' + settingsHTML() + back + '</div>';
   } else if (pg === 'about') {
-    h += '<p class="note intro" style="margin-top:-2px"><b>Danke, dass du Magus testest!</b> Der Schwerpunkt von <b>Version 0.8</b> ist die <b>Menüführung</b>. <b>Hauptmenü:</b> Es gibt jetzt die üblichen Einträge <b>Einzelspieler</b> (gegen den Computer oder zwei Computern zuschauen), <b>Mehrspieler</b> (Raum erstellen oder mit Code beitreten), <b>Einstellungen</b> und <b>Beenden</b>. Läuft gerade eine Partie, steht oben zusätzlich <b>Spiel fortsetzen</b>. <b>Einstellungen:</b> Ton an oder aus sowie die Regler für <b>Effekte</b> und <b>Musik</b>; sie sind auch im Spielmenü (Haus-Symbol) erreichbar, das jetzt Fortsetzen, Neu starten, Statistik, Einstellungen und <b>Zum Hauptmenü</b> enthält. <b>Version 0.7:</b> Es läuft <b>Hintergrundmusik</b> als Endlosschleife; <b>Effekte und Musik</b> haben getrennte Lautstärkeregler, die Einstellung bleibt gespeichert. Alle Effekte liegen auf einem ähnlichen mittleren Pegel (etwa −20 dB), nur Ultimate und Todes-Fluch sind absichtlich lauter. Sag mir bitte, wenn dir die Musik oder ein Effekt zu laut oder zu leise vorkommt.</p><div class="menulist">' + back + '</div>';
+    h += '<p class="note intro" style="margin-top:-2px"><b>Danke, dass du Magus testest!</b> Der Schwerpunkt von <b>Version 0.9</b> ist der <b>Hintergrund</b>. <b>Leuchtende Runen:</b> Die Runen im Stein leuchten sporadisch auf, mal einzeln, mal mehrere zugleich, in warmem Gold und Orange; Häufigkeit, Dauer, Größe, Farbe und Stärke sind in der <b>Runen-Werkstatt</b> einstellbar und werden von dort ins Spiel übernommen. Sag mir bitte, ob das Leuchten zu stark, zu schwach oder zu häufig wirkt. <b>Version 0.8:</b> Das <b>Hauptmenü</b> hat die üblichen Einträge <b>Einzelspieler</b> (gegen den Computer oder zwei Computern zuschauen), <b>Mehrspieler</b> (Raum erstellen oder mit Code beitreten), <b>Einstellungen</b> (Ton, Regler für Effekte und Musik) und <b>Beenden</b>; läuft eine Partie, steht oben <b>Spiel fortsetzen</b>. Das Spielmenü (Haus-Symbol) enthält Fortsetzen, Neu starten, Statistik, Einstellungen und <b>Zum Hauptmenü</b>.</p><div class="menulist">' + back + '</div>';
   } else if (pg === 'quit') {
     h += '<p class="note" style="text-align:center;font-size:19px">Danke fürs Spielen!<br>Ein Browser-Tab lässt sich vom Spiel aus nicht immer schließen. Schließe diesen Tab oder dieses Fenster einfach selbst.</p><div class="menulist">' + back + '</div>';
   }
