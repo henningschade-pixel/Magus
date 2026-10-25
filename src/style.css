@@ -173,7 +173,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .mon .sm{font-size:15px;color:var(--mute);line-height:1.2}
 .mon .sm.vals{color:var(--text,#e6e1d6);font-size:15px;font-weight:700;margin-top:2px}
 .mon.gone img.pic{opacity:.3}
-.introcover{position:absolute;z-index:50;box-sizing:border-box;border:1px solid var(--line);border-radius:12px;background-color:#000;background-size:auto 108%;background-position:center;background-repeat:no-repeat;transition:transform .45s ease-in,opacity .45s;transform:perspective(800px) rotateY(0);pointer-events:none}
+.introcover{position:absolute;z-index:50;box-sizing:border-box;border:1px solid var(--line);border-radius:12px;background-color:#000;background-size:88% auto;background-position:center;background-repeat:no-repeat;transition:transform .45s ease-in,opacity .45s;transform:perspective(800px) rotateY(0);pointer-events:none}
 .introcover.open{transform:perspective(800px) rotateY(90deg);opacity:.4}
 #introhint{position:absolute;left:50%;top:6px;transform:translateX(-50%);z-index:90;padding:3px 12px;border-radius:9px;background:rgba(0,0,0,.6);color:var(--mute);font-size:14px;pointer-events:none}
 .mon .loot{color:var(--gold);font-size:16px}
@@ -294,7 +294,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 @media (prefers-reduced-motion:reduce){#stage.turn-me::after,#stage.turn-opp::after{animation:none}}
 /* Startseite */
 .overlay .box.start{align-items:center;padding:34px 44px 30px}
-.overlay .box.start .logo{width:170px;height:170px;object-fit:contain;margin:6px 0 12px;mix-blend-mode:lighten;-webkit-mask-image:radial-gradient(circle,#000 58%,transparent 72%);mask-image:radial-gradient(circle,#000 58%,transparent 72%)}
+.overlay .box.start .logo{width:auto;height:190px;object-fit:contain;margin:6px 0 12px;mix-blend-mode:lighten}   /* neues Logo (0.5): schwarzer Grund, keine Randmaske nötig */
 .overlay .box.start .mpbox{align-self:stretch}
 .overlay .box.start .note.intro{flex:0 1 auto;min-height:64px;overflow-y:auto;padding-right:10px}   /* langer Einleitungstext: schrumpft und scrollt, Logo und Knöpfe bleiben sichtbar */
 .overlay .box.start .note.intro::-webkit-scrollbar{width:8px}.overlay .box.start .note.intro::-webkit-scrollbar-thumb{background:var(--gold);border-radius:4px}.overlay .box.start .note.intro::-webkit-scrollbar-track{background:rgba(255,255,255,.06);border-radius:4px}
