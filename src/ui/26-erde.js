@@ -366,7 +366,7 @@ function showStart(pg) {
     h += '<img class="logo" alt="" src="assets/img/logo.webp"><div class="menulist">' +
       (run ? menuBtn('resume', 'Spiel fortsetzen', '', 'primary') : '') +
       menuTo('single', 'Einzelspieler', run ? '' : 'primary') + menuTo('multi', 'Mehrspieler') + menuTo('settings', 'Einstellungen') + menuBtn('quit', 'Beenden') + '</div>' +
-      '<div class="menufoot">' + menuTo('about', 'Neu in Version 0.9', 'link') + '</div>';
+      '<div class="menufoot">' + menuTo('about', 'Neu in Version 0.10', 'link') + '</div>';
   } else if (pg === 'single') {
     h += '<h2>Einzelspieler</h2><div class="menulist">' +
       menuBtn('newgame', run ? 'Neues Spiel gegen den Computer' : 'Gegen den Computer spielen', '', run ? '' : 'primary') +
@@ -379,7 +379,7 @@ function showStart(pg) {
   } else if (pg === 'settings') {
     h += '<h2>Einstellungen</h2><div class="menulist">' + settingsHTML() + back + '</div>';
   } else if (pg === 'about') {
-    h += '<p class="note intro" style="margin-top:-2px"><b>Danke, dass du Magus testest!</b> <b>Neu in Version 0.9:</b> Im Steinhintergrund <b>leuchten die Runen</b> jetzt hin und wieder auf, mal einzeln, mal mehrere zugleich. <b>Neu in Version 0.8:</b> Das <b>Hauptmenü</b> ist übersichtlicher: Unter <b>Einzelspieler</b> spielst du gegen den Computer oder schaust zwei Computern zu, unter <b>Mehrspieler</b> erstellst du einen Raum oder trittst mit einem Code bei, und unter <b>Einstellungen</b> schaltest du den Ton ein oder aus und regelst <b>Effekte</b> und <b>Musik</b> getrennt. Läuft gerade eine Partie, findest du oben <b>Spiel fortsetzen</b>. Das Menü im Spiel (Haus-Symbol) bietet Fortsetzen, Neu starten, Statistik, Einstellungen und <b>Zum Hauptmenü</b>.</p><div class="menulist">' + back + '</div>';
+    h += '<p class="note intro" style="margin-top:-2px"><b>Danke, dass du Magus testest!</b> <b>Neu in Version 0.10:</b> Das <b>Haus-Symbol</b> im Spiel führt jetzt direkt ins <b>Hauptmenü</b>; dort setzt du die Partie mit <b>Spiel fortsetzen</b> fort. Die <b>Statistik</b> hat einen eigenen Knopf neben dem Haus. Die Würfel haben wieder ihre alten Farben: der <b>Pluswürfel ist grün</b>, der <b>Minuswürfel rot</b>. Im <b>Vollbild</b> bleiben die Würfel jetzt auf den Monsterkarten. <b>Neu in Version 0.9:</b> Im Steinhintergrund <b>leuchten die Runen</b> hin und wieder auf, mal einzeln, mal mehrere zugleich.</p><div class="menulist">' + back + '</div>';
   } else if (pg === 'quit') {
     h += '<p class="note" style="text-align:center;font-size:19px">Danke fürs Spielen!<br>Ein Browser-Tab lässt sich vom Spiel aus nicht immer schließen. Schließe diesen Tab oder dieses Fenster einfach selbst.</p><div class="menulist">' + back + '</div>';
   }
