@@ -111,7 +111,7 @@ const DiceKit = (() => {
     limit: '<rect x="6" y="10" width="20" height="28" rx="3.5" fill="none" stroke="currentColor" stroke-width="3.4"/><path d="M30 24h13m-5.5-6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>',
     draws: '<rect x="14" y="11" width="20" height="27" rx="3.5" fill="currentColor"/><path d="M40 20a16.5 16.5 0 1 0 1.2 9" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/><path d="M42.5 12.5 40.5 21 32 19" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>',
     hand: '<g fill="currentColor"><rect x="7" y="13" width="17" height="25" rx="3" transform="rotate(-22 15 38)"/><rect x="15.5" y="9" width="17" height="25" rx="3" transform="rotate(0 24 38)" opacity=".92"/><rect x="24" y="13" width="17" height="25" rx="3" transform="rotate(22 33 38)"/></g>',
-    none: '<circle cx="24" cy="24" r="3.2" fill="currentColor" opacity=".35"/>',
+    none: '<path d="M12 24h24" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" opacity=".4"/>',
   };
   // Welche Würfelseite zeigt zum Betrachter? [rotateX, rotateY] des Würfels in Ruhe
   const REST = [[0, 0], [0, 180], [0, -90], [0, 90], [-90, 0], [90, 0]];
@@ -124,13 +124,14 @@ const DiceKit = (() => {
       '.dk-cube{position:absolute;left:0;top:0;transform-style:preserve-3d}' +
       '.dk-f{position:absolute;left:0;top:0;box-sizing:border-box;display:flex;align-items:center;justify-content:center;color:#fff6df;border:2px solid rgba(255,255,255,.32);background:linear-gradient(145deg,var(--c2),var(--c1));box-shadow:inset 0 0 10px rgba(0,0,0,.4);backface-visibility:hidden}' +
       '.dk-f svg{display:block;filter:drop-shadow(0 1px 1px rgba(0,0,0,.45))}' +
+      '.dk-f .dk-s{position:absolute;left:3px;top:3px;width:12px;height:12px;opacity:.9}' +
       '.dk-f b{position:absolute;right:4px;bottom:1px;font:700 15px/1 "Alegreya SC",Georgia,serif;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.8)}' +
       '.dk-sh{position:absolute;left:12%;right:12%;bottom:-5px;height:10px;border-radius:50%;background:#000;filter:blur(3px);pointer-events:none}' +
       '.dk-die.dk-off{opacity:.5;filter:saturate(.45)}';
     document.head.appendChild(st);
   }
   function shade(hex, k) { const n = parseInt(hex.slice(1), 16), f = c => Math.max(0, Math.min(255, Math.round(c + (k > 0 ? (255 - c) * k : c * k)))); return 'rgb(' + f(n >> 16 & 255) + ',' + f(n >> 8 & 255) + ',' + f(n & 255) + ')'; }
-  // Würfel bauen: sign +1 (grün) / −1 (rot), amounts: Betrag je Seite (0 = keiner) für die Beschriftung
+  // Würfel bauen: sign +1 (Pluswürfel, rot) / −1 (Minuswürfel, grün), amounts: Betrag je Seite (0 = keiner) für die Beschriftung
   function make(sign, amounts, o) {
     css(); o = Object.assign({}, P, o || {});
     const S = o.size, col = o.color || (sign > 0 ? o.plus : o.minus), el = document.createElement('div');
@@ -144,7 +145,8 @@ const DiceKit = (() => {
     KINDS.forEach((k, i) => {
       const f = document.createElement('div'); f.className = 'dk-f'; f.style.cssText = 'width:' + S + 'px;height:' + S + 'px;border-radius:' + Math.round(S * .12) + 'px;transform:' + FACE_T[i] + ' translateZ(' + (S / 2) + 'px)';
       const g = Math.round(S * o.glyph), n = amounts && amounts[i];
-      f.innerHTML = '<svg width="' + g + '" height="' + g + '" viewBox="0 0 48 48">' + GLYPH[k] + '</svg>' + (o.numbers && n ? '<b style="font-size:' + Math.round(S * .3) + 'px">' + (sign > 0 ? '+' : '−') + n + '</b>' : '');
+      const sgn = k === 'none' ? '' : '<svg class="dk-s" viewBox="0 0 12 12"><path d="' + (sign > 0 ? 'M6 1.5v9M1.5 6h9' : 'M1.5 6h9') + '" fill="none" stroke="#fff6df" stroke-width="2.2" stroke-linecap="round"/></svg>';   // Plus auf dem roten, Minus auf dem grünen Würfel; die leere Seite trägt nur einen Strich
+      f.innerHTML = sgn + '<svg width="' + g + '" height="' + g + '" viewBox="0 0 48 48">' + GLYPH[k] + '</svg>' + (o.numbers && n ? '<b style="font-size:' + Math.round(S * .3) + 'px">' + (sign > 0 ? '+' : '−') + n + '</b>' : '');
       cube.appendChild(f);
     });
     el._k = 0; el._cube = cube; el._o = o; el._sh = sh; el._sign = sign;
@@ -199,7 +201,7 @@ const $ = id => document.getElementById(id);
 const DEF = JSON.parse(JSON.stringify(DiceKit.P));
 const AMOUNTS = [2, 1, 1, 1, 1, 0];   // wie MONSTER.variants.dice im Spiel, alle Stufen gleich
 const FACE_TXT = ['HP', 'Mana', 'Limit', 'Ziehen', 'Hand', 'leer'];
-const MON = [{ el: 'F', name: 'Feuerspezialist I' }, { el: 'E', name: 'Erdgeneralist I' }, { el: 'W', name: 'Wasserspezialist I' }];
+const MON = [{ el: 'F', name: 'Feuer-Spezialist I' }, { el: 'E', name: 'Erd-Generalist I' }, { el: 'W', name: 'Wasser-Spezialist I' }];
 const COL = { F: ['#ff9a4d', '#5a1a08'], E: ['#9bd05a', '#25360f'], W: ['#6cb6ff', '#0f2a4a'] };
 const sel = [{ pl: 4, mi: 0 }, { pl: 1, mi: 5 }, { pl: 5, mi: 2 }];   // gewählte Seiten je Monster (−1 = Zufall)
 let dice = [], timer = 0, seeds = [11, 22, 33];

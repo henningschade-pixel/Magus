@@ -106,7 +106,7 @@ const $ = id => document.getElementById(id);
 const DEF = JSON.parse(JSON.stringify(DiceKit.P));
 const AMOUNTS = [2, 1, 1, 1, 1, 0];   // wie MONSTER.variants.dice im Spiel, alle Stufen gleich
 const FACE_TXT = ['HP', 'Mana', 'Limit', 'Ziehen', 'Hand', 'leer'];
-const MON = [{ el: 'F', name: 'Feuerspezialist I' }, { el: 'E', name: 'Erdgeneralist I' }, { el: 'W', name: 'Wasserspezialist I' }];
+const MON = [{ el: 'F', name: 'Feuer-Spezialist I' }, { el: 'E', name: 'Erd-Generalist I' }, { el: 'W', name: 'Wasser-Spezialist I' }];
 const COL = { F: ['#ff9a4d', '#5a1a08'], E: ['#9bd05a', '#25360f'], W: ['#6cb6ff', '#0f2a4a'] };
 const sel = [{ pl: 4, mi: 0 }, { pl: 1, mi: 5 }, { pl: 5, mi: 2 }];   // gewählte Seiten je Monster (−1 = Zufall)
 let dice = [], timer = 0, seeds = [11, 22, 33];

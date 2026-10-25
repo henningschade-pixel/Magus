@@ -45,7 +45,7 @@ const MONSTER = {
   startLimit: 2,                                                          // Ausspiellimit aller Monster vor den Tempel-Schritten (Spieler starten seit 0.3 mit 2; hier wird neu abgestimmt)
   gold: { 1: 1, 2: 2, 3: 3 },                                              // Beute
   names: { F: 'Feuermonster', E: 'Erdmonster', W: 'Wassermonster' },   // Grundform (ohne Würfel)
-  formNames: { F: ['', 'Feuergeneralist', 'Feuerspezialist'], E: ['', 'Erdgeneralist', 'Erdspezialist'], W: ['', 'Wassergeneralist', 'Wasserspezialist'] },   // Index = Deckform: 1 breit (Generalist), 2 spitz (Spezialist)
+  formNames: { F: ['', 'Feuer-Generalist', 'Feuer-Spezialist'], E: ['', 'Erd-Generalist', 'Erd-Spezialist'], W: ['', 'Wasser-Generalist', 'Wasser-Spezialist'] },   // Index = Deckform: 1 breit (Generalist), 2 spitz (Spezialist)
 };
 const STAGE_NUMERAL = ['', 'I', 'II', 'III'];
 
