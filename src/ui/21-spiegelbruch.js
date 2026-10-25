@@ -29,10 +29,10 @@ const MirrorFx = (() => {
     return ev;
   }
   function frame(ctx, t, fx, ev, home, hpAtt, from) {
-    const col = EL[fx.elem] || EL.F, n = ev.n, gone = ev.after === 0, Z = { x: 640, y: 400 }, im = img(fx.elem);
-    ctx.clearRect(0, 0, 1280, 800);
+    const col = EL[fx.elem] || EL.F, n = ev.n, gone = ev.after === 0, Z = { x: SW / 2, y: 400 }, im = img(fx.elem);
+    ctx.clearRect(0, 0, SW, 800);
     const rf = ev.mode === 'r', u = eo(seg(t, 0, P.fly)), v = eio(seg(t, ev.tOut, ev.tOut + P.back)), m = rf ? 0 : gone ? u : u * (1 - v), md = rf ? 0 : u * (1 - v);   // Rückwurf: das Schild bleibt an seinem Platz, die überschüssige Verteidigung fliegt aus der Mitte zu ihm
-    ctx.fillStyle = 'rgba(0,0,0,' + (P.dim * md) + ')'; ctx.fillRect(0, 0, 1280, 800);
+    ctx.fillStyle = 'rgba(0,0,0,' + (P.dim * md) + ')'; ctx.fillRect(0, 0, SW, 800);
     const hit = ev.sparks.find(s => t >= s.ta && t < s.ta + .15), brk = t > ev.tBreak;
     const amp = ((brk ? P.shake * 9 * Math.exp(-(t - ev.tBreak) * 6) : 0) + (hit ? P.shake * 2 : 0)) * (rf ? .5 : 1);
     const pos = { x: lerp(home.x, Z.x, m) + Math.sin(t * 90) * amp * (rf ? 1 : m), y: lerp(home.y, Z.y, m) + Math.cos(t * 70) * amp * .7 * (rf ? 1 : m) }, h = lerp(home.h, P.size, m) * (rf && hit ? 1.3 : 1), w = h * 132 / 180;
@@ -84,13 +84,13 @@ const MirrorFx = (() => {
     const side = fx.who === ME ? 's' : 'o', homeEl = stage.querySelector('.mirstack[data-who="' + side + '"] .msh.' + fx.elem);
     const hp = FlowFx.hp(fx.att), home = homeEl ? toStage(homeEl) : shown[side + fx.elem] || { x: fx.who === ME ? 90 : 1190, y: fx.who === ME ? 690 : 110, h: 52 };   // das Schild bleibt, wo es angezeigt wurde
     stage.dataset.shieldhome = Math.round(home.x) + ',' + Math.round(home.y);
-    const ev = plan(fx), from = ev0(fx) === 'r' ? { x: 640, y: 400 } : { x: 640, y: fx.who === ME ? 70 : 730 };   // Rückwurf: der Überschuss liegt in der Mitte
+    const ev = plan(fx), from = ev0(fx) === 'r' ? { x: SW / 2, y: 400 } : { x: SW / 2, y: fx.who === ME ? 70 : 730 };   // Rückwurf: der Überschuss liegt in der Mitte
     fxUntil = Math.max(fxUntil, Date.now() + ev.tEnd * 1000);
     stage.dataset.shieldfx = side + fx.elem;   // das eigentliche Schild neben der Hand ausblenden, solange es fliegt
     ev.sparks.forEach((s, i) => Snd.play('shield_hit', s.ta, i === 0 ? .9 : .5));   // Aufprall der Geschosse auf dem Schild
     Snd.play('break', ev.tBreak + .12, .8);   // Splitter, wenn Stufen zerbrechen
     if (fx.r > 0) Snd.play('mirror_reflect', ev.refl[0].tl);
-    const cv = document.createElement('canvas'); cv.width = 1280; cv.height = 800; cv.style.cssText = 'position:absolute;left:0;top:0;width:1280px;height:800px;z-index:288;pointer-events:none'; stage.appendChild(cv);
+    const cv = document.createElement('canvas'); cv.width = SW; cv.height = 800; cv.style.cssText = 'position:absolute;left:0;top:0;width:' + SW + 'px;height:800px;z-index:288;pointer-events:none'; stage.appendChild(cv);
     const ctx = cv.getContext('2d'), t0 = performance.now();
     const step = ts => {
       const t = (ts - t0) / 1000;

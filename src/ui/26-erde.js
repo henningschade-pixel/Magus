@@ -112,7 +112,7 @@ function earthFormRaw(ctx, x, by, seed, i, t, tCrack, tRise, endAt, ending) {
   function startEx(fx, pre) {
     endEx();
     if (!pre) Snd.play('atk_' + ({ F: 'fire', E: 'earth', W: 'water' }[fx.elem] || 'fire'));
-    const cv = document.createElement('canvas'); cv.width = 1280; cv.height = 800; cv.style.cssText = 'position:absolute;left:0;top:0;width:1280px;height:800px;z-index:287;pointer-events:none'; stage.appendChild(cv);
+    const cv = document.createElement('canvas'); cv.width = SW; cv.height = 800; cv.style.cssText = 'position:absolute;left:0;top:0;width:' + SW + 'px;height:800px;z-index:287;pointer-events:none'; stage.appendChild(cv);
     const n = Math.max(1, Math.min(10, fx.n)), rn = rng(Math.floor(Math.random() * 9999)), seeds = []; for (let i = 0; i < 20; i++) seeds.push(Math.floor(rn() * 1e5));
     ex = { cv, ctx: cv.getContext('2d'), t0: performance.now(), n, who: fx.who, to: fx.to, C0: center(), seeds, p: Object.assign({}, KP, { atk: fx.elem, def: fx.elem }), def: null, tAe: (n - 1) * KP.gap + KP.flight };
     if (pre) ex.t0 -= (ex.tAe + 1) * 1000;
@@ -122,7 +122,7 @@ function earthFormRaw(ctx, x, by, seed, i, t, tCrack, tRise, endAt, ending) {
   function frame(ts) {
     const e = ex, ctx = e.ctx, p = e.p, t = (ts - e.t0) / 1000, n = e.n, C0 = e.C0, d = e.def;
     const T = d ? d.T : { tA: 0, tD: 1e9, tC: 1e9, tK: 1e9, tH: 1e9, hf: .8, cl: .6, pairs: 0, left: 0, end: 1e9 };
-    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, 1280, 800);
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, SW, 800);
     const HA = handOf(e.who), HD = d ? d.H : null, hp = d ? d.hp : null, b = d ? d.b : 0, seeds = e.seeds;
     let amp = p.shake * (t > T.tK && t < T.tK + .4 ? 3 * (1 - seg(t, T.tK, T.tK + .4)) : 0);
     const earthHit = (el, starts, N) => { if (el !== 'E') return; for (let i = 0; i < N; i++) { const ta = starts + i * p.gap + p.flight; if (t > ta && t < ta + .4) amp += p.shake * p.heavy * 7 * Math.exp(-(t - ta) * 9); } };

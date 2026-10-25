@@ -1,6 +1,6 @@
 /* ---------- Layout: alle Maße der 1280×800-Bühne an einer Stelle ---------- */
 const CW = 128, CH = 194;                                   // Kartengröße
-const LAYOUT = {
+const LAYOUT0 = {
   zoneLines: [166, 596],                                    // Trennlinien
   oppPanel:  { left: 920, top: 8,   w: 336, h: 160 },       // Gegner (oben rechts)
   mePanel:   { left: 920, top: 610, w: 336, h: 176 },       // eigener Spielerstatus (unten rechts)
@@ -21,6 +21,17 @@ const LAYOUT = {
     opp: { y: 12,  cx: 469, gap: 76,  span: 700, s: 0.5, draw: { x: 209, y: 14  }, disc: { x: 665, y: 14  }, ps: 0.5,  raise: 30 },
   },
 };
+/* Breite der Bühne: Höhe fest 800, Breite folgt dem Seitenverhältnis des Fensters (mindestens 1280). Rechte Blöcke wandern mit dem rechten Rand, mittlere mit der Mitte. */
+let SW = 1280;
+const LAYOUT = JSON.parse(JSON.stringify(LAYOUT0));
+function layoutFor(W) {
+  SW = W; const dx = W - 1280, h = dx / 2, B = LAYOUT0;
+  ['oppPanel', 'mePanel', 'vendor', 'oppInfo'].forEach(k => { LAYOUT[k].left = B[k].left + dx; });
+  ['banner', 'turnflag', 'combat', 'combatLog', 'combatSub', 'monsters'].forEach(k => { LAYOUT[k].left = B[k].left + h; });
+  LAYOUT.hand.me.cx = B.hand.me.cx + h; LAYOUT.hand.me.disc.x = B.hand.me.disc.x + dx;
+  LAYOUT.hand.opp.cx = B.hand.opp.cx + h; LAYOUT.hand.opp.disc.x = B.hand.opp.disc.x + dx;
+  stage.style.width = W + 'px'; stage.style.setProperty('--sw', W + 'px');
+}
 const box = (r, extra) => 'left:' + r.left + 'px;top:' + r.top + 'px;width:' + r.w + 'px;' + (r.h ? 'height:' + r.h + 'px;' : '') + (extra || '');
 LAYOUT.zoneLines.forEach(y => { const d = document.createElement('div'); d.className = 'zone-line'; d.style.top = y + 'px'; stage.insertBefore(d, stage.firstChild); });
 

@@ -106,7 +106,7 @@ const DiceBoard = (() => {
   const MIN_DICE_SEP = 12;   // Mindestabstand der beiden Würfel einer Karte (px), größer als der Überstand der verdrehten Würfel
   let layer = null, mons = null, items = [], thrown = false;
   const V = () => M.MONSTER.variants;
-  function ensure() { if (!layer) { layer = document.createElement('div'); layer.id = 'dicelayer'; layer.style.cssText = 'position:absolute;left:0;top:0;width:1280px;height:800px;z-index:45;pointer-events:none'; stage.appendChild(layer); } return layer; }
+  function ensure() { if (!layer) { layer = document.createElement('div'); layer.id = 'dicelayer'; layer.style.cssText = 'position:absolute;left:0;top:0;width:' + SW + 'px;height:800px;z-index:45;pointer-events:none'; stage.appendChild(layer); } return layer; }
   function tip(sign, face, n, same) {
     const k = face.k, nm = V().diceNames[k];
     if (k === 'none') return (sign > 0 ? 'Pluswürfel' : 'Minuswürfel') + ': leere Seite, keine Wirkung.';

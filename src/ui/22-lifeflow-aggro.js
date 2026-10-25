@@ -16,10 +16,10 @@ const FlowFx = (() => {
   const pileOf = pid => { const L = pid === ME ? L_MY : L_OP; return { x: L.disc.x + CW * L.ps / 2, y: L.disc.y + CH * L.ps / 2 }; };
   const handOf = pid => { const L = pid === ME ? L_MY : L_OP; return { x: L.cx, y: L.y + CH * L.s / 2 }; };
   function run(dur, fn) {
-    const cv = document.createElement('canvas'); cv.width = 1280; cv.height = 800; cv.style.cssText = 'position:absolute;left:0;top:0;width:1280px;height:800px;z-index:289;pointer-events:none'; stage.appendChild(cv);
+    const cv = document.createElement('canvas'); cv.width = SW; cv.height = 800; cv.style.cssText = 'position:absolute;left:0;top:0;width:' + SW + 'px;height:800px;z-index:289;pointer-events:none'; stage.appendChild(cv);
     const ctx = cv.getContext('2d'), t0 = performance.now();
     fxUntil = Math.max(fxUntil, Date.now() + dur * 1000);
-    const step = ts => { const t = (ts - t0) / 1000; ctx.clearRect(0, 0, 1280, 800); if (t >= dur) { cv.remove(); return; } fn(ctx, t, t / dur); requestAnimationFrame(step); };
+    const step = ts => { const t = (ts - t0) / 1000; ctx.clearRect(0, 0, SW, 800); if (t >= dur) { cv.remove(); return; } fn(ctx, t, t / dur); requestAnimationFrame(step); };
     requestAnimationFrame(step);
   }
   const off = () => FAST || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);

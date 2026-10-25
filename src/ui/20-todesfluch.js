@@ -64,15 +64,15 @@ const CurseFx = (() => {
   let cv = null, raf = 0;
   function play() {
     if (FAST || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
-    if (!cv) { cv = document.createElement('canvas'); cv.width = 1280; cv.height = 800; cv.style.cssText = 'position:absolute;left:0;top:0;width:1280px;height:800px;z-index:290;pointer-events:none'; stage.appendChild(cv); }
+    if (!cv) { cv = document.createElement('canvas'); cv.width = SW; cv.height = 800; cv.style.cssText = 'position:absolute;left:0;top:0;width:' + SW + 'px;height:800px;z-index:290;pointer-events:none'; stage.appendChild(cv); }
     cancelAnimationFrame(raf);
     fxUntil = Math.max(fxUntil, Date.now() + P.dur * 1000);
     const ctx = cv.getContext('2d'), k = 1.45, t0 = performance.now();
     const step = ts => {
       const t = (ts - t0) / 1000;
-      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, 1280, 800);
+      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, SW, 800);
       if (t >= P.dur) { cv.remove(); cv = null; return; }
-      ctx.setTransform(k, 0, 0, k, 640 - 360 * k, 400 - 320 * k);   // Pentagramm-Mitte = Bildschirmmitte
+      ctx.setTransform(k, 0, 0, k, SW / 2 - 360 * k, 400 - 320 * k);   // Pentagramm-Mitte = Bildschirmmitte
       frame(ctx, t); raf = requestAnimationFrame(step);
     };
     raf = requestAnimationFrame(step);

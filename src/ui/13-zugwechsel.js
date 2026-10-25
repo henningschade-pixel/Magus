@@ -18,7 +18,7 @@ function turnPending() { return !!(G && !G.over && ((turnAnim && !turnAnim.done)
 function markerOnWay() { return !!(G && !G.over && myTurn() && turnSide !== 'me'); }
 function startTurn(from, to) {
   if (turnAnim && turnAnim.cv) turnAnim.cv.remove();
-  const cv = document.createElement('canvas'); cv.id = 'turncv'; cv.width = 1280; cv.height = 800; stage.appendChild(cv);
+  const cv = document.createElement('canvas'); cv.id = 'turncv'; cv.width = SW; cv.height = 800; stage.appendChild(cv);
   const me = { from, to, t0: performance.now(), cv, done: false }; turnAnim = me;
   Snd.play('turn_change');
   const c = cv.getContext('2d'), tMove = TURN.pause + TURN.dur, tEnd = tMove + .1;
@@ -32,7 +32,7 @@ function startTurn(from, to) {
   requestAnimationFrame(loop);
 }
 function drawTurn(c, up, t, done) {
-  const W = 1280, H = 800, GOLD = '210,173,79', T = TURN, cl = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x)), lerp = (a, b, k) => a + (b - a) * k;
+  const W = SW, H = 800, GOLD = '210,173,79', T = TURN, cl = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x)), lerp = (a, b, k) => a + (b - a) * k;
   const m = T.width / 2 + 1, L1 = W / 2 - m, L2 = H - 2 * m, Pn = L1 + L2 + L1;
   const ease = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
   const ptAt = (d, side) => { let x, y; if (d <= L1) { x = W / 2 - d; y = H - m; } else if (d <= L1 + L2) { x = m; y = H - m - (d - L1); } else { x = m + (d - L1 - L2); y = m; } return [side > 0 ? W - x : x, y]; };

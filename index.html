@@ -17,7 +17,7 @@
 html,body{margin:0;height:100%;cursor:var(--cd);background:#0e0e10;color:var(--bone);font-family:'Alegreya',Georgia,'Times New Roman',serif;overflow:hidden}
 button{font:inherit;color:inherit}
 #viewport{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
-#stage{position:relative;width:1280px;height:800px;flex:none;transform-origin:center center;overflow:hidden;
+#stage{position:relative;width:var(--sw,1280px);height:800px;flex:none;transform-origin:center center;overflow:hidden;
   --gm:#2e2e33;--tm:#34343a;--te:#18181b;--bm:#34343a;--be:#18181b;
   background:radial-gradient(ellipse at 50% 50%,transparent 45%,rgba(0,0,0,.4) 100%),linear-gradient(180deg,var(--te) 0%,var(--tm) 20%,var(--gm) 50%,var(--bm) 80%,var(--be) 100%);border-radius:10px}
 #stage[data-top=F]{--tm:#5a2a1c;--te:#2a130d}#stage[data-top=E]{--tm:#3c4f22;--te:#1a240f}#stage[data-top=W]{--tm:#20426a;--te:#0f2037}
@@ -255,10 +255,10 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .combatcenter .btnrow{gap:6px}.combatcenter .btnrow .btn{padding:7px 10px;font-size:17px;white-space:nowrap}
 .banner{position:absolute;z-index:120;text-align:center;background:rgba(14,10,22,.93);border:1px solid var(--gold);border-radius:14px;padding:16px 20px;font-size:21px;line-height:1.3;cursor:var(--cp)}
 .banner small{display:block;color:var(--mute);font-size:15px;margin-top:6px}
-#turncv{position:absolute;left:0;top:0;width:1280px;height:800px;z-index:285;pointer-events:none}
-.endov{position:absolute;left:0;top:0;width:1280px;height:800px;z-index:400;background:rgba(5,4,10,.74);display:flex;align-items:center;justify-content:center;cursor:var(--cp);animation:endfade .5s ease-out}
+#turncv{position:absolute;left:0;top:0;width:var(--sw,1280px);height:800px;z-index:285;pointer-events:none}
+.endov{position:absolute;left:0;top:0;width:var(--sw,1280px);height:800px;z-index:400;background:rgba(5,4,10,.74);display:flex;align-items:center;justify-content:center;cursor:var(--cp);animation:endfade .5s ease-out}
 @keyframes endfade{from{background:rgba(5,4,10,0)}to{background:rgba(5,4,10,.74)}}
-#endov{position:absolute;left:0;top:0;width:1280px;height:800px;z-index:400}
+#endov{position:absolute;left:0;top:0;width:var(--sw,1280px);height:800px;z-index:400}
 .endbox{text-align:center;min-width:460px;max-width:640px;padding:34px 48px;border-radius:18px;background:rgba(18,14,26,.96);border:2px solid var(--gold);box-shadow:0 0 60px rgba(0,0,0,.8);animation:endpop .45s cubic-bezier(.2,1.3,.4,1)}
 @keyframes endpop{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
 .endbox .et{font-family:'Alegreya SC',serif;font-size:56px;letter-spacing:2px;color:var(--gold);line-height:1.1}
@@ -328,7 +328,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 /* Sanftes Abdunkeln des Spielfelds (wie im Schild-Effekt): Hauptmenü, Statistik, Deckübersicht */
 @keyframes dimin{from{opacity:0}to{opacity:1}}
 .overlay.soft{background:rgba(0,0,0,.45);animation:dimin .35s ease-out both}
-#dimdeck{position:absolute;left:0;top:0;width:1280px;height:800px;z-index:140;background:rgba(0,0,0,.45);opacity:0;pointer-events:none;transition:opacity .35s;cursor:var(--cp)}#dimdeck.on{opacity:1;pointer-events:auto}
+#dimdeck{position:absolute;left:0;top:0;width:var(--sw,1280px);height:800px;z-index:140;background:rgba(0,0,0,.45);opacity:0;pointer-events:none;transition:opacity .35s;cursor:var(--cp)}#dimdeck.on{opacity:1;pointer-events:auto}
 
 .panel[style*="scrollbar-width:none"]::-webkit-scrollbar{display:none}
 
@@ -1884,7 +1884,7 @@ let upSeen = null, hpHold = null, stageSeen = 1, endSnd = null, sacN = 0, G = nu
 
 /* ---------- Layout: alle Maße der 1280×800-Bühne an einer Stelle ---------- */
 const CW = 128, CH = 194;                                   // Kartengröße
-const LAYOUT = {
+const LAYOUT0 = {
   zoneLines: [166, 596],                                    // Trennlinien
   oppPanel:  { left: 920, top: 8,   w: 336, h: 160 },       // Gegner (oben rechts)
   mePanel:   { left: 920, top: 610, w: 336, h: 176 },       // eigener Spielerstatus (unten rechts)
@@ -1905,16 +1905,29 @@ const LAYOUT = {
     opp: { y: 12,  cx: 469, gap: 76,  span: 700, s: 0.5, draw: { x: 209, y: 14  }, disc: { x: 665, y: 14  }, ps: 0.5,  raise: 30 },
   },
 };
+/* Breite der Bühne: Höhe fest 800, Breite folgt dem Seitenverhältnis des Fensters (mindestens 1280). Rechte Blöcke wandern mit dem rechten Rand, mittlere mit der Mitte. */
+let SW = 1280;
+const LAYOUT = JSON.parse(JSON.stringify(LAYOUT0));
+function layoutFor(W) {
+  SW = W; const dx = W - 1280, h = dx / 2, B = LAYOUT0;
+  ['oppPanel', 'mePanel', 'vendor', 'oppInfo'].forEach(k => { LAYOUT[k].left = B[k].left + dx; });
+  ['banner', 'turnflag', 'combat', 'combatLog', 'combatSub', 'monsters'].forEach(k => { LAYOUT[k].left = B[k].left + h; });
+  LAYOUT.hand.me.cx = B.hand.me.cx + h; LAYOUT.hand.me.disc.x = B.hand.me.disc.x + dx;
+  LAYOUT.hand.opp.cx = B.hand.opp.cx + h; LAYOUT.hand.opp.disc.x = B.hand.opp.disc.x + dx;
+  stage.style.width = W + 'px'; stage.style.setProperty('--sw', W + 'px');
+}
 const box = (r, extra) => 'left:' + r.left + 'px;top:' + r.top + 'px;width:' + r.w + 'px;' + (r.h ? 'height:' + r.h + 'px;' : '') + (extra || '');
 LAYOUT.zoneLines.forEach(y => { const d = document.createElement('div'); d.className = 'zone-line'; d.style.top = y + 'px'; stage.insertBefore(d, stage.firstChild); });
 
-/* ---------- Skalierung ---------- */
+/* ---------- Skalierung: Höhe 800 fest, Breite füllt das Fenster (mindestens 1280) ---------- */
 function fit() {
-  const k = Math.min(window.innerWidth / 1280, window.innerHeight / 800);
+  const k = window.innerHeight / 800, W = Math.max(1280, Math.round(window.innerWidth / k));
+  const changed = W !== SW;
+  if (changed) layoutFor(W);
   stage.style.transform = 'scale(' + k + ')';
+  if (changed && typeof render === 'function' && G) render();
 }
 window.addEventListener('resize', fit); fit();
-
 /* ---------- Hilfen ---------- */
 const FAST_URL = /[?&]fast/.test(location.search);
 let FAST = FAST_URL;   // ohne Animationen, Töne und Wartezeiten (Testlauf per ?fast, beim Zuschauen ab Tempo ×3)
@@ -1984,7 +1997,7 @@ function turnPending() { return !!(G && !G.over && ((turnAnim && !turnAnim.done)
 function markerOnWay() { return !!(G && !G.over && myTurn() && turnSide !== 'me'); }
 function startTurn(from, to) {
   if (turnAnim && turnAnim.cv) turnAnim.cv.remove();
-  const cv = document.createElement('canvas'); cv.id = 'turncv'; cv.width = 1280; cv.height = 800; stage.appendChild(cv);
+  const cv = document.createElement('canvas'); cv.id = 'turncv'; cv.width = SW; cv.height = 800; stage.appendChild(cv);
   const me = { from, to, t0: performance.now(), cv, done: false }; turnAnim = me;
   Snd.play('turn_change');
   const c = cv.getContext('2d'), tMove = TURN.pause + TURN.dur, tEnd = tMove + .1;
@@ -1998,7 +2011,7 @@ function startTurn(from, to) {
   requestAnimationFrame(loop);
 }
 function drawTurn(c, up, t, done) {
-  const W = 1280, H = 800, GOLD = '210,173,79', T = TURN, cl = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x)), lerp = (a, b, k) => a + (b - a) * k;
+  const W = SW, H = 800, GOLD = '210,173,79', T = TURN, cl = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x)), lerp = (a, b, k) => a + (b - a) * k;
   const m = T.width / 2 + 1, L1 = W / 2 - m, L2 = H - 2 * m, Pn = L1 + L2 + L1;
   const ease = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
   const ptAt = (d, side) => { let x, y; if (d <= L1) { x = W / 2 - d; y = H - m; } else if (d <= L1 + L2) { x = m; y = H - m - (d - L1); } else { x = m + (d - L1 - L2); y = m; } return [side > 0 ? W - x : x, y]; };
@@ -2580,15 +2593,15 @@ const CurseFx = (() => {
   let cv = null, raf = 0;
   function play() {
     if (FAST || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
-    if (!cv) { cv = document.createElement('canvas'); cv.width = 1280; cv.height = 800; cv.style.cssText = 'position:absolute;left:0;top:0;width:1280px;height:800px;z-index:290;pointer-events:none'; stage.appendChild(cv); }
+    if (!cv) { cv = document.createElement('canvas'); cv.width = SW; cv.height = 800; cv.style.cssText = 'position:absolute;left:0;top:0;width:' + SW + 'px;height:800px;z-index:290;pointer-events:none'; stage.appendChild(cv); }
     cancelAnimationFrame(raf);
     fxUntil = Math.max(fxUntil, Date.now() + P.dur * 1000);
     const ctx = cv.getContext('2d'), k = 1.45, t0 = performance.now();
     const step = ts => {
       const t = (ts - t0) / 1000;
-      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, 1280, 800);
+      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, SW, 800);
       if (t >= P.dur) { cv.remove(); cv = null; return; }
-      ctx.setTransform(k, 0, 0, k, 640 - 360 * k, 400 - 320 * k);   // Pentagramm-Mitte = Bildschirmmitte
+      ctx.setTransform(k, 0, 0, k, SW / 2 - 360 * k, 400 - 320 * k);   // Pentagramm-Mitte = Bildschirmmitte
       frame(ctx, t); raf = requestAnimationFrame(step);
     };
     raf = requestAnimationFrame(step);
@@ -2627,10 +2640,10 @@ const MirrorFx = (() => {
     return ev;
   }
   function frame(ctx, t, fx, ev, home, hpAtt, from) {
-    const col = EL[fx.elem] || EL.F, n = ev.n, gone = ev.after === 0, Z = { x: 640, y: 400 }, im = img(fx.elem);
-    ctx.clearRect(0, 0, 1280, 800);
+    const col = EL[fx.elem] || EL.F, n = ev.n, gone = ev.after === 0, Z = { x: SW / 2, y: 400 }, im = img(fx.elem);
+    ctx.clearRect(0, 0, SW, 800);
     const rf = ev.mode === 'r', u = eo(seg(t, 0, P.fly)), v = eio(seg(t, ev.tOut, ev.tOut + P.back)), m = rf ? 0 : gone ? u : u * (1 - v), md = rf ? 0 : u * (1 - v);   // Rückwurf: das Schild bleibt an seinem Platz, die überschüssige Verteidigung fliegt aus der Mitte zu ihm
-    ctx.fillStyle = 'rgba(0,0,0,' + (P.dim * md) + ')'; ctx.fillRect(0, 0, 1280, 800);
+    ctx.fillStyle = 'rgba(0,0,0,' + (P.dim * md) + ')'; ctx.fillRect(0, 0, SW, 800);
     const hit = ev.sparks.find(s => t >= s.ta && t < s.ta + .15), brk = t > ev.tBreak;
     const amp = ((brk ? P.shake * 9 * Math.exp(-(t - ev.tBreak) * 6) : 0) + (hit ? P.shake * 2 : 0)) * (rf ? .5 : 1);
     const pos = { x: lerp(home.x, Z.x, m) + Math.sin(t * 90) * amp * (rf ? 1 : m), y: lerp(home.y, Z.y, m) + Math.cos(t * 70) * amp * .7 * (rf ? 1 : m) }, h = lerp(home.h, P.size, m) * (rf && hit ? 1.3 : 1), w = h * 132 / 180;
@@ -2682,13 +2695,13 @@ const MirrorFx = (() => {
     const side = fx.who === ME ? 's' : 'o', homeEl = stage.querySelector('.mirstack[data-who="' + side + '"] .msh.' + fx.elem);
     const hp = FlowFx.hp(fx.att), home = homeEl ? toStage(homeEl) : shown[side + fx.elem] || { x: fx.who === ME ? 90 : 1190, y: fx.who === ME ? 690 : 110, h: 52 };   // das Schild bleibt, wo es angezeigt wurde
     stage.dataset.shieldhome = Math.round(home.x) + ',' + Math.round(home.y);
-    const ev = plan(fx), from = ev0(fx) === 'r' ? { x: 640, y: 400 } : { x: 640, y: fx.who === ME ? 70 : 730 };   // Rückwurf: der Überschuss liegt in der Mitte
+    const ev = plan(fx), from = ev0(fx) === 'r' ? { x: SW / 2, y: 400 } : { x: SW / 2, y: fx.who === ME ? 70 : 730 };   // Rückwurf: der Überschuss liegt in der Mitte
     fxUntil = Math.max(fxUntil, Date.now() + ev.tEnd * 1000);
     stage.dataset.shieldfx = side + fx.elem;   // das eigentliche Schild neben der Hand ausblenden, solange es fliegt
     ev.sparks.forEach((s, i) => Snd.play('shield_hit', s.ta, i === 0 ? .9 : .5));   // Aufprall der Geschosse auf dem Schild
     Snd.play('break', ev.tBreak + .12, .8);   // Splitter, wenn Stufen zerbrechen
     if (fx.r > 0) Snd.play('mirror_reflect', ev.refl[0].tl);
-    const cv = document.createElement('canvas'); cv.width = 1280; cv.height = 800; cv.style.cssText = 'position:absolute;left:0;top:0;width:1280px;height:800px;z-index:288;pointer-events:none'; stage.appendChild(cv);
+    const cv = document.createElement('canvas'); cv.width = SW; cv.height = 800; cv.style.cssText = 'position:absolute;left:0;top:0;width:' + SW + 'px;height:800px;z-index:288;pointer-events:none'; stage.appendChild(cv);
     const ctx = cv.getContext('2d'), t0 = performance.now();
     const step = ts => {
       const t = (ts - t0) / 1000;
@@ -2721,10 +2734,10 @@ const FlowFx = (() => {
   const pileOf = pid => { const L = pid === ME ? L_MY : L_OP; return { x: L.disc.x + CW * L.ps / 2, y: L.disc.y + CH * L.ps / 2 }; };
   const handOf = pid => { const L = pid === ME ? L_MY : L_OP; return { x: L.cx, y: L.y + CH * L.s / 2 }; };
   function run(dur, fn) {
-    const cv = document.createElement('canvas'); cv.width = 1280; cv.height = 800; cv.style.cssText = 'position:absolute;left:0;top:0;width:1280px;height:800px;z-index:289;pointer-events:none'; stage.appendChild(cv);
+    const cv = document.createElement('canvas'); cv.width = SW; cv.height = 800; cv.style.cssText = 'position:absolute;left:0;top:0;width:' + SW + 'px;height:800px;z-index:289;pointer-events:none'; stage.appendChild(cv);
     const ctx = cv.getContext('2d'), t0 = performance.now();
     fxUntil = Math.max(fxUntil, Date.now() + dur * 1000);
-    const step = ts => { const t = (ts - t0) / 1000; ctx.clearRect(0, 0, 1280, 800); if (t >= dur) { cv.remove(); return; } fn(ctx, t, t / dur); requestAnimationFrame(step); };
+    const step = ts => { const t = (ts - t0) / 1000; ctx.clearRect(0, 0, SW, 800); if (t >= dur) { cv.remove(); return; } fn(ctx, t, t / dur); requestAnimationFrame(step); };
     requestAnimationFrame(step);
   }
   const off = () => FAST || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
@@ -3114,7 +3127,7 @@ function earthFormRaw(ctx, x, by, seed, i, t, tCrack, tRise, endAt, ending) {
   function startEx(fx, pre) {
     endEx();
     if (!pre) Snd.play('atk_' + ({ F: 'fire', E: 'earth', W: 'water' }[fx.elem] || 'fire'));
-    const cv = document.createElement('canvas'); cv.width = 1280; cv.height = 800; cv.style.cssText = 'position:absolute;left:0;top:0;width:1280px;height:800px;z-index:287;pointer-events:none'; stage.appendChild(cv);
+    const cv = document.createElement('canvas'); cv.width = SW; cv.height = 800; cv.style.cssText = 'position:absolute;left:0;top:0;width:' + SW + 'px;height:800px;z-index:287;pointer-events:none'; stage.appendChild(cv);
     const n = Math.max(1, Math.min(10, fx.n)), rn = rng(Math.floor(Math.random() * 9999)), seeds = []; for (let i = 0; i < 20; i++) seeds.push(Math.floor(rn() * 1e5));
     ex = { cv, ctx: cv.getContext('2d'), t0: performance.now(), n, who: fx.who, to: fx.to, C0: center(), seeds, p: Object.assign({}, KP, { atk: fx.elem, def: fx.elem }), def: null, tAe: (n - 1) * KP.gap + KP.flight };
     if (pre) ex.t0 -= (ex.tAe + 1) * 1000;
@@ -3124,7 +3137,7 @@ function earthFormRaw(ctx, x, by, seed, i, t, tCrack, tRise, endAt, ending) {
   function frame(ts) {
     const e = ex, ctx = e.ctx, p = e.p, t = (ts - e.t0) / 1000, n = e.n, C0 = e.C0, d = e.def;
     const T = d ? d.T : { tA: 0, tD: 1e9, tC: 1e9, tK: 1e9, tH: 1e9, hf: .8, cl: .6, pairs: 0, left: 0, end: 1e9 };
-    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, 1280, 800);
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, SW, 800);
     const HA = handOf(e.who), HD = d ? d.H : null, hp = d ? d.hp : null, b = d ? d.b : 0, seeds = e.seeds;
     let amp = p.shake * (t > T.tK && t < T.tK + .4 ? 3 * (1 - seg(t, T.tK, T.tK + .4)) : 0);
     const earthHit = (el, starts, N) => { if (el !== 'E') return; for (let i = 0; i < N; i++) { const ta = starts + i * p.gap + p.flight; if (t > ta && t < ta + .4) amp += p.shake * p.heavy * 7 * Math.exp(-(t - ta) * 9); } };
@@ -4053,7 +4066,7 @@ const DiceBoard = (() => {
   const MIN_DICE_SEP = 12;   // Mindestabstand der beiden Würfel einer Karte (px), größer als der Überstand der verdrehten Würfel
   let layer = null, mons = null, items = [], thrown = false;
   const V = () => M.MONSTER.variants;
-  function ensure() { if (!layer) { layer = document.createElement('div'); layer.id = 'dicelayer'; layer.style.cssText = 'position:absolute;left:0;top:0;width:1280px;height:800px;z-index:45;pointer-events:none'; stage.appendChild(layer); } return layer; }
+  function ensure() { if (!layer) { layer = document.createElement('div'); layer.id = 'dicelayer'; layer.style.cssText = 'position:absolute;left:0;top:0;width:' + SW + 'px;height:800px;z-index:45;pointer-events:none'; stage.appendChild(layer); } return layer; }
   function tip(sign, face, n, same) {
     const k = face.k, nm = V().diceNames[k];
     if (k === 'none') return (sign > 0 ? 'Pluswürfel' : 'Minuswürfel') + ': leere Seite, keine Wirkung.';
