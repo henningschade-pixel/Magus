@@ -183,8 +183,15 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .mon .sm{font-size:15px;color:var(--mute);line-height:1.2}
 .mon .sm.vals{color:var(--text,#e6e1d6);font-size:15px;font-weight:700;margin-top:2px}
 .mon.gone img.pic{opacity:.3}
-.introcover{position:absolute;z-index:50;box-sizing:border-box;border:1px solid var(--line);border-radius:12px;background-color:#000;background-size:88% auto;background-position:center;background-repeat:no-repeat;transition:transform .45s ease-in,opacity .45s;transform:perspective(800px) rotateY(0);pointer-events:none}
-.introcover.open{transform:perspective(800px) rotateY(90deg);opacity:.4}
+.introcover{position:absolute;z-index:50;pointer-events:none}
+.introcover .mc{position:absolute;inset:0;transform-style:preserve-3d;will-change:transform}
+.introcover .face{position:absolute;inset:0;box-sizing:border-box;border-radius:12px;overflow:hidden;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.introcover .cfback{border:1px solid var(--line);background:#000 center/88% auto no-repeat}
+.introcover .cffront{transform:rotateY(180deg)}
+.introcover .cffront .mon{left:0;top:0}
+.introcover .cfshadow{position:absolute;left:8%;right:8%;bottom:-18px;height:26px;border-radius:50%;background:rgba(0,0,0,.6);filter:blur(10px)}
+.introcover .cfglint{position:absolute;top:0;bottom:0;left:0;width:40%;opacity:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);mix-blend-mode:screen}
+#stage[data-hm~="0"] #ph .mon[data-i="0"],#stage[data-hm~="1"] #ph .mon[data-i="1"],#stage[data-hm~="2"] #ph .mon[data-i="2"]{visibility:hidden}   /* die echte Karte bleibt unsichtbar, solange die Abdeckung sie zeigt */
 #introhint{position:absolute;left:50%;top:6px;transform:translateX(-50%);z-index:90;padding:3px 12px;border-radius:9px;background:rgba(0,0,0,.6);color:var(--mute);font-size:14px;pointer-events:none}
 .mon .loot{color:var(--gold);font-size:16px}
 .mon .btn{margin-top:auto;width:100%;padding:3px 10px;flex:none}
@@ -2212,8 +2219,9 @@ function stockSpot(id) {
   const r = t.getBoundingClientRect(), sr = stage.getBoundingClientRect(), k = sr.width / stage.offsetWidth;
   return { x: (r.left - sr.left) / k, y: (r.top - sr.top) / k, sc: r.width / k / CW };
 }
+const reducedMotion = () => !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
 function place(card, s) {
-  let rec = els.get(card.uid);
+  let rec = els.get(card.uid); const isNew = !rec;
   if (!rec) {
     const d = createCard(card); layerCards.appendChild(d); rec = { el: d, id: card.id }; els.set(card.uid, rec);
     const vs = !firstFrame && s.zone === 'disc' && !M.parseCard(card.id).curse ? stockSpot(card.id) : null;   // in der Bibliothek gekauft
@@ -2236,9 +2244,11 @@ function place(card, s) {
   const held = rec.hold && Date.now() < rec.hold;   // gekaufte Karte wartet noch auf den Rückflug der bezahlten Karten
   if (!held) d.style.transform = rec.final;
   d.style.zIndex = held ? 400 : s.z;
+  const wasDown = d.classList.contains('down'), flipped = !isNew && !!s.down !== wasDown && s.zone !== 'draw' && !FAST && !reducedMotion();
   d.classList.toggle('down', !!s.down); d.classList.toggle('marked', !!s.marked); d.classList.toggle('first', !!s.first); d.classList.toggle('fd', !!s.fd); d.classList.toggle('locked', !!s.locked);
   d.classList.toggle('myhand', !!s.mine); d.dataset.slot = s.slot === undefined ? '' : s.slot;
   d.style.pointerEvents = s.mine ? 'auto' : 'none';
+  if (flipped) { const ms = CardFlip.hand(d.querySelector('.inner'), s.down ? 0 : 180, s.down ? 180 : 0); cardsUntil = Math.max(cardsUntil, Date.now() + ms); }   // Volle Drehung (Kartendreh-Werkstatt); Karten im Nachziehstapel (Mischen) drehen ohne Animation
 }
 function slotX(i, n, L) {
   const w = CW * L.s, step = n > 1 ? Math.min(L.gap, (L.span - w) / (n - 1)) : 0, total = w + step * (n - 1);
@@ -2351,6 +2361,42 @@ function canDrawNow() {
   if (G.phase === 'combat') return G.combat.action === 'attack';
   return true;
 }
+/* ---------- Kartendreh: die Drehung „Volle Drehung" aus werkstatt/kartendreh-werkstatt.html ---------- */
+// Eine Drehung um 180° mit Perspektive, Heben, Vergrößerung, seitlichem Kippen, Überdrehen und Hüpfer; bei den Monsterkarten dazu Schatten, Glanzstreifen und Leuchten in der Elementfarbe.
+// Gebaut als Web-Animation auf dem 3D-Element der Karte (.inner bei Handkarten, .mc bei den Monsterkarten zum Spielstart); danach gilt wieder der Stand aus dem Stylesheet.
+const CardFlip = (() => {
+  const MON = { extra: 0, persp: 800, heben: 30, skal: 1.06, kipp: 4, huepf: 6, nach: 8, schatten: .5, glanz: .5, leucht: .4, dauer: 900 };   // Monsterkarten (Export der Werkstatt)
+  const HAND = { extra: 0, persp: 800, heben: 14, skal: 1.06, kipp: 3, huepf: 3, nach: 6, dauer: 650 };   // Handkarten: kleiner und schneller, weil oft mehrere nacheinander gedreht werden
+  const bez = (x1, y1, x2, y2) => t => { let a = 0, b = 1, u = t; for (let k = 0; k < 24; k++) { u = (a + b) / 2; const x = 3 * (1 - u) * (1 - u) * u * x1 + 3 * (1 - u) * u * u * x2 + u * u * u; if (x < t) a = u; else b = u; } return 3 * (1 - u) * (1 - u) * u * y1 + 3 * (1 - u) * u * u * y2 + u * u * u; };
+  const ease = bez(.4, 0, .2, 1);
+  function pose(P, t, a0, a1) {
+    const e = ease(t), sinT = Math.sin(Math.PI * t), dir = a1 >= a0 ? 1 : -1;
+    const over = P.nach * Math.sin(Math.PI * Math.min(1, Math.max(0, (t - .6) / .4))) * (t > .6 ? 1 : 0);
+    return { ang: a0 + (a1 - a0 + dir * 360 * P.extra) * e + dir * over, sinT, lift: P.heben * sinT, sc: 1 + (P.skal - 1) * sinT, z: P.kipp * Math.sin(2 * Math.PI * t) * (1 - t), hop: t > .85 ? -P.huepf * Math.sin(Math.PI * (t - .85) / .15) : 0 };
+  }
+  function frames(P, a0, a1, fn) {
+    const N = 36, out = [];
+    for (let i = 0; i <= N; i++) { const t = i / N, p = pose(P, t, a0, a1); out.push(fn(p, t)); }
+    return out;
+  }
+  const tf = (P, p) => 'perspective(' + P.persp + 'px) translateY(' + p.hop + 'px) translateZ(' + p.lift + 'px) rotateZ(' + p.z + 'deg) scale(' + p.sc + ') rotateY(' + p.ang + 'deg)';
+  const run = (el, kf, dur) => el.animate(kf, { duration: dur, easing: 'linear' });
+  function hand(inner, from, to) {   // Handkarte: .inner von from nach to (0 = Vorderseite, 180 = Rückseite)
+    if (!inner.animate) return 0;
+    run(inner, frames(HAND, from, to, p => ({ transform: tf(HAND, p) })), HAND.dauer);
+    return HAND.dauer;
+  }
+  function monster(mc, col, done) {   // Monsterkarte zum Spielstart: .mc (verdeckt 0° -> offen 180°) mit Schatten, Glanz und Leuchten; done() am Ende
+    const P = MON, slot = mc.parentNode, sh = slot.querySelector('.cfshadow'), gl = slot.querySelector('.cfglint'), fr = slot.querySelector('.cffront');
+    if (!mc.animate) { done(); return 0; }
+    run(mc, frames(P, 0, 180, p => ({ transform: tf(P, p) })), P.dauer).onfinish = done;
+    if (sh) run(sh, frames(P, 0, 180, p => ({ opacity: P.schatten * (1 - .6 * p.sinT), transform: 'scale(' + (1 + .15 * p.sinT) + ')' })), P.dauer);
+    if (gl) run(gl, frames(P, 0, 180, (p, t) => ({ opacity: P.glanz * p.sinT, transform: 'translateX(' + (-60 + 360 * t) + '%) skewX(-15deg)' })), P.dauer);
+    if (fr) run(fr, frames(P, 0, 180, p => ({ boxShadow: '0 0 ' + 40 * P.leucht * p.sinT + 'px ' + 4 * P.leucht * p.sinT + 'px ' + col })), P.dauer);
+    return P.dauer;
+  }
+  return { hand, monster, MON, HAND };
+})();
 /* ---------- Seitenleisten ---------- */
 // Knopf so setzen, dass die MITTE SEINER SCHEIBE auf (cx, cy) liegt (Durchmesser diam). Die Grafiken haben die Scheibe nicht in der Bildmitte:
 // goldene Münz-Scheibe (goldup, 128 × 128): Scheibe Ø 106 in der Mitte; Plus-Scheibe (plusg, 64 × 71): Ø 61, Mitte bei (32,5 | 31), darunter Schatten.
@@ -2477,7 +2523,7 @@ function monsterCards() {
   M.ELEMENTS.forEach((e, i) => {
     const m = G.monsters[e], alive = M.monsterAlive(m), st = m.stats, b = m.base || { maxHp: st.maxHp, maxMana: st.maxMana, limit: st.limit, drawLimit: st.drawLimit || 1, hand: M.monsterHand(m) };   // Weltphase: unveränderte Standardwerte, die Würfel liegen darüber; im Kampf gelten die veränderten Werte
     const gone = !alive && m.retreated, img = alive || gone ? IMG['m_' + m.el.toLowerCase() + m.stage] : IMG['d_' + m.el.toLowerCase()];   // zurückgezogenes Monster: eigenes Bild, durchscheinend
-    h += '<div class="mon ' + (alive ? '' : gone ? 'dead gone' : 'dead') + '" style="left:' + (R.left + i * R.step) + 'px;top:' + R.top + 'px;width:' + R.w + 'px;height:' + R.h + 'px;padding:4px 8px 10px"><img class="pic" src="' + img + '" style="width:156px;height:178px">' +
+    h += '<div class="mon ' + (alive ? '' : gone ? 'dead gone' : 'dead') + '" data-i="' + i + '" style="left:' + (R.left + i * R.step) + 'px;top:' + R.top + 'px;width:' + R.w + 'px;height:' + R.h + 'px;padding:4px 8px 10px"><img class="pic" src="' + img + '" style="width:156px;height:178px">' +
       '<div class="nm ' + m.el + '"' + (m.hints && m.hints.length ? ' title="' + esc(m.hints.join('\n')) + '"' : '') + '>' + esc(m.name) + '</div>';   // die Würfel liegen über dem Kämpfen-Knopf (DiceBoard, LAYOUT.monsters.diceY)
     if (alive) {
       const hpNow = Math.max(1, b.maxHp - (st.maxHp - st.hp)), manaNow = Math.max(0, b.maxMana - (st.maxMana - st.mana));   // Würfel ändern die Höchstwerte; ein erlittener Verlust (Höchstwert minus Stand) wird auf die Standardwerte übertragen, ein unversehrtes Monster zeigt also volle Standardwerte
@@ -4269,20 +4315,21 @@ const DiceBoard = (() => {
 // Die Engine hat zu Beginn schon alles ausgeteilt; der Spielstart wird nur gezeigt: Monsterkarte 1, 2, 3 werden aufgedeckt und ihre Würfel geworfen, danach nimmt jeder Spieler seine Karten von der Ablage,
 // mischt sie, legt sie auf den Nachziehstapel und teilt von dort die Hand aus. view() liefert dafür einen gedachten Kartenstand der Decks; Eingaben und Computerzüge warten bis zum Ende (Klick überspringt).
 const Intro = (() => {
-  const T = { mon: 300, monStep: 1900, dice: 350, players: 6200, plStep: 2900, deal: 1250, dealStep: 240, end: 500 };
+  const T = { mon: 300, monStep: 1900, dice: 650, players: 6200, plStep: 2900, deal: 1250, dealStep: 240, end: 500 };
   let on = false, timers = [], monRev = 0, pl = {}, hint = null, covers = [];   // covers: verdeckte Monsterkarten als eigene Elemente (bleiben beim Neuzeichnen bestehen, die Dreh-Animation läuft ungestört)
   const later = (ms, fn) => timers.push(setTimeout(() => { if (on) { fn(); render(); } }, ms));
-  function stop() { timers.forEach(clearTimeout); timers = []; on = false; monRev = 0; pl = {}; covers.forEach(c => c.remove()); covers = []; if (hint) { hint.remove(); hint = null; } }
+  function stop() { timers.forEach(clearTimeout); timers = []; on = false; monRev = 0; pl = {}; covers.forEach(c => c.remove()); covers = []; delete stage.dataset.hm; if (hint) { hint.remove(); hint = null; } }
   function start() {
     stop();
     if (!G || FAST || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) || (navigator.webdriver && !/[?&]intro/.test(location.search))) return;   // Testläufe (Playwright, außer mit ?intro) und reduzierte Bewegung: ohne Vorführung
     const R = LAYOUT.monsters;
-    covers = M.ELEMENTS.map((e, i) => { const d = document.createElement('div'); d.className = 'introcover'; d.style.cssText = 'left:' + (R.left + i * R.step) + 'px;top:' + R.top + 'px;width:' + R.w + 'px;height:' + R.h + 'px;background-image:url(' + IMG.logo + ')'; stage.appendChild(d); return d; });
+    covers = M.ELEMENTS.map((e, i) => { const d = document.createElement('div'); d.className = 'introcover'; d.style.cssText = 'left:' + (R.left + i * R.step) + 'px;top:' + R.top + 'px;width:' + R.w + 'px;height:' + R.h + 'px'; d.innerHTML = '<div class="cfshadow"></div><div class="mc"><div class="face cfback" style="background-image:url(' + IMG.logo + ')"></div><div class="face cffront"><div class="cfglint"></div></div></div>'; stage.appendChild(d); return d; });
+    stage.dataset.hm = '0 1 2';   // die echten Monsterkarten bleiben verborgen, bis ihre Abdeckung umgedreht ist
     on = true; monRev = 0; pl = { [ME]: { st: 'disc', k: 0 }, [OPP]: { st: 'disc', k: 0 } };
     const n = G.players[ME].deck.hand.length, order = [ME, OPP];
     M.ELEMENTS.forEach((e, i) => {
       const t = T.mon + i * T.monStep;
-      later(t, () => { monRev = i + 1; Snd.play('flip', 0, .8); const c = covers[i]; if (c) { c.classList.add('open'); setTimeout(() => c.remove(), 500); } });
+      later(t, () => { monRev = i + 1; Snd.play('flip', 0, .8); const c = covers[i]; if (c) reveal(c, i); });
       later(t + T.dice, () => DiceBoard.throwItem(i));
     });
     order.forEach((p, j) => {
@@ -4293,6 +4340,12 @@ const Intro = (() => {
     later(T.players + 2 * T.plStep + T.end, finish);
     hold = Date.now() + T.players + 2 * T.plStep + T.end + 200;   // der Computer wartet
     hint = document.createElement('div'); hint.id = 'introhint'; hint.textContent = 'Klick: Spielstart überspringen'; stage.appendChild(hint);
+  }
+  function reveal(c, i) {   // Volle Drehung (Kartendreh-Werkstatt): die Abdeckung dreht sich um 180° und zeigt dabei eine Kopie der Monsterkarte
+    const real = stage.querySelector('.mon[data-i="' + i + '"]'), ff = c.querySelector('.cffront');
+    if (real) ff.insertBefore(real.cloneNode(true), ff.firstChild);
+    const end = () => { c.remove(); stage.dataset.hm = (stage.dataset.hm || '').split(' ').filter(x => x !== String(i)).join(' '); };
+    if (!real || FAST) end(); else CardFlip.monster(c.querySelector('.mc'), ({ F: '#ff6b3d', E: '#8bc34a', W: '#52a6f5' })[M.ELEMENTS[i]] || '#d2ad4f', end);
   }
   function finish() { stop(); hold = 0; DiceBoard.throwRest(); pump(); }
   function skip() {   // alles sofort in den Endstand; die Karten springen, ohne Töne zu erzeugen (erst ein stummes Zeichnen, dann Ende)

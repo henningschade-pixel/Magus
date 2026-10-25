@@ -126,6 +126,9 @@
   "file": "ui/15-karten.js"
  },
  {
+  "file": "ui/15a-kartendreh.js"
+ },
+ {
   "file": "ui/16-seitenleisten.js"
  },
  {
