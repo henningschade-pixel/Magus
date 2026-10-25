@@ -27,7 +27,8 @@ const DiceKit = (() => {
       '.dk-cube{position:absolute;left:0;top:0;transform-style:preserve-3d}' +
       '.dk-f{position:absolute;left:0;top:0;box-sizing:border-box;display:flex;align-items:center;justify-content:center;color:#fff6df;border:2px solid rgba(255,255,255,.32);background:linear-gradient(145deg,var(--c2),var(--c1));box-shadow:inset 0 0 10px rgba(0,0,0,.4);backface-visibility:hidden}' +
       '.dk-f svg{display:block;filter:drop-shadow(0 1px 1px rgba(0,0,0,.45))}' +
-      '.dk-f .dk-s{position:absolute;left:3px;top:3px;width:12px;height:12px;opacity:.9}' +
+      '.dk-f .dk-s{position:absolute;left:3px;top:3px;width:10px;height:10px;opacity:.9}' +
+      '.dk-f .dk-g{position:relative;left:3px;top:3px}' +
       '.dk-f b{position:absolute;right:4px;bottom:1px;font:700 15px/1 "Alegreya SC",Georgia,serif;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.8)}' +
       '.dk-sh{position:absolute;left:12%;right:12%;bottom:-5px;height:10px;border-radius:50%;background:#000;filter:blur(3px);pointer-events:none}' +
       '.dk-die.dk-off{opacity:.5;filter:saturate(.45)}';
@@ -47,9 +48,9 @@ const DiceKit = (() => {
     });
     KINDS.forEach((k, i) => {
       const f = document.createElement('div'); f.className = 'dk-f'; f.style.cssText = 'width:' + S + 'px;height:' + S + 'px;border-radius:' + Math.round(S * .12) + 'px;transform:' + FACE_T[i] + ' translateZ(' + (S / 2) + 'px)';
-      const g = Math.round(S * o.glyph), n = amounts && amounts[i];
+      const g = Math.round(S * o.glyph * (k === 'none' ? 1 : .86)), n = amounts && amounts[i];
       const sgn = k === 'none' ? '' : '<svg class="dk-s" viewBox="0 0 12 12"><path d="' + (sign > 0 ? 'M6 1.5v9M1.5 6h9' : 'M1.5 6h9') + '" fill="none" stroke="#fff6df" stroke-width="2.2" stroke-linecap="round"/></svg>';   // Plus auf dem roten, Minus auf dem grünen Würfel; die leere Seite trägt nur einen Strich
-      f.innerHTML = sgn + '<svg width="' + g + '" height="' + g + '" viewBox="0 0 48 48">' + GLYPH[k] + '</svg>' + (o.numbers && n ? '<b style="font-size:' + Math.round(S * .3) + 'px">' + (sign > 0 ? '+' : '−') + n + '</b>' : '');
+      f.innerHTML = sgn + '<svg class="dk-g" width="' + g + '" height="' + g + '" viewBox="0 0 48 48">' + GLYPH[k] + '</svg>' + (o.numbers && n ? '<b style="font-size:' + Math.round(S * .3) + 'px">' + (sign > 0 ? '+' : '−') + n + '</b>' : '');
       cube.appendChild(f);
     });
     el._k = 0; el._cube = cube; el._o = o; el._sh = sh; el._sign = sign;
