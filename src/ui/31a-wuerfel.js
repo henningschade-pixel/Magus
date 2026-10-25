@@ -14,7 +14,7 @@ const DiceKit = (() => {
     limit: '<rect x="6" y="10" width="20" height="28" rx="3.5" fill="none" stroke="currentColor" stroke-width="3.4"/><path d="M30 24h13m-5.5-6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>',
     draws: '<rect x="14" y="11" width="20" height="27" rx="3.5" fill="currentColor"/><path d="M40 20a16.5 16.5 0 1 0 1.2 9" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"/><path d="M42.5 12.5 40.5 21 32 19" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>',
     hand: '<g fill="currentColor"><rect x="7" y="13" width="17" height="25" rx="3" transform="rotate(-22 15 38)"/><rect x="15.5" y="9" width="17" height="25" rx="3" transform="rotate(0 24 38)" opacity=".92"/><rect x="24" y="13" width="17" height="25" rx="3" transform="rotate(22 33 38)"/></g>',
-    none: '<path d="M12 24h24" fill="none" stroke="currentColor" stroke-width="4.5" stroke-linecap="round" opacity=".4"/>',
+    none: '',   // leere Seite: keine Grafik
   };
   // Welche Würfelseite zeigt zum Betrachter? [rotateX, rotateY] des Würfels in Ruhe
   const REST = [[0, 0], [0, 180], [0, -90], [0, 90], [-90, 0], [90, 0]];
@@ -123,7 +123,7 @@ const DiceBoard = (() => {
        pl.style.top = (R.top + R.diceY + P.y + vr.plus.dy) + 'px'; mi.style.top = (R.top + R.diceY + P.y + vr.minus.dy) + 'px';
       pl.style.pointerEvents = mi.style.pointerEvents = 'auto';
       pl.title = tip(1, D.plus[v.pl], D.plus[v.pl].n[m.stage - 1], same); mi.title = tip(-1, D.minus[v.mi], D.minus[v.mi].n[m.stage - 1], same);
-      if (same) { pl.classList.add('dk-off'); mi.classList.add('dk-off'); }
+      if (same || D.plus[v.pl].k === 'none') pl.classList.add('dk-off'); if (same || D.minus[v.mi].k === 'none') mi.classList.add('dk-off');   // aufgehobene und leere Würfel durchscheinend
       DiceKit.setRest(pl, v.pl); DiceKit.setRest(mi, v.mi); pl.style.visibility = mi.style.visibility = 'hidden';
       layer.appendChild(pl); layer.appendChild(mi); items.push({ slot, pl, mi, v, vr });
     });
