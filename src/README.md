@@ -4,7 +4,7 @@
 Engine, KI und Oberfläche sind drei getrennte Schichten; die Oberfläche kennt nur `Magus` (Engine) und `MagusAI`.
 
 ## engine/ – Regelkern (ohne Oberfläche, läuft auch in Node)
-00 Rahmen · 10 Karten · 20 Werte · 30 Monster · 40 Flüche (Lähmung, Todesmarker) · 50 Händler · 60 Kampfberechnung · 65 Kampfablauf · 70 Weltphase · 80 Start/Schnittstelle (`DEFAULT_RULES`, `newGame`, `apply`)
+00 Rahmen · 10 Karten · 20 Werte · 30 Monster · 40 Flüche (Lähmung, Todesmarker) · 50 Bibliothek · 60 Kampfberechnung · 65 Kampfablauf · 70 Weltphase · 80 Start/Schnittstelle (`DEFAULT_RULES`, `newGame`, `apply`)
 
 ## ai/ – Computergegner
 10 Stellschrauben (`DEFAULTS`) · 20 Weltphase · 30 Kampf

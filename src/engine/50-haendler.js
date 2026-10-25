@@ -1,5 +1,5 @@
-/* Magus – Regelkern (Teil 5): Händler.
-   Der Händler arbeitet mit den markierten Handkarten (Auswahl, begrenzt durch das Ausspiellimit):
+/* Magus – Regelkern (Teil 5): Bibliothek.
+   Die Bibliothek arbeitet mit den markierten Handkarten (Auswahl, begrenzt durch das Ausspiellimit):
    - Gratiskarte (F1/E1/W1): immer möglich; sie verlangt keine Markierung und verbraucht weder Karten noch Markierungen.
    - Aufwertung: zwei gleiche markierte Karten ergeben die nächste Stufe, oder eine markierte Karte des überlegenen
      Elements ergibt die nächste Stufe des Elements. Die bezahlten Karten werden aus dem Deck entfernt, die gekaufte Karte kommt auf den Ablagestapel.
@@ -21,7 +21,7 @@ function vendorChoices(cards, limit) {   // (der Vorrat wird in vendorOffers/-Pl
 function handCards(d) { const out = []; d.hand.forEach((c, slot) => { if (c && !parseCard(c.id).curse) out.push({ slot, id: c.id }); }); return out; }
 function markedCards(d) { return handCards(d).filter(c => d.marks.includes(c.slot)); }
 
-// Vorrat: Wie viele Karten der Art im Vorrat des Händlers sind (ohne Begrenzung: unendlich).
+// Vorrat: Wie viele Karten der Art im Vorrat der Bibliothek sind (ohne Begrenzung: unendlich).
 function stockOf(state, id) { return state.supply ? (state.supply[id] || 0) : Infinity; }
 // Für die Oberfläche: Angebote zur aktuellen Auswahl. ‚available‘: false, wenn die Karte vergriffen ist; ‚stock‘: Restbestand.
 // Freischaltung: Eine Karte der Stufe t im Element e darf nur erwerben, wer die Magie e auf Stufe t hat.
@@ -47,7 +47,7 @@ function execVendor(state, pid, a) {
   if (!opt.free) d.marks = [];
   if (state.supply) { opt.cost.forEach(id => { state.supply[id]++; }); state.supply[opt.result]--; }   // bezahlte Karten gehen zurück in den Vorrat, die gekaufte kommt heraus
   d.discard.push(mkCard(state, opt.result));
-  log(state, p.name + ' tauscht beim Händler' + (opt.cost.length ? ' ' + opt.cost.join(' + ') + ' gegen ' : ' und erhält ') + opt.result + '.', pid);
+  log(state, p.name + ' tauscht in der Bibliothek' + (opt.cost.length ? ' ' + opt.cost.join(' + ') + ' gegen ' : ' und erhält ') + opt.result + '.', pid);
   endTurn(state, pid, 'vendor');
   return { ok: true };
 }

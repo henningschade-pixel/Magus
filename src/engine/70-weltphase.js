@@ -1,5 +1,5 @@
 /* Magus – Regelkern (Teil 7): Weltphase (Züge außerhalb des Kampfes).
-   Jede Aktion beendet den Zug (Spielerwechsel): Nachziehen, Händler, Kampf, Gold opfern, Magie kaufen, jedes Upgrade (Punkte ausgeben).
+   Jede Aktion beendet den Zug (Spielerwechsel): Nachziehen, Bibliothek, Kampf, Gold opfern, Magie kaufen, jedes Upgrade (Punkte ausgeben).
    Upgrade-Punkte dürfen aufgespart werden. */
 
 // Verlauf für die Statistik: ein Messpunkt zu Beginn, nach jedem Zug und nach jedem Kampf (ev = Kampfereignis)

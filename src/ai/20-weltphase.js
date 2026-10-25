@@ -162,7 +162,7 @@ function worldPlan(state, pid) {
 
   if (canDraw(d)) cands.push({ score: Q.dBase + Q.dCurse * curses.length + (normals.length === 0 ? Q.dEmpty : 0) + emptySlots * Q.dSlot - (normals.length >= 3 ? Q.dNorm : 0) - (p.drawRed ? Q.dRed : 0) + (!p.drawRed ? Q.dFree : 0) + R(), acts: [A({ type: 'draw' })] });
   if (p.drawRed && Q.dTmp && s.gold >= 1) cands.push({ score: Q.dTmp + R(), acts: [A({ type: 'temple', amount: 1 })] });   // roter Marker: 1 Gold im Tempel stellt ihn auf grün, statt dem Gegner beim Nachziehen Gold zu schenken
-  if (p.drawRed && Q.dVen && s.gold < 1) {   // roter Marker ohne Gold: ein Gratis-Tausch beim Händler stellt ihn ebenfalls auf grün (sonst schenkt das Warten dem Gegner jede zweite Runde 1 Gold)
+  if (p.drawRed && Q.dVen && s.gold < 1) {   // roter Marker ohne Gold: ein Gratis-Tausch in der Bibliothek stellt ihn ebenfalls auf grün (sonst schenkt das Warten dem Gegner jede zweite Runde 1 Gold)
     const best = M.ELEMENTS.slice().sort((a, b) => s.mag[b] - s.mag[a]), free = M.vendorPlans(state, pid).filter(o => o.free).sort((a, b) => best.indexOf(a.result[0]) - best.indexOf(b.result[0]))[0];
     if (free) cands.push({ score: Q.dVen + R(), acts: [A({ type: 'vendor', result: free.result, cost: [] })] });
   }

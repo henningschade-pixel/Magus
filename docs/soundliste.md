@@ -134,7 +134,7 @@ Prompt: *“A short satisfying magical power-up tick: a bright pluck with a tiny
 **magic_buy** (≈ 1–1,5 s) – Magiestufe im Tempel kaufen.
 Prompt: *“A magical power being gained by a wizard: rising swirling energy that locks in with a resonant chime, 1.2 seconds.”*
 
-**vendor_upgrade** (≈ 0,8–1,2 s) – Händler wertet eine Karte auf.
+**vendor_upgrade** (≈ 0,8–1,2 s) – Bibliothek wertet eine Karte auf.
 Prompt: *“A card being enchanted at a merchant’s table: a smithing-like tap, a coin clink and a glittering sparkle, 1 second.”*
 
 **ui_click** (≈ 0,1–0,2 s) – Knopfklick (Menü, Statistik, Pfeile).
@@ -169,7 +169,7 @@ Hinweis: Frühere Fassung der Aufbereitung hatte einen Fehler (Sounds waren fast
 
 Hinweis: `magic_buy` wurde entfernt (ersetzt durch `magic_lv2` und `magic_lv3`). Im Repo gelöschte Altlasten (Migrationsskripte, Spiellog der alten Regeln, Regelwerk v6) stehen weiter in der Git-Historie.
 - `spend_upgrade` („upgrade.wav“, 0,3 s) und `coin_sacrifice` („coins.wav“, 0,8 s): eigene Dateien des Spielers. `spend_upgrade` spielt einmal je angewendetem Upgrade, `coin_sacrifice` beim Opfern von Gold. Das Aufbereitungsskript nimmt jetzt auch wav, ogg, m4a und flac.
-- `card_lv2`, `card_lv3` („uprising2.wav“, „uprising3.wav“, je 1 s): spielen, wenn der Händler eine Karte auf Stufe 2 bzw. 3 aufwertet. Sie ersetzen `vendor_upgrade`, das entfernt wurde. Das kostenlose Tauschen gegen eine Stufe-1-Karte bleibt ohne eigenen Ton. Seit 17.10. vorläufig dieselben Klänge wie `magic_lv2` und `magic_lv3` (Kopien der Dateien; die Kategorie bleibt getrennt, damit sich die Kartenaufwertung später wieder eigens vertonen lässt). Die Synth-Fassungen davor stehen in der Git-Historie.
+- `card_lv2`, `card_lv3` („uprising2.wav“, „uprising3.wav“, je 1 s): spielen, wenn die Bibliothek eine Karte auf Stufe 2 bzw. 3 aufwertet. Sie ersetzen `vendor_upgrade`, das entfernt wurde. Das kostenlose Tauschen gegen eine Stufe-1-Karte bleibt ohne eigenen Ton. Seit 17.10. vorläufig dieselben Klänge wie `magic_lv2` und `magic_lv3` (Kopien der Dateien; die Kategorie bleibt getrennt, damit sich die Kartenaufwertung später wieder eigens vertonen lässt). Die Synth-Fassungen davor stehen in der Git-Historie.
 - `win` („win.mp3“, 4,3 s) und `lose` („loss.wav“, 2,8 s): eigene Dateien des Spielers für Sieg und Niederlage in Monsterkämpfen und Showdowns (Ergebnis-Bildschirm). 
 - `shuffle` („card-shuffling“ von someonecool15, freesound.org ID 423767, 2,1 s): wieder die frühere Version des Spielers; ersetzt die generierte. Lizenz auf der Seite prüfen.
 - `shield_hit` („explosion-outdoors-medium“ von evanboyerman, freesound.org ID 753843; Lizenz prüfen): Aufprall von Geschossen auf dem Schild/Spiegel (Spiel und Schild-Werkstatt); auf 1,9 s gekürzt. Spielt auch, wenn ein Spiegelmarker gelegt wird (statt `mirror_cast`). `break` (Splitter) spielt, wenn Stufen des Spiegels zerbrechen.

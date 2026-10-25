@@ -17,7 +17,7 @@ function newGame(opts) {
   const seed = (opts.seed === undefined ? (Date.now() & 0x7fffffff) : opts.seed) >>> 0;
   const state = { rules: Object.assign({}, DEFAULT_RULES, opts.rules || {}), seed, rng: makeRng(seed), uid: 1, log: [], logN: 0, stage: 1, showdown: 0, phase: 'world', turn: 0, hist: [], combat: null, over: false, winner: null, worldTurns: 0, idleTurns: 0, combatTurnsTotal: 0 };
   const names = opts.names || ['Du', 'Gegner'];
-  // Begrenzter Kartenvorrat (wie ein Brettspiel): von jeder der neun Karten gibt es ‚supply‘ Stück. Die Stufe-1-Karten werden gemischt, jeder Spieler erhält ‚startCards‘ davon (0 = alle, gleich viele je Spieler; daher ungleiche Startdecks), ein etwaiger Rest bleibt im Vorrat des Händlers.
+  // Begrenzter Kartenvorrat (wie ein Brettspiel): von jeder der neun Karten gibt es ‚supply‘ Stück. Die Stufe-1-Karten werden gemischt, jeder Spieler erhält ‚startCards‘ davon (0 = alle, gleich viele je Spieler; daher ungleiche Startdecks), ein etwaiger Rest bleibt im Vorrat der Bibliothek.
   let deal = [null, null];
   if (state.rules.supply > 0) {
     const pool = []; ELEMENTS.forEach(e => { for (let i = 0; i < state.rules.supply; i++) pool.push(e + '1'); });

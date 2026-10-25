@@ -110,10 +110,10 @@ const GROUPS = [
   ['Kampfende und Spielverlauf', [
     ['win', 'Kampf, Showdown oder Spiel gewonnen'], ['lose', 'Kampf, Showdown oder Spiel verloren'], ['draw', 'Unentschieden'],
     ['showdown_start', 'Showdown wird angekündigt'], ['stage_start', 'Neuer Abschnitt beginnt']]],
-  ['Tempel und Händler', [
+  ['Tempel und Bibliothek', [
     ['coin_sacrifice', 'Gold wird im Tempel geopfert'], ['temple_level', 'Tempelstufe steigt'], ['spend_upgrade', 'Ein Upgrade wird angewendet'],
     ['upgrade_gain', 'Neue Upgrade-Punkte erscheinen'], ['magic_lv2', 'Magierichtung erreicht Stufe 2'], ['magic_lv3', 'Magierichtung erreicht Stufe 3'],
-    ['card_lv2', 'Händler wertet eine Karte auf Stufe 2 auf'], ['card_lv3', 'Händler wertet eine Karte auf Stufe 3 auf']]],
+    ['card_lv2', 'Bibliothek wertet eine Karte auf Stufe 2 auf'], ['card_lv3', 'Bibliothek wertet eine Karte auf Stufe 3 auf']]],
 ];
 const ALL = []; GROUPS.forEach(g => g[1].forEach(s => ALL.push({ name: s[0], use: s[1], group: g[0] })));
 

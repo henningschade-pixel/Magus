@@ -1,10 +1,10 @@
-/* ---------- Weltphase: Händler, Monster ---------- */
+/* ---------- Weltphase: Bibliothek, Monster ---------- */
 function vendorPanel() {
   const p = G.players[ME];
   const offers = M.vendorOffers(G, ME);
   const can = myTurn();
-  let h = '<h3>Händler</h3>';
-  {   // Vorrat: wie viele Karten jeder Art der Händler noch hat; vergriffene sind abgedunkelt, kaufbare golden gerahmt (die Stufe-1-Karten immer, solange der Vorrat reicht)
+  let h = '<h3>Bibliothek</h3>';
+  {   // Vorrat: wie viele Karten jeder Art die Bibliothek noch hat; vergriffene sind abgedunkelt, kaufbare golden gerahmt (die Stufe-1-Karten immer, solange der Vorrat reicht)
     h += '<div class="stock">';
     ['F', 'E', 'W'].forEach(e => [1, 2, 3].forEach(t => {
       const id = e + t, n = G.supply ? G.supply[id] : Infinity, freeI = offers.findIndex(o => o.free && o.result === id), buy = offers.filter(o => !o.free && o.available && o.result === id);

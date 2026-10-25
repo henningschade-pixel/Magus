@@ -99,7 +99,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .freedraw.lf{transition:transform .12s}.freedraw.lf:hover{transform:scale(1.08)}
 .freedraw.lf.sel,.freedraw.opp.lf.sel{filter:drop-shadow(0 0 7px #f2d27a) drop-shadow(0 0 3px #f2d27a)}
 .freedraw.opp .lfb{font-style:normal;font-size:12px;color:var(--gold)}
-/* Panels, Spielerstatus, Händler, Monster */
+/* Panels, Spielerstatus, Bibliothek, Monster */
 .panel{position:absolute;background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:12px;padding:12px 14px;overflow:hidden}
 .panel h3{font-size:20px;color:var(--gold);margin-bottom:6px}
 .statrow .note{font-size:15px}
@@ -193,7 +193,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .magrow{display:flex;align-items:center;gap:8px;font-size:19px;margin:3px 0}
 .magrow .nm{width:70px}
 
-/* Händler */
+/* Bibliothek */
 .vrow{display:flex;align-items:center;gap:6px;padding:4px 6px;border:1px solid #44444c;border-radius:9px;margin-bottom:5px;cursor:var(--cp);background:rgba(0,0,0,.18)}
 .vrow:hover{border-color:var(--gold)}
 .vrow.off{opacity:.4;cursor:var(--cd)}.vrow.off:hover{border-color:#44444c}
@@ -659,8 +659,8 @@ function inflictCurses(state, victim, level) {
   for (let i = 0; i < n; i++) victim.deck.discard.push(mkCard(state, 'C1'));
   return n + ' Fluchkarte' + (n > 1 ? 'n' : '') + ' auf den Ablagestapel von ' + victim.name;
 }
-/* Magus – Regelkern (Teil 5): Händler.
-   Der Händler arbeitet mit den markierten Handkarten (Auswahl, begrenzt durch das Ausspiellimit):
+/* Magus – Regelkern (Teil 5): Bibliothek.
+   Die Bibliothek arbeitet mit den markierten Handkarten (Auswahl, begrenzt durch das Ausspiellimit):
    - Gratiskarte (F1/E1/W1): immer möglich; sie verlangt keine Markierung und verbraucht weder Karten noch Markierungen.
    - Aufwertung: zwei gleiche markierte Karten ergeben die nächste Stufe, oder eine markierte Karte des überlegenen
      Elements ergibt die nächste Stufe des Elements. Die bezahlten Karten werden aus dem Deck entfernt, die gekaufte Karte kommt auf den Ablagestapel.
@@ -682,7 +682,7 @@ function vendorChoices(cards, limit) {   // (der Vorrat wird in vendorOffers/-Pl
 function handCards(d) { const out = []; d.hand.forEach((c, slot) => { if (c && !parseCard(c.id).curse) out.push({ slot, id: c.id }); }); return out; }
 function markedCards(d) { return handCards(d).filter(c => d.marks.includes(c.slot)); }
 
-// Vorrat: Wie viele Karten der Art im Vorrat des Händlers sind (ohne Begrenzung: unendlich).
+// Vorrat: Wie viele Karten der Art im Vorrat der Bibliothek sind (ohne Begrenzung: unendlich).
 function stockOf(state, id) { return state.supply ? (state.supply[id] || 0) : Infinity; }
 // Für die Oberfläche: Angebote zur aktuellen Auswahl. ‚available‘: false, wenn die Karte vergriffen ist; ‚stock‘: Restbestand.
 // Freischaltung: Eine Karte der Stufe t im Element e darf nur erwerben, wer die Magie e auf Stufe t hat.
@@ -708,7 +708,7 @@ function execVendor(state, pid, a) {
   if (!opt.free) d.marks = [];
   if (state.supply) { opt.cost.forEach(id => { state.supply[id]++; }); state.supply[opt.result]--; }   // bezahlte Karten gehen zurück in den Vorrat, die gekaufte kommt heraus
   d.discard.push(mkCard(state, opt.result));
-  log(state, p.name + ' tauscht beim Händler' + (opt.cost.length ? ' ' + opt.cost.join(' + ') + ' gegen ' : ' und erhält ') + opt.result + '.', pid);
+  log(state, p.name + ' tauscht in der Bibliothek' + (opt.cost.length ? ' ' + opt.cost.join(' + ') + ' gegen ' : ' und erhält ') + opt.result + '.', pid);
   endTurn(state, pid, 'vendor');
   return { ok: true };
 }
@@ -1132,7 +1132,7 @@ function applyCombat(state, a) {
 }
 
 /* Magus – Regelkern (Teil 7): Weltphase (Züge außerhalb des Kampfes).
-   Jede Aktion beendet den Zug (Spielerwechsel): Nachziehen, Händler, Kampf, Gold opfern, Magie kaufen, jedes Upgrade (Punkte ausgeben).
+   Jede Aktion beendet den Zug (Spielerwechsel): Nachziehen, Bibliothek, Kampf, Gold opfern, Magie kaufen, jedes Upgrade (Punkte ausgeben).
    Upgrade-Punkte dürfen aufgespart werden. */
 
 // Verlauf für die Statistik: ein Messpunkt zu Beginn, nach jedem Zug und nach jedem Kampf (ev = Kampfereignis)
@@ -1278,7 +1278,7 @@ function newGame(opts) {
   const seed = (opts.seed === undefined ? (Date.now() & 0x7fffffff) : opts.seed) >>> 0;
   const state = { rules: Object.assign({}, DEFAULT_RULES, opts.rules || {}), seed, rng: makeRng(seed), uid: 1, log: [], logN: 0, stage: 1, showdown: 0, phase: 'world', turn: 0, hist: [], combat: null, over: false, winner: null, worldTurns: 0, idleTurns: 0, combatTurnsTotal: 0 };
   const names = opts.names || ['Du', 'Gegner'];
-  // Begrenzter Kartenvorrat (wie ein Brettspiel): von jeder der neun Karten gibt es ‚supply‘ Stück. Die Stufe-1-Karten werden gemischt, jeder Spieler erhält ‚startCards‘ davon (0 = alle, gleich viele je Spieler; daher ungleiche Startdecks), ein etwaiger Rest bleibt im Vorrat des Händlers.
+  // Begrenzter Kartenvorrat (wie ein Brettspiel): von jeder der neun Karten gibt es ‚supply‘ Stück. Die Stufe-1-Karten werden gemischt, jeder Spieler erhält ‚startCards‘ davon (0 = alle, gleich viele je Spieler; daher ungleiche Startdecks), ein etwaiger Rest bleibt im Vorrat der Bibliothek.
   let deal = [null, null];
   if (state.rules.supply > 0) {
     const pool = []; ELEMENTS.forEach(e => { for (let i = 0; i < state.rules.supply; i++) pool.push(e + '1'); });
@@ -1390,17 +1390,17 @@ return { ELEMENTS, SUPERIOR, NAMES, START_DECK, MAX_MAGIC, MAX_SLOTS, MIN_SLOTS,
 const DEFAULTS = {
   limitA: 1, slotA: 5, manaA: 5, hpA: 6, limitB: 3, slotB: 5,          // Ausbaureihenfolge der Upgrade-Punkte
   cBase: 34, cHp: 3, cMana: 1.5, cWt: 2.8, cMon: 0.8, minHp: 1, minMana: 3,   // Lust, ein Monster anzugreifen
-  dRed: 10, dTmp: 10, dVen: 5, rBroke: 400, cRed: 1, cRedA: 0,   // Nachziehmarker rot (Nachziehen schenkt dem Gegner Gold bzw. ein Nachziehtoken): dRed Abschlag auf das Nachziehen in der Weltphase, dTmp Lust, stattdessen 1 Gold im Tempel zu opfern, dVen Lust, ohne Gold stattdessen gratis beim Händler zu tauschen, rBroke Bonus für einen Monsterangriff, wenn sonst nur das Strafnachziehen bleibt; im Kampf cRed 1: erholen statt nachziehen (auch bei vollem Mana), cRedA: Angriffsschwelle sinkt um so viel
+  dRed: 10, dTmp: 10, dVen: 5, rBroke: 400, cRed: 1, cRedA: 0,   // Nachziehmarker rot (Nachziehen schenkt dem Gegner Gold bzw. ein Nachziehtoken): dRed Abschlag auf das Nachziehen in der Weltphase, dTmp Lust, stattdessen 1 Gold im Tempel zu opfern, dVen Lust, ohne Gold stattdessen gratis in der Bibliothek zu tauschen, rBroke Bonus für einen Monsterangriff, wenn sonst nur das Strafnachziehen bleibt; im Kampf cRed 1: erholen statt nachziehen (auch bei vollem Mana), cRedA: Angriffsschwelle sinkt um so viel
   sacG: 0, mgGoal: 6, sacRes: 0,   // swapCosts (0.3): Magie kostet Upgrade-Punkte, die es nur aus dem Tempel gibt. sacG 1: Gold opfern, wenn die Punkte für die nächste Magiestufe nicht reichen; mgGoal: nur solange der Magiefortschritt (Summe der Stufen über 1, höchstens 6) darunter liegt; sacRes: Gold, das dabei übrig bleiben muss (Vorrang der Verbesserungen)
   dlMax: 0, dlPos: 4, tKeep: 0, cRedE: 0, dFree: 0, rAtk: 0,   // rAtk: Angriffslust auf ein Monster, solange der Marker rot ist (statt nachzuziehen und dem Gegner Gold zu schenken); Nachziehlimit (Upgrade-Punkte): dlMax bis zu welcher Stufe die KI es kauft (0 = nie), dlPos Stelle in der Ausbaureihenfolge von pickSpend (0 = vor allem anderen, 4 = nach den A-Zielen, 9 = zuletzt); tKeep: Gold, das beim Tempel-Opfern zurückbleibt (Notgroschen gegen die Strafe, siehe dTmp); cRedE 1: mit leerer Hand bei Rot erst erholen (Marker auf Grün), dann nachziehen; dFree: Bonus aufs Nachziehen in der Weltphase, solange der Marker noch grün ist
   dBase: 7, dCurse: 4, dEmpty: 12, dSlot: 1, dNorm: 5,                    // Lust, nachzuziehen
-  vUp: 10.35, vUpW: 1.4,                                                       // Händler-Aufwertung
+  vUp: 10.35, vUpW: 1.4,                                                       // Bibliotheks-Aufwertung
   smart: 1, wMark: 0.5, keepB: 3, keepOn: 0, wDeath: 6, wDraw: 1.6, wFW: 1.3, wFE: 0.9, wEW: 2.8, aDmg: 1.5, aCost: 1.5, aCurse: 1.6, aThr: 0.5, oHits: 4, oFree: 4, stallDec: -0.05, stallFrom: 24, pasDec: 1,   // Angriffsbewertung; pasDec: die Angriffsschwelle sinkt um so viel je Passen-Zug des Gegners in Folge
   rW: 0, rRef: 3, dRec: 0, dU: 2,                                                 // Erholen als Manaquelle: Angriffsschwelle steigt bei wenig Mana, Verzicht auf Verteidigung bringt Mana
   dLeth: 40, dPend: 6, dCost: 1.4, dKeep: 0.9, mirW: 4, mirKeep: 3, mirAvoid: 2, lfOpp: 2, lfOppW: 0.8,                            // Verteidigungsbewertung
   mBase: 14, mCost: 2.1, mCnt: 0.7, mTop: 2,
   mPlan: 0, vOff: 0.5,   // Ziel-Farbe: gegen ein Monster zählt die ihm überlegene Magie. mPlan: Bonus beim Magiekauf, vOff: Aufwertungen anderer Farben zählen nur so viel
-  vOver: 0.5, vFut: 0,   // Händler: Eine Karte über dem Magielevel ihrer Farbe bringt (noch) nichts: Wert dieser Aufwertung × vOver (1 = wie bisher), vFut: ab so viel Gold zum Magiekauf zählt sie schon
+  vOver: 0.5, vFut: 0,   // Bibliothek: Eine Karte über dem Magielevel ihrer Farbe bringt (noch) nichts: Wert dieser Aufwertung × vOver (1 = wie bisher), vFut: ab so viel Gold zum Magiekauf zählt sie schon
   xPen: 0, xCost: 2, xHp: 1.5, xHor: 3,   // Erschöpfung: Ein überhasteter Angriff, der das Monster nicht schafft, lässt es angeschlagen zurück, und der Gegner (der danach am Zug ist) besiegt es leicht
   fleeIdle: 120,   // Patt-Sicherung: Nach so vielen Weltphasen-Zügen ohne entschiedenen Kampf flieht die KI nicht mehr (sonst konnte ein Spieler, der Gold aus roten Nachziehmarkern des Gegners in HP umsetzt, endlos angreifen und fliehen)
   fleeT: 999,   // Fliehen: ab so vielen Kampfschritten ohne brauchbaren Angriff gegen ein Monster ohne Mana (999 = nie; im Selbstspiel verlor die KI mit 14 Schritten 48 %, mit 6 Schritten 42 %)
@@ -1592,7 +1592,7 @@ function worldPlan(state, pid) {
 
   if (canDraw(d)) cands.push({ score: Q.dBase + Q.dCurse * curses.length + (normals.length === 0 ? Q.dEmpty : 0) + emptySlots * Q.dSlot - (normals.length >= 3 ? Q.dNorm : 0) - (p.drawRed ? Q.dRed : 0) + (!p.drawRed ? Q.dFree : 0) + R(), acts: [A({ type: 'draw' })] });
   if (p.drawRed && Q.dTmp && s.gold >= 1) cands.push({ score: Q.dTmp + R(), acts: [A({ type: 'temple', amount: 1 })] });   // roter Marker: 1 Gold im Tempel stellt ihn auf grün, statt dem Gegner beim Nachziehen Gold zu schenken
-  if (p.drawRed && Q.dVen && s.gold < 1) {   // roter Marker ohne Gold: ein Gratis-Tausch beim Händler stellt ihn ebenfalls auf grün (sonst schenkt das Warten dem Gegner jede zweite Runde 1 Gold)
+  if (p.drawRed && Q.dVen && s.gold < 1) {   // roter Marker ohne Gold: ein Gratis-Tausch in der Bibliothek stellt ihn ebenfalls auf grün (sonst schenkt das Warten dem Gegner jede zweite Runde 1 Gold)
     const best = M.ELEMENTS.slice().sort((a, b) => s.mag[b] - s.mag[a]), free = M.vendorPlans(state, pid).filter(o => o.free).sort((a, b) => best.indexOf(a.result[0]) - best.indexOf(b.result[0]))[0];
     if (free) cands.push({ score: Q.dVen + R(), acts: [A({ type: 'vendor', result: free.result, cost: [] })] });
   }
@@ -1888,7 +1888,7 @@ const LAYOUT = {
   zoneLines: [166, 596],                                    // Trennlinien
   oppPanel:  { left: 920, top: 8,   w: 336, h: 160 },       // Gegner (oben rechts)
   mePanel:   { left: 920, top: 610, w: 336, h: 176 },       // eigener Spielerstatus (unten rechts)
-  vendor:    { left: 920, top: 182, w: 336, h: 408 },       // Händler
+  vendor:    { left: 920, top: 182, w: 336, h: 408 },       // Bibliothek
   logPanel:  { left: 24,  top: 182, w: 260, h: 408 },       // Protokoll (Weltphase)
   monsters:  { left: 296, top: 182, step: 212, w: 188, h: 408, diceY: 317 },   // diceY: Oberkante der Würfel, von der Kartenoberkante aus (direkt über dem Kämpfen-Knopf)
   banner:    { left: 372, top: 230, w: 536 },
@@ -2081,7 +2081,7 @@ function flushSound(quiet) {
 /* ---------- Karten ---------- */
 const L_MY = LAYOUT.hand.me, L_OP = LAYOUT.hand.opp;
 const els = new Map(); let frame = 0, firstFrame = false;
-const VEND_WAIT = 520;   // Händler: Dauer des Rückflugs der bezahlten Karten, bevor die gekaufte Karte losfliegt (ms)
+const VEND_WAIT = 520;   // Bibliothek: Dauer des Rückflugs der bezahlten Karten, bevor die gekaufte Karte losfliegt (ms)
 function jit(uid, k) { const x = Math.sin(uid * 12.9898) * 43758.5453; return ((x - Math.floor(x)) - 0.5) * 2 * k; }
 function createCard(card) {
   const d = document.createElement('div'); d.className = 'card';
@@ -2096,7 +2096,7 @@ function isFirstAtk(deck, i) {   // goldener Rahmen auf allen markierten Karten 
   const ids = deck.marks.filter(k => deck.hand[k]).map(k => M.parseCard(deck.hand[k].id)), first = ids.find(p => !p.curse), me = M.parseCard(deck.hand[i] && deck.hand[i].id);
   return !!first && !me.curse && me.el === first.el;
 }
-// Händler-Vorrat: Lage (Bühnenpixel) und Maßstab des Kartenbilds im Vorrat; null, wenn gerade kein Händler zu sehen ist
+// Bibliotheks-Vorrat: Lage (Bühnenpixel) und Maßstab des Kartenbilds im Vorrat; null, wenn gerade keine Bibliothek zu sehen ist
 function stockSpot(id) {
   if (!G || G.phase !== 'world') return null;
   const t = stage.querySelector('.stk[data-stk="' + id + '"] .thumb');
@@ -2108,10 +2108,10 @@ function place(card, s) {
   let rec = els.get(card.uid);
   if (!rec) {
     const d = createCard(card); layerCards.appendChild(d); rec = { el: d, id: card.id }; els.set(card.uid, rec);
-    const vs = !firstFrame && s.zone === 'disc' && !M.parseCard(card.id).curse ? stockSpot(card.id) : null;   // beim Händler gekauft
+    const vs = !firstFrame && s.zone === 'disc' && !M.parseCard(card.id).curse ? stockSpot(card.id) : null;   // in der Bibliothek gekauft
     const sp = vs || s.spawn || { x: s.x, y: s.y };
     d.style.transform = 'translate(' + sp.x + 'px,' + sp.y + 'px) scale(' + (vs ? vs.sc : s.sc) + ')';
-    if (vs) {   // nacheinander: erst fliegen die bezahlten Karten zum Händler, dann die gekaufte Karte vom Vorrat direkt auf den Ablagestapel
+    if (vs) {   // nacheinander: erst fliegen die bezahlten Karten zur Bibliothek, dann die gekaufte Karte vom Vorrat direkt auf den Ablagestapel
       rec.hold = Date.now() + VEND_WAIT; d.style.opacity = '1'; d.style.visibility = 'hidden';
       setTimeout(() => { d.style.visibility = ''; d.style.transform = rec.final; }, VEND_WAIT);
     } else { d.style.opacity = '0'; void d.offsetWidth; d.style.opacity = '1'; }
@@ -2176,7 +2176,7 @@ function renderCards() {
   layoutDeck(cx.myDeck, L_MY, true);
   layoutDeck(cx.oppDeck, L_OP, false);
   for (const [uid, rec] of els) if (rec.frame !== frame) {
-    els.delete(uid); const d = rec.el, back = !M.parseCard(rec.id).curse && stockSpot(rec.id);   // nur Flüche werden zerstört; alle anderen Karten gehen verkleinert zurück auf ihren Stapel beim Händler
+    els.delete(uid); const d = rec.el, back = !M.parseCard(rec.id).curse && stockSpot(rec.id);   // nur Flüche werden zerstört; alle anderen Karten gehen verkleinert zurück auf ihren Stapel in der Bibliothek
     if (back) { d.style.pointerEvents = 'none'; d.style.zIndex = 400; d.style.transform = 'translate(' + back.x + 'px,' + back.y + 'px) scale(' + back.sc + ')'; cardsUntil = Math.max(cardsUntil, Date.now() + 520); setTimeout(() => d.remove(), 520); }
     else { d.classList.add('fadeout'); cardsUntil = Math.max(cardsUntil, Date.now() + 1200); setTimeout(() => d.remove(), 1200); }
   }
@@ -2344,13 +2344,13 @@ function sidePanels(cx) {
   return '<div class="panel" style="' + box(LAYOUT.mePanel, 'padding:6px 12px') + '">' + me + '</div>' +
     '<div class="panel" style="' + box(LAYOUT.oppPanel, 'padding:6px 12px;font-size:16px') + '">' + op.replace(/<h3>/, '<h3 style="font-size:17px;margin-bottom:2px">') + '</div>';
 }
-/* ---------- Weltphase: Händler, Monster ---------- */
+/* ---------- Weltphase: Bibliothek, Monster ---------- */
 function vendorPanel() {
   const p = G.players[ME];
   const offers = M.vendorOffers(G, ME);
   const can = myTurn();
-  let h = '<h3>Händler</h3>';
-  {   // Vorrat: wie viele Karten jeder Art der Händler noch hat; vergriffene sind abgedunkelt, kaufbare golden gerahmt (die Stufe-1-Karten immer, solange der Vorrat reicht)
+  let h = '<h3>Bibliothek</h3>';
+  {   // Vorrat: wie viele Karten jeder Art die Bibliothek noch hat; vergriffene sind abgedunkelt, kaufbare golden gerahmt (die Stufe-1-Karten immer, solange der Vorrat reicht)
     h += '<div class="stock">';
     ['F', 'E', 'W'].forEach(e => [1, 2, 3].forEach(t => {
       const id = e + t, n = G.supply ? G.supply[id] : Infinity, freeI = offers.findIndex(o => o.free && o.result === id), buy = offers.filter(o => !o.free && o.available && o.result === id);
@@ -3432,7 +3432,7 @@ function checkShowdownIntro() {
   const first = G.log.slice().reverse().find(e => /^Showdown \d/.test(e.txt));
   modal = { title: 'Showdown ' + (G.showdown + 1) + ' von 3', sub: 'Alle Monster sind besiegt: Duell Spieler gegen Spieler', lines: [first ? first.txt : '', 'Wer gewinnt, erhält 1 Siegpunkt, der Verlierer verliert 1 (nie unter 0); bei Gleichstand oder Flucht gibt es keine. Es gewinnt, wer nach drei Showdowns vorn liegt.'].filter(Boolean) };
 }
-// Töne zu eigenen Weltphasen-Aktionen (Tempel, Upgrades, Magie, Händler)
+// Töne zu eigenen Weltphasen-Aktionen (Tempel, Upgrades, Magie, Bibliothek)
 function worldSound(type, gainedUp, magNow, cardLv) {
   if (FAST) return;
   if (type === 'temple') { Snd.play('coin_sacrifice'); if (gainedUp) Snd.play('temple_level', .45); }

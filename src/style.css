@@ -89,7 +89,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .freedraw.lf{transition:transform .12s}.freedraw.lf:hover{transform:scale(1.08)}
 .freedraw.lf.sel,.freedraw.opp.lf.sel{filter:drop-shadow(0 0 7px #f2d27a) drop-shadow(0 0 3px #f2d27a)}
 .freedraw.opp .lfb{font-style:normal;font-size:12px;color:var(--gold)}
-/* Panels, Spielerstatus, Händler, Monster */
+/* Panels, Spielerstatus, Bibliothek, Monster */
 .panel{position:absolute;background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:12px;padding:12px 14px;overflow:hidden}
 .panel h3{font-size:20px;color:var(--gold);margin-bottom:6px}
 .statrow .note{font-size:15px}
@@ -183,7 +183,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .magrow{display:flex;align-items:center;gap:8px;font-size:19px;margin:3px 0}
 .magrow .nm{width:70px}
 
-/* Händler */
+/* Bibliothek */
 .vrow{display:flex;align-items:center;gap:6px;padding:4px 6px;border:1px solid #44444c;border-radius:9px;margin-bottom:5px;cursor:var(--cp);background:rgba(0,0,0,.18)}
 .vrow:hover{border-color:var(--gold)}
 .vrow.off{opacity:.4;cursor:var(--cd)}.vrow.off:hover{border-color:#44444c}

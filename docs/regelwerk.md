@@ -22,7 +22,7 @@ Eine Partie hat drei Abschnitte (1, 2, 3). Je Abschnitt gibt es drei Monster (St
 | Ausspiellimit | 2 | seit 0.3 (`startLimit`, vorher 1); höchstens 5, jeder Schritt kostet 2 Gold (seit 0.3, vorher 2 Upgrade-Punkte) |
 | Handplätze | 3 | je Upgrade-Punkt ein weiterer, höchstens 5 |
 
-**Kartenvorrat (neu):** Vom Vorrat jeder Karte gibt es: Stufe 1 je 8 (`supply`), Stufe 2 je 6 (`supply2`), Stufe 3 je 4 (`supply3`), also F1/E1/W1, F2/E2/W2 und F3/E3/W3. Vor der Partie werden die 24 Stufe-1-Karten gemischt und gleichmäßig verteilt: jeder Spieler erhält 12 als Startdeck (`startCards` 0 = alle; die Startdecks sind daher ungleich, zum Beispiel 5/4/3 statt 4/4/4). Im Vorrat des Händlers liegen danach nur Stufe-2- und Stufe-3-Karten (je 6 bzw. 4); Stufe-1-Karten tauchen dort erst auf, wenn welche beim Aufwerten zurückgegeben werden. Der Händler zeigt, wie viele Karten jeder Art noch im Vorrat sind; sind sie weg, ist die Karte vergriffen und nicht kaufbar (auch die Gratiskarten F1/E1/W1 nicht). Beim Aufwerten gehen die bezahlten Karten zurück in den Vorrat, die gekaufte Karte kommt heraus. Monsterdecks haben ihren eigenen Vorrat und zählen nicht mit. `supply` 0 schaltet den Vorrat ab (altes Startdeck 3× F1, E1, W1, unbegrenzte Karten). Karten heißen Element plus Stufe (F2 = Feuer, Stufe 2), Stufen 1 bis 3.
+**Kartenvorrat (neu):** Vom Vorrat jeder Karte gibt es: Stufe 1 je 8 (`supply`), Stufe 2 je 6 (`supply2`), Stufe 3 je 4 (`supply3`), also F1/E1/W1, F2/E2/W2 und F3/E3/W3. Vor der Partie werden die 24 Stufe-1-Karten gemischt und gleichmäßig verteilt: jeder Spieler erhält 12 als Startdeck (`startCards` 0 = alle; die Startdecks sind daher ungleich, zum Beispiel 5/4/3 statt 4/4/4). Im Vorrat der Bibliothek liegen danach nur Stufe-2- und Stufe-3-Karten (je 6 bzw. 4); Stufe-1-Karten tauchen dort erst auf, wenn welche beim Aufwerten zurückgegeben werden. Die Bibliothek zeigt, wie viele Karten jeder Art noch im Vorrat sind; sind sie weg, ist die Karte vergriffen und nicht kaufbar (auch die Gratiskarten F1/E1/W1 nicht). Beim Aufwerten gehen die bezahlten Karten zurück in den Vorrat, die gekaufte Karte kommt heraus. Monsterdecks haben ihren eigenen Vorrat und zählen nicht mit. `supply` 0 schaltet den Vorrat ab (altes Startdeck 3× F1, E1, W1, unbegrenzte Karten). Karten heißen Element plus Stufe (F2 = Feuer, Stufe 2), Stufen 1 bis 3.
 
 **Abschnittsbonus** (zu Beginn jedes Abschnitts, beide Spieler): Abschnitt 1: 2 Gold und 2 Upgrade-Punkte, Abschnitt 2: 3 und 3, Abschnitt 3: 4 und 4 (seit 0.3.2; vorher 1/2/3).
 
@@ -30,15 +30,15 @@ Eine Partie hat drei Abschnitte (1, 2, 3). Je Abschnitt gibt es drei Monster (St
 
 ## Weltphase
 
-Im eigenen Zug genau eine Aktion, danach wechselt der Spieler: Nachziehen, beim Händler tauschen, einen Kampf beginnen, im Tempel Gold opfern, Magie kaufen oder ein Upgrade kaufen (Magiestufe mit Upgrade-Punkten; HP, Mana, Limit, Handkarten, Nachziehlimit mit Gold; jeder Klick ist eine Aktion). Upgrade-Punkte und Gold dürfen aufgespart werden. Eine Erholungsphase gibt es nicht.
+Im eigenen Zug genau eine Aktion, danach wechselt der Spieler: Nachziehen, in der Bibliothek tauschen, einen Kampf beginnen, im Tempel Gold opfern, Magie kaufen oder ein Upgrade kaufen (Magiestufe mit Upgrade-Punkten; HP, Mana, Limit, Handkarten, Nachziehlimit mit Gold; jeder Klick ist eine Aktion). Upgrade-Punkte und Gold dürfen aufgespart werden. Eine Erholungsphase gibt es nicht.
 
 **Regeneration:** Bei jedem Zugwechsel erhält der Spieler, der dran kommt, **HP und Mana in Höhe des Abschnitts** (Abschnitt 1: +1/+1, Abschnitt 2: +2/+2, Abschnitt 3: +3/+3; nicht über das Maximum). Dasselbe bekommt der Verteidiger nach einem Kampf. Alle lebenden Monster regenerieren am Ende jeder Runde +1 HP und +1 Mana (Regel `regenByStage` gilt nur für Spieler).
 
 **Nachziehen:** Alle nicht gesperrten Handkarten wandern auf den Ablagestapel, freie Plätze werden aus dem Deck neu gefüllt (Deck leer: Ablagestapel mischen). Rechtsklick sperrt eine Karte. Nachziehen beendet den Zug.
 
-**Freischaltung (neu):** Eine Karte der Stufe t im Element X darf nur erwerben, wer die Magie X auf Stufe t hat. Für F2 braucht man also Feuer-Magie 2, für F3 Feuer-Magie 3. Gesperrte Karten sind im Händler abgedunkelt (Hinweis: Magie nötig), die Gratiskarten der Stufe 1 sind immer freigeschaltet.
+**Freischaltung (neu):** Eine Karte der Stufe t im Element X darf nur erwerben, wer die Magie X auf Stufe t hat. Für F2 braucht man also Feuer-Magie 2, für F3 Feuer-Magie 3. Gesperrte Karten sind in der Bibliothek abgedunkelt (Hinweis: Magie nötig), die Gratiskarten der Stufe 1 sind immer freigeschaltet.
 
-**Händler:** tauscht Karten, kein Gold. Mit markierten Handkarten (begrenzt durch das Ausspiellimit):
+**Bibliothek:** tauscht Karten, kein Gold. Mit markierten Handkarten (begrenzt durch das Ausspiellimit):
 
 | Ergebnis | Kosten |
 |---|---|
@@ -158,9 +158,9 @@ Messung (KI gegen KI, 1000 Partien): ohne Regel P90 1615, Maximum 12940 Aktionen
 
 ## Nachziehmarker (neu, Schalter `drawMarker`, Standard 1)
 
-Jeder Spieler hat einen beidseitigen Marker (grün/rot) beim Nachziehstapel. Er startet grün. **Nachziehen** dreht ihn auf rot; **jede andere Zugaktion** dreht ihn auf grün (Weltphase: Händler, Kampf beginnen, Tempel, Magie kaufen, Upgrade; Kampf: Angreifen, Verteidigen, Passen, Erholen, Fliehen). Markieren, Sperren und das Gratis-Nachziehen mit einem Nachziehtoken ändern ihn nicht. Der Marker bleibt zwischen Weltphase und Kampf liegen.
+Jeder Spieler hat einen beidseitigen Marker (grün/rot) beim Nachziehstapel. Er startet grün. **Nachziehen** dreht ihn auf rot; **jede andere Zugaktion** dreht ihn auf grün (Weltphase: Bibliothek, Kampf beginnen, Tempel, Magie kaufen, Upgrade; Kampf: Angreifen, Verteidigen, Passen, Erholen, Fliehen). Markieren, Sperren und das Gratis-Nachziehen mit einem Nachziehtoken ändern ihn nicht. Der Marker bleibt zwischen Weltphase und Kampf liegen.
 **Strafe:** Wer nachzieht, obwohl sein Marker rot ist, gibt dem Gegner in der Weltphase `drawPenaltyGold` (1) Gold, im Kampf ein Nachziehtoken (Gegenseite; im Monsterkampf bekommt das Monster das Token). Der Marker bleibt danach rot. Die Strafe ist ein Geschenk an den Gegner, der Nachziehende zahlt nichts selbst.
-KI: Sie zieht bei rotem Marker nur noch nach, wenn sie keine andere Aktion hat (Weltphase: lieber 1 Gold im Tempel opfern, ohne Gold gratis beim Händler tauschen oder ein Monster angreifen; Kampf: lieber erholen), siehe `tools/balance/README.md`.
+KI: Sie zieht bei rotem Marker nur noch nach, wenn sie keine andere Aktion hat (Weltphase: lieber 1 Gold im Tempel opfern, ohne Gold gratis in der Bibliothek tauschen oder ein Monster angreifen; Kampf: lieber erholen), siehe `tools/balance/README.md`.
 Messung (KI gegen KI, 1000 Partien, KI nachtrainiert): P90 657 statt 1615, Maximum 4050 statt 12940 Aktionen, Unentschieden 3,4 % statt 7,8 %. Die Schleife verschwindet nicht ganz: Beim Warten wandert Gold hin und her und wird im Tempel angelegt; die Stillstandsregel (`idleLimit`) bleibt als zweite Sicherung möglich.
 
 ## Nachziehlimit (neu in 0.2.1)
@@ -201,7 +201,7 @@ KI-Selbstspiel (400 Partien): In rund 24 % der Partien erreicht mindestens ein S
 
 ## Ausspiellimit startet bei 2 (Version 0.3, Schalter `startLimit`, Standard 2)
 
-Beide Spieler beginnen mit Ausspiellimit 2 (vorher 1; mit `startLimit` 0 gilt wieder 1). Damit gehen zwei markierte Karten sofort: Angriff mit zwei Karten, Kombos und der Händler-Tausch „2 gleiche Karten der Vorstufe“ stehen von Anfang an offen. Weitere Schritte (bis 5) kosten wie bisher 2 Gold.
+Beide Spieler beginnen mit Ausspiellimit 2 (vorher 1; mit `startLimit` 0 gilt wieder 1). Damit gehen zwei markierte Karten sofort: Angriff mit zwei Karten, Kombos und die Bibliothek-Tausch „2 gleiche Karten der Vorstufe“ stehen von Anfang an offen. Weitere Schritte (bis 5) kosten wie bisher 2 Gold.
 KI-Selbstspiel (1000 Partien): Der Vorteil des Beginners wächst, Beginner 51 % / Zweiter 39 % / Unentschieden 9 % (vorher 47 / 45 / 7); Median 670 Aktionen (vorher 927). Die KI wurde nachgestimmt: Eröffnung `strat` 2 (eine Farbe zuerst) statt 3 (+2,7 Punkte in 4000 Partien, 52 bis 53 % gegen die Pool-Gegner); Limit-Stellschrauben und `minMana` blieben.
 
 ## Monster neu abgestimmt (Version 0.3.1)

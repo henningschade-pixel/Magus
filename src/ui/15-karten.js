@@ -1,7 +1,7 @@
 /* ---------- Karten ---------- */
 const L_MY = LAYOUT.hand.me, L_OP = LAYOUT.hand.opp;
 const els = new Map(); let frame = 0, firstFrame = false;
-const VEND_WAIT = 520;   // Händler: Dauer des Rückflugs der bezahlten Karten, bevor die gekaufte Karte losfliegt (ms)
+const VEND_WAIT = 520;   // Bibliothek: Dauer des Rückflugs der bezahlten Karten, bevor die gekaufte Karte losfliegt (ms)
 function jit(uid, k) { const x = Math.sin(uid * 12.9898) * 43758.5453; return ((x - Math.floor(x)) - 0.5) * 2 * k; }
 function createCard(card) {
   const d = document.createElement('div'); d.className = 'card';
@@ -16,7 +16,7 @@ function isFirstAtk(deck, i) {   // goldener Rahmen auf allen markierten Karten 
   const ids = deck.marks.filter(k => deck.hand[k]).map(k => M.parseCard(deck.hand[k].id)), first = ids.find(p => !p.curse), me = M.parseCard(deck.hand[i] && deck.hand[i].id);
   return !!first && !me.curse && me.el === first.el;
 }
-// Händler-Vorrat: Lage (Bühnenpixel) und Maßstab des Kartenbilds im Vorrat; null, wenn gerade kein Händler zu sehen ist
+// Bibliotheks-Vorrat: Lage (Bühnenpixel) und Maßstab des Kartenbilds im Vorrat; null, wenn gerade keine Bibliothek zu sehen ist
 function stockSpot(id) {
   if (!G || G.phase !== 'world') return null;
   const t = stage.querySelector('.stk[data-stk="' + id + '"] .thumb');
@@ -28,10 +28,10 @@ function place(card, s) {
   let rec = els.get(card.uid);
   if (!rec) {
     const d = createCard(card); layerCards.appendChild(d); rec = { el: d, id: card.id }; els.set(card.uid, rec);
-    const vs = !firstFrame && s.zone === 'disc' && !M.parseCard(card.id).curse ? stockSpot(card.id) : null;   // beim Händler gekauft
+    const vs = !firstFrame && s.zone === 'disc' && !M.parseCard(card.id).curse ? stockSpot(card.id) : null;   // in der Bibliothek gekauft
     const sp = vs || s.spawn || { x: s.x, y: s.y };
     d.style.transform = 'translate(' + sp.x + 'px,' + sp.y + 'px) scale(' + (vs ? vs.sc : s.sc) + ')';
-    if (vs) {   // nacheinander: erst fliegen die bezahlten Karten zum Händler, dann die gekaufte Karte vom Vorrat direkt auf den Ablagestapel
+    if (vs) {   // nacheinander: erst fliegen die bezahlten Karten zur Bibliothek, dann die gekaufte Karte vom Vorrat direkt auf den Ablagestapel
       rec.hold = Date.now() + VEND_WAIT; d.style.opacity = '1'; d.style.visibility = 'hidden';
       setTimeout(() => { d.style.visibility = ''; d.style.transform = rec.final; }, VEND_WAIT);
     } else { d.style.opacity = '0'; void d.offsetWidth; d.style.opacity = '1'; }
@@ -96,7 +96,7 @@ function renderCards() {
   layoutDeck(cx.myDeck, L_MY, true);
   layoutDeck(cx.oppDeck, L_OP, false);
   for (const [uid, rec] of els) if (rec.frame !== frame) {
-    els.delete(uid); const d = rec.el, back = !M.parseCard(rec.id).curse && stockSpot(rec.id);   // nur Flüche werden zerstört; alle anderen Karten gehen verkleinert zurück auf ihren Stapel beim Händler
+    els.delete(uid); const d = rec.el, back = !M.parseCard(rec.id).curse && stockSpot(rec.id);   // nur Flüche werden zerstört; alle anderen Karten gehen verkleinert zurück auf ihren Stapel in der Bibliothek
     if (back) { d.style.pointerEvents = 'none'; d.style.zIndex = 400; d.style.transform = 'translate(' + back.x + 'px,' + back.y + 'px) scale(' + back.sc + ')'; cardsUntil = Math.max(cardsUntil, Date.now() + 520); setTimeout(() => d.remove(), 520); }
     else { d.classList.add('fadeout'); cardsUntil = Math.max(cardsUntil, Date.now() + 1200); setTimeout(() => d.remove(), 1200); }
   }

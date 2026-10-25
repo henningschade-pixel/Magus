@@ -241,7 +241,7 @@ test('Fliehen geht nicht, während ein Angriff aussteht', () => {
   assert.equal(M.canFlee(s, 1), false, 'auch der Verteidiger flieht nicht');
 });
 
-test('Kartenvorrat: Startdecks aus gemischten Stufe-1-Karten, getauschte Karten gehen zurück in den Händler, vergriffene Karten sind nicht kaufbar', () => {
+test('Kartenvorrat: Startdecks aus gemischten Stufe-1-Karten, getauschte Karten gehen zurück in die Bibliothek, vergriffene Karten sind nicht kaufbar', () => {
   const s = M.newGame({ seed: 9, ai: [false, false], first: 0 });
   const total = () => Object.values(s.supply).reduce((a, b) => a + b, 0);
   const inDecks = () => s.players.reduce((a, p) => a + p.deck.draw.length + p.deck.discard.length + p.deck.hand.filter(Boolean).length, 0);
