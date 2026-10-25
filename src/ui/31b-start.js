@@ -30,7 +30,7 @@ const Intro = (() => {
   }
   function reveal(c, i) {   // Volle Drehung (Kartendreh-Werkstatt): die Abdeckung dreht sich um 180° und zeigt dabei eine Kopie der Monsterkarte
     const real = stage.querySelector('.mon[data-i="' + i + '"]'), ff = c.querySelector('.cffront');
-    if (real) ff.insertBefore(real.cloneNode(true), ff.firstChild);
+    if (real) { const cl = real.cloneNode(true); cl.style.left = cl.style.top = '0'; ff.insertBefore(cl, ff.firstChild); }   // die Kopie liegt in der Abdeckung, nicht an der Kartenposition
     const end = () => { c.remove(); stage.dataset.hm = (stage.dataset.hm || '').split(' ').filter(x => x !== String(i)).join(' '); };
     if (!real || FAST) end(); else CardFlip.monster(c.querySelector('.mc'), ({ F: '#ff6b3d', E: '#8bc34a', W: '#52a6f5' })[M.ELEMENTS[i]] || '#d2ad4f', end);
   }

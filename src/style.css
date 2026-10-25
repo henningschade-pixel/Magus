@@ -181,7 +181,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .introcover .cffront .mon{left:0;top:0}
 .introcover .cfshadow{position:absolute;left:8%;right:8%;bottom:-18px;height:26px;border-radius:50%;background:rgba(0,0,0,.6);filter:blur(10px)}
 .introcover .cfglint{position:absolute;top:0;bottom:0;left:0;width:40%;opacity:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.55),transparent);mix-blend-mode:screen}
-#stage[data-hm~="0"] #ph .mon[data-i="0"],#stage[data-hm~="1"] #ph .mon[data-i="1"],#stage[data-hm~="2"] #ph .mon[data-i="2"]{visibility:hidden}   /* die echte Karte bleibt unsichtbar, solange die Abdeckung sie zeigt */
+#stage[data-hm~="0"] #panels .mon[data-i="0"],#stage[data-hm~="1"] #panels .mon[data-i="1"],#stage[data-hm~="2"] #panels .mon[data-i="2"]{visibility:hidden}   /* die echte Karte bleibt unsichtbar, solange die Abdeckung sie zeigt */
 #introhint{position:absolute;left:50%;top:6px;transform:translateX(-50%);z-index:90;padding:3px 12px;border-radius:9px;background:rgba(0,0,0,.6);color:var(--mute);font-size:14px;pointer-events:none}
 .mon .loot{color:var(--gold);font-size:16px}
 .mon .btn{margin-top:auto;width:100%;padding:3px 10px;flex:none}
