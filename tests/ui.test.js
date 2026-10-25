@@ -39,7 +39,7 @@ test('Statistikseite öffnet, zeigt den Verlauf und lässt sich filtern und schl
     await p.goto(url); await p.waitForTimeout(500);
     await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
     assert.equal(await p.locator('#log .logdl').count(), 1);
-    await p.click('#homebtn'); await p.click('text=Statistik');
+    await p.click('#statsbtn');
     await p.waitForSelector('.box.stats svg');
     assert.ok(await p.locator('.box.stats polyline, .box.stats circle').count() > 0);
     await p.click('.stchip:has-text("Magie (Feuer")');
@@ -48,8 +48,7 @@ test('Statistikseite öffnet, zeigt den Verlauf und lässt sich filtern und schl
     await p.mouse.move(bb.x + 500, bb.y + 200); await p.mouse.wheel(0, -300);   // Zoomen ändert die Achsen
     assert.notEqual(await p.locator('#stsvg').innerHTML(), before);
     await p.dblclick('#stsvg'); assert.equal(await p.locator('#stsvg').innerHTML(), before);   // Doppelklick: zurück zur automatischen Ansicht
-    await p.click('text=Schließen');
-    await p.click('text=Fortsetzen');
+    await p.click('text=Schließen');   // direkt zurück ins Spiel (kein Menü dazwischen)
     assert.equal(await p.evaluate(() => document.getElementById('overlay').style.display), 'none');
     assert.deepEqual(errs, []);
   } finally { await b.close(); }
@@ -281,7 +280,7 @@ test('Monsterwürfel: je lebendem Monster ein grüner Pluswürfel und ein roter 
   } finally { await b.close(); }
 });
 
-test('Hauptmenü: Einzelspieler, Mehrspieler, Einstellungen, Beenden; Einstellungen mit Reglern; Spielmenü führt zurück ins Hauptmenü', { skip: !chromium && 'Playwright nicht installiert', timeout: 60000 }, async () => {
+test('Hauptmenü: Einzelspieler, Mehrspieler, Einstellungen, Beenden; Einstellungen mit Reglern; Haus-Knopf führt direkt ins Hauptmenü, Statistik-Knopf daneben', { skip: !chromium && 'Playwright nicht installiert', timeout: 60000 }, async () => {
   const b = await chromium.launch({ executablePath: exe });
   try {
     const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
@@ -295,9 +294,11 @@ test('Hauptmenü: Einzelspieler, Mehrspieler, Einstellungen, Beenden; Einstellun
     await p.click('text=Zurück'); await p.click('text=Mehrspieler'); assert.ok((await txt()).includes('Mehrspieler')); await p.click('text=Zurück');
     await p.click('text=Beenden'); await p.waitForTimeout(400); assert.ok((await txt()).includes('Danke fürs Spielen')); await p.click('text=Zurück');
     await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
-    await p.click('#homebtn'); t = await txt(); for (const w of ['Fortsetzen', 'Neu starten', 'Statistik', 'Einstellungen', 'Zum Hauptmenü']) assert.ok(t.includes(w), w + ' fehlt im Spielmenü');
-    await p.click('text=Einstellungen'); assert.equal(await p.locator('input[data-vol]').count(), 2); await p.click('text=Zurück');
-    await p.click('text=Zum Hauptmenü'); t = await txt(); assert.ok(t.includes('Spiel fortsetzen') && t.includes('Einzelspieler'));
+    assert.equal(await p.locator('#statsbtn').isVisible(), true, 'Statistik-Knopf neben dem Haus');
+    await p.click('#homebtn'); t = await txt(); assert.ok(t.includes('Spiel fortsetzen') && t.includes('Einzelspieler') && t.includes('Einstellungen'), 'Haus führt direkt ins Hauptmenü');
+    await p.click('text=Spiel fortsetzen'); assert.equal(await p.evaluate(() => document.getElementById('overlay').style.display), 'none');
+    await p.click('#statsbtn'); assert.ok((await txt()).length > 0); await p.click('text=Schließen'); assert.equal(await p.evaluate(() => document.getElementById('overlay').style.display), 'none', 'Statistik schließt zurück ins Spiel');
+    await p.click('#homebtn'); await p.click('text=Einstellungen'); assert.equal(await p.locator('input[data-vol]').count(), 2); await p.click('text=Zurück');
     assert.deepEqual(errs, []);
   } finally { await b.close(); }
 });

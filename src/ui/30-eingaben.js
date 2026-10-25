@@ -143,7 +143,6 @@ function homeMenuDraw() {
   overlay.innerHTML = '<div class="box start" style="width:420px"><h1 style="font-size:44px">Menü</h1>' + (MP ? '<div id="mproom" style="font-size:19px;color:var(--mute);margin-top:-4px"></div>' : '') + '<div style="display:flex;flex-direction:column;gap:10px;align-self:stretch;margin-top:10px">' +
     '<button class="btn primary" style="font-size:21px;padding:10px" data-act="resume">Fortsetzen</button>' +
     (MP ? '' : '<button class="btn" style="font-size:21px;padding:10px" data-act="restart" title="Beginnt eine neue Partie (gleiche Art)">Neu starten</button>') +
-    '<button class="btn" style="font-size:21px;padding:10px" data-act="stopen" title="Verlauf über die Züge">📈 Statistik</button>' +
     '<button class="btn" style="font-size:21px;padding:10px" data-act="homeset">Einstellungen</button>' +
     '<button class="btn" style="font-size:21px;padding:10px" data-act="leave">' + (MP ? 'Partie verlassen' : 'Zum Hauptmenü') + '</button></div></div>';
   mpChip();
@@ -154,17 +153,22 @@ function homeSettings() {
 }
 // Klickton für Menü- und Bedienknöpfe (Aktionen mit eigenem Ton ausgenommen)
 const CLICK_ACTS = new Set(['sacdn', 'sacup', 'deckview', 'home', 'resume', 'restart', 'leave', 'newgame', 'newspec', 'specspeed', 'stend', 'logdl', 'stclose', 'stopen', 'sndtoggle', 'menu', 'quit', 'homeset', 'homeback', 'stfit', 'stwho', 'stser', 'dismiss']);
-stage.addEventListener('pointerdown', e => { const b = e.target.closest('button'); if (b && (b.id === 'homebtn' || b.classList.contains('logdl') || CLICK_ACTS.has(b.dataset.act))) Snd.play('ui_click'); }, true);
+stage.addEventListener('pointerdown', e => { const b = e.target.closest('button'); if (b && (b.id === 'homebtn' || b.id === 'statsbtn' || b.classList.contains('logdl') || CLICK_ACTS.has(b.dataset.act))) Snd.play('ui_click'); }, true);
 const homeBtn = document.createElement('button');
-homeBtn.id = 'homebtn'; homeBtn.title = 'Menü: fortsetzen, neu starten, verlassen'; homeBtn.textContent = '⌂';
-homeBtn.addEventListener('click', e => { e.stopPropagation(); if (G && started) homeMenu(); });
+homeBtn.id = 'homebtn'; homeBtn.title = 'Hauptmenü (die Partie bleibt erhalten)'; homeBtn.textContent = '⌂';
+homeBtn.addEventListener('click', e => { e.stopPropagation(); if (!G || !started || overlay.style.display === 'flex') return; if (MP) homeMenu(); else { clearTimeout(aiTimer); showStart(); } });   // Mehrspieler: Partie-Menü (Verlassen), sonst direkt das Hauptmenü mit „Spiel fortsetzen“
 stage.appendChild(homeBtn);
+const statsBtn = document.createElement('button');
+statsBtn.id = 'statsbtn'; statsBtn.title = 'Statistik: Verlauf der Partie'; statsBtn.setAttribute('aria-label', 'Statistik');
+statsBtn.innerHTML = '<svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true"><path d="M3 17V3M3 17h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M5.5 13l3.5-4 3 2.5 4-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+statsBtn.addEventListener('click', e => { e.stopPropagation(); statsOpen(false); });
+statsBtn.style.display = 'none'; stage.appendChild(statsBtn);
 // Tempo-Knopf auf dem Spielfeld, nur beim Zuschauen einer Computerpartie; bei „maximal“ wird der Ton selbst ausgeschaltet und danach wiederhergestellt
 const specBtn = document.createElement('button');
 specBtn.id = 'specbtn'; specBtn.dataset.act = 'specspeed'; specBtn.title = 'Tempo der Computerzüge; ab ×3 ohne Animationen und Töne, bei maximal zusätzlich ohne Ton';
 stage.appendChild(specBtn);
 let specMuted = false;
-function specBtnSync() { specBtn.style.display = SPEC && started && G && !G.over ? '' : 'none'; specBtn.textContent = '⏩ ' + (specSpeed === 1 ? 'normal' : specSpeed === 3 ? '×3' : 'maximal'); }
+function specBtnSync() { statsBtn.style.display = G && started ? '' : 'none'; specBtn.style.display = SPEC && started && G && !G.over ? '' : 'none'; specBtn.textContent = '⏩ ' + (specSpeed === 1 ? 'normal' : specSpeed === 3 ? '×3' : 'maximal'); }
 function setSpecSpeed(v) {
   specSpeed = v; setFast();
   if (v === 99 && Snd.on) { Snd.toggle(); specMuted = true; }
