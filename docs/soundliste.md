@@ -21,6 +21,7 @@ Alle Soundeffekte des Spiels: die fünf vorhandenen und die geplanten. Jeder Ein
 
 | Datei | Moment | Länge heute |
 |---|---|---|
+| `dice` | Die beiden Würfel einer Monsterkarte werden geworfen (je Monster einmal, versetzt) | 1,1 s |
 | `flip` | Karte wird umgedreht oder gezogen | 1,0 s |
 | `play` | Karte wird ausgespielt oder abgelegt | 0,6 s |
 | `shuffle` | Deck wird gemischt (ab zwei gemischten Stapeln) | 2,6 s |

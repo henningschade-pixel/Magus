@@ -131,6 +131,7 @@ const DiceBoard = (() => {
     items.forEach((it, i) => {
       if (!it) return;
       const P = DiceKit.P, d0 = i * P.monsterStagger * 1000;
+      if (!FAST) Snd.play('dice', d0 / 1000, .6);   // Würfelrollen auf dem Tisch, je Monsterkarte einmal beim Wurf
       [it.pl, it.mi].forEach((el, j) => { const k = j ? it.v.mi : it.v.pl; DiceKit.roll(el, k, d0 + j * P.stagger * 1000, () => { if (!FAST) Snd.play('flip', 0, .5); }, (j ? it.vr.minus : it.vr.plus).roll); });
     });
   }
