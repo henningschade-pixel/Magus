@@ -7,7 +7,7 @@ const DiceKit = (() => {
   const KINDS = ['hp', 'mana', 'limit', 'draws', 'hand', 'none'];   // Reihenfolge wie MONSTER.variants.dice (Seite 0 bis 5)
   const NAMES = { hp: 'HP', mana: 'Mana', limit: 'Limit', draws: 'Ziehen', hand: 'Hand', none: 'leer' };
   // Einstellungen (Werkstatt: Export einfügen). tiltX/tiltY: Kippung im Flug, restTiltX/restTiltY: Kippung in Ruhe (0 = die Symbole stehen gerade); vary: Stärke der Abweichung je Monster (0 = keine)
-  const P = { size: 46, duration: 1.45, spins: 2, bounces: 3, hop: 38, fromX: -300, fromY: -230, tiltX: -24, tiltY: 20, restTiltX: 0, restTiltY: 0, vary: 1, stagger: 0.16, monsterStagger: 0.5, glyph: 0.6, numbers: 0, shadow: 0.5, plus: '#c0392b', minus: '#3f9d4d', gap: 8, y: 6 };
+  const P = { size: 41, duration: 1.45, spins: 2, bounces: 3, hop: 38, fromX: -300, fromY: -230, tiltX: -24, tiltY: 20, restTiltX: 0, restTiltY: 0, vary: 1, stagger: 0.16, monsterStagger: 0.5, glyph: 0.6, numbers: 0, shadow: 0.5, plus: '#c0392b', minus: '#3f9d4d', gap: 8, y: 6 };
   const GLYPH = {   // Symbole (48 × 48), Farbe über currentColor
     hp: '<path d="M24 42C11 31 6 23 6 16.5A9.5 9.5 0 0 1 24 12a9.5 9.5 0 0 1 18 4.5C42 23 37 31 24 42Z" fill="currentColor"/>',
     mana: '<path d="M24 5C32 16 38 23.5 38 30.5a14 14 0 0 1-28 0C10 23.5 16 16 24 5Z" fill="currentColor"/><path d="M17.5 31a6.5 6.5 0 0 0 5 6.2" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="3" stroke-linecap="round"/>',
