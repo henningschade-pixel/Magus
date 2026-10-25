@@ -6,7 +6,7 @@
     "build": "node tools/build.js",
     "build:single": "node tools/build-single.js",
     "check": "node tools/build.js --check",
-    "test": "node tools/build.js --check && node tools/build-wuerfel-werkstatt.js --check && node --test tests/*.test.js",
+    "test": "node tools/build.js --check && node tools/build-wuerfel-werkstatt.js --check && node tools/build-runen-werkstatt.js --check && node --test tests/*.test.js",
     "golden": "node tests/make-golden.js",
     "balance": "node tools/balance/report.js 400 '{}'"
   }
