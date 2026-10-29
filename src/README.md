@@ -11,7 +11,7 @@ Engine, KI und Oberfläche sind drei getrennte Schichten; die Oberfläche kennt 
 
 ## ui/ – Oberfläche (eine IIFE, Dateien werden nacheinander verkettet)
 - Grundlage: 00 Start/Zustand · 10 Layout · 11 Skalierung · 12 Hilfen · 14 Sound
-- Darstellung: 15 Karten · 16 Seitenleisten · 17 Weltphase · 18 Kampf · 19 Gesamtdarstellung · 26 Erde (Weltphasen-Hintergrund)
+- Darstellung: 15 Karten · 16 Seitenleisten · 17 Weltphase · 18 Kampf · 19 Gesamtdarstellung · 26 Erde und Kampfeffekt-Ablauf · 26a Darstellung (render, Menüs, Start-/Ergebnis-Bildschirm)
 - Animationen: 13 Zugwechsel · 20 Todesfluch · 21 Spiegelbruch · 22 Lifeflow/Lähmung · 23 Kampffunken · 24 Funken · 25 Auflösung
 - Ablauf und Eingaben: 27 Ablauf (Spielschleife, Ergebnis-Overlay) · 30 Eingaben · 31 Statistik · 32 Spiellog (Export)
 - Mehrspieler: 28 PeerJS · 29 Mehrspieler

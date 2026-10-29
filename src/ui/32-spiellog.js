@@ -12,7 +12,7 @@ function buildExport() {
     log: G.log.map(e => ({ n: e.n, pid: e.pid, text: e.txt }))
   };
 }
-// Der Export-Knopf sitzt in der Kopfzeile des Logs (siehe render in 26-erde.js)
+// Der Export-Knopf sitzt in der Kopfzeile des Logs (siehe render in 26a-darstellung.js)
 logEl.addEventListener('click', e => { if (e.target.closest('.logdl')) { e.stopPropagation(); exportLog(e); } });
 async function exportLog(e) {
   const d = buildExport(); if (!d) { toast('Noch keine Partie.'); return; }
