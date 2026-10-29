@@ -5,8 +5,16 @@ function playerSide(state, pid, key) {
 }
 // Vor und nach jedem Kampf: frisch gemischtes Deck und volle Hand. In Monsterkämpfen bleiben HP und Mana erhalten (sie regenerieren in der Weltphase); vor und nach einem Showdown sind HP und Mana voll.
 function resetPlayers(state, mode) {
-  const parts = mode === 'monster' ? 'd' : 'hmd';
-  state.players.forEach(p => { if (parts.includes('h')) p.stats.hp = p.stats.maxHp; if (parts.includes('m')) p.stats.mana = p.stats.maxMana; p.stats.freeDraws = 0; if (parts.includes('d')) dealFresh(state, p.deck, p.slots); });
+  const full = mode !== 'monster';
+  state.players.forEach(p => {
+    if (full) { p.stats.hp = p.stats.maxHp; p.stats.mana = p.stats.maxMana; }
+    p.stats.freeDraws = 0;
+    dealFresh(state, p.deck, p.slots);
+  });
+}
+// Gemeinsamer Anfangszustand eines Kampfs (Monsterkampf und Showdown unterscheiden sich nur in den übergebenen Feldern).
+function newCombat(state, fields) {
+  return Object.assign({ logFrom: state.logN, turn: 'a', action: 'attack', color: null, pending: 0, turns: 0 }, fields);
 }
 function startCombat(state, attPid, slot) {   // slot: Platz des Monsters (F, E, W); sein Element steht in monster.el
   const A = state.players[attPid];
@@ -16,12 +24,10 @@ function startCombat(state, attPid, slot) {   // slot: Platz des Monsters (F, E,
   const mdeck = newDeck(state, m.deckIds, monsterHand(m));
   state.players.forEach(p => { p.stats.freeDraws = 0; });
   m.stats.freeDraws = 0; m.drawN = 0; m.drawRed = false;   // eigener Nachziehmarker des Monsters (Limit: stats.drawLimit), frisch zu Kampfbeginn
-  state.combat = {
-    logFrom: state.logN,
+  state.combat = newCombat(state, {
     mode: 'monster', elem: el, slot, att: attPid, def: other(attPid),
     sides: { a: playerSide(state, attPid, 'a'), b: { key: 'b', kind: 'monster', ctrl: other(attPid), name: m.name, stats: m.stats, deck: mdeck, monster: m } },
-    turn: 'a', action: 'attack', color: null, pending: 0, turns: 0,
-  };
+  });
   state.phase = 'combat'; traceStep(state);
   log(state, A.name + ' greift ' + m.name + ' an. ' + state.players[other(attPid)].name + ' führt das Monster.', attPid);
 }
@@ -34,13 +40,11 @@ function pickShowdownAttacker(state) {
 }
 function startShowdown(state) {
   const att = pickShowdownAttacker(state);
-  state.players.forEach(p => { dealFresh(state, p.deck, p.slots); p.stats.freeDraws = 0; p.stats.hp = p.stats.maxHp; p.stats.mana = p.stats.maxMana; });
-  state.combat = {
-    logFrom: state.logN,
+  resetPlayers(state, 'showdown');
+  state.combat = newCombat(state, {
     mode: 'showdown', elem: null, att, def: other(att),
     sides: { a: playerSide(state, att, 'a'), b: playerSide(state, other(att), 'b') },
-    turn: 'a', action: 'attack', color: null, pending: 0, turns: 0,
-  };
+  });
   state.phase = 'combat'; traceStep(state);
   log(state, 'Showdown ' + (state.showdown + 1) + ': ' + state.players[att].name + ' greift zuerst an (liegt zurück oder Zufall).', att);
 }
