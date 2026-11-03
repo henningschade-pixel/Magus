@@ -124,7 +124,7 @@ function earthFormRaw(ctx, x, by, seed, i, t, tCrack, tRise, endAt, ending) {
     const T = d ? d.T : { tA: 0, tD: 1e9, tC: 1e9, tK: 1e9, tH: 1e9, hf: .8, cl: .6, pairs: 0, left: 0, end: 1e9 };
     ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, SW, 800);
     const HA = handOf(e.who), HD = d ? d.H : null, hp = d ? d.hp : null, b = d ? d.b : 0, seeds = e.seeds;
-    let amp = p.shake * (t > T.tK && t < T.tK + .4 ? 3 * (1 - seg(t, T.tK, T.tK + .4)) : 0);
+    let amp = p.shake * (t > T.tK && t < T.tK + .4 ? (p.atk !== p.def && (p.atk === 'E' || p.def === 'E') ? 6 : 3) * (1 - seg(t, T.tK, T.tK + .4)) : 0);   // Lava und Schlamm wackeln stärker als Dampf
     const earthHit = (el, starts, N) => { if (el !== 'E') return; for (let i = 0; i < N; i++) { const ta = starts + i * p.gap + p.flight; if (t > ta && t < ta + .4) amp += p.shake * p.heavy * 7 * Math.exp(-(t - ta) * 9); } };
     earthHit(p.atk, 0, n); if (d) earthHit(p.def, T.tD, b);
     ctx.setTransform(SC, 0, 0, SC, 0, 0); ctx.translate(Math.sin(t * 95) * amp, Math.cos(t * 80) * amp * .7);
@@ -187,11 +187,12 @@ function earthFormRaw(ctx, x, by, seed, i, t, tCrack, tRise, endAt, ending) {
     const e = ex, p = e.p, now = (performance.now() - e.t0) / 1000, tD = Math.max(now, e.tAe + p.hover), pairs = Math.min(e.n, bb);
     const tDe = bb ? tD + (bb - 1) * p.gap + p.flight : tD, tC = tDe + .12, tK = tC + (pairs ? .3 : 0);
     p.def = fx.defElem || fx.attElem;
+    const cl = pairs ? clashDur(p, clashStyle(p, p.atk, p.def)) : .6;   // Lava und Schlamm lösen sich langsamer auf als Dampf
     const sh = fx.mirror && !off() ? fx.mirror : null, shD = sh ? MirrorFx.delay(sh) : 0, hf = .8;
     const abs = sh ? Math.min(sh.abs || 0, e.n - pairs) : 0, left = e.n - pairs - abs;   // vom Schild ausgeglichene Geschosse erreichen die HP nicht
     const tS = tK + (pairs ? .55 : 0);   // erst läuft die normale Grafik (Angriff gegen Verteidigung), danach, nur wenn das Schild wirklich eingreift, der Schild-Effekt
     const tH = sh ? tS + shD : tK + (pairs ? .45 : 0);   // der Schaden auf den HP kommt nach dem Schild-Effekt
-    e.def = { H: handOf(fx.who), hp: hpOf(fx.who), ha: hpOf(fx.to), b: bb, T: { tA: 0, tD, tC, tK, tS, tH, hf, cl: .6, pairs, left, abs, end: Math.max(left ? tH + hf + .7 : tK + .6, sh ? tS + shD : 0) + .3 + (p.atk === 'E' || p.def === 'E' ? .35 : 0) } };
+    e.def = { H: handOf(fx.who), hp: hpOf(fx.who), ha: hpOf(fx.to), b: bb, T: { tA: 0, tD, tC, tK, tS, tH, hf, cl, pairs, left, abs, end: Math.max(left ? tH + hf + .7 : tK + .6, sh ? tS + shD : 0, pairs ? tK + cl : 0) + .3 + (p.atk === 'E' || p.def === 'E' ? .35 : 0) } };
     fxUntil = Math.max(fxUntil, Date.now() + (e.def.T.end - now) * 1000);
     if (fx.hpPre) {   // HP-Balken zeigen den Schaden genau im Moment des Einschlags (ohne Verzögerung)
       const at = tt => Math.max(0, Math.round((tt - now) * 1000)), msD = at(left > 0 ? tH + hf : tH), msA = sh && sh.r > 0 ? at(tS + MirrorFx.landing(sh)) : 0;   // Verteidiger: Einschlag der Geschosse; Angreifer: Rückwurf

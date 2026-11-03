@@ -269,3 +269,7 @@ Wie beim Angriff läuft bei den Kombos zuerst die Animation, dann erscheint die 
 ## Monster-Hand höchstens 5, Stufe III mit 7 HP (0.5)
 
 Die Hand eines Monsters (Limit + 2, plus oder minus der Würfel) ist höchstens so groß wie die eines Spielers (`MAX_SLOTS`, 5). Das trifft die Monster der Stufe III (Limit 4, vorher Hand 6). Als Ausgleich haben sie 7 statt 6 HP. Messung (1200 Partien KI gegen KI, Siegquote der Spieler in Stufe III): vorher 58,6 %, nur Hand 5 ohne Ausgleich 63,8 %, mit +1 HP 57,2 %, mit +1 Mana 65,1 %. Mana bringt also kaum etwas.
+
+## Auflösungseffekte der Elementkombinationen (0.14)
+
+Treffen im Kampf Angriff und Verteidigung verschiedener Elemente aufeinander, wählt `clashStyle` (`src/ui/25-aufloesung.js`) den Effekt nach dem Paar: Feuer + Wasser **Dampf** (0,6 s), Feuer + Erde **Lava** (1,5 s: glühende Brocken, die abkühlen, Lavalache mit Kruste, Funkenflug, Rauch), Erde + Wasser **Schlamm** (1,5 s: Klumpen und Tropfen, Pfütze mit Blasen und Wellen). Erde gegen Erde bleibt Splitter, gleiche Elemente sonst Welle. Lava und Schlamm wackeln den Bildschirm doppelt so stark wie Dampf. Die Dauer der Auflösung (`T.cl`, Wert `clashT`) bestimmt nun auch das Ende der Animation. Die Werte stammen aus `werkstatt/elementkombi-werkstatt.html` (Vorlage „Standard“) und stehen in `KP` (`src/ui/25-aufloesung.js`). Nur die Anzeige ändert sich, die Regeln nicht.
