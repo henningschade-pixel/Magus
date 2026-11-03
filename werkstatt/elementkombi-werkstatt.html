@@ -37,10 +37,13 @@ select{background:var(--panel2);color:var(--bone);border:1px solid var(--line);b
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:14px;min-width:0}
 .panel h2{font:700 12px var(--f-display);letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin:6px 0 -4px}
 .panel h2:first-child{margin-top:0}
-.panel h2.fw::after,.panel h2.fe::after,.panel h2.ew::after{content:"";display:inline-block;width:9px;height:9px;border-radius:50%;margin-left:8px;vertical-align:middle}
+.panel h2.fw::after,.panel h2.fe::after,.panel h2.ew::after,.panel h2.ff::after,.panel h2.ee::after,.panel h2.ww::after{content:"";display:inline-block;width:9px;height:9px;border-radius:50%;margin-left:8px;vertical-align:middle}
 .panel h2.fw::after{background:linear-gradient(90deg,var(--fire) 50%,var(--water) 50%)}
 .panel h2.fe::after{background:linear-gradient(90deg,var(--fire) 50%,var(--earth) 50%)}
 .panel h2.ew::after{background:linear-gradient(90deg,var(--earth) 50%,var(--water) 50%)}
+.panel h2.ff::after{background:var(--fire)}
+.panel h2.ee::after{background:var(--earth)}
+.panel h2.ww::after{background:var(--water)}
 .presets{display:flex;flex-wrap:wrap;gap:6px}
 .ctl{display:flex;flex-direction:column;gap:4px}
 .ctl .row{display:flex;justify-content:space-between;gap:10px;font-size:14px}
@@ -49,6 +52,8 @@ select{background:var(--panel2);color:var(--bone);border:1px solid var(--line);b
 .seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
 .seg button{flex:1;font:inherit;font-size:14px;background:var(--panel2);color:var(--mute);border:0;border-right:1px solid var(--line);padding:6px 4px;cursor:pointer}
 .seg button:last-child{border-right:0}
+.seg.rows{flex-wrap:wrap}
+.seg.rows button{flex:1 0 33%;font-size:13px;border-bottom:1px solid var(--line)}
 .seg button[aria-pressed=true]{background:var(--bone);color:var(--ink);font-weight:700}
 .tools{display:flex;gap:8px;flex-wrap:wrap}
 .export{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px;display:grid;gap:10px}
@@ -61,7 +66,7 @@ textarea{width:100%;min-height:150px;background:var(--ink);color:var(--bone);bor
 <div class="wrap">
   <header>
     <h1>Elementkombi-Werkstatt</h1>
-    <p>Was passiert, wenn zwei Elemente aufeinandertreffen? Feuer gegen Wasser gibt Dampf (wie im Spiel), Feuer gegen Erde gibt Lava, Erde gegen Wasser gibt Schlamm. Zwei Funken fliegen in die Mitte, prallen aufeinander und lösen sich in der Kombination auf. Regler verstellen, Zeitleiste ziehen, mit „Alle drei“ nebeneinander vergleichen, Werte ins Spiel übernehmen.</p>
+    <p>Was passiert, wenn zwei Elemente aufeinandertreffen? Verschiedene Elemente: Feuer gegen Wasser gibt Dampf, Feuer gegen Erde Lava, Erde gegen Wasser Schlamm (alle drei im Spiel). Gleiche Elemente: Feuer gegen Feuer gibt einen Feuerball, Erde gegen Erde ein Bersten, Wasser gegen Wasser eine Woge (neu, noch nicht im Spiel). Zwei Funken fliegen in die Mitte, prallen aufeinander und lösen sich auf. Regler verstellen, Zeitleiste ziehen, die Gruppen nebeneinander vergleichen, Werte ins Spiel übernehmen.</p>
   </header>
   <div class="grid">
     <section class="stagebox" aria-label="Vorschau">
@@ -98,14 +103,18 @@ function rgba(hex,a){const n=parseInt(hex.slice(1),16);return 'rgba('+(n>>16&255
 function lighten(hex,k){const n=parseInt(hex.slice(1),16),f=c=>Math.round(c+(255-c)*k);return 'rgb('+f(n>>16&255)+','+f(n>>8&255)+','+f(n&255)+')'}
 function mix(a,b,k){const n=parseInt(a.slice(1),16),m=parseInt(b.slice(1),16),f=(x,y)=>Math.round(x+(y-x)*k);return '#'+((1<<24)+(f(n>>16&255,m>>16&255)<<16)+(f(n>>8&255,m>>8&255)<<8)+f(n&255,m&255)).toString(16).slice(1)}
 const EL={F:'#ff7a3d',E:'#93c24f',W:'#52a6f5'};
-const COMBOS={FW:{a:'F',d:'W',name:'Feuer + Wasser',fx:'Dampf'},FE:{a:'F',d:'E',name:'Feuer + Erde',fx:'Lava'},EW:{a:'E',d:'W',name:'Erde + Wasser',fx:'Schlamm'}};
-const ORDER=['FW','FE','EW'];
+const COMBOS={FW:{a:'F',d:'W',name:'Feuer + Wasser',fx:'Dampf'},FE:{a:'F',d:'E',name:'Feuer + Erde',fx:'Lava'},EW:{a:'E',d:'W',name:'Erde + Wasser',fx:'Schlamm'},
+  FF:{a:'F',d:'F',name:'Feuer + Feuer',fx:'Feuerball'},EE:{a:'E',d:'E',name:'Erde + Erde',fx:'Bersten'},WW:{a:'W',d:'W',name:'Wasser + Wasser',fx:'Woge'}};
+const ORDER=['FW','FE','EW'],SAME=['FF','EE','WW'];
 
 /* ---------- Parameter ---------- */
 const DEF={view:'einzeln',combo:'FE',pairs:1,spread:200,flight:.7,duration:1.5,clashSize:1.4,shake:1,flash:1,
   steam:1,steamRise:1,steamDense:1,
   lavaChunks:9,lavaThrow:1,lavaSparks:1,lavaGlow:1,lavaPool:1,lavaSmoke:1,
   mudClumps:12,mudThrow:1,mudPool:1,mudBubbles:6,mudTone:.15,mudDrops:.3,
+  fireBall:1,fireTongues:9,fireEmbers:1,fireRing:1,
+  rockShards:10,rockThrow:1,rockDust:1,rockCracks:1,
+  waterCrown:9,waterSurge:1,waterRipples:3,waterDrops:14,
   seed:7};
 const PRE={
  'Standard':{},
@@ -113,6 +122,7 @@ const PRE={
  'Wucht':{clashSize:1.8,duration:1.9,lavaChunks:14,lavaThrow:1.3,lavaGlow:1.4,lavaSparks:1.5,mudClumps:18,mudThrow:1.3,mudPool:1.3,steam:1.5,steamDense:1.3,shake:1.4},
  'Zäher Brei':{combo:'EW',mudClumps:8,mudThrow:.6,mudPool:1.6,mudBubbles:10,mudTone:.5,mudDrops:0,duration:2.2},
  'Glutnest':{combo:'FE',lavaChunks:4,lavaGlow:1.8,lavaPool:1.7,lavaSparks:.5,lavaSmoke:1.6,lavaThrow:.6,duration:2.2},
+ 'Gleiche im Vergleich':{view:'gleich'},
  'Wie im Spiel (Dampf)':{combo:'FW',clashSize:1.4,steam:1,steamRise:1,steamDense:1,duration:.6,shake:1}
 };
 
@@ -120,7 +130,7 @@ const PRE={
 const C0={x:W/2,y:H/2+10},FLOOR=18;
 function timeline(p){const tA=.3,tF=tA+p.flight,tK=tF+.22;return{tA,tF,tK,cl:p.duration,dur:tK+p.duration+.55}}
 function centers(p){
-  if(p.view==='alle')return ORDER.map((c,i)=>({x:[130,360,590][i],combo:c,seed:p.seed+i*31}));
+  if(p.view==='alle'||p.view==='gleich')return(p.view==='alle'?ORDER:SAME).map((c,i)=>({x:[130,360,590][i],combo:c,seed:p.seed+i*31}));
   const n=p.pairs;return Array.from({length:n},(_,i)=>({x:C0.x+(i-(n-1)/2)*p.spread,combo:p.combo,seed:p.seed+i*31}));
 }
 function bg(ctx,p,list){
@@ -281,20 +291,111 @@ function fxMud(ctx,p,x,y,g,sr,dur){
     ctx.restore();
   }
 }
+// Feuer + Feuer: Feuerball. Beide Flammen verschmelzen, der Ball bläht sich auf, Flammenzungen und Glut steigen, eine Druckwelle läuft nach außen
+function fxFire(ctx,p,x,y,g,sr,dur){
+  const S=p.clashSize,fade=1-seg(g,.85,1),gy=y+FLOOR;
+  const grow=eo(seg(g,0,.3)),shr=1-seg(g,.4,1),R=(34+34*grow)*S*p.fireBall*shr;
+  ctx.save();   // Rußfleck auf dem Boden
+  ctx.globalAlpha=fade*seg(g,.3,.7)*.55;ctx.translate(x,gy);ctx.scale(1,.34);
+  const sg=ctx.createRadialGradient(0,0,0,0,0,52*S*p.fireBall);sg.addColorStop(0,'rgba(22,15,12,.8)');sg.addColorStop(1,'rgba(22,15,12,0)');
+  ctx.fillStyle=sg;ctx.beginPath();ctx.arc(0,0,52*S*p.fireBall,0,7);ctx.fill();ctx.restore();
+  ctx.save();ctx.globalCompositeOperation='lighter';
+  if(R>1){
+    const gr=ctx.createRadialGradient(x,y,0,x,y,R);gr.addColorStop(0,rgba('#fff6d8',.95*shr+.05));gr.addColorStop(.3,rgba('#ffb347',.85*shr));gr.addColorStop(.65,rgba('#ff5a1f',.55*shr));gr.addColorStop(1,'rgba(160,30,10,0)');
+    ctx.fillStyle=gr;ctx.beginPath();ctx.arc(x,y,R,0,7);ctx.fill();
+  }
+  const rq=seg(g,0,.55);   // Druckwelle
+  if(rq>0&&rq<1&&p.fireRing>0){ctx.strokeStyle=rgba(lighten(EL.F,.5),(1-rq)*.8*Math.min(1,p.fireRing));ctx.lineWidth=4*(1-rq)+.8;ctx.beginPath();ctx.ellipse(x,y,12+rq*100*S,(12+rq*100*S)*.8,0,0,7);ctx.stroke()}
+  for(let k=0;k<Math.round(p.fireTongues);k++){   // Flammenzungen
+    const a=-Math.PI/2+(sr()-.5)*2.3,L=(36+sr()*60)*S*p.fireBall*Math.sin(Math.PI*clamp(g/.85)),w=(5+sr()*6)*S*.8,ph=sr()*6,sway=Math.sin(g*dur*14+ph)*.18;
+    if(L<2)continue;
+    const bx=x+(sr()-.5)*26*S*.6,by=y+6,ca=Math.cos(a+sway),sa=Math.sin(a+sway),tx=bx+ca*L,ty=by+sa*L,nx=-sa,ny=ca;
+    const lg=ctx.createLinearGradient(bx,by,tx,ty);lg.addColorStop(0,'rgba(255,233,168,.9)');lg.addColorStop(.5,'rgba(255,122,61,.75)');lg.addColorStop(1,'rgba(255,60,20,0)');
+    ctx.fillStyle=lg;ctx.beginPath();ctx.moveTo(bx-nx*w,by-ny*w);
+    ctx.quadraticCurveTo(bx+ca*L*.55-nx*w*1.1+Math.sin(g*dur*11+ph)*5,by+sa*L*.55-ny*w*1.1,tx,ty);
+    ctx.quadraticCurveTo(bx+ca*L*.55+nx*w*1.1+Math.sin(g*dur*11+ph)*5,by+sa*L*.55+ny*w*1.1,bx+nx*w,by+ny*w);ctx.closePath();ctx.fill();
+  }
+  for(let k=0;k<Math.round(24*p.fireEmbers);k++){   // aufsteigende Glut
+    const a=-Math.PI/2+(sr()-.5)*2.6,v=40+sr()*170,life=.4+sr()*.5,d0=sr()*.2,q=(g-d0)/life;
+    if(q<=0||q>=1)continue;const u=(g-d0)*dur;
+    ctx.fillStyle=rgba(k%3?'#ffc060':'#ff7a3d',(1-q)*.95);ctx.beginPath();ctx.arc(x+Math.cos(a)*v*u*.5+Math.sin(u*9+k)*4,y+Math.sin(a)*v*u*.6,1.3+sr()*1.6,0,7);ctx.fill();
+  }
+  ctx.restore();
+}
+// Erde + Erde: Bersten. Zwei Felsen prallen, zerplatzen in Brocken, Risse laufen durch den Boden, Staub wallt auf
+function fxRock(ctx,p,x,y,g,sr,dur){
+  const S=p.clashSize,s=g*dur,G=760,gy=y+FLOOR,fade=1-seg(g,.85,1);
+  const cq=eo(seg(g,.04,.4));
+  if(cq>0&&p.rockCracks>0){   // Risse im Boden
+    ctx.save();ctx.globalAlpha=fade;ctx.translate(x,gy);ctx.scale(1,.36);ctx.lineCap='round';ctx.lineJoin='round';
+    const cr=rng(313);
+    for(let k=0;k<Math.round(8*p.rockCracks);k++){
+      let a=cr()*Math.PI*2,px=0,py=0;const L=(36+cr()*58)*S*cq,n=5;
+      ctx.strokeStyle='rgba(18,14,8,'+(.85-k*.02)+')';ctx.lineWidth=2.6*(1-k*.04);ctx.beginPath();ctx.moveTo(0,0);
+      for(let i=1;i<=n;i++){a+=(cr()-.5)*.9;px+=Math.cos(a)*L/n;py+=Math.sin(a)*L/n;ctx.lineTo(px,py)}
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  for(let k=0;k<Math.round(9*p.rockDust);k++){   // Staubwolke
+    const a=sr()*Math.PI*2,d=(20+sr()*48)*S*g,r=(12+sr()*16)*S*(.6+g),al=Math.sin(Math.PI*clamp(g))*.38*p.rockDust;
+    puff(ctx,x+Math.cos(a)*d,gy-6+Math.sin(a)*d*.34-g*26,r,'138,136,98',al);
+  }
+  for(let k=0;k<Math.round(p.rockShards);k++){   // Brocken
+    const a=-Math.PI/2+(sr()-.5)*2.4,v=(150+sr()*210)*S*p.rockThrow*.8,r=(5+sr()*9)*S*.8,rot0=sr()*6,spin=(sr()-.5)*9,sd=Math.floor(sr()*1e5);
+    const b=ballistic(x,y,Math.cos(a)*v*.62,Math.sin(a)*v,G,gy+(sr()-.5)*10,s);
+    ctx.save();ctx.globalAlpha=fade;
+    rock(ctx,b.x,b.y,r,rot0+spin*Math.min(s,b.tl),sd,k%3?'#4c4a36':'#6c7551',lighten('#93c24f',.15));
+    ctx.restore();
+  }
+}
+// Wasser + Wasser: Woge. Die Wasser schlagen zusammen, eine Krone spritzt hoch, Tropfen fallen, Ringwellen laufen über den Boden
+function fxWave(ctx,p,x,y,g,sr,dur){
+  const S=p.clashSize,s=g*dur,G=700,gy=y+FLOOR,fade=1-seg(g,.85,1),col=EL.W;
+  const pq=eo(seg(g,.05,.45));
+  if(pq>0){   // Wasserfläche am Boden
+    ctx.save();ctx.globalAlpha=fade;ctx.translate(x,gy);ctx.scale(1,.34);
+    const R=54*S*p.waterSurge*pq,gr=ctx.createRadialGradient(0,0,0,0,0,R);gr.addColorStop(0,rgba('#8cc8ff',.55));gr.addColorStop(.7,rgba('#2a74c4',.4));gr.addColorStop(1,rgba('#2a74c4',0));
+    ctx.fillStyle=gr;ctx.beginPath();ctx.arc(0,0,R,0,7);ctx.fill();
+    for(let k=0;k<Math.round(p.waterRipples);k++){const q=clamp((g-.05-k*.12)/.62);if(q>0&&q<1){ctx.strokeStyle=rgba('#cfeaff',(1-q)*.75);ctx.lineWidth=3*(1-q)+.8;ctx.beginPath();ctx.arc(0,0,10+q*112*S*p.waterSurge,0,7);ctx.stroke()}}
+    ctx.restore();
+  }
+  const up=Math.sin(Math.PI*clamp(g/.6));   // Krone: Spitzen steigen und fallen wieder
+  const n=Math.round(p.waterCrown);
+  if(up>.02)for(let k=0;k<n;k++){
+    const a=-Math.PI/2+((n>1?k/(n-1):.5)-.5)*2.3,H=(40+sr()*44)*S*p.waterSurge*up,w=(4+sr()*4)*S*.8,base=(10+sr()*8)*S;
+    const bx=x+Math.cos(a)*base*1.4,by=y+8,tx=bx+Math.cos(a)*H*.6,ty=by+Math.sin(a)*H;
+    ctx.save();ctx.globalAlpha=fade;
+    const lg=ctx.createLinearGradient(bx,by,tx,ty);lg.addColorStop(0,rgba('#2a74c4',.85));lg.addColorStop(1,rgba('#cfeaff',.9));
+    ctx.fillStyle=lg;ctx.shadowColor=col;ctx.shadowBlur=10;
+    ctx.beginPath();ctx.moveTo(bx-w,by);ctx.quadraticCurveTo(bx-w*.7+(tx-bx)*.4,by+(ty-by)*.5,tx,ty);ctx.quadraticCurveTo(bx+w*.7+(tx-bx)*.4,by+(ty-by)*.5,bx+w,by);ctx.closePath();ctx.fill();ctx.restore();
+  }
+  for(let k=0;k<Math.round(p.waterDrops);k++){   // Tropfen
+    const vy=-(120+sr()*250)*S*.8*p.waterSurge,vx=(sr()-.5)*280*S*.7,r=(2.4+sr()*3.4)*S*.8,ground=gy+(sr()-.5)*10;
+    const b=ballistic(x,y,vx,vy,G,ground,s),land=clamp(b.x,x-170*S,x+170*S);
+    ctx.save();ctx.globalAlpha=fade;
+    if(!b.landed)drop(ctx,b.x,b.y,r,Math.atan2(b.vy,b.vx),'#7fb6e8');
+    else{const q=clamp((s-b.tl)/.38);if(q<1){ctx.strokeStyle=rgba('#cfeaff',(1-q)*.7);ctx.lineWidth=1.4;ctx.beginPath();ctx.ellipse(land,b.y+2,3+q*15,(3+q*15)*.34,0,0,7);ctx.stroke()}}
+    ctx.restore();
+  }
+}
 function drawClash(ctx,p,combo,x,y,g,seed,dur){
   const cb=COMBOS[combo],sr=rng(seed);
   flash(ctx,p,x,y,seg(g,0,.45),EL[cb.a],EL[cb.d]);
   ctx.save();
   if(combo==='FW')fxSteam(ctx,p,x,y,g,sr);
   else if(combo==='FE')fxLava(ctx,p,x,y,g,sr,dur);
-  else fxMud(ctx,p,x,y,g,sr,dur);
+  else if(combo==='EW')fxMud(ctx,p,x,y,g,sr,dur);
+  else if(combo==='FF')fxFire(ctx,p,x,y,g,sr,dur);
+  else if(combo==='EE')fxRock(ctx,p,x,y,g,sr,dur);
+  else fxWave(ctx,p,x,y,g,sr,dur);
   ctx.restore();
 }
 
 /* ---------- Gesamtbild ---------- */
 function draw(ctx,t,p){
   const T=timeline(p),list=centers(p);
-  let amp=0;if(t>T.tK&&t<T.tK+.4)amp=p.shake*(p.view==='alle'||p.combo!=='FW'?6:3)*(1-seg(t,T.tK,T.tK+.4));
+  let amp=0;if(t>T.tK&&t<T.tK+.4)amp=p.shake*(p.view==='einzeln'&&(p.combo==='FW'||p.combo==='WW')?3:6)*(1-seg(t,T.tK,T.tK+.4));
   ctx.save();ctx.translate(Math.sin(t*95)*amp,Math.cos(t*80)*amp*.7);
   bg(ctx,p,list);
   list.forEach(c=>{
@@ -309,8 +410,8 @@ const FX={name:'elementkombi',def:DEF,presets:PRE,
  phases:p=>{const T=timeline(p);return[[0,'Anflug'],[T.tK,'Aufprall'],[T.tK+.3*T.cl,'Auflösung'],[T.tK+.75*T.cl,'Nachklang']].map(x=>[x[0]/T.dur,x[1]])},
  ctrls:[
   {t:'h',l:'Szenario'},
-  {k:'view',t:'seg',l:'Ansicht',o:[['einzeln','Einzeln'],['alle','Alle drei']],hint:'„Alle drei“ zeigt Dampf, Lava und Schlamm nebeneinander mit denselben Reglern.'},
-  {k:'combo',t:'seg',l:'Kombination',o:[['FW','Feuer + Wasser'],['FE','Feuer + Erde'],['EW','Erde + Wasser']]},
+  {k:'view',t:'seg',l:'Ansicht',o:[['einzeln','Einzeln'],['alle','Verschiedene'],['gleich','Gleiche']],hint:'„Verschiedene“ zeigt Dampf, Lava und Schlamm nebeneinander, „Gleiche“ Feuerball, Bersten und Woge, jeweils mit denselben Reglern.'},
+  {k:'combo',t:'seg',wrap:1,l:'Kombination',o:[['FW','F+W Dampf'],['FE','F+E Lava'],['EW','E+W Schlamm'],['FF','F+F Feuerball'],['EE','E+E Bersten'],['WW','W+W Woge']]},
   {k:'pairs',t:'rng',l:'Paare in der Mitte',min:1,max:3,step:1,hint:'Im Spiel löst sich je ein Paar aus Angriff und Verteidigung auf.'},
   {k:'spread',t:'rng',l:'Abstand der Paare',min:100,max:260,step:5},
   {t:'h',l:'Allgemein'},
@@ -336,7 +437,22 @@ const FX={name:'elementkombi',def:DEF,presets:PRE,
   {k:'mudDrops',t:'rng',l:'Wassertropfen darunter',min:0,max:1,step:.05,hint:'Anteil der Spritzer, die klares Wasser sind.'},
   {k:'mudPool',t:'rng',l:'Pfütze',min:0,max:2,step:.05,u:'×'},
   {k:'mudBubbles',t:'rng',l:'Blasen',min:0,max:12,step:1},
-  {k:'mudTone',t:'rng',l:'Farbton',min:0,max:1,step:.05,hint:'0 = Braun, 1 = Olivgrün (Erde klingt an).'}
+  {k:'mudTone',t:'rng',l:'Farbton',min:0,max:1,step:.05,hint:'0 = Braun, 1 = Olivgrün (Erde klingt an).'},
+  {t:'h',l:'Feuerball (Feuer + Feuer)',c:'ff'},
+  {k:'fireBall',t:'rng',l:'Größe des Balls',min:.4,max:2,step:.05,u:'×'},
+  {k:'fireTongues',t:'rng',l:'Flammenzungen',min:0,max:16,step:1},
+  {k:'fireEmbers',t:'rng',l:'Glut',min:0,max:2.5,step:.05,u:'×'},
+  {k:'fireRing',t:'rng',l:'Druckwelle',min:0,max:1.5,step:.05,u:'×'},
+  {t:'h',l:'Bersten (Erde + Erde)',c:'ee'},
+  {k:'rockShards',t:'rng',l:'Brocken',min:0,max:20,step:1},
+  {k:'rockThrow',t:'rng',l:'Wurfkraft',min:.4,max:2,step:.05,u:'×'},
+  {k:'rockDust',t:'rng',l:'Staub',min:0,max:2.5,step:.05,u:'×'},
+  {k:'rockCracks',t:'rng',l:'Risse im Boden',min:0,max:2,step:.05,u:'×'},
+  {t:'h',l:'Woge (Wasser + Wasser)',c:'ww'},
+  {k:'waterCrown',t:'rng',l:'Spitzen der Krone',min:0,max:16,step:1},
+  {k:'waterSurge',t:'rng',l:'Höhe und Weite',min:.4,max:2,step:.05,u:'×'},
+  {k:'waterRipples',t:'rng',l:'Ringwellen',min:0,max:5,step:1},
+  {k:'waterDrops',t:'rng',l:'Tropfen',min:0,max:30,step:1}
  ]};
 
 /* ---------- Zustand und Bedienung ---------- */
@@ -363,7 +479,7 @@ function buildPanel(){
       inp.oninput=()=>{P[c.k]=+inp.value;out.textContent=fmt(P[c.k],c);save();refresh(false)};
     }else if(c.t==='seg'){
       w.innerHTML='<div class="row"><span>'+c.l+'</span></div><div class="seg" role="group" aria-label="'+c.l+'"></div>'+(c.hint?'<small>'+c.hint+'</small>':'');
-      const box=w.querySelector('.seg');
+      const box=w.querySelector('.seg');if(c.wrap)box.classList.add("rows");
       c.o.forEach(o=>{const b=document.createElement('button');b.type='button';b.textContent=o[1];b.setAttribute('aria-pressed',String(P[c.k]===o[0]));
         b.onclick=()=>{P[c.k]=o[0];save();[...box.children].forEach(x=>x.setAttribute('aria-pressed','false'));b.setAttribute('aria-pressed','true');refresh(true)};box.appendChild(b)});
     }
