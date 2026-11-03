@@ -97,21 +97,22 @@ function pvShow(b) {
   if (act === 'draw' || act === 'defend' || act === 'pass' || act === 'recover') {   // Kampfaktionen und Nachziehen: zu erwartende Veränderungen
     const pnl = pid => pid === ME ? stage.querySelector('.sbody[data-lead]') : stage.querySelector('.sbody:not([data-lead])');
     const set = (pid, key, html) => { const p = pnl(pid), el = p && p.querySelector('[data-pv="' + key + '"]'); if (!el) return; const old = el.innerHTML; el.innerHTML = html; undos.push(() => { el.innerHTML = old; }); };
+    const cst = G.phase === 'combat' ? ctx().myStats : st;   // im Kampf zählen die Werte des geführten Monsters, nicht die Weltphasen-Werte des Spielers
     const dn = x => '<span class="pvdn">' + x + '</span>', up = x => '<span class="pvnew">' + x + '</span>';
     if (act === 'draw') {   // roter Nachziehmarker: im Kampf kostet es Mana, in der Weltphase bekommt der Gegner Gold
       if (!canDrawNow()) return;
       const mc = M.drawManaCost(G, ME), gp = M.drawGoldPenalty(G, ME);
-      if (mc > 0) set(ME, 'mana', dn(Math.max(0, st.mana - mc)) + '/' + st.maxMana);
+      if (mc > 0) set(ME, 'mana', dn(Math.max(0, cst.mana - mc)) + '/' + cst.maxMana);
       if (gp > 0) set(1 - ME, 'gold', up(G.players[1 - ME].stats.gold + gp));
     } else if (act === 'recover') {   // Erholen: Mana steigt höchstens bis zum Maximum; die markierten Karten werden nicht gespielt
       if (!myTurn() || G.phase !== 'combat' || G.combat.action !== 'attack') return;
-      const nm = Math.min(st.maxMana, st.mana + M.recoverGain(G));
-      set(ME, 'mana', (nm > st.mana ? up(nm) : st.mana) + '/' + st.maxMana);
+      const nm = Math.min(cst.maxMana, cst.mana + M.recoverGain(G));
+      set(ME, 'mana', (nm > cst.mana ? up(nm) : cst.mana) + '/' + cst.maxMana);
     } else {   // Verteidigen / Passen: Mana-Kosten und Restschaden (rot), Spiegelrückwurf auf den Angreifer (rot)
       const pd = myTurn() && G.phase === 'combat' ? M.previewDefense(G, act === 'pass') : null;
       if (!pd || pd.who !== ME) return;
-      set(ME, 'mana', (pd.cost > 0 ? dn(Math.max(0, st.mana - pd.cost)) : st.mana) + '/' + st.maxMana);   // beim Passen wird nichts gespielt, auch wenn Karten markiert sind
-      if (pd.leftover > 0) set(ME, 'hp', dn(pd.hpAfter) + '/' + st.maxHp);
+      set(ME, 'mana', (pd.cost > 0 ? dn(Math.max(0, cst.mana - pd.cost)) : cst.mana) + '/' + cst.maxMana);   // beim Passen wird nichts gespielt, auch wenn Karten markiert sind
+      if (pd.leftover > 0) set(ME, 'hp', dn(pd.hpAfter) + '/' + cst.maxHp);
       if (pd.refl > 0) { const cs = G.combat.sides.a.ctrl === pd.att ? G.combat.sides.a : G.combat.sides.b; set(pd.att, 'hp', dn(pd.attHpAfter) + '/' + cs.stats.maxHp); }
     }
   } else if (act === 'temple') {   // Opfern: Gold sinkt (rot), Upgrade-Punkte steigen (grün)
