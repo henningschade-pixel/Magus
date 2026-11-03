@@ -190,7 +190,14 @@ function passAttackTurn(state) {
 function applyComboPlan(state, side, opp, plan, ev, texts, fxs) {
   const c = state.combat;
   for (const [k, lvl] of plan) {
-    if (k === 'fw') { const mel = ev.ord.el; mirrorAdd(side.stats, mel, lvl); fxs.push({ kind: 'mirrorcast', who: side.ctrl, to: opp.ctrl, elem: mel, n: lvl }); texts.push('Spiegel ' + lvl + ' (' + NAMES[mel] + ', ' + (side.stats.mirror || 0) + ' Marker)'); }
+    if (k === 'fw') {
+      const mel = ev.ord.el, was = mirrorOf(side.stats, mel); mirrorAdd(side.stats, mel, lvl);
+      const now = mirrorOf(side.stats, mel), total = side.stats.mirror || 0;
+      // Liegen schon 3 Marker anderer Farben, bleibt der Spiegel dieser Farbe (ganz oder teilweise) aus: das Protokoll sagt es, und ohne neuen Marker gibt es keinen Schild-Effekt
+      if (now > was || now >= lvl) fxs.push({ kind: 'mirrorcast', who: side.ctrl, to: opp.ctrl, elem: mel, n: lvl });
+      if (now >= lvl) texts.push('Spiegel ' + lvl + ' (' + NAMES[mel] + ', ' + total + ' Marker)');
+      else texts.push('Spiegel ' + lvl + ' (' + NAMES[mel] + '): ' + (now > was ? 'nur ' + now + ' Marker' : 'kein neuer Marker') + ', da höchstens ' + MAX_MIRROR + ' Marker insgesamt liegen dürfen (' + (total - now) + ' anderer Farbe)');
+    }
     if (k === 'fe') { texts.push('Lähmung ' + lvl + ': ' + inflictCurses(state, opp, lvl)); fxs.push({ kind: 'aggro', who: side.ctrl, to: opp.ctrl, n: lvl }); }
     if (k === 'rm') {   // Zerrüttung: Der Gegner muss S Handkarten seiner Wahl abwerfen
       const n = Math.min(lvl, opp.deck.hand.filter(Boolean).length);

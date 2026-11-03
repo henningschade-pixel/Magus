@@ -308,6 +308,25 @@ test('Läuterung Stufe 3 entfernt beliebig gemischt eigene und gegnerische Spieg
   assert.equal(me.stats.freeDraws, 3, 'je entferntem Marker ein Gratis-Nachziehen');
 });
 
+test('Spiegel-Kombo: Liegen schon 3 Marker anderer Farbe, kommt kein neuer Marker dazu, und das Protokoll sagt es', () => {
+  const { s, me } = combatSetup(11, ['W2', 'F3']);
+  me.stats.mirrorEl = { F: 0, E: 3, W: 0 }; me.stats.mirror = 3;
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
+  assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+  assert.equal(M.mirrorOf(me.stats, 'F'), 0, 'kein Feuer-Marker, das Limit von 3 ist voll'); assert.equal(M.mirrorOf(me.stats, 'E'), 3);
+  const txt = s.log.map(l => l.txt).filter(t => t.includes('Spiegel'));
+  assert.ok(txt.some(t => t.includes('kein neuer Marker') && t.includes('höchstens 3')), 'Protokoll nennt den Grund: ' + txt.join(' | '));
+  assert.ok(!txt.some(t => /Spiegel \d \(Feuer, 3 Marker\)/.test(t)), 'keine irreführende Erfolgsmeldung');
+});
+
+test('Spiegel-Kombo ohne Limit: Marker der Farbe kommen dazu, Protokoll wie bisher', () => {
+  const { s, me } = combatSetup(11, ['W2', 'F3']);
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
+  assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+  const f = M.mirrorOf(me.stats, 'F'); assert.ok(f > 0, 'Feuer-Spiegel liegt');
+  assert.ok(s.log.some(l => l.txt.includes('Spiegel ' + f + ' (Feuer, ' + f + ' Marker)')), 'bekannter Protokolltext');
+});
+
 test('Nachziehmarker Weltphase: Nachziehen bei rotem Marker gibt dem Gegner 1 Gold, jede andere Aktion stellt auf grün zurück', () => {
   const s = M.newGame({ seed: 5, ai: [false, false], first: 0 }), g1 = () => s.players[1].stats.gold;
   const base = g1();

@@ -130,7 +130,8 @@ function earthFormRaw(ctx, x, by, seed, i, t, tCrack, tRise, endAt, ending) {
     ctx.setTransform(SC, 0, 0, SC, 0, 0); ctx.translate(Math.sin(t * 95) * amp, Math.cos(t * 80) * amp * .7);
     const grid = (i, cnt, isAtk) => {   // ab 6 Geschossen zweizeilig, damit die Magie nicht aus der Kampfbox ragt; jede Zeile mittig, die zweite weiter von der Mitte entfernt; die Zeilen sind um eine halbe Symbolbreite gegeneinander versetzt
       const rows = cnt > 5 ? 2 : 1, per = Math.ceil(cnt / rows), row = Math.floor(i / per), inRow = row < rows - 1 ? per : cnt - per * row, y0 = slotY(e, isAtk), sg = y0 >= C0.y ? 1 : -1;
-      return { x: C0.x + (i % per - (inRow - 1) / 2) * p.spread + (rows === 1 ? 0 : (row ? 1 : -1) * p.spread / 4), y: rows === 1 ? y0 : C0.y + sg * (20 + row * 24), cy: rows === 1 ? C0.y : C0.y + (row ? 14 : -14) };   // cy: Treffpunkt der Paare
+      const shift = rows === 1 || (per - (cnt - per)) % 2 ? 0 : (row ? 1 : -1) * p.spread / 4;   // gleich lange Zeilen (gerade Anzahl) werden verschoben; bei ungerader Anzahl sind die Zeilen durch die Mittelung schon eine halbe Breite versetzt (sonst stünden sie bei 7 und 9 genau übereinander)
+      return { x: C0.x + (i % per - (inRow - 1) / 2) * p.spread + shift, y: rows === 1 ? y0 : C0.y + sg * (20 + row * 24), cy: rows === 1 ? C0.y : C0.y + (row ? 14 : -14) };   // cy: Treffpunkt der Paare
     };
     const slotA = i => grid(i, n, true), slotD = j => grid(j, b, false);
     for (let i = 0; i < n; i++) {   // Angriffsfunken
