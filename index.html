@@ -1051,6 +1051,25 @@ function canFlee(state, pid) {
   return me.ctrl === pid && opp.stats.mana <= 0 && !(me.stats.death > 0);
 }
 function recoverGain(state) { const r = state.rules.recoverByStage; return r ? (r[Math.min(r.length, Math.max(1, state.stage)) - 1] || 1) : 1; }
+// Ergebnis einer Verteidigung (Spiegel, Rückwurf, Restschaden): gemeinsam für die Ausführung (execDefense) und die Vorschau der Oberfläche (previewDefense).
+function defenseOutcome(stats, color, pending, block) {
+  const mLvl = mirrorOf(stats, color), missing = Math.max(0, pending - block), excess = Math.max(0, block - pending);
+  const absorb = Math.min(mLvl, missing), refl = Math.min(mLvl, excess, pending);
+  return { mLvl, absorb, refl, lost: absorb + refl, leftover: missing - absorb };
+}
+// Vorschau für die Knöpfe „Verteidigen“ und „Passen“, ohne etwas zu ändern: Mana-Kosten, Block, Restschaden und die HP danach (beim Verteidiger und, durch den Spiegelrückwurf, beim Angreifer). null, wenn gerade keine Verteidigung ansteht oder die Auswahl nicht geht.
+function previewDefense(state, passOnly) {
+  const c = state.combat;
+  if (!c || c.forced || c.action !== 'defense') return null;
+  const side = c.sides[c.turn], att = c.sides[c.turn === 'a' ? 'b' : 'a'];
+  let block = 0, cost = 0;
+  if (!passOnly) {
+    const sel = selection(side.deck);
+    if (sel.length) { const ev = evalDefense(side.stats, sel, c.color); if (!ev.valid || ev.affordable === false) return null; block = ev.block || 0; cost = ev.cost || 0; }
+  }
+  const o = defenseOutcome(side.stats, c.color, c.pending, block);
+  return Object.assign({ who: side.ctrl, att: att.ctrl, cost, block, hpAfter: Math.max(0, side.stats.hp - o.leftover), attHpAfter: Math.max(0, att.stats.hp - o.refl) }, o);
+}
 function execDefense(state, passOnly) {
   const c = state.combat, side = c.sides[c.turn], c0pending = c.pending;
   const d = side.deck;
@@ -1069,8 +1088,7 @@ function execDefense(state, passOnly) {
   // Spiegel (dauerhaft, je Farbe eine Stufe, zusammen höchstens 3). Gegen einen Angriff in seiner Farbe gleicht er zuerst fehlende Verteidigung aus
   // (höchstens seine Stufe) und verliert dafür je ausgeglichenen Schaden eine Stufe. Nur wenn der Verteidiger mehr verteidigt als nötig, wirft er den
   // Überschuss zurück (ebenfalls höchstens seine Stufe und höchstens der eingehende Schaden) und verliert dafür je zurückgeworfenen Schaden eine Stufe. Das gilt auch beim Passen.
-  const mLvl = mirrorOf(side.stats, c.color), missing = Math.max(0, c.pending - block), excess = Math.max(0, block - c.pending);
-  const absorb = Math.min(mLvl, missing), refl = Math.min(mLvl, excess, c.pending), lost = absorb + refl, leftover = missing - absorb;
+  const { mLvl, absorb, refl, lost, leftover } = defenseOutcome(side.stats, c.color, c.pending, block);
   const hpPre = { [side.ctrl]: side.stats.hp, [c.sides[c.turn === 'a' ? 'b' : 'a'].ctrl]: c.sides[c.turn === 'a' ? 'b' : 'a'].stats.hp };   // HP vor dem Schaden (Oberfläche zeigt sie, bis der Schild-Effekt durch ist)
   side.stats.hp = Math.max(0, side.stats.hp - leftover);
   const attacker = c.sides[c.turn === 'a' ? 'b' : 'a'], defEl = sel.length && sel[0].el && !sel[0].curse ? sel[0].el : c.color;
@@ -1398,6 +1416,11 @@ function drawManaCost(state, pid) {
   if (!state.rules.drawMarker || state.phase !== 'combat') return 0;
   return markerOf(state, pid).h.drawRed ? (state.rules.drawPenaltyMana ?? 1) : 0;
 }
+// Weltphase: Gold, das der Gegner bekommt, wenn pid bei rotem Nachziehmarker nachzieht (0, wenn der Marker grün ist oder die Regel fehlt).
+function drawGoldPenalty(state, pid) {
+  if (!state.rules.drawMarker || state.phase !== 'world') return 0;
+  return markerOf(state, pid).h.drawRed ? (state.rules.drawPenaltyGold || 0) : 0;
+}
 // Wer ist gerade am Zug (Spieler-Index) oder null, wenn das Spiel vorbei ist.
 function actor(state) {
   if (state.over) return null;
@@ -1410,7 +1433,7 @@ return { ELEMENTS, SUPERIOR, NAMES, START_DECK, MAX_MAGIC, MAX_SLOTS, MIN_SLOTS,
   makeRng, parseCard, selection, newGame, apply, record, prim, actor, other, regen, handCounts,
   vendorOffers, vendorPlans, previewTemple, pointsForGold, nextLevelCost, limitStepCost, manaStepCost, hpStepCost, slotStepCost, magicCost, drawLimitCost, upField, magicField, payTxt,
   evalAttack, evalDefense, canFlee, stockOf, recoverGain, regenGain, comboLevels, levelsFor,
-  mirrorOf, monsterAlive, monsterHand, markerOf, drawManaCost, allMonstersDead, magicProgress, spawnMonsters, spawnForGame };
+  mirrorOf, monsterAlive, monsterHand, markerOf, drawManaCost, drawGoldPenalty, previewDefense, allMonstersDead, magicProgress, spawnMonsters, spawnForGame };
 }));</script>
 <script>/* Magus – einfacher Computergegner. Wählt nur Aktionen, die auch ein Mensch hätte. */
 (function (root, factory) {
@@ -3610,7 +3633,7 @@ function showStart(pg) {
     h += '<img class="logo" alt="" src="assets/img/logo.webp"><div class="menulist">' +
       (run ? menuBtn('resume', 'Spiel fortsetzen', '', 'primary') : '') +
       menuTo('single', 'Einzelspieler', run ? '' : 'primary') + menuTo('multi', 'Mehrspieler') + menuTo('settings', 'Einstellungen') + menuBtn('quit', 'Beenden') + '</div>' +
-      '<div class="menufoot">' + menuTo('about', 'Neu in Version 0.11', 'link') + '</div>';
+      '<div class="menufoot">' + menuTo('about', 'Neu in Version 0.13', 'link') + '</div>';
   } else if (pg === 'single') {
     h += '<h2>Einzelspieler</h2><div class="menulist">' +
       menuBtn('newgame', run ? 'Neues Spiel gegen den Computer' : 'Gegen den Computer spielen', '', run ? '' : 'primary') +
@@ -3623,7 +3646,7 @@ function showStart(pg) {
   } else if (pg === 'settings') {
     h += '<h2>Einstellungen</h2><div class="menulist">' + settingsHTML() + back + '</div>';
   } else if (pg === 'about') {
-    h += '<p class="note intro" style="margin-top:-2px"><b>Danke, dass du Magus testest!</b> <b>Neu in Version 0.11:</b> Der <b>Computer</b> entscheidet sich in festgefahrenen Kämpfen schneller zum Angriff; lange Pattphasen, vor allem im ersten Abschnitt, werden dadurch seltener. Beim Spielstart <b>drehen sich die Monsterkarten</b> jetzt richtig um und die <b>Handkarten</b> drehen sich beim Austeilen und Aufdecken mit Schwung um. <b>Neu in Version 0.10:</b> Das <b>Haus-Symbol</b> im Spiel führt jetzt direkt ins <b>Hauptmenü</b>; dort setzt du die Partie mit <b>Spiel fortsetzen</b> fort. Die <b>Statistik</b> hat einen eigenen Knopf neben dem Haus. Die Würfel haben wieder ihre alten Farben: der <b>Pluswürfel ist grün</b>, der <b>Minuswürfel rot</b>. Im <b>Vollbild</b> bleiben die Würfel jetzt auf den Monsterkarten.</p><div class="menulist">' + back + '</div>';
+    h += '<p class="note intro" style="margin-top:-2px"><b>Danke, dass du Magus testest!</b> <b>Neu in Version 0.13:</b> Die <b>Vorschau</b>, die bisher nur bei Gold und Upgrade-Punkten erschien, zeigt jetzt auch weitere zu erwartende Änderungen: Fährst du mit der Maus über <b>Verteidigen</b>, <b>Passen</b>, <b>Erholen</b> oder den <b>Nachziehstapel</b>, erscheinen die zu erwartenden Änderungen von HP, Mana und Gold, sinkende Werte in <b>Rot</b>, steigende in <b>Grün</b>. Bei <b>rotem Nachziehmarker</b> kostet das Nachziehen im Kampf jetzt <b>1 Mana</b>, in der Weltphase bekommt der Gegner Gold. <b>Neu in Version 0.11:</b> Der <b>Computer</b> entscheidet sich in festgefahrenen Kämpfen schneller zum Angriff; lange Pattphasen, vor allem im ersten Abschnitt, werden dadurch seltener. Beim Spielstart <b>drehen sich die Monsterkarten</b> jetzt richtig um und die <b>Handkarten</b> drehen sich beim Austeilen und Aufdecken mit Schwung um.</p><div class="menulist">' + back + '</div>';
   } else if (pg === 'quit') {
     h += '<p class="note" style="text-align:center;font-size:19px">Danke fürs Spielen!<br>Ein Browser-Tab lässt sich vom Spiel aus nicht immer schließen. Schließe diesen Tab oder dieses Fenster einfach selbst.</p><div class="menulist">' + back + '</div>';
   }
@@ -4002,13 +4025,14 @@ stage.addEventListener('click', e => {
     act({ type: 'mark', slot: +c.dataset.slot });
   }
 });
-/* Vorschau beim Überfahren eines Plus-Knopfes: neue Werte in Grün, neue Magiestufe grün eingekreist */
+/* Vorschau beim Überfahren eines Plus-Knopfes: neue Werte in Grün, neue Magiestufe grün eingekreist. Dazu die Knöpfe Verteidigen, Passen, Erholen und der Nachziehstapel: sinkende Werte in Rot, steigende in Grün */
+const PV_SEL = 'button.up, .sacbtn, [data-act="draw"], [data-act="defend"], [data-act="pass"], [data-act="recover"]';
 let pvUndo = null;
 function pvClear() { if (pvUndo) { pvUndo(); pvUndo = null; } }
 let pvHover = false;   // true, solange die Maus auf einem Vorschau-Knopf liegt (dann hat dessen Vorschau Vorrang vor der Opfer-Vorschau)
 function pvSticky() { if (pvHover || !G) return; pvClear(); const sb = stage.querySelector('.sacbtn:not([disabled])'); if (sb) pvShow(sb); }   // Opfer-Vorschau steht dauerhaft, passend zur Pfeil-Einstellung
 stage.addEventListener('mouseover', e => {
-  const b = e.target.closest('button.up, .sacbtn'); if (!b || b.disabled || b.classList.contains('off')) { if (!b) { pvHover = false; pvSticky(); } return; }
+  const b = e.target.closest(PV_SEL); if (!b || b.disabled || b.classList.contains('off')) { if (!b) { pvHover = false; pvSticky(); } return; }
   pvHover = true; pvShow(b);
 });
 function pvShow(b) {
@@ -4020,7 +4044,27 @@ function pvShow(b) {
     const old = el.innerHTML, cur = key === 'gold' ? st.gold : st.pending;
     el.innerHTML = '<span class="pvdn">' + Math.max(0, cur - cost) + '</span>'; undos.push(() => { el.innerHTML = old; });
   };
-  if (act === 'temple') {   // Opfern: Gold sinkt (rot), Upgrade-Punkte steigen (grün)
+  if (act === 'draw' || act === 'defend' || act === 'pass' || act === 'recover') {   // Kampfaktionen und Nachziehen: zu erwartende Veränderungen
+    const pnl = pid => pid === ME ? stage.querySelector('.sbody[data-lead]') : stage.querySelector('.sbody:not([data-lead])');
+    const set = (pid, key, html) => { const p = pnl(pid), el = p && p.querySelector('[data-pv="' + key + '"]'); if (!el) return; const old = el.innerHTML; el.innerHTML = html; undos.push(() => { el.innerHTML = old; }); };
+    const dn = x => '<span class="pvdn">' + x + '</span>', up = x => '<span class="pvnew">' + x + '</span>';
+    if (act === 'draw') {   // roter Nachziehmarker: im Kampf kostet es Mana, in der Weltphase bekommt der Gegner Gold
+      if (!canDrawNow()) return;
+      const mc = M.drawManaCost(G, ME), gp = M.drawGoldPenalty(G, ME);
+      if (mc > 0) set(ME, 'mana', dn(Math.max(0, st.mana - mc)) + '/' + st.maxMana);
+      if (gp > 0) set(1 - ME, 'gold', up(G.players[1 - ME].stats.gold + gp));
+    } else if (act === 'recover') {   // Erholen: Mana steigt höchstens bis zum Maximum; die markierten Karten werden nicht gespielt
+      if (!myTurn() || G.phase !== 'combat' || G.combat.action !== 'attack') return;
+      const nm = Math.min(st.maxMana, st.mana + M.recoverGain(G));
+      set(ME, 'mana', (nm > st.mana ? up(nm) : st.mana) + '/' + st.maxMana);
+    } else {   // Verteidigen / Passen: Mana-Kosten und Restschaden (rot), Spiegelrückwurf auf den Angreifer (rot)
+      const pd = myTurn() && G.phase === 'combat' ? M.previewDefense(G, act === 'pass') : null;
+      if (!pd || pd.who !== ME) return;
+      set(ME, 'mana', (pd.cost > 0 ? dn(Math.max(0, st.mana - pd.cost)) : st.mana) + '/' + st.maxMana);   // beim Passen wird nichts gespielt, auch wenn Karten markiert sind
+      if (pd.leftover > 0) set(ME, 'hp', dn(pd.hpAfter) + '/' + st.maxHp);
+      if (pd.refl > 0) { const cs = G.combat.sides.a.ctrl === pd.att ? G.combat.sides.a : G.combat.sides.b; set(pd.att, 'hp', dn(pd.attHpAfter) + '/' + cs.stats.maxHp); }
+    }
+  } else if (act === 'temple') {   // Opfern: Gold sinkt (rot), Upgrade-Punkte steigen (grün)
     const n = +b.dataset.n, pv = M.previewTemple(G.players[ME], n);
     redo('gold', n);
     const el = stage.querySelector('[data-pv="pts"]');
@@ -4043,7 +4087,7 @@ function pvShow(b) {
   }
   pvUndo = () => { undos.forEach(u => u()); };
 }
-stage.addEventListener('mouseout', e => { const b = e.target.closest('button.up, .sacbtn'); if (b && !(e.relatedTarget && b.contains(e.relatedTarget))) { pvHover = false; pvClear(); pvSticky(); } });
+stage.addEventListener('mouseout', e => { const b = e.target.closest(PV_SEL); if (b && !(e.relatedTarget && b.contains(e.relatedTarget))) { pvHover = false; pvClear(); pvSticky(); } });
 stage.addEventListener('contextmenu', e => { const c = e.target.closest('.card.myhand'); if (c) { e.preventDefault(); act({ type: 'lock', slot: +c.dataset.slot }); } });
 
 /* Home-Knopf: Menü zum Fortsetzen, Neustarten oder Verlassen */

@@ -584,3 +584,41 @@ test('Monsterkarte (Weltphase): die Standardwerte base enthalten auch die Magie 
     for (const k of Object.keys(r)) { const m = r[k], S = M.MONSTER.profile[m.el].secondary; assert.equal(m.stats.mag[S], m.base.mag[S] + 1, 'mit Würfel +1'); assert.deepEqual(m.base.mag, { F: m.el === 'F' ? 3 : m.el === 'W' ? 2 : 1, E: m.el === 'E' ? 3 : m.el === 'F' ? 2 : 1, W: m.el === 'W' ? 3 : m.el === 'E' ? 2 : 1 }); }
   } finally { D.plus.splice(0, 6, ...save); }
 });
+
+test('Vorschau Verteidigung (Verteidigen/Passen) stimmt mit der tatsächlichen Ausführung überein, auch mit Spiegel und Rückwurf', () => {
+  for (const [mode, mirror, hand, mark] of [['defend', 0, ['W2'], 0], ['pass', 0, ['W2'], 0], ['pass', 2, ['W2'], 0], ['defend', 2, ['W3'], 0], ['defend', 0, [], -1]]) {
+    const { s, c, me, op } = combatSetup(11, hand);
+    me.stats.hp = 6; op.stats.hp = 6; c.turn = 'a'; c.action = 'defense'; c.color = 'F'; c.pending = mode === 'defend' && mirror ? 1 : 3;
+    if (mirror) me.stats.mirrorEl = { F: mirror }, me.stats.mirror = mirror;
+    if (mark >= 0) M.apply(s, { pid: 0, type: 'mark', slot: 0 });
+    const pv = M.previewDefense(s, mode === 'pass'), mana0 = me.stats.mana;
+    assert.ok(pv, mode + ': Vorschau vorhanden'); assert.equal(pv.who, 0);
+    assert.ok(M.apply(s, { pid: 0, type: mode }).ok);
+    assert.equal(me.stats.hp, pv.hpAfter, mode + ' (Spiegel ' + mirror + '): HP des Verteidigers');
+    assert.equal(op.stats.hp, pv.attHpAfter, mode + ' (Spiegel ' + mirror + '): HP des Angreifers (Rückwurf)');
+    assert.equal(mana0 - me.stats.mana, pv.cost, mode + ': Mana-Kosten');
+  }
+});
+
+test('Vorschau Verteidigung: nur im Verteidigungszug, nicht bei zu wenig Mana', () => {
+  const { s, c, me } = combatSetup(11, ['W2', 'F1']);
+  assert.equal(M.previewDefense(s, false), null, 'Angriffszug: keine Verteidigungsvorschau');
+  c.turn = 'a'; c.action = 'defense'; c.color = 'F'; c.pending = 2;
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });   // Wasser + Feuer: Kombokarte kostet 1 Mana
+  me.stats.mana = 0;
+  assert.equal(M.previewDefense(s, false), null, 'ohne Mana nicht ausführbar');
+  assert.ok(M.previewDefense(s, true), 'Passen geht immer');
+});
+
+test('Vorschau Nachziehen: Strafe nur bei rotem Marker (Weltphase Gold für den Gegner, Kampf Mana für den Nachziehenden)', () => {
+  const s = M.newGame({ seed: 5, ai: [false, false], first: 0 });
+  assert.equal(M.drawGoldPenalty(s, 0), 0, 'grüner Marker: keine Strafe');
+  assert.equal(M.drawManaCost(s, 0), 0, 'Weltphase: keine Manakosten');
+  assert.ok(M.apply(s, { pid: 0, type: 'draw' }).ok);
+  assert.equal(M.drawGoldPenalty(s, 0), 1, 'roter Marker: der Gegner bekäme 1 Gold');
+  const { s: k, me } = combatSetup(11, ['F1']);
+  assert.equal(M.drawGoldPenalty(k, 0), 0, 'im Kampf nie Gold');
+  assert.ok(M.apply(k, { pid: 0, type: 'draw' }).ok); assert.ok(M.apply(k, { pid: 1, type: 'draw' }).ok);
+  assert.equal(M.drawManaCost(k, 0), 1, 'roter Marker im Kampf: 1 Mana');
+  assert.ok(me);
+});

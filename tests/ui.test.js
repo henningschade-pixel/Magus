@@ -319,3 +319,32 @@ test('Fenstergröße ändern (Vollbild): die Würfel wandern mit den Monsterkart
     assert.deepEqual(errs, []);
   } finally { await b.close(); }
 });
+
+test('Vorschau beim Überfahren: Nachziehstapel bei rotem Marker (Gold des Gegners grün), Passen und Verteidigen (eigene HP rot), Erholen (Mana grün)', { skip: !chromium && 'Playwright nicht installiert', timeout: 90000 }, async () => {
+  const b = await chromium.launch({ executablePath: exe });
+  try {
+    const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
+    p.on('pageerror', e => errs.push(e.message));
+    await p.goto(url); await p.waitForTimeout(500);
+    await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
+    // Weltphase: roter Nachziehmarker, Mensch am Zug
+    await p.evaluate(() => { const G = window.__magus.state; G.turn = 0; G.players[0].drawRed = true; G.players[0].drawN = G.players[0].stats.drawLimit || 1; window.__magus.pump(); });
+    await p.hover('.pilehit[data-act="draw"]');
+    assert.equal(await p.locator('.sbody:not([data-lead]) [data-pv="gold"] .pvnew').count(), 1, 'Gold des Gegners in Grün');
+    await p.mouse.move(5, 5);
+    assert.equal(await p.locator('[data-pv="gold"] .pvnew').count(), 0, 'Vorschau verschwindet wieder');
+    // Kampf: Verteidigung gegen 3 Schaden
+    await p.evaluate(() => {
+      const G = window.__magus.state, M = window.Magus; M.apply(G, { pid: 0, type: 'combat', elem: 'F' });
+      const c = G.combat, me = c.sides.a; me.stats.hp = 6; me.stats.mana = me.stats.maxMana = 9; c.turn = 'a'; c.action = 'defense'; c.color = 'F'; c.pending = 3; window.__magus.pump();
+    });
+    await p.hover('[data-act="pass"]');
+    assert.equal(await p.locator('.sbody[data-lead] [data-pv="hp"] .pvdn').textContent(), '3', 'HP nach dem Passen in Rot');
+    await p.mouse.move(5, 5);
+    assert.equal(await p.locator('.sbody[data-lead] [data-pv="hp"] .pvdn').count(), 0);
+    await p.evaluate(() => { const G = window.__magus.state, c = G.combat, me = c.sides.a; me.stats.mana = 3; c.action = 'attack'; c.color = null; c.pending = 0; window.__magus.pump(); });
+    await p.hover('[data-act="recover"]');
+    assert.equal(await p.locator('.sbody[data-lead] [data-pv="mana"] .pvnew').count(), 1, 'Mana nach dem Erholen in Grün');
+    assert.deepEqual(errs, []);
+  } finally { await b.close(); }
+});

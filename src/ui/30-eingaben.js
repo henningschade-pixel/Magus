@@ -75,13 +75,14 @@ stage.addEventListener('click', e => {
     act({ type: 'mark', slot: +c.dataset.slot });
   }
 });
-/* Vorschau beim Überfahren eines Plus-Knopfes: neue Werte in Grün, neue Magiestufe grün eingekreist */
+/* Vorschau beim Überfahren eines Plus-Knopfes: neue Werte in Grün, neue Magiestufe grün eingekreist. Dazu die Knöpfe Verteidigen, Passen, Erholen und der Nachziehstapel: sinkende Werte in Rot, steigende in Grün */
+const PV_SEL = 'button.up, .sacbtn, [data-act="draw"], [data-act="defend"], [data-act="pass"], [data-act="recover"]';
 let pvUndo = null;
 function pvClear() { if (pvUndo) { pvUndo(); pvUndo = null; } }
 let pvHover = false;   // true, solange die Maus auf einem Vorschau-Knopf liegt (dann hat dessen Vorschau Vorrang vor der Opfer-Vorschau)
 function pvSticky() { if (pvHover || !G) return; pvClear(); const sb = stage.querySelector('.sacbtn:not([disabled])'); if (sb) pvShow(sb); }   // Opfer-Vorschau steht dauerhaft, passend zur Pfeil-Einstellung
 stage.addEventListener('mouseover', e => {
-  const b = e.target.closest('button.up, .sacbtn'); if (!b || b.disabled || b.classList.contains('off')) { if (!b) { pvHover = false; pvSticky(); } return; }
+  const b = e.target.closest(PV_SEL); if (!b || b.disabled || b.classList.contains('off')) { if (!b) { pvHover = false; pvSticky(); } return; }
   pvHover = true; pvShow(b);
 });
 function pvShow(b) {
@@ -93,7 +94,27 @@ function pvShow(b) {
     const old = el.innerHTML, cur = key === 'gold' ? st.gold : st.pending;
     el.innerHTML = '<span class="pvdn">' + Math.max(0, cur - cost) + '</span>'; undos.push(() => { el.innerHTML = old; });
   };
-  if (act === 'temple') {   // Opfern: Gold sinkt (rot), Upgrade-Punkte steigen (grün)
+  if (act === 'draw' || act === 'defend' || act === 'pass' || act === 'recover') {   // Kampfaktionen und Nachziehen: zu erwartende Veränderungen
+    const pnl = pid => pid === ME ? stage.querySelector('.sbody[data-lead]') : stage.querySelector('.sbody:not([data-lead])');
+    const set = (pid, key, html) => { const p = pnl(pid), el = p && p.querySelector('[data-pv="' + key + '"]'); if (!el) return; const old = el.innerHTML; el.innerHTML = html; undos.push(() => { el.innerHTML = old; }); };
+    const dn = x => '<span class="pvdn">' + x + '</span>', up = x => '<span class="pvnew">' + x + '</span>';
+    if (act === 'draw') {   // roter Nachziehmarker: im Kampf kostet es Mana, in der Weltphase bekommt der Gegner Gold
+      if (!canDrawNow()) return;
+      const mc = M.drawManaCost(G, ME), gp = M.drawGoldPenalty(G, ME);
+      if (mc > 0) set(ME, 'mana', dn(Math.max(0, st.mana - mc)) + '/' + st.maxMana);
+      if (gp > 0) set(1 - ME, 'gold', up(G.players[1 - ME].stats.gold + gp));
+    } else if (act === 'recover') {   // Erholen: Mana steigt höchstens bis zum Maximum; die markierten Karten werden nicht gespielt
+      if (!myTurn() || G.phase !== 'combat' || G.combat.action !== 'attack') return;
+      const nm = Math.min(st.maxMana, st.mana + M.recoverGain(G));
+      set(ME, 'mana', (nm > st.mana ? up(nm) : st.mana) + '/' + st.maxMana);
+    } else {   // Verteidigen / Passen: Mana-Kosten und Restschaden (rot), Spiegelrückwurf auf den Angreifer (rot)
+      const pd = myTurn() && G.phase === 'combat' ? M.previewDefense(G, act === 'pass') : null;
+      if (!pd || pd.who !== ME) return;
+      set(ME, 'mana', (pd.cost > 0 ? dn(Math.max(0, st.mana - pd.cost)) : st.mana) + '/' + st.maxMana);   // beim Passen wird nichts gespielt, auch wenn Karten markiert sind
+      if (pd.leftover > 0) set(ME, 'hp', dn(pd.hpAfter) + '/' + st.maxHp);
+      if (pd.refl > 0) { const cs = G.combat.sides.a.ctrl === pd.att ? G.combat.sides.a : G.combat.sides.b; set(pd.att, 'hp', dn(pd.attHpAfter) + '/' + cs.stats.maxHp); }
+    }
+  } else if (act === 'temple') {   // Opfern: Gold sinkt (rot), Upgrade-Punkte steigen (grün)
     const n = +b.dataset.n, pv = M.previewTemple(G.players[ME], n);
     redo('gold', n);
     const el = stage.querySelector('[data-pv="pts"]');
@@ -116,7 +137,7 @@ function pvShow(b) {
   }
   pvUndo = () => { undos.forEach(u => u()); };
 }
-stage.addEventListener('mouseout', e => { const b = e.target.closest('button.up, .sacbtn'); if (b && !(e.relatedTarget && b.contains(e.relatedTarget))) { pvHover = false; pvClear(); pvSticky(); } });
+stage.addEventListener('mouseout', e => { const b = e.target.closest(PV_SEL); if (b && !(e.relatedTarget && b.contains(e.relatedTarget))) { pvHover = false; pvClear(); pvSticky(); } });
 stage.addEventListener('contextmenu', e => { const c = e.target.closest('.card.myhand'); if (c) { e.preventDefault(); act({ type: 'lock', slot: +c.dataset.slot }); } });
 
 /* Home-Knopf: Menü zum Fortsetzen, Neustarten oder Verlassen */

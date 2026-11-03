@@ -103,6 +103,11 @@ function drawManaCost(state, pid) {
   if (!state.rules.drawMarker || state.phase !== 'combat') return 0;
   return markerOf(state, pid).h.drawRed ? (state.rules.drawPenaltyMana ?? 1) : 0;
 }
+// Weltphase: Gold, das der Gegner bekommt, wenn pid bei rotem Nachziehmarker nachzieht (0, wenn der Marker grün ist oder die Regel fehlt).
+function drawGoldPenalty(state, pid) {
+  if (!state.rules.drawMarker || state.phase !== 'world') return 0;
+  return markerOf(state, pid).h.drawRed ? (state.rules.drawPenaltyGold || 0) : 0;
+}
 // Wer ist gerade am Zug (Spieler-Index) oder null, wenn das Spiel vorbei ist.
 function actor(state) {
   if (state.over) return null;
@@ -115,5 +120,5 @@ return { ELEMENTS, SUPERIOR, NAMES, START_DECK, MAX_MAGIC, MAX_SLOTS, MIN_SLOTS,
   makeRng, parseCard, selection, newGame, apply, record, prim, actor, other, regen, handCounts,
   vendorOffers, vendorPlans, previewTemple, pointsForGold, nextLevelCost, limitStepCost, manaStepCost, hpStepCost, slotStepCost, magicCost, drawLimitCost, upField, magicField, payTxt,
   evalAttack, evalDefense, canFlee, stockOf, recoverGain, regenGain, comboLevels, levelsFor,
-  mirrorOf, monsterAlive, monsterHand, markerOf, drawManaCost, allMonstersDead, magicProgress, spawnMonsters, spawnForGame };
+  mirrorOf, monsterAlive, monsterHand, markerOf, drawManaCost, drawGoldPenalty, previewDefense, allMonstersDead, magicProgress, spawnMonsters, spawnForGame };
 }));

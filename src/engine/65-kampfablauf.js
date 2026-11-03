@@ -249,6 +249,25 @@ function canFlee(state, pid) {
   return me.ctrl === pid && opp.stats.mana <= 0 && !(me.stats.death > 0);
 }
 function recoverGain(state) { const r = state.rules.recoverByStage; return r ? (r[Math.min(r.length, Math.max(1, state.stage)) - 1] || 1) : 1; }
+// Ergebnis einer Verteidigung (Spiegel, Rückwurf, Restschaden): gemeinsam für die Ausführung (execDefense) und die Vorschau der Oberfläche (previewDefense).
+function defenseOutcome(stats, color, pending, block) {
+  const mLvl = mirrorOf(stats, color), missing = Math.max(0, pending - block), excess = Math.max(0, block - pending);
+  const absorb = Math.min(mLvl, missing), refl = Math.min(mLvl, excess, pending);
+  return { mLvl, absorb, refl, lost: absorb + refl, leftover: missing - absorb };
+}
+// Vorschau für die Knöpfe „Verteidigen“ und „Passen“, ohne etwas zu ändern: Mana-Kosten, Block, Restschaden und die HP danach (beim Verteidiger und, durch den Spiegelrückwurf, beim Angreifer). null, wenn gerade keine Verteidigung ansteht oder die Auswahl nicht geht.
+function previewDefense(state, passOnly) {
+  const c = state.combat;
+  if (!c || c.forced || c.action !== 'defense') return null;
+  const side = c.sides[c.turn], att = c.sides[c.turn === 'a' ? 'b' : 'a'];
+  let block = 0, cost = 0;
+  if (!passOnly) {
+    const sel = selection(side.deck);
+    if (sel.length) { const ev = evalDefense(side.stats, sel, c.color); if (!ev.valid || ev.affordable === false) return null; block = ev.block || 0; cost = ev.cost || 0; }
+  }
+  const o = defenseOutcome(side.stats, c.color, c.pending, block);
+  return Object.assign({ who: side.ctrl, att: att.ctrl, cost, block, hpAfter: Math.max(0, side.stats.hp - o.leftover), attHpAfter: Math.max(0, att.stats.hp - o.refl) }, o);
+}
 function execDefense(state, passOnly) {
   const c = state.combat, side = c.sides[c.turn], c0pending = c.pending;
   const d = side.deck;
@@ -267,8 +286,7 @@ function execDefense(state, passOnly) {
   // Spiegel (dauerhaft, je Farbe eine Stufe, zusammen höchstens 3). Gegen einen Angriff in seiner Farbe gleicht er zuerst fehlende Verteidigung aus
   // (höchstens seine Stufe) und verliert dafür je ausgeglichenen Schaden eine Stufe. Nur wenn der Verteidiger mehr verteidigt als nötig, wirft er den
   // Überschuss zurück (ebenfalls höchstens seine Stufe und höchstens der eingehende Schaden) und verliert dafür je zurückgeworfenen Schaden eine Stufe. Das gilt auch beim Passen.
-  const mLvl = mirrorOf(side.stats, c.color), missing = Math.max(0, c.pending - block), excess = Math.max(0, block - c.pending);
-  const absorb = Math.min(mLvl, missing), refl = Math.min(mLvl, excess, c.pending), lost = absorb + refl, leftover = missing - absorb;
+  const { mLvl, absorb, refl, lost, leftover } = defenseOutcome(side.stats, c.color, c.pending, block);
   const hpPre = { [side.ctrl]: side.stats.hp, [c.sides[c.turn === 'a' ? 'b' : 'a'].ctrl]: c.sides[c.turn === 'a' ? 'b' : 'a'].stats.hp };   // HP vor dem Schaden (Oberfläche zeigt sie, bis der Schild-Effekt durch ist)
   side.stats.hp = Math.max(0, side.stats.hp - leftover);
   const attacker = c.sides[c.turn === 'a' ? 'b' : 'a'], defEl = sel.length && sel[0].el && !sel[0].curse ? sel[0].el : c.color;
