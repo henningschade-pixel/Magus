@@ -327,14 +327,29 @@ test('Nachziehmarker Weltphase: Nachziehen bei rotem Marker gibt dem Gegner 1 Go
   assert.equal(s.players[0].stats.gold <= g0, true);
 });
 
-test('Nachziehmarker Kampf: Nachziehen bei rotem Marker gibt dem Gegner ein Nachziehtoken', () => {
-  const { s, op } = combatSetup(11, ['F1']);
+test('Nachziehmarker Kampf: Nachziehen bei rotem Marker kostet 1 Mana, der Gegner bekommt kein Token', () => {
+  const { s, me, op } = combatSetup(11, ['F1']);
+  const m0 = me.stats.mana;
   assert.equal(op.stats.freeDraws || 0, 0);
+  assert.ok(M.apply(s, { pid: 0, type: 'draw' }).ok);   // grün -> rot: gratis
+  assert.equal(me.stats.mana, m0, 'bei grünem Marker kostenlos');
+  assert.ok(M.apply(s, { pid: 1, type: 'draw' }).ok);
+  assert.ok(M.apply(s, { pid: 0, type: 'draw' }).ok);   // rot: 1 Mana
+  assert.equal(me.stats.mana, m0 - 1);
+  assert.equal(op.stats.freeDraws || 0, 0, 'kein Nachziehtoken für den Gegner');
+  assert.equal(s.players[0].drawRed, true, 'Marker bleibt rot');
+});
+
+test('Nachziehmarker Kampf: bei rotem Marker ohne Mana ist Nachziehen nicht möglich', () => {
+  const { s, me } = combatSetup(11, ['F1']);
   assert.ok(M.apply(s, { pid: 0, type: 'draw' }).ok);
   assert.ok(M.apply(s, { pid: 1, type: 'draw' }).ok);
-  assert.equal(op.stats.freeDraws || 0, 0);
-  assert.ok(M.apply(s, { pid: 0, type: 'draw' }).ok);
-  assert.equal(op.stats.freeDraws, 1);
+  me.stats.mana = 0;
+  const hand = JSON.stringify(me.deck.hand), r = M.apply(s, { pid: 0, type: 'draw' });
+  assert.equal(r.ok, false, 'ohne Mana abgelehnt');
+  assert.equal(JSON.stringify(me.deck.hand), hand, 'Hand unverändert');
+  assert.equal(s.combat.sides[s.combat.turn].ctrl, 0, 'Zug nicht beendet');
+  assert.ok(M.apply(s, { pid: 0, type: 'recover' }).ok, 'Erholen bleibt möglich');
 });
 
 test('KI meidet Nachziehen bei rotem Nachziehmarker (Weltphase: Gold opfern statt dem Gegner Gold schenken; Kampf: kein Nachziehen)', () => {
@@ -347,6 +362,15 @@ test('KI meidet Nachziehen bei rotem Nachziehmarker (Weltphase: Gold opfern stat
     t.players[0].drawRed = true;
     const ca = AI.plan(t, 0).map(a => a.type);
     assert.ok(!ca.includes('draw'), 'Kampf bei Rot: ' + ca.join(','));
+  }
+});
+
+test('KI zieht im Kampf bei rotem Marker ohne Mana nicht nach (leere Hand eingeschlossen)', () => {
+  for (let k = 0; k < 4; k++) {
+    const { s, me } = combatSetup(11 + k, ['F1']);
+    s.players[0].drawRed = true; me.stats.mana = 0; me.deck.hand.fill(null);
+    const ca = AI.plan(s, 0).map(a => a.type);
+    assert.ok(!ca.includes('draw'), 'Kampf bei Rot ohne Mana: ' + ca.join(','));
   }
 });
 
@@ -380,13 +404,14 @@ test('Nachziehlimit Weltphase: so viele Nachziehvorgänge hintereinander sind fr
   assert.equal(p0.drawRed, false); assert.equal(p0.drawN, 0);
 });
 
-test('Nachziehlimit Kampf: erst das Nachziehen über dem Limit gibt dem Gegner ein Nachziehtoken', () => {
-  const { s, op } = combatSetup(11, ['F1']);
+test('Nachziehlimit Kampf: erst das Nachziehen über dem Limit kostet Mana', () => {
+  const { s, me, op } = combatSetup(11, ['F1']);
   s.players[0].stats.drawLimit = 2;
+  const m0 = me.stats.mana;
   for (let i = 0; i < 2; i++) { assert.ok(M.apply(s, { pid: 0, type: 'draw' }).ok); assert.ok(M.apply(s, { pid: 1, type: 'draw' }).ok); }
-  assert.equal(op.stats.freeDraws || 0, 0); assert.equal(s.players[0].drawRed, true);
+  assert.equal(me.stats.mana, m0, 'innerhalb des Limits kostenlos'); assert.equal(s.players[0].drawRed, true);
   assert.ok(M.apply(s, { pid: 0, type: 'draw' }).ok);
-  assert.equal(op.stats.freeDraws, 1);
+  assert.equal(me.stats.mana, m0 - 1); assert.equal(op.stats.freeDraws || 0, 0);
 });
 
 test('KI: Stellschraube dlMax kauft das Nachziehlimit mit Gold bis zur gewählten Stufe, nicht weiter', () => {

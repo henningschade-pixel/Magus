@@ -1148,8 +1148,11 @@ function applyCombat(state, a) {
     }
     case 'draw': {
       if (c.action !== 'attack') return fail('Nachziehen geht nur im Angriffszug.');
+      const dmc = drawManaCost(state, side.ctrl);   // roter Nachziehmarker: Nachziehen kostet Mana
+      if (side.stats.mana < dmc) return fail('Bei rotem Nachziehmarker kostet Nachziehen ' + dmc + ' Mana. Es ist nicht genug Mana da.');
       if (!drawPhase(state, side.deck)) return fail('Alle Karten sind gesperrt, es gibt nichts zu tauschen.');
-      log(state, side.name + ' zieht Karten nach (ersetzt den Angriff).', side.ctrl);
+      side.stats.mana -= dmc;
+      log(state, side.name + ' zieht Karten nach (ersetzt den Angriff)' + (dmc ? ' und zahlt bei rotem Marker ' + dmc + ' Mana' : '') + '.', side.ctrl);
       passAttackTurn(state); return { ok: true, combatEnd: finishStep(state) };
     }
     case 'freeDraw': {
@@ -1293,7 +1296,7 @@ function applyWorld(state, a) {
 /* Magus – Regelkern (Teil 8): Spielstart und Schnittstelle nach außen. */
 
 // Regelwerte (Abstimmungs- und Variantenschalter). ‚curses‘: Fluchsystem, siehe 30-curses.js.
-const DEFAULT_RULES = { priceRise: 1, startHp: 4, startLimit: 2, startSp: 2, surplusSp: 1, swapCosts: 1, limitCost: 2, limitFirstStepCost: 2, hpPerPoint: 2, stagePoints: [0, 1, 2, 3], stageGold: [0, 1, 2, 3], loserUp: 0, loserUp2: 0, winSp: 0, winSpFromShowdown: 2, monsterSp: 1, monsterLoot: 0, idleLimit: 0, drawMarker: 1, drawPenaltyGold: 1, drawLimitCost: [1, 1], lossHelp: 1, showdownSp: 1, lootBoth: true, recoverByStage: [1, 2, 3], regenByStage: [1, 2, 3], supply: 8, supply2: 6, supply3: 4, startCards: 0 };   // Jede gespielte Karte (auch Kombokarten) kostet 1 Mana, nur Verteidigung in der überlegenen Farbe ist gratis. recoverByStage: Mana-Gewinn von „Erholen“ im Kampf je Abschnitt
+const DEFAULT_RULES = { priceRise: 1, startHp: 4, startLimit: 2, startSp: 2, surplusSp: 1, swapCosts: 1, limitCost: 2, limitFirstStepCost: 2, hpPerPoint: 2, stagePoints: [0, 1, 2, 3], stageGold: [0, 1, 2, 3], loserUp: 0, loserUp2: 0, winSp: 0, winSpFromShowdown: 2, monsterSp: 1, monsterLoot: 0, idleLimit: 0, drawMarker: 1, drawPenaltyGold: 1, drawPenaltyMana: 1, drawLimitCost: [1, 1], lossHelp: 1, showdownSp: 1, lootBoth: true, recoverByStage: [1, 2, 3], regenByStage: [1, 2, 3], supply: 8, supply2: 6, supply3: 4, startCards: 0 };   // Jede gespielte Karte (auch Kombokarten) kostet 1 Mana, nur Verteidigung in der überlegenen Farbe ist gratis. recoverByStage: Mana-Gewinn von „Erholen“ im Kampf je Abschnitt
 
 function newPlayer(state, name, ai, startIds) {
   const p = { name, ai: !!ai, stats: newStats(), temple: { points: 0, level: 0 }, sp: state.rules.startSp || 0, slots: MIN_SLOTS, drawRed: false, drawN: 0 };   // drawN: Nachziehvorgänge seit der letzten anderen Aktion (höchstens Nachziehlimit), drawRed: Marker rot
@@ -1366,7 +1369,7 @@ function dispatch(state, a) {
   if (state.phase === 'combat') return applyCombat(state, a);
   return fail('Keine Aktion möglich.');
 }
-// Nachziehmarker (je Spieler, grün/rot): Nachziehen dreht ihn auf rot, jede andere Zugaktion zurück auf grün; wer bei rotem Marker nachzieht, gibt dem Gegner eine Strafe (Weltphase: drawPenaltyGold Gold, Kampf: ein Nachziehtoken). Markieren, Sperren, Läuterungswahl und das Gratis-Nachziehen (Token) zählen nicht als Aktion.
+// Nachziehmarker (je Spieler, grün/rot): Nachziehen dreht ihn auf rot, jede andere Zugaktion zurück auf grün; wer bei rotem Marker nachzieht, zahlt eine Strafe (Weltphase: der Gegner erhält drawPenaltyGold Gold; Kampf: der Nachziehende verliert drawPenaltyMana Mana, ohne Mana ist das Nachziehen nicht möglich). Markieren, Sperren, Läuterungswahl und das Gratis-Nachziehen (Token) zählen nicht als Aktion.
 function markerKind(state, a) {
   if (state.phase === 'world') return a.type === 'draw' ? 'draw' : ['vendor', 'temple', 'magic', 'spend', 'drawlimit', 'combat'].includes(a.type) ? 'other' : null;
   if (state.phase === 'combat') return a.type === 'draw' ? 'draw' : ['attack', 'defend', 'pass', 'recover', 'flee'].includes(a.type) ? 'other' : null;
@@ -1384,16 +1387,16 @@ function drawMarkerAfter(state, pid, kind, wasRed) {
   if (kind === 'other') { h.drawRed = false; h.drawN = 0; return; }
   h.drawN = Math.min((h.drawN || 0) + 1, mk.lim); h.drawRed = h.drawN >= mk.lim;   // Nachziehlimit: so viele Nachziehvorgänge hintereinander sind frei, danach springt der Marker auf Rot
   if (!wasRed) return;
+  if (state.phase === 'combat' && state.combat) return;   // Kampf: die Strafe (drawPenaltyMana Mana) wird schon in der Aktion „Nachziehen“ bezahlt, der Gegner bekommt nichts
   const q = state.players[other(pid)];
-  if (state.phase === 'combat' && state.combat) {
-    const c = state.combat, opp = c.sides.a.ctrl === pid ? c.sides.b : c.sides.a;
-    opp.stats.freeDraws = (opp.stats.freeDraws || 0) + 1;
-    log(state, p.name + ' zog bei rotem Nachziehmarker nach: ' + opp.name + ' erhält ein Nachziehtoken.', pid);
-  } else {
-    const g = state.rules.drawPenaltyGold || 0;
-    q.stats.gold += g; q.stats.goldGot += g;
-    log(state, p.name + ' zog bei rotem Nachziehmarker nach: ' + q.name + ' erhält ' + g + ' Gold.', pid);
-  }
+  const g = state.rules.drawPenaltyGold || 0;
+  q.stats.gold += g; q.stats.goldGot += g;
+  log(state, p.name + ' zog bei rotem Nachziehmarker nach: ' + q.name + ' erhält ' + g + ' Gold.', pid);
+}
+// Kampf: Mana, das Nachziehen bei rotem Marker kostet (0, wenn der Marker grün ist oder die Regel fehlt).
+function drawManaCost(state, pid) {
+  if (!state.rules.drawMarker || state.phase !== 'combat') return 0;
+  return markerOf(state, pid).h.drawRed ? (state.rules.drawPenaltyMana ?? 1) : 0;
 }
 // Wer ist gerade am Zug (Spieler-Index) oder null, wenn das Spiel vorbei ist.
 function actor(state) {
@@ -1407,7 +1410,7 @@ return { ELEMENTS, SUPERIOR, NAMES, START_DECK, MAX_MAGIC, MAX_SLOTS, MIN_SLOTS,
   makeRng, parseCard, selection, newGame, apply, record, prim, actor, other, regen, handCounts,
   vendorOffers, vendorPlans, previewTemple, pointsForGold, nextLevelCost, limitStepCost, manaStepCost, hpStepCost, slotStepCost, magicCost, drawLimitCost, upField, magicField, payTxt,
   evalAttack, evalDefense, canFlee, stockOf, recoverGain, regenGain, comboLevels, levelsFor,
-  mirrorOf, monsterAlive, monsterHand, markerOf, allMonstersDead, magicProgress, spawnMonsters, spawnForGame };
+  mirrorOf, monsterAlive, monsterHand, markerOf, drawManaCost, allMonstersDead, magicProgress, spawnMonsters, spawnForGame };
 }));</script>
 <script>/* Magus – einfacher Computergegner. Wählt nur Aktionen, die auch ein Mensch hätte. */
 (function (root, factory) {
@@ -1867,7 +1870,7 @@ function combatPlan(state, pid) {
       const raw = bestAttack(side, opp, hand, Q, state);
       if (raw && raw.value > Q.aThr && (!best || best.value <= Q.aThr)) return [A({ type: 'recover' })];
     }
-    const red = !!M.markerOf(state, pid).h.drawRed;   // roter Nachziehmarker: Nachziehen schenkt dem Gegner ein Nachziehtoken
+    const red = !!M.markerOf(state, pid).h.drawRed, payOk = s.mana >= M.drawManaCost(state, pid);   // roter Nachziehmarker: Nachziehen kostet Mana (ohne Mana nicht möglich)
     const lowMana = Q.rW * gain * Math.max(0, Q.rRef - s.mana) - (red ? Q.cRedA : 0);   // wenig Mana: nur noch starke Angriffe, sonst lieber erholen; roter Marker: auch schwächere Angriffe statt nachzuziehen
     if (best && best.value > Q.aThr + lowMana - Q.pasDec * (opp.passed || 0) - Q.stallDec * Math.max(0, Math.floor(((c.turns || 0) - Q.stallFrom) / 2))) {   // Passt der Gegner im Angriffszug, bleibt er ohne Druck: dann lohnt auch ein knapper Angriff (sonst wartet die KI, bis die Anti-Stillstands-Schwelle sinkt)   // lange ohne Angriff: Schwelle sinkt, damit die KI nicht endlos nachzieht
       const acts = best.ord.map(h => A({ type: 'mark', slot: h.slot }));
@@ -1885,9 +1888,9 @@ function combatPlan(state, pid) {
     if (canFlee && (c.turns || 0) >= Q.fleeT && (!best || best.value <= Q.aThr)) return [A({ type: 'flee' })];   // lange ohne brauchbaren Angriff gegen ein Monster ohne Mana: abbrechen statt endlos nachzuziehen
     if (s.freeDraws > 0 && canDraw(d) && hand.length < d.hand.length) return [A({ type: 'freeDraw' })];
     if (s.freeDraws > 0 && canDraw(d) && (!best || best.value <= Q.aThr)) return [A({ type: 'freeDraw' })];
-    if (s.mana <= 0 || !hand.length) { if (hand.length === 0 && canDraw(d) && !(Q.cRedE && red)) return [A({ type: 'draw' })]; return [A({ type: 'recover' })]; }
+    if (s.mana <= 0 || !hand.length) { if (hand.length === 0 && canDraw(d) && payOk && !(Q.cRedE && red)) return [A({ type: 'draw' })]; return [A({ type: 'recover' })]; }
     if (Q.rW > 0 && s.mana < Q.rRef && s.mana < s.maxMana) return [A({ type: 'recover' })];
-    if (canDraw(d)) {
+    if (canDraw(d) && payOk) {
       if (Q.cRed && red) return [A({ type: 'recover' })];
       const acts = [];
       if (Q.keepOn) {   // (bei schwachem Angriff) Kombo-Bausteine behalten
@@ -2350,11 +2353,12 @@ function drawTrack(L, mine) {
   const sz = mine ? 24 : 19, gap = mine ? 6 : 4, tk = mine ? 18 : 15, w = CW * L.ps;
   const x0 = L.draw.x + (w - (n * sz + (n - 1) * gap)) / 2, y = L.draw.y + CH * L.ps + 24;   // unter der Stapelbeschriftung
   const red = !!pl.drawRed, at = Math.min((pl.drawN || 0) + 1, lim);   // Stufe des Markers: das wievielte Nachziehen als Nächstes frei wäre
-  const pen = G.phase === 'combat' ? 'ein Nachziehtoken' : G.rules.drawPenaltyGold + ' Gold';
-  const tip = (mine ? 'Dein' : 'Gegnerisches') + ' Nachziehlimit ' + lim + ' von ' + n + ': So oft ' + (mine ? 'darfst du' : 'darf er') + ' hintereinander nachziehen (ohne andere Aktion dazwischen), bevor der Marker auf Rot springt. Nachziehen bei rotem Marker gibt dem Gegner ' + pen + '.';
+  const pm = G.rules.drawPenaltyMana ?? 1, who = mine ? 'dich' : 'ihn';
+  const pen = G.phase === 'combat' ? 'kostet ' + who + ' ' + pm + ' Mana (ohne Mana geht es nicht)' : 'gibt dem Gegner ' + G.rules.drawPenaltyGold + ' Gold';
+  const tip = (mine ? 'Dein' : 'Gegnerisches') + ' Nachziehlimit ' + lim + ' von ' + n + ': So oft ' + (mine ? 'darfst du' : 'darf er') + ' hintereinander nachziehen (ohne andere Aktion dazwischen), bevor der Marker auf Rot springt. Nachziehen bei rotem Marker ' + pen + '.';
   let h = '';
   for (let i = 1; i <= n; i++) h += '<div class="dlc' + (i <= lim ? '' : ' off') + '" title="' + tip + '" style="left:' + (x0 + (i - 1) * (sz + gap)) + 'px;top:' + y + 'px;width:' + sz + 'px;height:' + sz + 'px"></div>';
-  h += '<div class="dmark ' + (red ? 'red' : 'green') + '" title="Nachziehmarker ' + (red ? 'rot: Nachziehen gibt dem Gegner ' + pen : 'grün: noch ' + (lim - (pl.drawN || 0)) + 'x Nachziehen frei') + '" style="width:' + tk + 'px;height:' + tk + 'px;left:' + (x0 + (at - 1) * (sz + gap) + (sz - tk) / 2) + 'px;top:' + (y + (sz - tk) / 2) + 'px"></div>';
+  h += '<div class="dmark ' + (red ? 'red' : 'green') + '" title="Nachziehmarker ' + (red ? 'rot: Nachziehen ' + pen : 'grün: noch ' + (lim - (pl.drawN || 0)) + 'x Nachziehen frei') + '" style="width:' + tk + 'px;height:' + tk + 'px;left:' + (x0 + (at - 1) * (sz + gap) + (sz - tk) / 2) + 'px;top:' + (y + (sz - tk) / 2) + 'px"></div>';
   const cost = M.drawLimitCost(G, st);
   if (mine && pl !== G.combat?.sides?.b?.monster && lim < n && G.phase === 'world' && !G.over && myTurn() && st[M.upField(G)] >= cost) {   // wie die anderen Plus-Knöpfe: nur im eigenen Zug der Weltphase und nur, wenn die Upgrade-Punkte reichen
     const cx = x0 + lim * (sz + gap) + sz / 2, cy = y + sz / 2;   // die Scheibe des Knopfes deckt sich mit dem Kreis (Mitte auf Mitte, gleicher Durchmesser)
@@ -2433,8 +2437,13 @@ function deckPopHTML(deck) {
 }
 function canDrawNow() {
   if (!myTurn()) return false;
-  if (G.phase === 'combat') return G.combat.action === 'attack';
+  if (G.phase === 'combat') return G.combat.action === 'attack' && !drawNeedsMana();
   return true;
+}
+// Kampf, roter Nachziehmarker: Nachziehen kostet Mana. Wahr, wenn mein Mana dafür nicht reicht.
+function drawNeedsMana() {
+  const sd = G.combat.sides.a.ctrl === ME ? G.combat.sides.a : G.combat.sides.b;
+  return sd.stats.mana < M.drawManaCost(G, ME);
 }
 /* ---------- Kartendreh: die Drehung „Volle Drehung" aus werkstatt/kartendreh-werkstatt.html ---------- */
 // Eine Drehung um 180° mit Perspektive, Heben, Vergrößerung, seitlichem Kippen, Überdrehen und Hüpfer; bei den Monsterkarten dazu Schatten, Glanzstreifen und Leuchten in der Elementfarbe.
@@ -3955,7 +3964,7 @@ function onAct(d) {
     case 'magic': act({ type: 'magic', elem: d.e }); break;
     case 'drawlimit': act({ type: 'drawlimit' }); break;
     case 'fd': act({ type: 'fd', slots: [...fdSel] }); fdSel.clear(); break;
-    case 'draw': if (canDrawNow()) act({ type: 'draw' }); else if (myTurn()) toast('Jetzt ist kein Nachziehen möglich.'); break;
+    case 'draw': if (canDrawNow()) act({ type: 'draw' }); else if (myTurn()) toast(G.phase === 'combat' && G.combat.action === 'attack' && drawNeedsMana() ? 'Roter Nachziehmarker: Nachziehen kostet ' + M.drawManaCost(G, ME) + ' Mana, du hast nicht genug.' : 'Jetzt ist kein Nachziehen möglich.'); break;
     case 'freedraw': act({ type: 'freeDraw' }); break;
     case 'attack': act({ type: 'attack' }); break;
     case 'defend': act({ type: 'defend' }); break;

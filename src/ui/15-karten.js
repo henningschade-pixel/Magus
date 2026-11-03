@@ -88,11 +88,12 @@ function drawTrack(L, mine) {
   const sz = mine ? 24 : 19, gap = mine ? 6 : 4, tk = mine ? 18 : 15, w = CW * L.ps;
   const x0 = L.draw.x + (w - (n * sz + (n - 1) * gap)) / 2, y = L.draw.y + CH * L.ps + 24;   // unter der Stapelbeschriftung
   const red = !!pl.drawRed, at = Math.min((pl.drawN || 0) + 1, lim);   // Stufe des Markers: das wievielte Nachziehen als Nächstes frei wäre
-  const pen = G.phase === 'combat' ? 'ein Nachziehtoken' : G.rules.drawPenaltyGold + ' Gold';
-  const tip = (mine ? 'Dein' : 'Gegnerisches') + ' Nachziehlimit ' + lim + ' von ' + n + ': So oft ' + (mine ? 'darfst du' : 'darf er') + ' hintereinander nachziehen (ohne andere Aktion dazwischen), bevor der Marker auf Rot springt. Nachziehen bei rotem Marker gibt dem Gegner ' + pen + '.';
+  const pm = G.rules.drawPenaltyMana ?? 1, who = mine ? 'dich' : 'ihn';
+  const pen = G.phase === 'combat' ? 'kostet ' + who + ' ' + pm + ' Mana (ohne Mana geht es nicht)' : 'gibt dem Gegner ' + G.rules.drawPenaltyGold + ' Gold';
+  const tip = (mine ? 'Dein' : 'Gegnerisches') + ' Nachziehlimit ' + lim + ' von ' + n + ': So oft ' + (mine ? 'darfst du' : 'darf er') + ' hintereinander nachziehen (ohne andere Aktion dazwischen), bevor der Marker auf Rot springt. Nachziehen bei rotem Marker ' + pen + '.';
   let h = '';
   for (let i = 1; i <= n; i++) h += '<div class="dlc' + (i <= lim ? '' : ' off') + '" title="' + tip + '" style="left:' + (x0 + (i - 1) * (sz + gap)) + 'px;top:' + y + 'px;width:' + sz + 'px;height:' + sz + 'px"></div>';
-  h += '<div class="dmark ' + (red ? 'red' : 'green') + '" title="Nachziehmarker ' + (red ? 'rot: Nachziehen gibt dem Gegner ' + pen : 'grün: noch ' + (lim - (pl.drawN || 0)) + 'x Nachziehen frei') + '" style="width:' + tk + 'px;height:' + tk + 'px;left:' + (x0 + (at - 1) * (sz + gap) + (sz - tk) / 2) + 'px;top:' + (y + (sz - tk) / 2) + 'px"></div>';
+  h += '<div class="dmark ' + (red ? 'red' : 'green') + '" title="Nachziehmarker ' + (red ? 'rot: Nachziehen ' + pen : 'grün: noch ' + (lim - (pl.drawN || 0)) + 'x Nachziehen frei') + '" style="width:' + tk + 'px;height:' + tk + 'px;left:' + (x0 + (at - 1) * (sz + gap) + (sz - tk) / 2) + 'px;top:' + (y + (sz - tk) / 2) + 'px"></div>';
   const cost = M.drawLimitCost(G, st);
   if (mine && pl !== G.combat?.sides?.b?.monster && lim < n && G.phase === 'world' && !G.over && myTurn() && st[M.upField(G)] >= cost) {   // wie die anderen Plus-Knöpfe: nur im eigenen Zug der Weltphase und nur, wenn die Upgrade-Punkte reichen
     const cx = x0 + lim * (sz + gap) + sz / 2, cy = y + sz / 2;   // die Scheibe des Knopfes deckt sich mit dem Kreis (Mitte auf Mitte, gleicher Durchmesser)
@@ -171,6 +172,11 @@ function deckPopHTML(deck) {
 }
 function canDrawNow() {
   if (!myTurn()) return false;
-  if (G.phase === 'combat') return G.combat.action === 'attack';
+  if (G.phase === 'combat') return G.combat.action === 'attack' && !drawNeedsMana();
   return true;
+}
+// Kampf, roter Nachziehmarker: Nachziehen kostet Mana. Wahr, wenn mein Mana dafür nicht reicht.
+function drawNeedsMana() {
+  const sd = G.combat.sides.a.ctrl === ME ? G.combat.sides.a : G.combat.sides.b;
+  return sd.stats.mana < M.drawManaCost(G, ME);
 }

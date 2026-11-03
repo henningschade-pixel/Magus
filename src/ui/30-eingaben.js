@@ -37,7 +37,7 @@ function onAct(d) {
     case 'magic': act({ type: 'magic', elem: d.e }); break;
     case 'drawlimit': act({ type: 'drawlimit' }); break;
     case 'fd': act({ type: 'fd', slots: [...fdSel] }); fdSel.clear(); break;
-    case 'draw': if (canDrawNow()) act({ type: 'draw' }); else if (myTurn()) toast('Jetzt ist kein Nachziehen möglich.'); break;
+    case 'draw': if (canDrawNow()) act({ type: 'draw' }); else if (myTurn()) toast(G.phase === 'combat' && G.combat.action === 'attack' && drawNeedsMana() ? 'Roter Nachziehmarker: Nachziehen kostet ' + M.drawManaCost(G, ME) + ' Mana, du hast nicht genug.' : 'Jetzt ist kein Nachziehen möglich.'); break;
     case 'freedraw': act({ type: 'freeDraw' }); break;
     case 'attack': act({ type: 'attack' }); break;
     case 'defend': act({ type: 'defend' }); break;
