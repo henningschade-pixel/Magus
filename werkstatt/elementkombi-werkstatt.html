@@ -112,7 +112,7 @@ const DEF={view:'einzeln',combo:'FE',pairs:1,spread:200,flight:.7,duration:1.5,c
   steam:1,steamRise:1,steamDense:1,
   lavaChunks:9,lavaThrow:1,lavaSparks:1,lavaGlow:1,lavaPool:1,lavaSmoke:1,
   mudClumps:12,mudThrow:1,mudPool:1,mudBubbles:6,mudTone:.15,mudDrops:.3,
-  fireBall:1,fireTongues:9,fireEmbers:1,fireRing:1,
+  fireBall:1,fireTongues:9,fireEmbers:1,fireRing:1,fireSmoke:1,
   rockShards:10,rockThrow:1,rockDust:1,rockCracks:1,
   waterDome:1,waterSurge:1,waterRipples:3,waterDrops:14,
   seed:7};
@@ -294,32 +294,41 @@ function fxMud(ctx,p,x,y,g,sr,dur){
 // Feuer + Feuer: Feuerball. Beide Flammen verschmelzen, der Ball bläht sich auf, Flammenzungen und Glut steigen, eine Druckwelle läuft nach außen
 function fxFire(ctx,p,x,y,g,sr,dur){
   const S=p.clashSize,fade=1-seg(g,.85,1),gy=y+FLOOR;
-  const grow=eo(seg(g,0,.3)),shr=1-seg(g,.4,1),R=(34+34*grow)*S*p.fireBall*shr;
+  const burst=eo(seg(g,0,.16)),out=1-seg(g,.16,.5);   // schneller Ausbruch, dann rasch vorbei
+  const R=(24+34*burst)*S*p.fireBall*out;
   ctx.save();   // Rußfleck auf dem Boden
-  ctx.globalAlpha=fade*seg(g,.3,.7)*.55;ctx.translate(x,gy);ctx.scale(1,.34);
+  ctx.globalAlpha=fade*seg(g,.25,.6)*.55;ctx.translate(x,gy);ctx.scale(1,.34);
   const sg=ctx.createRadialGradient(0,0,0,0,0,52*S*p.fireBall);sg.addColorStop(0,'rgba(22,15,12,.8)');sg.addColorStop(1,'rgba(22,15,12,0)');
   ctx.fillStyle=sg;ctx.beginPath();ctx.arc(0,0,52*S*p.fireBall,0,7);ctx.fill();ctx.restore();
   ctx.save();ctx.globalCompositeOperation='lighter';
   if(R>1){
-    const gr=ctx.createRadialGradient(x,y,0,x,y,R);gr.addColorStop(0,rgba('#fff6d8',.95*shr+.05));gr.addColorStop(.3,rgba('#ffb347',.85*shr));gr.addColorStop(.65,rgba('#ff5a1f',.55*shr));gr.addColorStop(1,'rgba(160,30,10,0)');
+    const gr=ctx.createRadialGradient(x,y,0,x,y,R);gr.addColorStop(0,rgba('#fff6d8',.95*out+.05));gr.addColorStop(.3,rgba('#ffb347',.85*out));gr.addColorStop(.65,rgba('#ff5a1f',.55*out));gr.addColorStop(1,'rgba(160,30,10,0)');
     ctx.fillStyle=gr;ctx.beginPath();ctx.arc(x,y,R,0,7);ctx.fill();
   }
-  const rq=seg(g,0,.55);   // Druckwelle, kreisrund
-  if(rq>0&&rq<1&&p.fireRing>0){ctx.strokeStyle=rgba(lighten(EL.F,.5),(1-rq)*.8*Math.min(1,p.fireRing));ctx.lineWidth=4*(1-rq)+.8;ctx.beginPath();ctx.arc(x,y,12+rq*100*S,0,7);ctx.stroke()}
+  const rq=seg(g,0,.35);   // Druckwelle, kreisrund und schnell
+  if(rq>0&&rq<1&&p.fireRing>0){ctx.strokeStyle=rgba(lighten(EL.F,.5),(1-rq)*.8*Math.min(1,p.fireRing));ctx.lineWidth=4*(1-rq)+.8;ctx.beginPath();ctx.arc(x,y,12+eo(rq)*100*S,0,7);ctx.stroke()}
   const nT=Math.round(p.fireTongues),off=sr()*Math.PI*2;
-  for(let k=0;k<nT;k++){   // Flammenzungen strahlen gleichmäßig in alle Richtungen (360 Grad)
-    const a=off+k/nT*Math.PI*2+(sr()-.5)*.5,L=(34+sr()*58)*S*p.fireBall*Math.sin(Math.PI*clamp(g/.85)),w=(5+sr()*6)*S*.8,ph=sr()*6,sway=Math.sin(g*dur*14+ph)*.16;
+  ctx.globalAlpha=Math.pow(out,.7);
+  for(let k=0;k<nT;k++){   // Flammenzungen schießen in alle Richtungen (360 Grad) und sind rasch wieder weg
+    const a=off+k/nT*Math.PI*2+(sr()-.5)*.5,L=(30+sr()*46)*S*p.fireBall*burst*(.3+.7*out),w=(5+sr()*6)*S*.8*(.5+.5*out),ph=sr()*6;
     if(L<2)continue;
-    const r0=R*.35,bx=x+Math.cos(a)*r0,by=y+Math.sin(a)*r0,ca=Math.cos(a+sway),sa=Math.sin(a+sway),tx=bx+ca*L,ty=by+sa*L,nx=-sa,ny=ca;
+    const r0=R*.3,bx=x+Math.cos(a)*r0,by=y+Math.sin(a)*r0,ca=Math.cos(a),sa=Math.sin(a),tx=bx+ca*L,ty=by+sa*L,nx=-sa,ny=ca;
     const lg=ctx.createLinearGradient(bx,by,tx,ty);lg.addColorStop(0,'rgba(255,233,168,.9)');lg.addColorStop(.5,'rgba(255,122,61,.75)');lg.addColorStop(1,'rgba(255,60,20,0)');
     ctx.fillStyle=lg;ctx.beginPath();ctx.moveTo(bx-nx*w,by-ny*w);
-    ctx.quadraticCurveTo(bx+ca*L*.55-nx*w*1.1+Math.sin(g*dur*11+ph)*4,by+sa*L*.55-ny*w*1.1,tx,ty);
-    ctx.quadraticCurveTo(bx+ca*L*.55+nx*w*1.1+Math.sin(g*dur*11+ph)*4,by+sa*L*.55+ny*w*1.1,bx+nx*w,by+ny*w);ctx.closePath();ctx.fill();
+    ctx.quadraticCurveTo(bx+ca*L*.55-nx*w*1.1,by+sa*L*.55-ny*w*1.1,tx,ty);
+    ctx.quadraticCurveTo(bx+ca*L*.55+nx*w*1.1,by+sa*L*.55+ny*w*1.1,bx+nx*w,by+ny*w);ctx.closePath();ctx.fill();
   }
-  for(let k=0;k<Math.round(30*p.fireEmbers);k++){   // Glut fliegt nach allen Seiten
-    const a=sr()*Math.PI*2,v=50+sr()*170,life=.4+sr()*.5,d0=sr()*.2,q=(g-d0)/life;
-    if(q<=0||q>=1)continue;const u=(g-d0)*dur;
-    ctx.fillStyle=rgba(k%3?'#ffc060':'#ff7a3d',(1-q)*.95);ctx.beginPath();ctx.arc(x+Math.cos(a)*v*u*.6,y+Math.sin(a)*v*u*.6,1.3+sr()*1.6,0,7);ctx.fill();
+  ctx.globalAlpha=1;
+  for(let k=0;k<Math.round(30*p.fireEmbers);k++){   // Glut wird nach allen Seiten geschleudert und bremst schnell ab
+    const a=sr()*Math.PI*2,v=260+sr()*320,life=.25+sr()*.35,d0=sr()*.06,q=(g-d0)/life;
+    if(q<=0||q>=1)continue;const u=(g-d0)*dur,dd=v*(1-Math.exp(-u*6))/6*S*.8;
+    ctx.fillStyle=rgba(k%3?'#ffc060':'#ff7a3d',(1-q)*.95);ctx.beginPath();ctx.arc(x+Math.cos(a)*dd,y+Math.sin(a)*dd,1.3+sr()*1.6,0,7);ctx.fill();
+  }
+  ctx.restore();
+  ctx.save();   // Rauch bleibt nach dem Knall stehen
+  for(let k=0;k<Math.round(7*p.fireSmoke);k++){
+    const ox=(sr()-.5)*64*S,rise=22+sr()*34,r=(14+sr()*12)*S*.8*(.6+g),al=Math.sin(Math.PI*clamp((g-.12)/.88))*.3*p.fireSmoke*Math.min(1,seg(g,.12,.3)*1.5);
+    puff(ctx,x+ox*(.3+g),y-g*rise,r,'60,52,48',al);
   }
   ctx.restore();
 }
@@ -361,9 +370,9 @@ function fxWave(ctx,p,x,y,g,sr,dur){
     for(let k=0;k<Math.round(p.waterRipples);k++){const q=clamp((g-.05-k*.12)/.62);if(q>0&&q<1){ctx.strokeStyle=rgba('#cfeaff',(1-q)*.75);ctx.lineWidth=3*(1-q)+.8;ctx.beginPath();ctx.arc(0,0,10+q*112*S*p.waterSurge,0,7);ctx.stroke()}}
     ctx.restore();
   }
-  const up=Math.sin(Math.PI*clamp(g/.62));   // runder Wasserberg: steigt weich auf und sackt wieder zusammen
+  const up=Math.sin(Math.PI*clamp(g/.45));   // niedriger Wasserberg: steigt kurz auf und sackt wieder zusammen
   if(up>.02&&p.waterDome>0){
-    const h=60*S*p.waterDome*up,wd=(30+22*up)*S,wob=1+.06*Math.sin(g*dur*13);
+    const h=24*S*p.waterDome*up,wd=(13+9*up)*S,wob=1+.06*Math.sin(g*dur*13);
     ctx.save();ctx.globalAlpha=fade;ctx.translate(x,gy-2);
     const lg=ctx.createLinearGradient(0,-h,0,0);lg.addColorStop(0,rgba('#cfeaff',.95));lg.addColorStop(.45,rgba('#52a6f5',.85));lg.addColorStop(1,rgba('#1f5fa8',.85));
     ctx.fillStyle=lg;ctx.shadowColor=col;ctx.shadowBlur=14;
@@ -444,6 +453,7 @@ const FX={name:'elementkombi',def:DEF,presets:PRE,
   {k:'fireTongues',t:'rng',l:'Flammenzungen',min:0,max:16,step:1},
   {k:'fireEmbers',t:'rng',l:'Glut',min:0,max:2.5,step:.05,u:'×'},
   {k:'fireRing',t:'rng',l:'Druckwelle',min:0,max:1.5,step:.05,u:'×'},
+  {k:'fireSmoke',t:'rng',l:'Rauch',min:0,max:2.5,step:.05,u:'×'},
   {t:'h',l:'Bersten (Erde + Erde)',c:'ee'},
   {k:'rockShards',t:'rng',l:'Brocken',min:0,max:20,step:1},
   {k:'rockThrow',t:'rng',l:'Wurfkraft',min:.4,max:2,step:.05,u:'×'},
