@@ -1,0 +1,405 @@
+<title>Elementkombi-Werkstatt</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya+Sans:wght@400;500;700&family=Cinzel:wght@500;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout wie die Kampfeffekt-Werkstatt: links Bühne mit Zeitleiste und Phasen, rechts die Regler, darunter der Export. */
+:root{
+  --ink:#141416; --panel:#232327; --panel2:#2e2e33; --line:#4d4d55; --gold:#d2ad4f; --bone:#efe6d2; --mute:#aaaab2;
+  --fire:#ff7a3d; --earth:#93c24f; --water:#52a6f5; --bad:#ea5a5e; --good:#7fd08a;
+  --f-display:"Cinzel",Georgia,serif; --f-body:"Alegreya Sans","Segoe UI",system-ui,sans-serif; --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--ink);color:var(--bone);font:16px/1.45 var(--f-body);margin:0;padding-inline:16px;padding-block:20px 40px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+header p{margin:4px 0 0;color:var(--mute);max-width:66ch}
+h1{font:700 26px/1.1 var(--f-display);letter-spacing:.06em;margin:0;color:var(--gold)}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--water);outline-offset:2px}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 350px;gap:18px;align-items:start}
+@media(max-width:880px){.grid{grid-template-columns:minmax(0,1fr)}}
+.stagebox{display:flex;flex-direction:column;gap:10px;min-width:0}
+.stage{position:relative;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#0c0c0e;aspect-ratio:3/2}
+canvas{display:block;width:100%;height:100%}
+.hud{position:absolute;left:10px;top:8px;font:500 11px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--mute);background:rgba(12,12,14,.7);padding:3px 8px;border-radius:4px;pointer-events:none}
+.transport{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.btn{font:500 14px var(--f-body);background:var(--panel2);color:var(--bone);border:1px solid var(--line);border-radius:6px;padding:7px 14px;cursor:pointer}
+.btn:hover{border-color:var(--gold)}
+.btn.primary{background:var(--gold);color:var(--ink);border-color:var(--gold);font-weight:700;min-width:92px}
+.scrub{flex:1 1 220px;min-width:0}
+input[type=range]{width:100%;accent-color:var(--gold);margin:0}
+.time{font:400 12px var(--f-mono);color:var(--mute);min-width:104px;text-align:right}
+.opt{display:flex;align-items:center;gap:6px;color:var(--mute);font-size:14px}
+select{background:var(--panel2);color:var(--bone);border:1px solid var(--line);border-radius:6px;padding:5px 8px;font:inherit}
+.phases{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font:500 12px var(--f-mono);letter-spacing:.05em;text-transform:uppercase;background:transparent;color:var(--mute);border:1px solid var(--line);border-radius:999px;padding:4px 11px;cursor:pointer}
+.chip[aria-current=true]{color:var(--ink);background:var(--bone);border-color:var(--bone)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.panel h2{font:700 12px var(--f-display);letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin:6px 0 -4px}
+.panel h2:first-child{margin-top:0}
+.panel h2.fw::after,.panel h2.fe::after,.panel h2.ew::after{content:"";display:inline-block;width:9px;height:9px;border-radius:50%;margin-left:8px;vertical-align:middle}
+.panel h2.fw::after{background:linear-gradient(90deg,var(--fire) 50%,var(--water) 50%)}
+.panel h2.fe::after{background:linear-gradient(90deg,var(--fire) 50%,var(--earth) 50%)}
+.panel h2.ew::after{background:linear-gradient(90deg,var(--earth) 50%,var(--water) 50%)}
+.presets{display:flex;flex-wrap:wrap;gap:6px}
+.ctl{display:flex;flex-direction:column;gap:4px}
+.ctl .row{display:flex;justify-content:space-between;gap:10px;font-size:14px}
+.ctl .row output{font:400 12px var(--f-mono);color:var(--mute)}
+.ctl small{color:var(--mute);font-size:12.5px}
+.seg{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden}
+.seg button{flex:1;font:inherit;font-size:14px;background:var(--panel2);color:var(--mute);border:0;border-right:1px solid var(--line);padding:6px 4px;cursor:pointer}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed=true]{background:var(--bone);color:var(--ink);font-weight:700}
+.tools{display:flex;gap:8px;flex-wrap:wrap}
+.export{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px;display:grid;gap:10px}
+.export h2{font:700 12px var(--f-display);letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin:0}
+.export p{margin:0;color:var(--mute);font-size:14px}
+textarea{width:100%;min-height:150px;background:var(--ink);color:var(--bone);border:1px solid var(--line);border-radius:6px;padding:10px;font:12.5px/1.5 var(--f-mono);resize:vertical}
+.msg{font-size:14px;min-height:1.4em}.msg.err{color:var(--bad)}.msg.ok{color:var(--good)}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+</style>
+<div class="wrap">
+  <header>
+    <h1>Elementkombi-Werkstatt</h1>
+    <p>Was passiert, wenn zwei Elemente aufeinandertreffen? Feuer gegen Wasser gibt Dampf (wie im Spiel), Feuer gegen Erde gibt Lava, Erde gegen Wasser gibt Schlamm. Zwei Funken fliegen in die Mitte, prallen aufeinander und lösen sich in der Kombination auf. Regler verstellen, Zeitleiste ziehen, mit „Alle drei“ nebeneinander vergleichen, Werte ins Spiel übernehmen.</p>
+  </header>
+  <div class="grid">
+    <section class="stagebox" aria-label="Vorschau">
+      <div class="stage"><canvas id="cv" aria-label="Effektvorschau"></canvas><div class="hud" id="hud">Anflug</div></div>
+      <div class="transport">
+        <button class="btn primary" id="play" type="button">Pause</button>
+        <button class="btn" id="restart" type="button">Neu starten</button>
+        <div class="scrub"><input type="range" id="scrub" min="0" max="1000" value="0" aria-label="Zeitleiste"></div>
+        <div class="time" id="time">0.00 / 0.00 s</div>
+      </div>
+      <div class="transport">
+        <label class="opt"><input type="checkbox" id="loop" checked> Wiederholen</label>
+        <label class="opt">Tempo <select id="speed"><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1" selected>1×</option></select></label>
+      </div>
+      <div class="phases" id="phases" aria-label="Phasen"></div>
+    </section>
+    <aside class="panel" id="panel" aria-label="Regler"></aside>
+  </div>
+  <section class="export">
+    <h2>Werte für das Spiel</h2>
+    <p>Kopiere die Werte oder füge gespeicherte Werte ein und übernimm sie. <code>clashSize</code>, <code>steam</code> und <code>shake</code> heißen wie in der Kampfeffekt-Werkstatt.</p>
+    <textarea id="json" spellcheck="false" aria-label="Effektwerte als JSON"></textarea>
+    <div class="tools"><button class="btn primary" id="copy" type="button">Kopieren</button><button class="btn" id="apply" type="button">Eingefügte Werte übernehmen</button><button class="btn" id="reset" type="button">Zurücksetzen</button></div>
+    <div class="msg" id="msg" role="status"></div>
+  </section>
+</div>
+<script>
+(function(){
+const W=720,H=480;
+const clamp=(x,a=0,b=1)=>Math.min(b,Math.max(a,x)),lerp=(a,b,t)=>a+(b-a)*t,seg=(u,a,b)=>clamp((u-a)/(b-a));
+const eo=x=>1-Math.pow(1-x,3),eio=x=>x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2;
+function rng(seed){let a=seed>>>0;return()=>{a=(a+0x6D2B79F5)|0;let t=Math.imul(a^(a>>>15),1|a);t=(t+Math.imul(t^(t>>>7),61|t))^t;return((t^(t>>>14))>>>0)/4294967296}}
+function rgba(hex,a){const n=parseInt(hex.slice(1),16);return 'rgba('+(n>>16&255)+','+(n>>8&255)+','+(n&255)+','+clamp(a)+')'}
+function lighten(hex,k){const n=parseInt(hex.slice(1),16),f=c=>Math.round(c+(255-c)*k);return 'rgb('+f(n>>16&255)+','+f(n>>8&255)+','+f(n&255)+')'}
+function mix(a,b,k){const n=parseInt(a.slice(1),16),m=parseInt(b.slice(1),16),f=(x,y)=>Math.round(x+(y-x)*k);return '#'+((1<<24)+(f(n>>16&255,m>>16&255)<<16)+(f(n>>8&255,m>>8&255)<<8)+f(n&255,m&255)).toString(16).slice(1)}
+const EL={F:'#ff7a3d',E:'#93c24f',W:'#52a6f5'};
+const COMBOS={FW:{a:'F',d:'W',name:'Feuer + Wasser',fx:'Dampf'},FE:{a:'F',d:'E',name:'Feuer + Erde',fx:'Lava'},EW:{a:'E',d:'W',name:'Erde + Wasser',fx:'Schlamm'}};
+const ORDER=['FW','FE','EW'];
+
+/* ---------- Parameter ---------- */
+const DEF={view:'einzeln',combo:'FE',pairs:1,spread:200,flight:.7,duration:1.5,clashSize:1.4,shake:1,flash:1,
+  steam:1,steamRise:1,steamDense:1,
+  lavaChunks:9,lavaThrow:1,lavaSparks:1,lavaGlow:1,lavaPool:1,lavaSmoke:1,
+  mudClumps:12,mudThrow:1,mudPool:1,mudBubbles:6,mudTone:.15,mudDrops:.3,
+  seed:7};
+const PRE={
+ 'Standard':{},
+ 'Dezent':{clashSize:1,duration:1.2,lavaChunks:5,lavaSparks:.6,lavaSmoke:.6,mudClumps:7,mudBubbles:3,mudThrow:.8,steam:.8,shake:.4},
+ 'Wucht':{clashSize:1.8,duration:1.9,lavaChunks:14,lavaThrow:1.3,lavaGlow:1.4,lavaSparks:1.5,mudClumps:18,mudThrow:1.3,mudPool:1.3,steam:1.5,steamDense:1.3,shake:1.4},
+ 'Zäher Brei':{combo:'EW',mudClumps:8,mudThrow:.6,mudPool:1.6,mudBubbles:10,mudTone:.5,mudDrops:0,duration:2.2},
+ 'Glutnest':{combo:'FE',lavaChunks:4,lavaGlow:1.8,lavaPool:1.7,lavaSparks:.5,lavaSmoke:1.6,lavaThrow:.6,duration:2.2},
+ 'Wie im Spiel (Dampf)':{combo:'FW',clashSize:1.4,steam:1,steamRise:1,steamDense:1,duration:.6,shake:1}
+};
+
+/* ---------- Szene ---------- */
+const C0={x:W/2,y:H/2+10},FLOOR=18;
+function timeline(p){const tA=.3,tF=tA+p.flight,tK=tF+.22;return{tA,tF,tK,cl:p.duration,dur:tK+p.duration+.55}}
+function centers(p){
+  if(p.view==='alle')return ORDER.map((c,i)=>({x:[130,360,590][i],combo:c,seed:p.seed+i*31}));
+  const n=p.pairs;return Array.from({length:n},(_,i)=>({x:C0.x+(i-(n-1)/2)*p.spread,combo:p.combo,seed:p.seed+i*31}));
+}
+function bg(ctx,p,list){
+  const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#101013');g.addColorStop(.5,'#1b1b20');g.addColorStop(1,'#0e0e11');
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='rgba(255,255,255,.07)';ctx.setLineDash([6,6]);ctx.strokeRect(24,C0.y-100,W-48,200);ctx.setLineDash([]);
+  list.forEach(c=>{   // Boden unter dem Aufprall
+    ctx.save();ctx.translate(c.x,C0.y+FLOOR);ctx.scale(1,.3);const r=ctx.createRadialGradient(0,0,0,0,0,110);r.addColorStop(0,'rgba(255,255,255,.07)');r.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.fillStyle=r;ctx.beginPath();ctx.arc(0,0,110,0,7);ctx.fill();ctx.restore();
+    const cb=COMBOS[c.combo];ctx.font='500 11px "JetBrains Mono",monospace';ctx.textAlign='center';ctx.fillStyle='rgba(170,170,178,.85)';
+    ctx.fillText((cb.name+' · '+cb.fx).toUpperCase(),c.x,H-18);
+  });
+}
+
+/* ---------- Funken im Anflug ---------- */
+function orbGlow(ctx,x,y,r,col,core){
+  ctx.save();ctx.globalCompositeOperation='lighter';
+  const g=ctx.createRadialGradient(x,y,0,x,y,r*3);g.addColorStop(0,rgba(core||'#ffffff',1));g.addColorStop(.25,rgba(col,.85));g.addColorStop(1,rgba(col,0));
+  ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r*3,0,7);ctx.fill();ctx.restore();
+}
+function rock(ctx,x,y,r,rot,seed,fill,edge){
+  const rn=rng(seed),n=7;ctx.save();ctx.translate(x,y);ctx.rotate(rot);ctx.beginPath();
+  for(let k=0;k<n;k++){const a=k/n*Math.PI*2,rr=r*(.65+rn()*.5);const px=Math.cos(a)*rr,py=Math.sin(a)*rr;k?ctx.lineTo(px,py):ctx.moveTo(px,py)}
+  ctx.closePath();ctx.fillStyle=fill;ctx.fill();if(edge){ctx.strokeStyle=edge;ctx.lineWidth=1.5;ctx.stroke()}ctx.restore();
+}
+function drop(ctx,x,y,r,ang,col){
+  ctx.save();ctx.translate(x,y);ctx.rotate(ang);ctx.shadowColor=col;ctx.shadowBlur=14;
+  ctx.beginPath();ctx.moveTo(r*1.6,0);ctx.bezierCurveTo(r*.5,-r*1.1,-r*1.1,-r*.9,-r*1.1,0);ctx.bezierCurveTo(-r*1.1,r*.9,r*.5,r*1.1,r*1.6,0);ctx.closePath();
+  ctx.fillStyle=rgba(col,.85);ctx.fill();ctx.shadowBlur=0;ctx.fillStyle='rgba(255,255,255,.7)';ctx.beginPath();ctx.ellipse(r*.2,-r*.35,r*.35,r*.2,-.4,0,7);ctx.fill();ctx.restore();
+}
+function spark(ctx,el,x,y,dirx,diry,t,seed){   // dirx/diry: Flugrichtung (Einheitsvektor), für Schweif und Drehung
+  const ang=Math.atan2(diry,dirx),col=EL[el];
+  if(el==='F'){   // Feuerkomet mit Schweif
+    for(let k=5;k>=1;k--){orbGlow(ctx,x-dirx*k*9,y-diry*k*9,7-k*.9,col,'#ffd9a0')}
+    orbGlow(ctx,x,y,9,col,'#fff3d6');
+  }else if(el==='E'){
+    ctx.save();ctx.globalAlpha=.25;for(let k=3;k>=1;k--)rock(ctx,x-dirx*k*10,y-diry*k*10,9-k,t*4+k,seed,'#4c4a36');ctx.restore();
+    rock(ctx,x,y,13,t*5+seed,seed,'#4c4a36',lighten(col,.2));
+    ctx.fillStyle=rgba(col,.55);ctx.beginPath();ctx.arc(x-3,y-3,4.5,0,7);ctx.fill();
+  }else{
+    for(let k=4;k>=1;k--){ctx.save();ctx.globalAlpha=.16*(5-k)/4;drop(ctx,x-dirx*k*10,y-diry*k*10,8-k,ang,col);ctx.restore()}
+    drop(ctx,x,y,10,ang,col);
+  }
+}
+function flight(ctx,p,c,t,T){
+  const cb=COMBOS[c.combo],aSlot={x:c.x,y:C0.y+34},dSlot={x:c.x,y:C0.y-34};
+  const aStart={x:c.x-40,y:H-60},dStart={x:c.x+40,y:60};
+  [[cb.a,aStart,aSlot,1],[cb.d,dStart,dSlot,-1]].forEach(([el,s0,sl,dir],i)=>{
+    const s=seg(t,T.tA,T.tF),m=seg(t,T.tF,T.tK);
+    if(t<T.tA||t>=T.tK)return;
+    let x,y,dx,dy;
+    if(s<1){const q=eio(s);x=lerp(s0.x,sl.x,q)+Math.sin(q*Math.PI)*dir*-26;y=lerp(s0.y,sl.y,q);dx=0;dy=-dir}
+    else{x=sl.x;y=lerp(sl.y,C0.y,m*m);dx=0;dy=-dir*.3}
+    spark(ctx,el,x,y,dx,dy,t,c.seed+i*7);
+  });
+}
+
+/* ---------- Auflösungen ---------- */
+function puff(ctx,x,y,r,rgb,a){const g=ctx.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,'rgba('+rgb+','+clamp(a)+')');g.addColorStop(1,'rgba('+rgb+',0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r,0,7);ctx.fill()}
+function flash(ctx,p,x,y,g,ca,cd){
+  const S=p.clashSize,k=p.flash;if(k<=0)return;
+  ctx.save();ctx.globalCompositeOperation='lighter';
+  const R=50*S*(.4+g*.8),fl=ctx.createRadialGradient(x,y,0,x,y,R);fl.addColorStop(0,'rgba(255,255,255,'+(.9*(1-g)*k)+')');fl.addColorStop(.5,rgba(ca,.45*(1-g)*k));fl.addColorStop(1,rgba(cd,0));
+  ctx.fillStyle=fl;ctx.beginPath();ctx.arc(x,y,R,0,7);ctx.fill();ctx.restore();
+}
+// Wurfbahn mit Schwerkraft: liefert Ort, Landezeit und ob schon gelandet
+function ballistic(x0,y0,vx,vy,G,gy,s){
+  const tl=(-vy+Math.sqrt(vy*vy+2*G*Math.max(0,gy-y0)))/G,u=Math.min(s,tl);
+  return{x:x0+vx*u,y:y0+vy*u+.5*G*u*u,landed:s>=tl,tl,vx,vy:vy+G*u}
+}
+// Feuer + Wasser: Dampf (wie im Spiel, `drawClash` in src/ui/25-aufloesung.js)
+function fxSteam(ctx,p,x,y,g,sr){
+  const S=p.clashSize,n=Math.round(12*clamp(p.steam,.5,2.5));
+  for(let k=0;k<n;k++){
+    const a=-Math.PI/2+(sr()-.5)*1.6,v=20+sr()*60,r=(10+sr()*16)*S*p.steam*(.5+g),al=Math.sin(Math.PI*g)*.5*p.steamDense;
+    const px=x+Math.cos(a)*v*g+(sr()-.5)*30,py=y+Math.sin(a)*v*g-g*30*p.steamRise*p.steam;
+    puff(ctx,px,py,Math.max(.1,r),'225,230,238',al);
+  }
+}
+// Feuer + Erde: Lava. Glühende Brocken fliegen, kühlen ab und bleiben liegen, eine Lavalache wächst und verkrustet, Funken und Rauch steigen auf
+function fxLava(ctx,p,x,y,g,sr,dur){
+  const S=p.clashSize,s=g*dur,G=720,gy=y+FLOOR,fade=1-seg(g,.8,1),heat=clamp(1-g*1.05);
+  // Lache
+  const pq=eo(seg(g,.1,.55)),R=46*S*p.lavaPool*pq;
+  if(R>1){
+    ctx.save();ctx.translate(x,gy);ctx.scale(1,.36);ctx.globalAlpha=fade;
+    ctx.globalCompositeOperation='lighter';
+    const gr=ctx.createRadialGradient(0,0,0,0,0,R);gr.addColorStop(0,rgba('#ffe9a8',.95*p.lavaGlow*Math.min(1,heat+.15)));gr.addColorStop(.35,rgba('#ff8a2a',.85*Math.min(1,heat+.25)));gr.addColorStop(.75,rgba('#a8310f',.7));gr.addColorStop(1,'rgba(60,20,10,0)');
+    ctx.fillStyle=gr;ctx.beginPath();ctx.arc(0,0,R,0,7);ctx.fill();
+    ctx.globalCompositeOperation='source-over';
+    const cool=seg(g,.3,.9),cr=rng(991);   // dunkle Kruste, die sich über die Glut legt
+    for(let k=0;k<9;k++){const a=cr()*Math.PI*2,d=cr()*R*.8,rr=R*(.14+cr()*.16);ctx.fillStyle='rgba(30,22,20,'+(.62*cool)+')';ctx.beginPath();ctx.ellipse(Math.cos(a)*d,Math.sin(a)*d,rr,rr*.8,cr()*3,0,7);ctx.fill()}
+    ctx.restore();
+  }
+  // Brocken
+  for(let k=0;k<Math.round(p.lavaChunks);k++){
+    const a=-Math.PI/2+(sr()-.5)*2.2,v=(140+sr()*170)*S*p.lavaThrow*.8,r=(4+sr()*7)*S*.8,rot0=sr()*6,spin=(sr()-.5)*10,sd=Math.floor(sr()*1e5);
+    const b=ballistic(x,y,Math.cos(a)*v*.65,Math.sin(a)*v,G,gy+(sr()-.5)*10,s);
+    const h=clamp(heat+.1-(b.landed?(s-b.tl)*.15:0)),al=fade;
+    ctx.save();ctx.globalAlpha=al;
+    rock(ctx,b.x,b.y,r,rot0+spin*Math.min(s,b.tl),sd,mix('#2a2420','#ff8a2a',h),null);
+    ctx.restore();
+    if(h>.05&&p.lavaGlow>0){ctx.save();ctx.globalAlpha=al*h;orbGlow(ctx,b.x,b.y,r*.9*p.lavaGlow,'#ff7a3d','#ffd08a');ctx.restore()}
+  }
+  // Funkenflug
+  ctx.save();ctx.globalCompositeOperation='lighter';
+  for(let k=0;k<Math.round(26*p.lavaSparks);k++){
+    const a=-Math.PI/2+(sr()-.5)*2.8,v=(80+sr()*260)*S,life=.3+sr()*.55,d0=sr()*.15,q=(g-d0)/life;
+    if(q<=0||q>=1)continue;const u=(g-d0)*dur;
+    const px=x+Math.cos(a)*v*u*.5,py=y+Math.sin(a)*v*u+.5*380*u*u;
+    ctx.fillStyle=rgba(k%3?'#ffc060':'#ff7a3d',(1-q)*.95);ctx.beginPath();ctx.arc(px,py,1.3+sr()*1.4,0,7);ctx.fill();
+  }
+  ctx.restore();
+  // Rauch und Asche
+  for(let k=0;k<Math.round(8*p.lavaSmoke);k++){
+    const ox=(sr()-.5)*70*S,rise=40+sr()*55,r=(14+sr()*14)*S*.8*(.6+g),al=Math.sin(Math.PI*clamp((g-.12)/.88))*.34*p.lavaSmoke;
+    puff(ctx,x+ox*(.4+g),gy-14-g*rise,r,'74,68,66',al);
+  }
+}
+// Erde + Wasser: Schlamm. Klumpen und Tropfen spritzen, klatschen auf den Boden, eine Schlammpfütze breitet sich aus und blubbert
+function fxMud(ctx,p,x,y,g,sr,dur){
+  const S=p.clashSize,s=g*dur,G=700,gy=y+FLOOR,fade=1-seg(g,.9,1);
+  const col=mix('#5b4129','#4f5d2b',p.mudTone),dark=mix(col,'#1c130b',.5),light=mix(col,'#d2b078',.4);
+  // Pfütze
+  const pq=eo(seg(g,.14,.6)),R=50*S*p.mudPool*pq;
+  if(R>1){
+    ctx.save();ctx.globalAlpha=fade;ctx.translate(x,gy);ctx.scale(1,.34);
+    const gr=ctx.createRadialGradient(0,0,0,0,0,R);gr.addColorStop(0,col);gr.addColorStop(.7,dark);gr.addColorStop(1,rgba(dark,0));
+    ctx.fillStyle=gr;ctx.beginPath();ctx.arc(0,0,R,0,7);ctx.fill();
+    ctx.strokeStyle=rgba(light,.28);ctx.lineWidth=2.2;   // Wellen auf dem Brei
+    for(let k=0;k<2;k++){const q=clamp((g-.18-k*.14)/.5);if(q>0&&q<1){ctx.globalAlpha=fade*(1-q);ctx.beginPath();ctx.arc(0,0,R*.25+R*.6*q,0,7);ctx.stroke()}}
+    ctx.restore();
+    const br=rng(555);   // Blasen steigen auf und platzen
+    for(let k=0;k<Math.round(p.mudBubbles);k++){
+      const a=br()*Math.PI*2,d=Math.sqrt(br())*R*.72,ph=(g*2.6+br()*3)%1,rr=(3+br()*5)*S*.7*Math.sin(Math.PI*ph);if(pq<.5||rr<.3)continue;
+      const bx=x+Math.cos(a)*d,by=gy+Math.sin(a)*d*.34-rr*.5;
+      ctx.save();ctx.globalAlpha=fade*.85;ctx.fillStyle=rgba(col,.9);ctx.strokeStyle=rgba(light,.7);ctx.lineWidth=1.2;ctx.beginPath();ctx.ellipse(bx,by,rr,rr*.8,0,0,7);ctx.fill();ctx.stroke();
+      ctx.fillStyle='rgba(255,255,255,.35)';ctx.beginPath();ctx.arc(bx-rr*.3,by-rr*.3,rr*.25,0,7);ctx.fill();ctx.restore();
+    }
+  }
+  // Klumpen und Tropfen
+  const n=Math.round(p.mudClumps);
+  for(let k=0;k<n;k++){
+    const vy=-(130+sr()*270)*S*.8*p.mudThrow,vx=(sr()-.5)*300*S*.7,rx=(5+sr()*8)*S*.7,isDrop=sr()<p.mudDrops,ground=gy+(sr()-.5)*12;
+    const b=ballistic(x,y,vx,vy,G,ground,s),land=clamp(b.x,x-170*S,x+170*S);
+    ctx.save();ctx.globalAlpha=fade;
+    if(!b.landed){
+      const sp=Math.hypot(b.vx,b.vy),st=1+clamp(sp/700,0,.9),ang=Math.atan2(b.vy,b.vx),c=isDrop?'#7fb6e8':col;
+      ctx.translate(b.x,b.y);ctx.rotate(ang);
+      ctx.fillStyle=isDrop?rgba(c,.85):c;ctx.beginPath();ctx.ellipse(0,0,rx*st*(isDrop?.7:1),rx*.62*(isDrop?.7:1),0,0,7);ctx.fill();
+      ctx.fillStyle=isDrop?'rgba(255,255,255,.6)':rgba(light,.55);ctx.beginPath();ctx.ellipse(-rx*.2,-rx*.2,rx*.35,rx*.2,0,0,7);ctx.fill();
+    }else if(!isDrop){   // Klumpen klatscht flach auf den Boden
+      const q=clamp((s-b.tl)/.12);ctx.translate(land,b.y+2);ctx.fillStyle=dark;ctx.beginPath();ctx.ellipse(0,0,rx*(1+.8*q),rx*(.62-.2*q)*.7,0,0,7);ctx.fill();
+      ctx.fillStyle=rgba(col,.9);ctx.beginPath();ctx.ellipse(-rx*.1,-rx*.1,rx*.6*(1+.5*q),rx*.28,0,0,7);ctx.fill();
+    }else{   // Tropfen: kleiner Ring, dann weg
+      const q=clamp((s-b.tl)/.35);if(q<1){ctx.strokeStyle=rgba('#a8d0f0',(1-q)*.7);ctx.lineWidth=1.4;ctx.beginPath();ctx.ellipse(land,b.y+2,3+q*14,(3+q*14)*.34,0,0,7);ctx.stroke()}
+    }
+    ctx.restore();
+  }
+}
+function drawClash(ctx,p,combo,x,y,g,seed,dur){
+  const cb=COMBOS[combo],sr=rng(seed);
+  flash(ctx,p,x,y,seg(g,0,.45),EL[cb.a],EL[cb.d]);
+  ctx.save();
+  if(combo==='FW')fxSteam(ctx,p,x,y,g,sr);
+  else if(combo==='FE')fxLava(ctx,p,x,y,g,sr,dur);
+  else fxMud(ctx,p,x,y,g,sr,dur);
+  ctx.restore();
+}
+
+/* ---------- Gesamtbild ---------- */
+function draw(ctx,t,p){
+  const T=timeline(p),list=centers(p);
+  let amp=0;if(t>T.tK&&t<T.tK+.4)amp=p.shake*(p.view==='alle'||p.combo!=='FW'?6:3)*(1-seg(t,T.tK,T.tK+.4));
+  ctx.save();ctx.translate(Math.sin(t*95)*amp,Math.cos(t*80)*amp*.7);
+  bg(ctx,p,list);
+  list.forEach(c=>{
+    flight(ctx,p,c,t,T);
+    const g=seg(t,T.tK,T.tK+T.cl);if(g>0&&g<=1)drawClash(ctx,p,c.combo,c.x,C0.y,g,c.seed+3,T.cl);
+  });
+  ctx.restore();
+}
+
+/* ---------- Definition ---------- */
+const FX={name:'elementkombi',def:DEF,presets:PRE,
+ phases:p=>{const T=timeline(p);return[[0,'Anflug'],[T.tK,'Aufprall'],[T.tK+.3*T.cl,'Auflösung'],[T.tK+.75*T.cl,'Nachklang']].map(x=>[x[0]/T.dur,x[1]])},
+ ctrls:[
+  {t:'h',l:'Szenario'},
+  {k:'view',t:'seg',l:'Ansicht',o:[['einzeln','Einzeln'],['alle','Alle drei']],hint:'„Alle drei“ zeigt Dampf, Lava und Schlamm nebeneinander mit denselben Reglern.'},
+  {k:'combo',t:'seg',l:'Kombination',o:[['FW','Feuer + Wasser'],['FE','Feuer + Erde'],['EW','Erde + Wasser']]},
+  {k:'pairs',t:'rng',l:'Paare in der Mitte',min:1,max:3,step:1,hint:'Im Spiel löst sich je ein Paar aus Angriff und Verteidigung auf.'},
+  {k:'spread',t:'rng',l:'Abstand der Paare',min:100,max:260,step:5},
+  {t:'h',l:'Allgemein'},
+  {k:'flight',t:'rng',l:'Flugdauer',min:.3,max:1.4,step:.05,u:' s'},
+  {k:'duration',t:'rng',l:'Dauer der Auflösung',min:.5,max:3,step:.05,u:' s'},
+  {k:'clashSize',t:'rng',l:'Stärke',min:.4,max:2,step:.05,u:'×'},
+  {k:'flash',t:'rng',l:'Aufprall-Blitz',min:0,max:1.5,step:.05,u:'×'},
+  {k:'shake',t:'rng',l:'Wackeln',min:0,max:1.5,step:.05,hint:'Bei Dampf halb so stark wie bei Lava und Schlamm.'},
+  {t:'h',l:'Dampf (Feuer + Wasser)',c:'fw'},
+  {k:'steam',t:'rng',l:'Dampfmenge',min:0,max:2.5,step:.1,u:'×'},
+  {k:'steamRise',t:'rng',l:'Aufstieg',min:0,max:3,step:.1,u:'×'},
+  {k:'steamDense',t:'rng',l:'Dichte',min:.2,max:2,step:.05,u:'×'},
+  {t:'h',l:'Lava (Feuer + Erde)',c:'fe'},
+  {k:'lavaChunks',t:'rng',l:'Glühende Brocken',min:0,max:20,step:1},
+  {k:'lavaThrow',t:'rng',l:'Wurfkraft',min:.4,max:2,step:.05,u:'×'},
+  {k:'lavaGlow',t:'rng',l:'Glut',min:0,max:2,step:.05,u:'×',hint:'Leuchten der Brocken und der Lache; beides kühlt mit der Zeit ab.'},
+  {k:'lavaSparks',t:'rng',l:'Funkenflug',min:0,max:2.5,step:.05,u:'×'},
+  {k:'lavaPool',t:'rng',l:'Lavalache',min:0,max:2,step:.05,u:'×'},
+  {k:'lavaSmoke',t:'rng',l:'Rauch und Asche',min:0,max:2.5,step:.05,u:'×'},
+  {t:'h',l:'Schlamm (Erde + Wasser)',c:'ew'},
+  {k:'mudClumps',t:'rng',l:'Schlammklumpen',min:0,max:24,step:1},
+  {k:'mudThrow',t:'rng',l:'Spritzhöhe',min:.4,max:2,step:.05,u:'×'},
+  {k:'mudDrops',t:'rng',l:'Wassertropfen darunter',min:0,max:1,step:.05,hint:'Anteil der Spritzer, die klares Wasser sind.'},
+  {k:'mudPool',t:'rng',l:'Pfütze',min:0,max:2,step:.05,u:'×'},
+  {k:'mudBubbles',t:'rng',l:'Blasen',min:0,max:12,step:1},
+  {k:'mudTone',t:'rng',l:'Farbton',min:0,max:1,step:.05,hint:'0 = Braun, 1 = Olivgrün (Erde klingt an).'}
+ ]};
+
+/* ---------- Zustand und Bedienung ---------- */
+let P={...DEF};
+try{const s=JSON.parse(localStorage.getItem('magus-kombi-v1')||'null');if(s)for(const k in DEF)if(k in s&&typeof s[k]===typeof DEF[k])P[k]=s[k]}catch(e){}
+function save(){try{localStorage.setItem('magus-kombi-v1',JSON.stringify(P))}catch(e){}}
+let t=0,playing=true,last=0,hold=.7;
+const $=id=>document.getElementById(id),cv=$('cv'),ctx=cv.getContext('2d'),panel=$('panel');
+const reduce=window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches;if(reduce)playing=false;
+const dur=()=>timeline(P).dur;
+function fmt(v,c){return(+v).toFixed(c.step>=1?0:2)+(c.u||'')}
+function buildPanel(){
+  panel.innerHTML='';
+  const ph=document.createElement('h2');ph.textContent='Vorlagen';panel.appendChild(ph);
+  const pre=document.createElement('div');pre.className='presets';
+  Object.keys(PRE).forEach(n=>{const b=document.createElement('button');b.className='chip';b.type='button';b.textContent=n;b.onclick=()=>{P={...DEF,...PRE[n],seed:P.seed};save();buildPanel();refresh(true)};pre.appendChild(b)});
+  panel.appendChild(pre);
+  FX.ctrls.forEach(c=>{
+    if(c.t==='h'){const h=document.createElement('h2');h.textContent=c.l;if(c.c)h.className=c.c;panel.appendChild(h);return}
+    const w=document.createElement('div');w.className='ctl';
+    if(c.t==='rng'){
+      const id='c-'+c.k;w.innerHTML='<div class="row"><label for="'+id+'">'+c.l+'</label><output></output></div><input type="range" id="'+id+'" min="'+c.min+'" max="'+c.max+'" step="'+c.step+'">'+(c.hint?'<small>'+c.hint+'</small>':'');
+      const inp=w.querySelector('input'),out=w.querySelector('output');inp.value=P[c.k];out.textContent=fmt(P[c.k],c);
+      inp.oninput=()=>{P[c.k]=+inp.value;out.textContent=fmt(P[c.k],c);save();refresh(false)};
+    }else if(c.t==='seg'){
+      w.innerHTML='<div class="row"><span>'+c.l+'</span></div><div class="seg" role="group" aria-label="'+c.l+'"></div>'+(c.hint?'<small>'+c.hint+'</small>':'');
+      const box=w.querySelector('.seg');
+      c.o.forEach(o=>{const b=document.createElement('button');b.type='button';b.textContent=o[1];b.setAttribute('aria-pressed',String(P[c.k]===o[0]));
+        b.onclick=()=>{P[c.k]=o[0];save();[...box.children].forEach(x=>x.setAttribute('aria-pressed','false'));b.setAttribute('aria-pressed','true');refresh(true)};box.appendChild(b)});
+    }
+    panel.appendChild(w);
+  });
+  const tools=document.createElement('div');tools.className='tools';
+  const rb=document.createElement('button');rb.className='btn';rb.type='button';rb.textContent='Neuer Zufall';rb.onclick=()=>{P.seed=Math.floor(Math.random()*9999)+1;save();refresh(true)};
+  tools.appendChild(rb);panel.appendChild(tools);buildPhases();
+}
+function buildPhases(){
+  const box=$('phases');box.innerHTML='';
+  FX.phases(P).forEach(ph=>{const b=document.createElement('button');b.type='button';b.className='chip';b.textContent=ph[1];b.onclick=()=>{playing=false;t=ph[0]*dur()+.001;sync()};box.appendChild(b)});
+}
+function phaseNow(){const u=t/dur(),list=FX.phases(P);let name=list[0][1];for(const ph of list)if(u>=ph[0])name=ph[1];return name}
+function exportJson(){return JSON.stringify({effekt:FX.name,werte:P},null,2)}
+function sync(){
+  const d=dur();$('scrub').value=Math.round(clamp(t/d)*1000);$('time').textContent=Math.min(t,d).toFixed(2)+' / '+d.toFixed(2)+' s';
+  const nm=phaseNow();$('hud').textContent=nm;[...$('phases').children].forEach(c=>c.setAttribute('aria-current',String(c.textContent===nm)));
+  $('play').textContent=playing?'Pause':'Abspielen';$('json').value=exportJson();drawNow();
+}
+function resize(){const r=cv.getBoundingClientRect(),d=Math.min(window.devicePixelRatio||1,2);cv.width=Math.round(r.width*d);cv.height=Math.round(r.height*d)}
+function drawNow(){ctx.setTransform(cv.width/W,0,0,cv.width/W,0,0);ctx.clearRect(0,0,W,H);draw(ctx,Math.min(t,dur()),P)}
+function refresh(restart){if(restart){t=0;if(!reduce)playing=true}t=Math.min(t,dur());buildPhases();sync()}
+function frame(ts){const dt=Math.min(.1,(ts-last)/1000||0);last=ts;
+  if(playing){t+=dt*parseFloat($('speed').value);const d=dur();if(t>=d+hold){if($('loop').checked)t=0;else{t=d;playing=false}}sync()}
+  requestAnimationFrame(frame)}
+$('play').onclick=()=>{if(!playing&&t>=dur())t=0;playing=!playing;sync()};
+$('restart').onclick=()=>{t=0;playing=true;sync()};
+$('scrub').oninput=e=>{playing=false;t=e.target.value/1000*dur();sync()};
+function msg(s,c){const m=$('msg');m.textContent=s;m.className='msg '+(c||'')}
+$('copy').onclick=async()=>{const ta=$('json');try{await navigator.clipboard.writeText(ta.value);msg('Werte kopiert.','ok')}catch(e){ta.focus();ta.select();msg('Kopieren nicht möglich. Der Text ist markiert, bitte mit Strg+C kopieren.','err')}};
+$('apply').onclick=()=>{try{const o=JSON.parse($('json').value);if(o.effekt!==FX.name||!o.werte)throw new Error('Feld „effekt“ oder „werte“ fehlt oder passt nicht.');
+  const n={...DEF};for(const k in DEF)if(k in o.werte){if(typeof o.werte[k]!==typeof DEF[k])throw new Error('Wert „'+k+'“ hat den falschen Typ.');n[k]=o.werte[k]}
+  P=n;save();buildPanel();refresh(true);msg('Werte übernommen.','ok')}catch(e){msg('Übernehmen fehlgeschlagen: '+e.message,'err')}};
+$('reset').onclick=()=>{P={...DEF};save();buildPanel();refresh(true);msg('Auf Standardwerte zurückgesetzt.','ok')};
+new ResizeObserver(()=>{resize();drawNow()}).observe(cv);
+resize();buildPanel();if(reduce)t=dur()*.5;sync();requestAnimationFrame(frame);
+})();
+</script>
