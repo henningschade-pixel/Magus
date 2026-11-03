@@ -21,6 +21,6 @@ Stand heute: `loserUp` = 1 und `loserUp2` = 2 (siehe `docs/regelwerk.md`, Abschn
 
 Soll zurückgeworfener Schaden (Überverteidigung) das Schild Stufen kosten? Heute: eine Stufe je zurückgeworfenem Schaden. Optionen: gar nichts, halb, wie jetzt. Vorschlag war die Einstellung `reflectCost` und Messung in KI-Partien.
 
-## Spiegel: Limit von 3 Markern über alle Farben (03.11.)
+## Spiegel: Limit von 3 Markern (03.11. / 04.11.)
 
-Heute: höchstens 3 Spiegelmarker insgesamt. Liegen schon 3 Marker einer Farbe (z. B. Erde), bleibt ein neuer Spiegel anderer Farbe (z. B. Feuer) ganz aus, auch wenn die Kombi bezahlt wurde. Aufgefallen im Showdown 3 der Partie mit Seed 1653969251: Erde 3 lag, die Feuer-Spiegel danach (Stufe 3, 1, 2) blieben wirkungslos, obwohl der Computer fast nur mit Feuer angriff. Seit 0.16 sagt das Protokoll es und der Schild-Effekt bleibt aus. Offen: Soll ein neuer Spiegel andere Marker verdrängen dürfen (z. B. die ältesten oder die der Farbe ohne Gegner-Angriffe), soll das Limit je Farbe gelten, oder bleibt es wie heute?
+Entschieden am 04.11. (0.16.1): Das Limit gilt je Farbe (Feuer-Marker sind andere als Erde-Marker), nicht insgesamt. Anlass: Showdown 3 der Partie mit Seed 1653969251, in dem ein Erde-Spiegel (3) alle Feuer-Spiegel verhinderte. Offen: Balance prüfen (`npm run balance`), weil ein Spieler jetzt bis zu 6 Spiegelmarker haben kann.

@@ -154,11 +154,11 @@ function mirrorSync(stats) {
   const m = stats.mirrorEl; const t = m ? (m.F || 0) + (m.E || 0) + (m.W || 0) : 0;
   if (t > 0) stats.mirror = t; else { delete stats.mirror; delete stats.mirrorEl; delete stats.mirrorFree; }
 }
-// Ein Control der Stufe n bringt den Spiegel dieser Farbe auf n Marker (nicht obendrauf addiert); höchstens 3 Marker insgesamt über alle Farben.
+// Ein Control der Stufe n bringt den Spiegel dieser Farbe auf n Marker (nicht obendrauf addiert); höchstens 3 Marker je Farbe, die Farben zählen getrennt.
 function mirrorAdd(stats, el, n) {
   stats.mirrorEl = stats.mirrorEl || { F: 0, E: 0, W: 0 };
-  const cur = stats.mirrorEl[el] || 0, others = (stats.mirror || 0) - cur;
-  stats.mirrorEl[el] = Math.max(cur, Math.min(n, MAX_MIRROR - others)); mirrorSync(stats);
+  const cur = stats.mirrorEl[el] || 0;
+  stats.mirrorEl[el] = Math.max(cur, Math.min(n, MAX_MIRROR)); mirrorSync(stats);
 }
 function mirrorTake(stats, el, n) { if (stats.mirrorEl) { stats.mirrorEl[el] = Math.max(0, stats.mirrorEl[el] - n); mirrorSync(stats); } }
 function mirrorTakeAny(stats, n) { for (const el of ELEMENTS) { while (n > 0 && mirrorOf(stats, el) > 0) { mirrorTake(stats, el, 1); n--; } } }
@@ -190,14 +190,7 @@ function passAttackTurn(state) {
 function applyComboPlan(state, side, opp, plan, ev, texts, fxs) {
   const c = state.combat;
   for (const [k, lvl] of plan) {
-    if (k === 'fw') {
-      const mel = ev.ord.el, was = mirrorOf(side.stats, mel); mirrorAdd(side.stats, mel, lvl);
-      const now = mirrorOf(side.stats, mel), total = side.stats.mirror || 0;
-      // Liegen schon 3 Marker anderer Farben, bleibt der Spiegel dieser Farbe (ganz oder teilweise) aus: das Protokoll sagt es, und ohne neuen Marker gibt es keinen Schild-Effekt
-      if (now > was || now >= lvl) fxs.push({ kind: 'mirrorcast', who: side.ctrl, to: opp.ctrl, elem: mel, n: lvl });
-      if (now >= lvl) texts.push('Spiegel ' + lvl + ' (' + NAMES[mel] + ', ' + total + ' Marker)');
-      else texts.push('Spiegel ' + lvl + ' (' + NAMES[mel] + '): ' + (now > was ? 'nur ' + now + ' Marker' : 'kein neuer Marker') + ', da höchstens ' + MAX_MIRROR + ' Marker insgesamt liegen dürfen (' + (total - now) + ' anderer Farbe)');
-    }
+    if (k === 'fw') { const mel = ev.ord.el; mirrorAdd(side.stats, mel, lvl); fxs.push({ kind: 'mirrorcast', who: side.ctrl, to: opp.ctrl, elem: mel, n: lvl }); texts.push('Spiegel ' + lvl + ' (' + NAMES[mel] + ', ' + (side.stats.mirror || 0) + ' Marker)'); }
     if (k === 'fe') { texts.push('Lähmung ' + lvl + ': ' + inflictCurses(state, opp, lvl)); fxs.push({ kind: 'aggro', who: side.ctrl, to: opp.ctrl, n: lvl }); }
     if (k === 'rm') {   // Zerrüttung: Der Gegner muss S Handkarten seiner Wahl abwerfen
       const n = Math.min(lvl, opp.deck.hand.filter(Boolean).length);
@@ -290,7 +283,7 @@ function execDefense(state, passOnly) {
   const gain = recoverGain(state);
   // Passen in der Verteidigung bringt kein Mana (nur im Angriffszug gibt es Erholen)
   if (sel.length) consumeSelection(d, sel); else d.marks = [];
-  // Spiegel (dauerhaft, je Farbe eine Stufe, zusammen höchstens 3). Gegen einen Angriff in seiner Farbe gleicht er zuerst fehlende Verteidigung aus
+  // Spiegel (dauerhaft, je Farbe eine Stufe von höchstens 3, die Farben zählen getrennt). Gegen einen Angriff in seiner Farbe gleicht er zuerst fehlende Verteidigung aus
   // (höchstens seine Stufe) und verliert dafür je ausgeglichenen Schaden eine Stufe. Nur wenn der Verteidiger mehr verteidigt als nötig, wirft er den
   // Überschuss zurück (ebenfalls höchstens seine Stufe und höchstens der eingehende Schaden) und verliert dafür je zurückgeworfenen Schaden eine Stufe. Das gilt auch beim Passen.
   const { mLvl, absorb, refl, lost, leftover } = defenseOutcome(side.stats, c.color, c.pending, block);

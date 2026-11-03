@@ -85,7 +85,7 @@ Die Farbe der ersten markierten Karte bestimmt die Rolle (Feuer aggressiv, Wasse
 |---|---|---|
 | Lähmung | Feuer + Erde | **2·S Fluchkarten** (2 / 4 / 6) auf den Ablagestapel der Gegenseite |
 | Zerrüttung | Feuer + Wasser | Gegner wirft S Handkarten seiner Wahl ab |
-| Spiegel (rot) | Wasser + Feuer | roter Spiegel auf Stufe S (nicht addiert, höchstens 3 Stufen insgesamt) |
+| Spiegel (rot) | Wasser + Feuer | roter Spiegel auf Stufe S (nicht addiert, höchstens Stufe 3 je Farbe) |
 | Spiegel (grün) | Wasser + Erde | grüner Spiegel auf Stufe S |
 | Heilung | Erde + Wasser | S HP heilen |
 | Läuterung | Erde + Feuer | S beliebige Marker vom Brett entfernen, je entferntem Marker ein Nachziehtoken |
@@ -93,7 +93,7 @@ Die Farbe der ersten markierten Karte bestimmt die Rolle (Feuer aggressiv, Wasse
 
 **Fluchkarten:** Sie kommen erst in den Zugstapel, wenn der Ablagestapel gemischt wird. Auf der Hand belegen sie einen Platz und wirken nicht. Beim Nachziehen werden sie dauerhaft verworfen, am Kampfende verschwinden alle.
 
-**Spiegel:** Dauerhaft (bis Kampfende), je Farbe eine Stufe (1 bis 3, zusammen höchstens 3). Er wirkt gegen Angriffe in seiner Farbe: (1) Fehlt dem Verteidiger Verteidigung, gleicht der Spiegel den fehlenden Schaden aus, höchstens in Höhe seiner Stufe, und verliert dafür je ausgeglichenem Schaden eine Stufe (die HP des Verteidigers werden um diesen Betrag geschont). (2) Verteidigt der Verteidiger mehr als nötig, wirft der Spiegel den Überschuss unblockbar auf den Angreifer zurück, höchstens in Höhe seiner Stufe und höchstens in Höhe des eingehenden Schadens, und verliert dafür je zurückgeworfenem Schaden eine Stufe. Beides schließt sich aus. Beim Erholen (ohne Verteidigung) gleicht der Spiegel ebenfalls aus. Wasserangriffe lassen sich nicht spiegeln.
+**Spiegel:** Dauerhaft (bis Kampfende), je Farbe eine Stufe (1 bis 3; die Farben zählen getrennt, bis zu 3 Stufen je Farbe, auch gleichzeitig). Er wirkt gegen Angriffe in seiner Farbe: (1) Fehlt dem Verteidiger Verteidigung, gleicht der Spiegel den fehlenden Schaden aus, höchstens in Höhe seiner Stufe, und verliert dafür je ausgeglichenem Schaden eine Stufe (die HP des Verteidigers werden um diesen Betrag geschont). (2) Verteidigt der Verteidiger mehr als nötig, wirft der Spiegel den Überschuss unblockbar auf den Angreifer zurück, höchstens in Höhe seiner Stufe und höchstens in Höhe des eingehenden Schadens, und verliert dafür je zurückgeworfenem Schaden eine Stufe. Beides schließt sich aus. Beim Erholen (ohne Verteidigung) gleicht der Spiegel ebenfalls aus. Wasserangriffe lassen sich nicht spiegeln.
 
 **Läuterung:** Wählbar sind alle Marker auf dem Brett, auch eigene: Todesmarker, Spiegelmarker und **gegnerische Nachziehtokens**. Gegnerische Tokens werden nur zerstört, sie werden nicht gutgeschrieben. Für jeden anderen entfernten Marker erhält der Angreifer ein Nachziehtoken. Keine Heilung.
 
@@ -282,6 +282,8 @@ Treffen Angriff und Verteidigung im **gleichen Element** aufeinander, wählt `cl
 
 **Zeilenversatz:** Der Versatz der beiden Symbolzeilen (0.14.1) galt nur bei gerader Symbolzahl. Bei 7 oder 9 Symbolen sind die Zeilen schon durch die Mittelung (4+3 bzw. 5+4) um eine halbe Breite versetzt; die zusätzliche Verschiebung hob das wieder auf, und die Symbole standen genau übereinander. `grid` in `src/ui/26-erde.js` verschiebt die Zeilen jetzt nur noch bei gleich langen Zeilen (6, 8, 10). Gilt für Angriffs- und Verteidigungssymbole. Nur die Anzeige ändert sich.
 
-**Spiegel-Limit:** Die Regel bleibt unverändert: höchstens 3 Spiegelmarker insgesamt über alle Farben. Liegen schon 3 Marker einer anderen Farbe (z. B. Erde 3), bleibt ein neu gewirkter Spiegel (z. B. Feuer) aus. Früher meldete das Protokoll trotzdem „Spiegel 3 (Feuer, 3 Marker)“ und der Schild-Effekt lief; das wirkte, als wäre der Feuerschild gelegt worden. Jetzt steht im Protokoll „Spiegel N (Feuer): kein neuer Marker, da höchstens 3 Marker insgesamt liegen dürfen (3 anderer Farbe)“ (bei teilweiser Wirkung „nur M Marker“), und ohne neuen Marker gibt es keinen Schild-Effekt (`applyComboPlan`, `src/engine/65-kampfablauf.js`). Gleich bleibt der Text, wenn der Spiegel in voller Stufe liegt.
+**Spiegel-Limit (in 0.16 nur im Protokoll geändert, in 0.16.1 abgelöst):** Bis 0.16 galten höchstens 3 Spiegelmarker insgesamt über alle Farben. Lagen z. B. 3 Erde-Marker, blieb ein neuer Feuer-Spiegel ganz aus, obwohl das Protokoll „Spiegel 3 (Feuer, 3 Marker)“ meldete und der Schild-Effekt lief (aufgefallen im Showdown 3 der Partie mit Seed 1653969251). Seit 0.16.1 siehe unten.
 
-*Offene Frage (nicht entschieden):* Soll ein neu gewirkter Spiegel Marker einer anderen Farbe verdrängen dürfen, statt wirkungslos zu bleiben? Siehe `docs/notizen.md`.
+## Spiegel: bis zu 3 Marker je Farbe (0.16.1)
+
+**Regeländerung:** Das Limit von 3 Spiegelmarkern gilt **je Farbe** und nicht mehr insgesamt: Feuer-, Erde- (und Wasser-)Marker sind verschiedene Marker und zählen getrennt. Es können also bis zu 3 Feuer- und 3 Erde-Marker gleichzeitig liegen (Summe `stats.mirror` bis 6; die Anzeige zeigt je Farbe einen Schild mit ×n). Ein Kombo der Stufe S bringt den Spiegel dieser Farbe weiter auf Stufe S (nicht addiert, höchstens 3). Umgesetzt in `mirrorAdd` (`src/engine/65-kampfablauf.js`); Protokolltext „Spiegel N (Farbe, M Marker)“ nennt die Gesamtzahl aller Marker. Die Meldung „kein neuer Marker“ aus 0.16 entfällt, da der Fall nicht mehr vorkommt. Die KI wertet Spiegel weiter je Farbe (`mirrorOf`); ob sie die neue Möglichkeit klug nutzt, ist nicht eigens abgestimmt (`npm run balance`).

@@ -308,18 +308,26 @@ test('Läuterung Stufe 3 entfernt beliebig gemischt eigene und gegnerische Spieg
   assert.equal(me.stats.freeDraws, 3, 'je entferntem Marker ein Gratis-Nachziehen');
 });
 
-test('Spiegel-Kombo: Liegen schon 3 Marker anderer Farbe, kommt kein neuer Marker dazu, und das Protokoll sagt es', () => {
+test('Spiegel-Kombo: Die Farben zählen getrennt, bis zu 3 Marker je Farbe (Erde 3 und Feuer 3 liegen zusammen)', () => {
   const { s, me } = combatSetup(11, ['W2', 'F3']);
   me.stats.mirrorEl = { F: 0, E: 3, W: 0 }; me.stats.mirror = 3;
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
   assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
-  assert.equal(M.mirrorOf(me.stats, 'F'), 0, 'kein Feuer-Marker, das Limit von 3 ist voll'); assert.equal(M.mirrorOf(me.stats, 'E'), 3);
-  const txt = s.log.map(l => l.txt).filter(t => t.includes('Spiegel'));
-  assert.ok(txt.some(t => t.includes('kein neuer Marker') && t.includes('höchstens 3')), 'Protokoll nennt den Grund: ' + txt.join(' | '));
-  assert.ok(!txt.some(t => /Spiegel \d \(Feuer, 3 Marker\)/.test(t)), 'keine irreführende Erfolgsmeldung');
+  const f = M.mirrorOf(me.stats, 'F');
+  assert.ok(f > 0, 'Feuer-Spiegel kommt trotz Erde 3 dazu'); assert.ok(f <= 3, 'höchstens 3 je Farbe'); assert.equal(M.mirrorOf(me.stats, 'E'), 3, 'Erde bleibt');
+  assert.equal(me.stats.mirror, 3 + f, 'Summe beider Farben');
+  assert.ok(s.log.some(l => l.txt.includes('Spiegel ' + f + ' (Feuer, ' + (3 + f) + ' Marker)')), 'Protokoll nennt die Gesamtzahl');
 });
 
-test('Spiegel-Kombo ohne Limit: Marker der Farbe kommen dazu, Protokoll wie bisher', () => {
+test('Spiegel-Kombo: Mehr als 3 Marker je Farbe gibt es nicht', () => {
+  const { s, me } = combatSetup(11, ['W3', 'F3']);
+  me.stats.mirrorEl = { F: 2, E: 0, W: 0 }; me.stats.mirror = 2;
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
+  assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+  assert.equal(M.mirrorOf(me.stats, 'F'), 3, 'auf Stufe 3 begrenzt, nicht addiert');
+});
+
+test('Spiegel-Kombo auf leerem Brett: Marker der Farbe kommen dazu, Protokoll wie bisher', () => {
   const { s, me } = combatSetup(11, ['W2', 'F3']);
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
   assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
