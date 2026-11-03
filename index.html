@@ -3224,19 +3224,19 @@ function clashStyle(p,ea,ed){
   if((ea==='F'&&ed==='W')||(ea==='W'&&ed==='F'))return'dampf';
   if((ea==='F'&&ed==='E')||(ea==='E'&&ed==='F'))return'lava';
   if((ea==='E'&&ed==='W')||(ea==='W'&&ed==='E'))return'schlamm';
-  if(ea==='E'||ed==='E')return'splitter';   // Erde gegen Erde
-  if(ea===ed)return'schock';
+  if(ea===ed)return ea==='F'?'feuerball':ea==='E'?'bersten':'woge';   // gleiche Elemente
   return'funken';
 }
 // Dauer der Auflösung: Lava und Schlamm brauchen länger als Dampf und die älteren Stile (Werte der Elementkombi-Werkstatt)
-function clashDur(p,style){return style==='lava'||style==='schlamm'?p.clashT:.6}
+const KLANG=['lava','schlamm','feuerball','bersten','woge'];   // Stile mit eigener, längerer Dauer
+function clashDur(p,style){return KLANG.includes(style)?p.clashT:.6}
 const KFLOOR=18;   // Boden unter dem Aufprall (Lavalache, Schlammpfütze)
 function kMix(a,b,k){const n=parseInt(a.slice(1),16),m=parseInt(b.slice(1),16),f=(x,y)=>Math.round(x+(y-x)*k);return '#'+((1<<24)+(f(n>>16&255,m>>16&255)<<16)+(f(n>>8&255,m>>8&255)<<8)+f(n&255,m&255)).toString(16).slice(1)}
 function kPuff(ctx,x,y,r,rgb,a){const g=ctx.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,'rgba('+rgb+','+clamp(a)+')');g.addColorStop(1,'rgba('+rgb+',0)');ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r,0,7);ctx.fill()}
-function kRock(ctx,x,y,r,rot,seed,fill){
+function kRock(ctx,x,y,r,rot,seed,fill,edge){
   const rn=rng(seed),n=7;ctx.save();ctx.translate(x,y);ctx.rotate(rot);ctx.beginPath();
   for(let k=0;k<n;k++){const a=k/n*Math.PI*2,rr=r*(.65+rn()*.5);const px=Math.cos(a)*rr,py=Math.sin(a)*rr;k?ctx.lineTo(px,py):ctx.moveTo(px,py)}
-  ctx.closePath();ctx.fillStyle=fill;ctx.fill();ctx.restore();
+  ctx.closePath();ctx.fillStyle=fill;ctx.fill();if(edge){ctx.strokeStyle=edge;ctx.lineWidth=1.5;ctx.stroke()}ctx.restore();
 }
 // Wurfbahn mit Schwerkraft: Ort zur Zeit s, Landezeit und ob schon gelandet
 function kBall(x0,y0,vx,vy,G,gy,s){
@@ -3332,10 +3332,113 @@ function kMud(ctx,p,x,y,g,sr,dur){
     ctx.restore();
   }
 }
+function kDrop(ctx,x,y,r,ang,col){
+  ctx.save();ctx.translate(x,y);ctx.rotate(ang);ctx.shadowColor=col;ctx.shadowBlur=14;
+  ctx.beginPath();ctx.moveTo(r*1.6,0);ctx.bezierCurveTo(r*.5,-r*1.1,-r*1.1,-r*.9,-r*1.1,0);ctx.bezierCurveTo(-r*1.1,r*.9,r*.5,r*1.1,r*1.6,0);ctx.closePath();
+  ctx.fillStyle=rgba(col,.85);ctx.fill();ctx.shadowBlur=0;ctx.fillStyle='rgba(255,255,255,.7)';ctx.beginPath();ctx.ellipse(r*.2,-r*.35,r*.35,r*.2,-.4,0,7);ctx.fill();ctx.restore();
+}
+// Gleiche Elemente: Feuerball, Bersten, Woge (Werte der Elementkombi-Werkstatt)
+function kFire(ctx,p,x,y,g,sr,dur){
+  const S=p.clashSize,fade=1-seg(g,.85,1),gy=y+KFLOOR;
+  const burst=eo(seg(g,0,.16)),out=1-seg(g,.16,.5);   // schneller Ausbruch, dann rasch vorbei
+  const R=(24+34*burst)*S*p.fireBall*out;
+  ctx.save();   // Rußfleck auf dem Boden
+  ctx.globalAlpha=fade*seg(g,.25,.6)*.55;ctx.translate(x,gy);ctx.scale(1,.34);
+  const sg=ctx.createRadialGradient(0,0,0,0,0,52*S*p.fireBall);sg.addColorStop(0,'rgba(22,15,12,.8)');sg.addColorStop(1,'rgba(22,15,12,0)');
+  ctx.fillStyle=sg;ctx.beginPath();ctx.arc(0,0,52*S*p.fireBall,0,7);ctx.fill();ctx.restore();
+  ctx.save();ctx.globalCompositeOperation='lighter';
+  if(R>1){
+    const gr=ctx.createRadialGradient(x,y,0,x,y,R);gr.addColorStop(0,rgba('#fff6d8',.95*out+.05));gr.addColorStop(.3,rgba('#ffb347',.85*out));gr.addColorStop(.65,rgba('#ff5a1f',.55*out));gr.addColorStop(1,'rgba(160,30,10,0)');
+    ctx.fillStyle=gr;ctx.beginPath();ctx.arc(x,y,R,0,7);ctx.fill();
+  }
+  const rq=seg(g,0,.35);   // Druckwelle, kreisrund und schnell
+  if(rq>0&&rq<1&&p.fireRing>0){ctx.strokeStyle=rgba(lighten(EL.F,.5),(1-rq)*.8*Math.min(1,p.fireRing));ctx.lineWidth=4*(1-rq)+.8;ctx.beginPath();ctx.arc(x,y,12+eo(rq)*100*S,0,7);ctx.stroke()}
+  const nT=Math.round(p.fireTongues),off=sr()*Math.PI*2;
+  ctx.globalAlpha=Math.pow(out,.7);
+  for(let k=0;k<nT;k++){   // Flammenzungen schießen in alle Richtungen (360 Grad) und sind rasch wieder weg
+    const a=off+k/nT*Math.PI*2+(sr()-.5)*.5,L=(30+sr()*46)*S*p.fireBall*burst*(.3+.7*out),w=(5+sr()*6)*S*.8*(.5+.5*out),ph=sr()*6;
+    if(L<2)continue;
+    const r0=R*.3,bx=x+Math.cos(a)*r0,by=y+Math.sin(a)*r0,ca=Math.cos(a),sa=Math.sin(a),tx=bx+ca*L,ty=by+sa*L,nx=-sa,ny=ca;
+    const lg=ctx.createLinearGradient(bx,by,tx,ty);lg.addColorStop(0,'rgba(255,233,168,.9)');lg.addColorStop(.5,'rgba(255,122,61,.75)');lg.addColorStop(1,'rgba(255,60,20,0)');
+    ctx.fillStyle=lg;ctx.beginPath();ctx.moveTo(bx-nx*w,by-ny*w);
+    ctx.quadraticCurveTo(bx+ca*L*.55-nx*w*1.1,by+sa*L*.55-ny*w*1.1,tx,ty);
+    ctx.quadraticCurveTo(bx+ca*L*.55+nx*w*1.1,by+sa*L*.55+ny*w*1.1,bx+nx*w,by+ny*w);ctx.closePath();ctx.fill();
+  }
+  ctx.globalAlpha=1;
+  for(let k=0;k<Math.round(30*p.fireEmbers);k++){   // Glut wird nach allen Seiten geschleudert und bremst schnell ab
+    const a=sr()*Math.PI*2,v=260+sr()*320,life=.25+sr()*.35,d0=sr()*.06,q=(g-d0)/life;
+    if(q<=0||q>=1)continue;const u=(g-d0)*dur,dd=v*(1-Math.exp(-u*6))/6*S*.8;
+    ctx.fillStyle=rgba(k%3?'#ffc060':'#ff7a3d',(1-q)*.95);ctx.beginPath();ctx.arc(x+Math.cos(a)*dd,y+Math.sin(a)*dd,1.3+sr()*1.6,0,7);ctx.fill();
+  }
+  ctx.restore();
+  ctx.save();   // Rauch bleibt nach dem Knall stehen
+  for(let k=0;k<Math.round(7*p.fireSmoke);k++){
+    const ox=(sr()-.5)*64*S,rise=22+sr()*34,r=(14+sr()*12)*S*.8*(.6+g),al=Math.sin(Math.PI*clamp((g-.12)/.88))*.3*p.fireSmoke*Math.min(1,seg(g,.12,.3)*1.5);
+    kPuff(ctx,x+ox*(.3+g),y-g*rise,r,'60,52,48',al);
+  }
+  ctx.restore();
+}
+// Erde + Erde: Bersten. Zwei Felsen prallen, zerplatzen in Brocken, Risse laufen durch den Boden, Staub wallt auf
+function kBerst(ctx,p,x,y,g,sr,dur){
+  const S=p.clashSize,s=g*dur,G=760,gy=y+KFLOOR,fade=1-seg(g,.85,1);
+  const cq=eo(seg(g,.04,.4));
+  if(cq>0&&p.rockCracks>0){   // Risse im Boden
+    ctx.save();ctx.globalAlpha=fade;ctx.translate(x,gy);ctx.scale(1,.36);ctx.lineCap='round';ctx.lineJoin='round';
+    const cr=rng(313);
+    for(let k=0;k<Math.round(8*p.rockCracks);k++){
+      let a=cr()*Math.PI*2,px=0,py=0;const L=(36+cr()*58)*S*cq,n=5;
+      ctx.strokeStyle='rgba(18,14,8,'+(.85-k*.02)+')';ctx.lineWidth=2.6*(1-k*.04);ctx.beginPath();ctx.moveTo(0,0);
+      for(let i=1;i<=n;i++){a+=(cr()-.5)*.9;px+=Math.cos(a)*L/n;py+=Math.sin(a)*L/n;ctx.lineTo(px,py)}
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  for(let k=0;k<Math.round(9*p.rockDust);k++){   // Staubwolke
+    const a=sr()*Math.PI*2,d=(20+sr()*48)*S*g,r=(12+sr()*16)*S*(.6+g),al=Math.sin(Math.PI*clamp(g))*.38*p.rockDust;
+    kPuff(ctx,x+Math.cos(a)*d,gy-6+Math.sin(a)*d*.34-g*26,r,'138,136,98',al);
+  }
+  for(let k=0;k<Math.round(p.rockShards);k++){   // Brocken
+    const a=-Math.PI/2+(sr()-.5)*2.4,v=(150+sr()*210)*S*p.rockThrow*.8,r=(5+sr()*9)*S*.8,rot0=sr()*6,spin=(sr()-.5)*9,sd=Math.floor(sr()*1e5);
+    const b=kBall(x,y,Math.cos(a)*v*.62,Math.sin(a)*v,G,gy+(sr()-.5)*10,s);
+    ctx.save();ctx.globalAlpha=fade;
+    kRock(ctx,b.x,b.y,r,rot0+spin*Math.min(s,b.tl),sd,k%3?'#4c4a36':'#6c7551',lighten('#93c24f',.15));
+    ctx.restore();
+  }
+}
+// Wasser + Wasser: Woge. Die Wasser schlagen zusammen, ein runder Wasserberg steigt auf, Tropfen fallen, Ringwellen laufen über den Boden
+function kWoge(ctx,p,x,y,g,sr,dur){
+  const S=p.clashSize,s=g*dur,G=700,gy=y+KFLOOR,fade=1-seg(g,.85,1),col=EL.W;
+  const pq=eo(seg(g,.05,.45));
+  if(pq>0){   // Wasserfläche am Boden
+    ctx.save();ctx.globalAlpha=fade;ctx.translate(x,gy);ctx.scale(1,.34);
+    const R=54*S*p.waterSurge*pq,gr=ctx.createRadialGradient(0,0,0,0,0,R);gr.addColorStop(0,rgba('#8cc8ff',.55));gr.addColorStop(.7,rgba('#2a74c4',.4));gr.addColorStop(1,rgba('#2a74c4',0));
+    ctx.fillStyle=gr;ctx.beginPath();ctx.arc(0,0,R,0,7);ctx.fill();
+    for(let k=0;k<Math.round(p.waterRipples);k++){const q=clamp((g-.05-k*.12)/.62);if(q>0&&q<1){ctx.strokeStyle=rgba('#cfeaff',(1-q)*.75);ctx.lineWidth=3*(1-q)+.8;ctx.beginPath();ctx.arc(0,0,10+q*112*S*p.waterSurge,0,7);ctx.stroke()}}
+    ctx.restore();
+  }
+  const up=Math.sin(Math.PI*clamp(g/.45));   // niedriger Wasserberg: steigt kurz auf und sackt wieder zusammen
+  if(up>.02&&p.waterDome>0){
+    const h=24*S*p.waterDome*up,wd=(13+9*up)*S,wob=1+.06*Math.sin(g*dur*13);
+    ctx.save();ctx.globalAlpha=fade;ctx.translate(x,gy-2);
+    const lg=ctx.createLinearGradient(0,-h,0,0);lg.addColorStop(0,rgba('#cfeaff',.95));lg.addColorStop(.45,rgba('#52a6f5',.85));lg.addColorStop(1,rgba('#1f5fa8',.85));
+    ctx.fillStyle=lg;ctx.shadowColor=col;ctx.shadowBlur=14;
+    ctx.beginPath();ctx.moveTo(-wd,0);ctx.bezierCurveTo(-wd*.9,-h*.75*wob,-wd*.45,-h*wob,0,-h*wob);ctx.bezierCurveTo(wd*.45,-h*wob,wd*.9,-h*.75*wob,wd,0);ctx.closePath();ctx.fill();
+    ctx.shadowBlur=0;ctx.fillStyle='rgba(255,255,255,.4)';ctx.beginPath();ctx.ellipse(-wd*.28,-h*.62,wd*.16,h*.2,-.3,0,7);ctx.fill();
+    ctx.restore();
+  }
+  for(let k=0;k<Math.round(p.waterDrops);k++){   // Tropfen
+    const vy=-(120+sr()*250)*S*.8*p.waterSurge,vx=(sr()-.5)*280*S*.7,r=(2.4+sr()*3.4)*S*.8,ground=gy+(sr()-.5)*10;
+    const b=kBall(x,y,vx,vy,G,ground,s),land=clamp(b.x,x-170*S,x+170*S);
+    ctx.save();ctx.globalAlpha=fade;
+    if(!b.landed)kDrop(ctx,b.x,b.y,r,Math.atan2(b.vy,b.vx),'#7fb6e8');
+    else{const q=clamp((s-b.tl)/.38);if(q<1){ctx.strokeStyle=rgba('#cfeaff',(1-q)*.7);ctx.lineWidth=1.4;ctx.beginPath();ctx.ellipse(land,b.y+2,3+q*15,(3+q*15)*.34,0,0,7);ctx.stroke()}}
+    ctx.restore();
+  }
+}
 function drawClash(ctx,p,style,x,y,g,ea,ed,seed){
   const ca=EL[ea],cd=EL[ed],S=p.clashSize,sr=rng(seed);
   ctx.save();
-  if(style==='dampf'||style==='lava'||style==='schlamm')kFlash(ctx,p,x,y,seg(g,0,.45),ca,cd);
+  if(style==='dampf'||KLANG.includes(style))kFlash(ctx,p,x,y,seg(g,0,.45),ca,cd);
   if(style==='schock'||style==='funken'){
     ctx.globalCompositeOperation='lighter';const fl=ctx.createRadialGradient(x,y,0,x,y,50*S);fl.addColorStop(0,'rgba(255,255,255,'+(.9*(1-g))+')');fl.addColorStop(1,rgba(ca,0));
     ctx.fillStyle=fl;ctx.beginPath();ctx.arc(x,y,50*S*(.4+g),0,7);ctx.fill();
@@ -3349,6 +3452,9 @@ function drawClash(ctx,p,style,x,y,g,ea,ed,seed){
   if(style==='dampf')kSteam(ctx,p,x,y,g,sr);
   if(style==='lava')kLava(ctx,p,x,y,g,sr,clashDur(p,style));
   if(style==='schlamm')kMud(ctx,p,x,y,g,sr,clashDur(p,style));
+  if(style==='feuerball')kFire(ctx,p,x,y,g,sr,clashDur(p,style));
+  if(style==='bersten')kBerst(ctx,p,x,y,g,sr,clashDur(p,style));
+  if(style==='woge')kWoge(ctx,p,x,y,g,sr,clashDur(p,style));
   if(style==='splitter'){
     for(let k=0;k<14;k++){const a=sr()*Math.PI*2,v=40+sr()*120*S,rot=sr()*6+g*(sr()-.5)*14,sz=3+sr()*6,gx=x+Math.cos(a)*v*g,gy=y+Math.sin(a)*v*g*.7+g*g*60;
       ctx.save();ctx.translate(gx,gy);ctx.rotate(rot);ctx.globalAlpha=1-g;ctx.fillStyle=k%3?'#6b6246':rgba(k%2?ca:cd,.9);ctx.beginPath();ctx.moveTo(-sz,-sz*.5);ctx.lineTo(sz,-sz*.2);ctx.lineTo(sz*.3,sz);ctx.closePath();ctx.fill();ctx.restore()}
@@ -3358,7 +3464,7 @@ function drawClash(ctx,p,style,x,y,g,ea,ed,seed){
 }
 
 
-  const SC = 1.5, KP = { look: 'elementar', water: 'blob', wobble: 1, heavy: 1.75, flight: .9, gap: .07, arc: 185, trail: 1.7, size: 1, spread: 60, hover: .75, clash: 'auto', clashSize: 1.4, steam: 1, shake: 1, hit: 'beides', clashT: 1.5, flash: 1, steamRise: 1, steamDense: 1, lavaChunks: 9, lavaThrow: 1, lavaSparks: 1, lavaGlow: 1, lavaPool: 1, lavaSmoke: 1, mudClumps: 12, mudThrow: 1, mudPool: 1, mudBubbles: 6, mudTone: .15, mudDrops: .3 };   // Werte aus der Kampfeffekt-Werkstatt
+  const SC = 1.5, KP = { look: 'elementar', water: 'blob', wobble: 1, heavy: 1.75, flight: .9, gap: .07, arc: 185, trail: 1.7, size: 1, spread: 60, hover: .75, clash: 'auto', clashSize: 1.4, steam: 1, shake: 1, hit: 'beides', clashT: 1.5, flash: 1, steamRise: 1, steamDense: 1, lavaChunks: 9, lavaThrow: 1, lavaSparks: 1, lavaGlow: 1, lavaPool: 1, lavaSmoke: 1, mudClumps: 12, mudThrow: 1, mudPool: 1, mudBubbles: 6, mudTone: .15, mudDrops: .3, fireBall: 1, fireTongues: 9, fireEmbers: 1, fireRing: 1, fireSmoke: 1, rockShards: 10, rockThrow: 1, rockDust: 1, rockCracks: 1, waterDome: 0, waterSurge: 1, waterRipples: 3, waterDrops: 14 };   // Werte aus der Kampfeffekt-Werkstatt
   const at = el => { if (!el) return null; const r = el.getBoundingClientRect(), sr = stage.getBoundingClientRect(), k = sr.width / stage.offsetWidth; return { x: (r.left + r.width / 2 - sr.left) / k, y: (r.top + r.height / 2 - sr.top) / k }; };
   const panelOf = pid => pid === ME ? stage.querySelector('.sbody[data-lead]') : stage.querySelector('.sbody:not([data-lead])');
   const U = pt => ({ x: pt.x / SC, y: pt.y / SC });   // Bühnenpixel -> Werkstatt-Einheiten
@@ -3495,13 +3601,13 @@ function earthFormRaw(ctx, x, by, seed, i, t, tCrack, tRise, endAt, ending) {
     const T = d ? d.T : { tA: 0, tD: 1e9, tC: 1e9, tK: 1e9, tH: 1e9, hf: .8, cl: .6, pairs: 0, left: 0, end: 1e9 };
     ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, SW, 800);
     const HA = handOf(e.who), HD = d ? d.H : null, hp = d ? d.hp : null, b = d ? d.b : 0, seeds = e.seeds;
-    let amp = p.shake * (t > T.tK && t < T.tK + .4 ? (p.atk !== p.def && (p.atk === 'E' || p.def === 'E') ? 6 : 3) * (1 - seg(t, T.tK, T.tK + .4)) : 0);   // Lava und Schlamm wackeln stärker als Dampf
+    let amp = p.shake * (t > T.tK && t < T.tK + .4 ? (['lava', 'schlamm', 'feuerball', 'bersten'].includes(clashStyle(p, p.atk, p.def)) ? 6 : 3) * (1 - seg(t, T.tK, T.tK + .4)) : 0);   // Lava, Schlamm, Feuerball und Bersten wackeln stärker als Dampf und Woge
     const earthHit = (el, starts, N) => { if (el !== 'E') return; for (let i = 0; i < N; i++) { const ta = starts + i * p.gap + p.flight; if (t > ta && t < ta + .4) amp += p.shake * p.heavy * 7 * Math.exp(-(t - ta) * 9); } };
     earthHit(p.atk, 0, n); if (d) earthHit(p.def, T.tD, b);
     ctx.setTransform(SC, 0, 0, SC, 0, 0); ctx.translate(Math.sin(t * 95) * amp, Math.cos(t * 80) * amp * .7);
-    const grid = (i, cnt, isAtk) => {   // ab 6 Geschossen zweizeilig, damit die Magie nicht aus der Kampfbox ragt; jede Zeile mittig, die zweite weiter von der Mitte entfernt
+    const grid = (i, cnt, isAtk) => {   // ab 6 Geschossen zweizeilig, damit die Magie nicht aus der Kampfbox ragt; jede Zeile mittig, die zweite weiter von der Mitte entfernt; die Zeilen sind um eine halbe Symbolbreite gegeneinander versetzt
       const rows = cnt > 5 ? 2 : 1, per = Math.ceil(cnt / rows), row = Math.floor(i / per), inRow = row < rows - 1 ? per : cnt - per * row, y0 = slotY(e, isAtk), sg = y0 >= C0.y ? 1 : -1;
-      return { x: C0.x + (i % per - (inRow - 1) / 2) * p.spread, y: rows === 1 ? y0 : C0.y + sg * (20 + row * 24), cy: rows === 1 ? C0.y : C0.y + (row ? 14 : -14) };   // cy: Treffpunkt der Paare
+      return { x: C0.x + (i % per - (inRow - 1) / 2) * p.spread + (rows === 1 ? 0 : (row ? 1 : -1) * p.spread / 4), y: rows === 1 ? y0 : C0.y + sg * (20 + row * 24), cy: rows === 1 ? C0.y : C0.y + (row ? 14 : -14) };   // cy: Treffpunkt der Paare
     };
     const slotA = i => grid(i, n, true), slotD = j => grid(j, b, false);
     for (let i = 0; i < n; i++) {   // Angriffsfunken
@@ -3739,7 +3845,7 @@ function showStart(pg) {
     h += '<img class="logo" alt="" src="assets/img/logo.webp"><div class="menulist">' +
       (run ? menuBtn('resume', 'Spiel fortsetzen', '', 'primary') : '') +
       menuTo('single', 'Einzelspieler', run ? '' : 'primary') + menuTo('multi', 'Mehrspieler') + menuTo('settings', 'Einstellungen') + menuBtn('quit', 'Beenden') + '</div>' +
-      '<div class="menufoot">' + menuTo('about', 'Neu in Version 0.14', 'link') + '</div>';
+      '<div class="menufoot">' + menuTo('about', 'Neu in Version 0.14.1', 'link') + '</div>';
   } else if (pg === 'single') {
     h += '<h2>Einzelspieler</h2><div class="menulist">' +
       menuBtn('newgame', run ? 'Neues Spiel gegen den Computer' : 'Gegen den Computer spielen', '', run ? '' : 'primary') +
@@ -3752,7 +3858,7 @@ function showStart(pg) {
   } else if (pg === 'settings') {
     h += '<h2>Einstellungen</h2><div class="menulist">' + settingsHTML() + back + '</div>';
   } else if (pg === 'about') {
-    h += '<p class="note intro" style="margin-top:-2px"><b>Danke, dass du Magus testest!</b> <b>Neu in Version 0.14:</b> Treffen im Kampf zwei verschiedene Elemente aufeinander, hat jede Kombination ihren eigenen Effekt: <b>Feuer gegen Wasser</b> ergibt <b>Dampf</b>, <b>Feuer gegen Erde</b> <b>Lava</b> mit glühenden Brocken, Funken und Rauch, <b>Erde gegen Wasser</b> <b>Schlamm</b> mit Spritzern, einer Pfütze und Blasen. <b>Neu in Version 0.13:</b> Die <b>Vorschau</b>, die bisher nur bei Gold und Upgrade-Punkten erschien, zeigt jetzt auch weitere zu erwartende Änderungen: Fährst du mit der Maus über <b>Verteidigen</b>, <b>Passen</b>, <b>Erholen</b> oder den <b>Nachziehstapel</b>, erscheinen die zu erwartenden Änderungen von HP, Mana und Gold, sinkende Werte in <b>Rot</b>, steigende in <b>Grün</b>. Bei <b>rotem Nachziehmarker</b> kostet das Nachziehen im Kampf jetzt <b>1 Mana</b>, in der Weltphase bekommt der Gegner Gold. <b>Neu in Version 0.11:</b> Der <b>Computer</b> entscheidet sich in festgefahrenen Kämpfen schneller zum Angriff; lange Pattphasen, vor allem im ersten Abschnitt, werden dadurch seltener. Beim Spielstart <b>drehen sich die Monsterkarten</b> jetzt richtig um und die <b>Handkarten</b> drehen sich beim Austeilen und Aufdecken mit Schwung um.</p><div class="menulist">' + back + '</div>';
+    h += '<p class="note intro" style="margin-top:-2px"><b>Danke, dass du Magus testest!</b> <b>Neu in Version 0.14.1:</b> Auch <b>gleiche Elemente</b> haben jetzt ihren eigenen Effekt: <b>Feuer gegen Feuer</b> ergibt einen <b>Feuerball</b>, der in alle Richtungen explodiert, <b>Erde gegen Erde</b> ein <b>Bersten</b> mit Brocken, Staub und Rissen im Boden, <b>Wasser gegen Wasser</b> eine <b>Woge</b> mit Tropfen und Ringwellen. Sind es so viele Angriffssymbole, dass sie in <b>zwei Zeilen</b> stehen, sind die Zeilen jetzt <b>gegeneinander versetzt</b>. <b>Neu in Version 0.14:</b> Treffen im Kampf zwei verschiedene Elemente aufeinander, hat jede Kombination ihren eigenen Effekt: <b>Feuer gegen Wasser</b> ergibt <b>Dampf</b>, <b>Feuer gegen Erde</b> <b>Lava</b> mit glühenden Brocken, Funken und Rauch, <b>Erde gegen Wasser</b> <b>Schlamm</b> mit Spritzern, einer Pfütze und Blasen. <b>Neu in Version 0.13:</b> Die <b>Vorschau</b>, die bisher nur bei Gold und Upgrade-Punkten erschien, zeigt jetzt auch weitere zu erwartende Änderungen: Fährst du mit der Maus über <b>Verteidigen</b>, <b>Passen</b>, <b>Erholen</b> oder den <b>Nachziehstapel</b>, erscheinen die zu erwartenden Änderungen von HP, Mana und Gold, sinkende Werte in <b>Rot</b>, steigende in <b>Grün</b>. Bei <b>rotem Nachziehmarker</b> kostet das Nachziehen im Kampf jetzt <b>1 Mana</b>, in der Weltphase bekommt der Gegner Gold. <b>Neu in Version 0.11:</b> Der <b>Computer</b> entscheidet sich in festgefahrenen Kämpfen schneller zum Angriff; lange Pattphasen, vor allem im ersten Abschnitt, werden dadurch seltener. Beim Spielstart <b>drehen sich die Monsterkarten</b> jetzt richtig um und die <b>Handkarten</b> drehen sich beim Austeilen und Aufdecken mit Schwung um.</p><div class="menulist">' + back + '</div>';
   } else if (pg === 'quit') {
     h += '<p class="note" style="text-align:center;font-size:19px">Danke fürs Spielen!<br>Ein Browser-Tab lässt sich vom Spiel aus nicht immer schließen. Schließe diesen Tab oder dieses Fenster einfach selbst.</p><div class="menulist">' + back + '</div>';
   }

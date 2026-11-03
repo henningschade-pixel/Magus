@@ -124,13 +124,13 @@ function earthFormRaw(ctx, x, by, seed, i, t, tCrack, tRise, endAt, ending) {
     const T = d ? d.T : { tA: 0, tD: 1e9, tC: 1e9, tK: 1e9, tH: 1e9, hf: .8, cl: .6, pairs: 0, left: 0, end: 1e9 };
     ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, SW, 800);
     const HA = handOf(e.who), HD = d ? d.H : null, hp = d ? d.hp : null, b = d ? d.b : 0, seeds = e.seeds;
-    let amp = p.shake * (t > T.tK && t < T.tK + .4 ? (p.atk !== p.def && (p.atk === 'E' || p.def === 'E') ? 6 : 3) * (1 - seg(t, T.tK, T.tK + .4)) : 0);   // Lava und Schlamm wackeln stärker als Dampf
+    let amp = p.shake * (t > T.tK && t < T.tK + .4 ? (['lava', 'schlamm', 'feuerball', 'bersten'].includes(clashStyle(p, p.atk, p.def)) ? 6 : 3) * (1 - seg(t, T.tK, T.tK + .4)) : 0);   // Lava, Schlamm, Feuerball und Bersten wackeln stärker als Dampf und Woge
     const earthHit = (el, starts, N) => { if (el !== 'E') return; for (let i = 0; i < N; i++) { const ta = starts + i * p.gap + p.flight; if (t > ta && t < ta + .4) amp += p.shake * p.heavy * 7 * Math.exp(-(t - ta) * 9); } };
     earthHit(p.atk, 0, n); if (d) earthHit(p.def, T.tD, b);
     ctx.setTransform(SC, 0, 0, SC, 0, 0); ctx.translate(Math.sin(t * 95) * amp, Math.cos(t * 80) * amp * .7);
-    const grid = (i, cnt, isAtk) => {   // ab 6 Geschossen zweizeilig, damit die Magie nicht aus der Kampfbox ragt; jede Zeile mittig, die zweite weiter von der Mitte entfernt
+    const grid = (i, cnt, isAtk) => {   // ab 6 Geschossen zweizeilig, damit die Magie nicht aus der Kampfbox ragt; jede Zeile mittig, die zweite weiter von der Mitte entfernt; die Zeilen sind um eine halbe Symbolbreite gegeneinander versetzt
       const rows = cnt > 5 ? 2 : 1, per = Math.ceil(cnt / rows), row = Math.floor(i / per), inRow = row < rows - 1 ? per : cnt - per * row, y0 = slotY(e, isAtk), sg = y0 >= C0.y ? 1 : -1;
-      return { x: C0.x + (i % per - (inRow - 1) / 2) * p.spread, y: rows === 1 ? y0 : C0.y + sg * (20 + row * 24), cy: rows === 1 ? C0.y : C0.y + (row ? 14 : -14) };   // cy: Treffpunkt der Paare
+      return { x: C0.x + (i % per - (inRow - 1) / 2) * p.spread + (rows === 1 ? 0 : (row ? 1 : -1) * p.spread / 4), y: rows === 1 ? y0 : C0.y + sg * (20 + row * 24), cy: rows === 1 ? C0.y : C0.y + (row ? 14 : -14) };   // cy: Treffpunkt der Paare
     };
     const slotA = i => grid(i, n, true), slotD = j => grid(j, b, false);
     for (let i = 0; i < n; i++) {   // Angriffsfunken
