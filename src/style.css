@@ -351,3 +351,5 @@ b.dfl.inf{animation-iteration-count:infinite}
 .arcs .arcfx.pos{stroke:#7fd08a}.arcs .arcfx.neg{stroke:#ff5a5e}
 .arcs .arcfx.inf{animation-duration:.8s;animation-iteration-count:infinite}
 @keyframes dflseg{0%,100%{opacity:1}50%{opacity:.1}}
+/* Vorschau (seit 0.5.6.3): der Wert bleibt in Normalfarbe, die Änderung zeigen Blinken und die Zahl */
+b.pvb .pvdn,b.pvb .pvnew{color:inherit;text-shadow:none}

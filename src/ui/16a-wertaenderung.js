@@ -45,7 +45,9 @@ const Delta = (() => {
   function mark(el, oldText, undos) {
     const x = diff(oldText, el.textContent); if (!x) return;
     el.insertAdjacentHTML('beforeend', tag(x));
-    if (FLASH.indexOf(el.dataset.pv) >= 0) { undos.push(setFlash([el], x, true, 0)); undos.push(seg(el, x, region(oldText, el.textContent), true, 0)); }
+    el.classList.add('pvb'); undos.push(() => el.classList.remove('pvb'));   // Vorschauwert in Normalfarbe: der zu erwartende Effekt blinkt, statt rot oder grün abgehoben zu stehen
+    undos.push(setFlash([el], x, true, 0));
+    if (FLASH.indexOf(el.dataset.pv) >= 0) undos.push(seg(el, x, region(oldText, el.textContent), true, 0));
   }
   function track() {   // nach jedem Zeichnen der Seitenleisten
     if (!G) { snap = null; return; }
