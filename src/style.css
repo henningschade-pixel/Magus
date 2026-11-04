@@ -336,20 +336,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 
 #statsbtn{position:absolute;left:56px;top:12px;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:rgba(10,8,14,.7);line-height:1;cursor:var(--cp);z-index:250;padding:0;color:var(--bone);display:flex;align-items:center;justify-content:center}
 #statsbtn:hover{border-color:var(--gold);color:var(--gold)}
-
-/* Wertänderungen (seit 0.5.6): Zahl grün (+) oder rot (−); HP und Mana blinken */
-.dlt{position:absolute;z-index:275;pointer-events:none;font:700 26px/1 Alegreya,serif;font-variant-numeric:tabular-nums;white-space:nowrap;text-shadow:0 0 5px #000,0 0 3px #000,0 0 9px #000;animation:dltrise 1.6s ease-out forwards}
-.dlt.pos,.pvd.pos{color:var(--good)}.dlt.neg,.pvd.neg{color:var(--bad)}
-@keyframes dltrise{0%{opacity:0;transform:translate(-50%,-50%) scale(.7)}12%{opacity:1;transform:translate(-50%,-70%) scale(1.2)}65%{opacity:1}100%{opacity:0;transform:translate(-50%,-140%) scale(1)}}
-.pvd{font-size:.82em;font-weight:700;margin-left:4px;white-space:nowrap}
-b.dfl{border-radius:6px;animation:dflb .37s ease-in-out 3}
-b.dfl.pos{--c:127,208,138}b.dfl.neg{--c:234,90,94}
-@keyframes dflb{0%,100%{background:rgba(var(--c),0);box-shadow:none}50%{background:rgba(var(--c),.5);box-shadow:0 0 10px 3px rgba(var(--c),.85)}}
-b.dfl.inf{animation-iteration-count:infinite}
-/* Bogen (seit 0.5.6.2): nur der betroffene Anteil blinkt, grün bei Zuwachs, rot bei Verlust */
-.arcs .arcfx{animation:dflseg .37s ease-in-out 3;stroke-linecap:butt}
-.arcs .arcfx.pos{stroke:#7fd08a}.arcs .arcfx.neg{stroke:#ff5a5e}
-.arcs .arcfx.inf{animation-duration:.8s;animation-iteration-count:infinite}
-@keyframes dflseg{0%,100%{opacity:1}50%{opacity:.1}}
-/* Vorschau (seit 0.5.6.3): der Wert bleibt in Normalfarbe, die Änderung zeigen Blinken und die Zahl */
-b.pvb .pvdn,b.pvb .pvnew{color:inherit;text-shadow:none}
+/* Vorschau (seit 0.5.6.4): der betroffene Anteil des HP- bzw. Mana-Bogens blendet beim Überfahren eines Knopfes aus und ein */
+.arcs .arcfx{animation:arcfx .9s ease-in-out infinite;stroke-linecap:butt}
+.arcs .arcfx.hp{stroke:#e0653f}.arcs .arcfx.mana{stroke:#4a9be0}.arcs .arcfx.bg{stroke:#141416}
+@keyframes arcfx{0%,100%{opacity:0}50%{opacity:1}}

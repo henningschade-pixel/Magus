@@ -54,7 +54,7 @@ function statsBlock(name, s, p, size, up, full) {
   const hasUp = !compact && !!(hpPl || manaPl || limPl || sacCoin);
   const hp = '<div class="statrow">' + lead(hpPl) + img('hp') + '<b data-pv="hp">' + Math.max(0, s.hp) + '/' + s.maxHp + '</b></div>';
   const mana = '<div class="statrow">' + lead(manaPl) + img('mana') + '<b data-pv="mana">' + s.mana + '/' + s.maxMana + '</b></div>';
-  let h = '<h3><span class="hdr"><span class="hn">' + name + '</span>@@T@@@@G@@' + (p ? '<span class="hsp" title="Siegpunkte">★ <b data-pv="sp">' + p.sp + '</b></span>' : '') + '</span></h3><div class="sbody' + (hasUp ? ' hasup' : '') + (sacCoin ? ' hassac' : '') + '"' + (compact ? '' : ' data-lead="1"') + '><div class="scol">';
+  let h = '<h3><span class="hdr"><span class="hn">' + name + '</span>@@T@@@@G@@' + (p ? '<span class="hsp" title="Siegpunkte">★ <b>' + p.sp + '</b></span>' : '') + '</span></h3><div class="sbody' + (hasUp ? ' hasup' : '') + (sacCoin ? ' hassac' : '') + '"' + (compact ? '' : ' data-lead="1"') + '><div class="scol">';
   let ptsHdr = '';
   if (p) {   // offene Upgrade-Punkte, dahinter als Bruch der Fortschritt zur nächsten Tempelstufe; das Ergebnis eines Opfers zeigt die Vorschau beim Überfahren des Opfern-Knopfes
     const lvl = p.temple.level;
