@@ -349,3 +349,6 @@ b.dfl.pos{--c:127,208,138}b.dfl.neg{--c:234,90,94}
 .arcs .arcv.dfl.pos{--g:#7fd08a}.arcs .arcv.dfl.neg{--g:#ff5a5e}
 @keyframes dfla{0%,100%{filter:none}50%{filter:drop-shadow(0 0 6px var(--g)) drop-shadow(0 0 3px var(--g)) brightness(1.8)}}
 b.dfl.inf,.arcs .arcv.dfl.inf{animation-iteration-count:infinite}
+/* Vorschau (seit 0.5.6.1): der zugehörige Bogen blendet beim Überfahren sanft ein und aus */
+.arcs .arcv.dfl.inf{animation:dflfade .9s ease-in-out infinite}
+@keyframes dflfade{0%,100%{opacity:1;filter:drop-shadow(0 0 6px var(--g)) brightness(1.6)}50%{opacity:.12;filter:none}}
