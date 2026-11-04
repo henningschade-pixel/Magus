@@ -23,4 +23,4 @@ Soll zurückgeworfener Schaden (Überverteidigung) das Schild Stufen kosten? Heu
 
 ## Spiegel: Limit von 3 Markern (03.11. / 04.11.)
 
-Entschieden am 04.11. (0.16.1): Das Limit gilt je Farbe (Feuer-Marker sind andere als Erde-Marker), nicht insgesamt. Anlass: Showdown 3 der Partie mit Seed 1653969251, in dem ein Erde-Spiegel (3) alle Feuer-Spiegel verhinderte. Offen: Balance prüfen (`npm run balance`), weil ein Spieler jetzt bis zu 6 Spiegelmarker haben kann.
+Entschieden am 04.11. (0.16.1): Das Limit gilt je Farbe (Feuer-Marker sind andere als Erde-Marker), nicht insgesamt. Anlass: Showdown 3 der Partie mit Seed 1653969251, in dem ein Erde-Spiegel (3) alle Feuer-Spiegel verhinderte. Balance am 04.11. gemessen (0.16.2): keine messbare Verschiebung, weil die KI Spiegel selten wirkt und nie zwei Farben hält; mehr Spiegel-Kombos schaden ihr (siehe `tools/balance/README.md`). Offen für Menschen: Ob zwei Spiegelfarben gleichzeitig (bis zu 6 Marker) im Spiel zu stark sind, zeigt nur Spielerfahrung, die KI-Messung sagt dazu nichts.

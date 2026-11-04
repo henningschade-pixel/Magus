@@ -34,6 +34,10 @@ const DEFAULTS = {
   rW: 0, rRef: 3, dRec: 0, dU: 2,
   // Verteidigungsbewertung
   dLeth: 40, dPend: 6, dCost: 1.4, dKeep: 0.9, mirW: 4, mirKeep: 3, mirAvoid: 2, lfOpp: 2, lfOppW: 0.8,
+  // Spiegel (Limit seit 0.16.1 je Farbe): mirMarg 1 wertet nur den Zugewinn gegenüber dem Spiegel der Farbe, mirGrade 1 gewichtet die
+  // Farbe nach Bedrohungsanteil (mindestens mirMin) statt pauschal 0,5 außer für die wahrscheinlichste Farbe
+  // lfColor 1: Läuterung entfernt Spiegel des Gegners zuerst in der Farbe, mit der ich selbst am stärksten angreife
+  mirMarg: 1, mirGrade: 1, mirMin: 0.3, lfColor: 1,
   mBase: 14, mCost: 2.1, mCnt: 0.7, mTop: 2,
   // Ziel-Farbe: gegen ein Monster zählt die ihm überlegene Magie. mPlan: Bonus beim Magiekauf, vOff:
   // Aufwertungen anderer Farben zählen nur so viel

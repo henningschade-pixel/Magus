@@ -379,6 +379,19 @@ test('Nachziehmarker Kampf: bei rotem Marker ohne Mana ist Nachziehen nicht mög
   assert.ok(M.apply(s, { pid: 0, type: 'recover' }).ok, 'Erholen bleibt möglich');
 });
 
+test('KI-Läuterung entfernt Spiegel des Gegners nach Farbe: zuerst die Farbe, mit der sie selbst am stärksten angreift (Standard lfColor 1)', () => {
+  for (const [params, want] of [[null, ['om:E', 'om:F']], [{ lfColor: 0 }, ['om', 'om']]]) {
+    const { s, c, me, op } = combatSetup(11, ['E3', 'F3']);
+    me.deck.draw = Array.from({ length: 8 }, () => ({ id: 'E2' })); me.deck.discard = [];
+    op.stats.mirrorEl = { F: 1, E: 1, W: 0 }; op.stats.mirror = 2;
+    if (params) AI.setParams(0, Object.assign({}, params));
+    const acts = AI.plan(s, 0); AI.setParams(0, null);
+    const lf = acts.find(a => a.type === 'lfp');
+    assert.ok(lf, 'KI wählt die Läuterung: ' + acts.map(a => a.type).join(','));
+    assert.deepEqual(lf.pick, want, JSON.stringify(params));
+  }
+});
+
 test('KI meidet Nachziehen bei rotem Nachziehmarker (Weltphase: Gold opfern statt dem Gegner Gold schenken; Kampf: kein Nachziehen)', () => {
   const s = M.newGame({ seed: 5, ai: [true, true], first: 0 }), p = s.players[0];
   p.stats.pending = 0; p.stats.gold = 1; p.stats.mana = 0; p.drawRed = true;

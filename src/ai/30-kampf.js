@@ -1,14 +1,30 @@
 /* ---------- Kampf ---------- */
-// Farbe neuer Spiegelmarker: das Element, mit dem der Gegner am wahrscheinlichsten (und am stärksten) angreift.
-function pickMirrorEl(side, opp) {
-  const d = opp.deck, all = [].concat(d.draw, d.discard, d.hand.filter(Boolean)), mag = opp.stats.mag, own = side.stats.mirrorEl || {};
-  let best = null, bv = -1;
+// Bedrohung je Farbe: Wie wahrscheinlich und wie stark greift der Gegner mit diesem Element an (Karten im Deck, begrenzt durch seine Magie).
+// useOwn: bestehende eigene Spiegel dieser Farbe senken den Wert (so war es, als sich alle Farben 3 Marker teilten).
+function mirrorScores(side, opp, useOwn) {
+  const d = opp.deck, all = [].concat(d.draw, d.discard, d.hand.filter(Boolean)), mag = opp.stats.mag, own = side.stats.mirrorEl || {}, out = {};
   for (const e of M.ELEMENTS) {
     let v = 0; for (const c of all) { const p = M.parseCard(c.id); if (!p.curse && p.el === e) v += Math.min(p.tier, mag[e]); }
-    v = v * (1 + 0.15 * mag[e]) / (1 + 0.5 * (own[e] || 0));
-    if (v > bv) { bv = v; best = e; }
+    out[e] = v * (1 + 0.15 * mag[e]) / (useOwn ? 1 + 0.5 * (own[e] || 0) : 1);
   }
+  return out;
+}
+// Farbe neuer Spiegelmarker: das Element, mit dem der Gegner am wahrscheinlichsten (und am stärksten) angreift.
+function pickMirrorEl(side, opp) {
+  const sc = mirrorScores(side, opp, true); let best = null, bv = -1;
+  for (const e of M.ELEMENTS) if (sc[e] > bv) { bv = sc[e]; best = e; }
   return best;
+}
+// Wert eines Spiegel-Kombos der Stufe lvl in Farbe el. Seit 0.16.1 zählt das Limit von 3 Markern je Farbe (nicht mehr insgesamt) und die Stufen werden
+// nicht addiert: mirMarg 1 wertet nur den Zugewinn gegenüber dem Spiegel, der in dieser Farbe schon liegt. mirGrade 1 gewichtet die Farbe nach ihrem
+// Bedrohungsanteil (mindestens mirMin) statt pauschal mit 0,5 für jede Farbe außer der wahrscheinlichsten.
+function mirrorWorth(side, opp, Q, el, lvl) {
+  if (!(lvl > 0) || !el) return 0;
+  const own = M.mirrorOf(side.stats, el), gain = Q.mirMarg ? Math.max(0, lvl - own) : lvl;
+  let f;
+  if (Q.mirGrade) { const sc = mirrorScores(side, opp, false), top = Math.max(sc.F, sc.E, sc.W); f = top > 0 ? Math.max(Q.mirMin, Math.min(1, sc[el] / top)) : 1; }
+  else f = pickMirrorEl(side, opp) === el ? 1 : 0.5;
+  return gain * Q.wFW * f;
 }
 // Zerrüttung: Der Gegner wirft S Handkarten seiner Wahl ab, zuerst Fluchkarten. Wert hat nur, was darüber hinaus echte Karten kostet.
 function ruinWorth(opp, n) {
@@ -20,8 +36,7 @@ function ruinWorth(opp, n) {
 function ordComboWorth(side, opp, Q, rules, lvs, ev) {
   const st = side.stats, hurt = st.maxHp - st.hp, oMir = opp.stats.mirror || 0;
   const wEw = oMir > 0 ? 1.2 + oMir * Math.max(0.3, Q.lfOppW || 0) : 0.1;
-  let wFw = Q.wFW; if (ev.ord && ev.ord.el && pickMirrorEl(side, opp) !== ev.ord.el) wFw *= 0.5;
-  return lvs.fw * wFw + lvs.fe * Q.wFE + lvs.ew * wEw + ruinWorth(opp, lvs.rm) + Math.min(lvs.gh * (rules.lifeflowHeal || 1), hurt) * Q.wEW + (lvs.gh > 0 && hurt === 0 ? 0.1 : 0);
+  return mirrorWorth(side, opp, Q, ev.ord && ev.ord.el, lvs.fw) + lvs.fe * Q.wFE + lvs.ew * wEw + ruinWorth(opp, lvs.rm) + Math.min(lvs.gh * (rules.lifeflowHeal || 1), hurt) * Q.wEW + (lvs.gh > 0 && hurt === 0 ? 0.1 : 0);
 }
 function bestAttack(side, opp, hand, Q, state0, reserve) {
   const stats = side.stats, lim = Math.max(1, stats.limit);
@@ -34,12 +49,11 @@ function bestAttack(side, opp, hand, Q, state0, reserve) {
       const ev = M.evalAttack(stats, ord);
       if (!ev.valid || !ev.affordable) continue;
       const hurt = stats.maxHp - stats.hp, oMir = opp.stats.mirror || 0;
-      const w = { fw: Q.wFW, fe: Q.wFE, ew: oMir > 0 ? 1.2 + oMir * Math.max(0.3, Q.lfOppW || 0) : 0.1 };   // Läuterung lohnt, wenn der Gegner Spiegelmarker trägt
-      if (ev.ord && ev.ord.el && pickMirrorEl(side, opp) !== ev.ord.el) w.fw *= 0.5;
+      const w = { fe: Q.wFE, ew: oMir > 0 ? 1.2 + oMir * Math.max(0.3, Q.lfOppW || 0) : 0.1 };   // Läuterung lohnt, wenn der Gegner Spiegelmarker trägt
       const lvs = M.levelsFor(ev);
       let combo = 0;
       if (ev.levels.ulti > 0) combo = ev.levels.ulti * Q.wDeath * (opp.stats.death >= ev.levels.ulti ? 0.1 : 1) * (Q.smart ? Math.max(0.4, Math.min(1.4, opp.stats.hp / 4)) : 1);
-      else combo = lvs.fw * w.fw + lvs.fe * w.fe + lvs.ew * w.ew + ruinWorth(opp, lvs.rm) + Math.min(lvs.gh * 1, hurt) * Q.wEW + (lvs.gh > 0 && hurt === 0 ? 0.1 : 0);
+      else combo = mirrorWorth(side, opp, Q, ev.ord && ev.ord.el, lvs.fw) + lvs.fe * w.fe + lvs.ew * w.ew + ruinWorth(opp, lvs.rm) + Math.min(lvs.gh * 1, hurt) * Q.wEW + (lvs.gh > 0 && hurt === 0 ? 0.1 : 0);
       const dmg = ev.prim ? ev.damage : 0;
       let value = dmg * Q.aDmg + combo - ev.cost * Q.aCost + ev.curses * Q.aCurse;
       // Mana-Reserve: ohne Mana darf der unterlegene Gegner fliehen. Übersteht er den Angriff nach dem erwarteten Block, zählt der Angriff nicht als sicher tödlich.
@@ -143,7 +157,10 @@ function combatPlan(state, pid) {
       if (best.ev.levels.ulti <= 0 && lvB.ew > 0) {   // Läuterung: eigene Todesmarker, dann Spiegel des Gegners, zuletzt dessen Nachziehtokens
         const lvl = lvB.ew, pick = [];
         for (let i = 0; pick.length < lvl && i < (s.death || 0); i++) pick.push('sd');
-        for (let i = 0; pick.length < lvl && i < (opp.stats.mirror || 0); i++) pick.push('om');
+        if (Q.lfColor) {   // Spiegel des Gegners nach Farbe: zuerst die Farbe, mit der ich selbst am stärksten angreife (dort würde der Spiegel am meisten ausgleichen)
+          const th = mirrorScores(opp, side, false);
+          for (const e of M.ELEMENTS.slice().sort((x, y) => th[y] - th[x])) for (let i = 0; pick.length < lvl && i < M.mirrorOf(opp.stats, e); i++) pick.push('om:' + e);
+        } else for (let i = 0; pick.length < lvl && i < (opp.stats.mirror || 0); i++) pick.push('om');
         for (let i = 0; pick.length < lvl && i < (opp.stats.freeDraws || 0); i++) pick.push('ot');
         acts.push(A({ type: 'lfp', pick }));
       }
