@@ -128,10 +128,6 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .rg.on{border:2.5px solid #f2c850;box-shadow:0 0 6px #f2c850aa;background:rgba(242,200,80,.18)}
 .lfsel{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;flex-basis:100%}.lfsel .mini{font-size:13px;padding:2px 7px}.mini{font:700 14px Alegreya,serif;padding:2px 8px;border-radius:10px;border:1px solid #8a7a50;background:#2b2b30;color:#d8c9a0;cursor:var(--cp)}.mini.on{background:#e8c35a;color:#2a1a05}
 .mr{color:#7fd4ff;font-size:18px;font-weight:700;margin-left:8px;white-space:nowrap;cursor:help}
-.mk{color:#c58cf0;letter-spacing:2px;font-size:20px}
-.mkimg{width:22px;height:22px;vertical-align:middle;margin-right:2px}.mkimg.off{opacity:.22}
-.sbody .statrow .mk{display:flex;flex-wrap:nowrap;gap:1px;white-space:nowrap;margin-left:0}
-.sbody .statrow .mk img{width:15px;height:15px}
 .lead{display:inline-flex;flex:none;width:0;overflow:hidden;margin-right:-6px;justify-content:center;transition:width .28s ease,margin .28s ease}   /* alle Knöpfe der Spalte sitzen mittig auf einer senkrechten Linie unter dem Münzknopf */
 .sbody.hasup .lead{width:30px;margin-right:0;overflow:visible}
 .lead .up{margin:0}
@@ -152,13 +148,6 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .mtok.lf.sel{box-shadow:0 0 0 3px #f2d27a,0 0 16px 5px rgba(242,210,122,.9)}
 .mtok.lf.sel::after{border:2px solid #f2d27a}
 .lfb{position:absolute;right:-10px;top:-10px;min-width:22px;height:18px;padding:0 3px;border-radius:9px;background:#f2d27a;color:#2a1a05;font:700 12px/18px Alegreya,serif;text-align:center;font-style:normal;box-shadow:0 0 0 1px #2a1a05;z-index:3}
-.mkb{background:none;border:0;padding:0;margin:0;cursor:var(--cp);position:relative;border-radius:50%;line-height:0;display:block}
-.mkb img{display:block}
-.mkb.lf::after{content:"";position:absolute;inset:-3px;border:1.5px dashed rgba(210,173,79,.65);border-radius:50%;pointer-events:none}
-.mkb.lf:hover img{filter:brightness(1.4)}
-.mkb.lf.sel{background:radial-gradient(circle,rgba(242,210,122,.6),transparent 72%)}
-.mkb.lf.sel::after{border:2px solid #f2d27a;box-shadow:0 0 8px 2px rgba(242,210,122,.85)}
-.mkb.lf.sel img{filter:brightness(1.6) drop-shadow(0 0 3px #f2d27a)}
 .lfchips{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0}.lfchip{padding:1px 9px;border-radius:11px;background:rgba(242,210,122,.2);border:1px solid #f2d27a;color:#f2d27a;font-size:15px}
 .lfsum{margin-top:6px}.lfsum .note{font-size:15px}.lfsum b{color:#f2d27a}
 .up.costly::after{content:attr(data-c);position:absolute;right:-5px;top:-6px;min-width:15px;height:15px;border-radius:8px;background:#e8c35a;color:#2a1a05;font:700 12px/15px Alegreya,serif;text-align:center;box-shadow:0 0 0 1px #2a1a05}
@@ -240,12 +229,12 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .mrsel{margin-top:6px}.mrsel b{font-size:20px;margin:0 4px}
 .bar.tp{position:relative}.bar.tp>i{position:absolute;left:0;top:0;bottom:0}.bar.tp>i.pre{background:repeating-linear-gradient(45deg,#6fbf73,#6fbf73 4px,#9bdca0 4px,#9bdca0 8px);opacity:.9}
 .temple .bar.sb{height:12px}
-.mkcol{display:inline-flex;flex-direction:column;gap:0;vertical-align:middle;line-height:1}
-.mkcol .mk{display:flex;flex-wrap:nowrap;gap:1px;white-space:nowrap;margin:0}
-.mkcol .mk img{width:15px;height:15px;margin:0}
-.mkimg.mir{filter:hue-rotate(-95deg) saturate(1.4) brightness(1.15)}
-.mkcol .mr{font-size:13px;margin:0;line-height:1.1}
 
+.deathtok{position:absolute;z-index:61;display:block;width:56px;height:56px;padding:0;border:0;background:none;transform:rotate(var(--r,0deg));cursor:help;filter:drop-shadow(0 3px 4px rgba(0,0,0,.75))}
+.deathtok img{width:100%;height:100%;object-fit:contain;display:block}
+.deathtok.lf{cursor:var(--cp);transition:transform .12s}.deathtok.lf:hover{transform:rotate(var(--r,0deg)) scale(1.08)}
+.deathtok.lf::after{content:"";position:absolute;inset:-3px;border:1.5px dashed rgba(210,173,79,.65);border-radius:50%;pointer-events:none}
+.deathtok.lf.sel{filter:drop-shadow(0 0 7px #f2d27a) drop-shadow(0 0 3px #f2d27a)}.deathtok.lf.sel::after{border:2px solid #f2d27a}
 .mirstack{position:absolute;display:flex;flex-direction:column;gap:4px;z-index:70}
 .mtok{width:34px;height:34px;border-radius:50%;border:3px solid currentColor;display:flex;align-items:center;justify-content:center;font:700 20px Alegreya,serif;background:radial-gradient(circle at 35% 30%,#fff9 0,#ffffff22 35%,#0006 100%),#1d1d21;box-shadow:0 0 8px currentColor;cursor:help}
 .msh{position:relative;width:40px;height:52px;flex:none;cursor:help;filter:drop-shadow(0 2px 4px rgba(0,0,0,.65))}.msh img{width:100%;height:100%;object-fit:contain;display:block}.msh .mul{position:absolute;right:-7px;bottom:-4px;font:700 20px Alegreya,serif;color:#f2d27a;text-shadow:0 0 2px #000,0 0 3px #000,0 0 6px #000}button.msh{background:none;border:0;padding:0}.msh.lf{cursor:var(--cp);transition:transform .12s}.msh.lf:hover{transform:scale(1.08)}.msh.lf.sel{filter:drop-shadow(0 0 7px #f2d27a) drop-shadow(0 0 3px #f2d27a)}.mtok.F{color:var(--fire)}.mtok.E{color:var(--earth)}.mtok.W{color:var(--water)}
@@ -2147,8 +2136,6 @@ function ctx() {
   }
   return { combat: false, myDeck: G.players[ME].deck, oppDeck: G.players[OPP].deck, myStats: G.players[ME].stats, oppStats: G.players[OPP].stats };
 }
-const MAX_MARKS = 3;   // Anzahl der Totenkopf-Plätze neben dem Limit
-function marks(n, cls) { let t = ''; for (let i = 0; i < MAX_MARKS; i++) t += '<img class="mkimg' + (cls ? ' ' + cls : '') + (i < n ? '' : ' off') + '" src="' + IMG.curse + '">'; return t; }
 // Todes-Fluch (Ultimate): HP-Verlust am Ende jeder eigenen Angriffsphase, bis Kampfende.
 // Spiegel: je Element ein Stein neben dem Handbrett, mit Stufenzähler ab 2.
 function mirrorStack(s, x, y, who) {
@@ -2167,18 +2154,20 @@ function mirrorStack(s, x, y, who) {
   }
   return '<div class="mirstack" data-who="' + (who || '') + '" style="left:' + x + 'px;top:' + y + 'px">' + t + '</div>';
 }
-// Marker-Symbole (Totenköpfe/Flüche); im Lifeflow-Angriff anklickbar, gewählte leuchten
-function markIcons(n, kind, L, cls) {
-  const sel = L ? L.picks.filter(p => p === kind).length : 0; let t = '';
-  for (let i = 0; i < MAX_MARKS; i++) {
-    const img = '<img class="mkimg' + (cls ? ' ' + cls : '') + (i < n ? '' : ' off') + '" src="' + IMG.curse + '">';
-    t += L && i < n ? '<button class="mkb lf' + (i < sel ? ' sel' : '') + '" data-act="lfm" data-k="' + kind[0] + kind[1] + '" data-i="' + i + '" title="Lifeflow: diesen Marker wählen oder abwählen">' + img + '</button>' : img;
+// Todesmarker: jeder Marker liegt als eigener, größerer Token auf dem Tisch (wie die Nachziehtokens), leicht verdreht und versetzt; im Läuterungs-Angriff anklickbar.
+// Eigene Marker liegen rechts neben den Nachziehtokens über dem Nachziehstapel, die des Gegners rechts neben dessen Nachziehstapel (frei von den Panels).
+function deathPos(who, i) {
+  const L = who === 's' ? L_MY : L_OP, rot = [-7, 5, -3, 8][i % 4], dy = [0, -3, 2, -2][i % 4];
+  return { x: L.draw.x + (who === 's' ? 58 : 100) + i * 52, y: (who === 's' ? L.draw.y - 62 : L.draw.y + CH * L.ps - 4) + dy, rot };
+}
+function deathTokens(s, who) {
+  const n = Math.min(s.death || 0, 4), L = lfCtx(), sel = L ? L.picks.filter(p => p === who + 'd').length : 0; let t = '';
+  for (let i = 0; i < n; i++) {
+    const q = deathPos(who, i), pos = 'left:' + q.x + 'px;top:' + q.y + 'px;--r:' + q.rot + 'deg', tip = 'Todesmarker: ' + (s.death || 0) + ' HP Verlust am Ende jeder eigenen Angriffsphase bis Kampfende. Nur Läuterung kann Marker entfernen.';
+    t += L ? '<button class="deathtok lf' + (i < sel ? ' sel' : '') + '" data-who="' + who + '" data-act="lfm" data-k="' + who + 'd" data-i="' + i + '" title="Läuterung: diesen Marker wählen oder abwählen" style="' + pos + '"><img src="' + IMG.curse + '"></button>'
+      : '<div class="deathtok" data-who="' + who + '" title="' + tip + '" style="' + pos + '"><img src="' + IMG.curse + '"></div>';
   }
   return t;
-}
-function markCol(s, who) {   // Todesmarker neben dem Limit; im Läuterungs-Angriff anklickbar
-  const L = who ? lfCtx() : null;
-  return '<span class="mkcol"><span class="mk" title="Todesmarker: ' + (s.death || 0) + ' HP Verlust am Ende jeder eigenen Angriffsphase bis Kampfende. Nur Läuterung kann Marker entfernen.">' + (who ? markIcons(s.death || 0, who + 'd', L) : marks(s.death || 0)) + '</span></span>';
 }
 /* ---------- Zugwechsel (Werte der Zugwechsel-Werkstatt): Der Rand teilt sich in der Mitte, zwei Linien laufen links und rechts zur anderen Seite ---------- */
 let turnSide = null, turnAnim = null, turnWait = 0, cardsUntil = 0;   // cardsUntil: bis wann Karten fliegen oder verbrennen
@@ -2466,6 +2455,7 @@ function renderCards() {
     const lf = lfCtx(), sel = lf ? lf.picks.filter(p => p === 'ot').length : 0, pos = 'left:' + L_OP.draw.x + 'px;top:' + (L_OP.draw.y + CH * L_OP.ps + (G.rules.drawMarker ? 48 : 22)) + 'px', inner = '<img src="' + IMG.gratis + '">' + (cx.oppStats.freeDraws > 1 ? '<b class="mul">×' + cx.oppStats.freeDraws + '</b>' : '') + (sel ? '<i class="lfb">✓' + sel + '</i>' : '');
     ph += lf ? '<button class="freedraw opp lf' + (sel ? ' sel' : '') + '" data-act="lfm" data-k="ot" title="Läuterung: gegnerische Nachziehtokens zerstören (Klick: einen mehr, nach dem Maximum wieder alle weg). Sie werden nicht gutgeschrieben." style="' + pos + '">' + inner + '</button>' : '<div class="freedraw opp" title="Gratis-Nachziehen des Gegners: ' + cx.oppStats.freeDraws + 'x" style="' + pos + '">' + inner + '</div>';
   }
+  if (cx.combat) ph += deathTokens(cx.myStats, 's') + deathTokens(cx.oppStats, 'o');   // Todesmarker als einzelne Tokens auf dem Tisch
   const pnd = G.players[ME].stats[M.upField(G)], slotC = M.slotStepCost(G, G.players[ME].stats);
   if (!cx.combat && pnd >= slotC && G.players[ME].slots < M.MAX_SLOTS) {
     const canSlot = myTurn();
@@ -2582,8 +2572,7 @@ function arcsHTML(s, bsz, pad, R) {
 }
 function statsBlock(name, s, p, size, up, full) {
   const img = k => '<img src="' + IMG[k] + '">', compact = !full;
-  const lfc = lfCtx(), who = lfc ? (s === lfc.cx.myStats ? 's' : s === lfc.cx.oppStats ? 'o' : null) : null;
-  const mk = markCol(s, who), mr = '';
+  const mk = '', mr = '';
   const my = myTurn(), anyT = my, UF = M.upField(G), UC = UF === 'gold' ? 'gc' : 'pt', one = M.payTxt(G, UF, 1), pend = up ? s[UF] : 0, lc = up ? M.limitStepCost(G, s) : 1, mc = up ? M.manaStepCost(G, s) : 1, hc = up ? M.hpStepCost(G, s) : 1;
   const pl = (ok, w, title, attr) => ok ? '<button class="up ' + UC + '" data-act="' + (attr || 'spend') + '" ' + (attr ? 'data-e' : 'data-w') + '="' + w + '" title="' + title + '"></button>' : '';
   // Schritte, die mehr als 1 Upgrade-Punkt kosten, bleiben sichtbar (abgedunkelt, solange die Punkte fehlen) und tragen eine Kostenzahl.
@@ -3033,7 +3022,7 @@ const FlowFx = (() => {
   function at(el) { if (!el) return null; const r = el.getBoundingClientRect(), sr = stage.getBoundingClientRect(), k = sr.width / stage.offsetWidth; return { x: (r.left + r.width / 2 - sr.left) / k, y: (r.top + r.height / 2 - sr.top) / k }; }
   const panelOf = pid => pid === ME ? stage.querySelector('.sbody[data-lead]') : stage.querySelector('.sbody:not([data-lead])');
   const hpOf = pid => at(panelOf(pid) && panelOf(pid).querySelector('[data-pv="hp"]')) || { x: pid === ME ? 1000 : 1000, y: pid === ME ? 700 : 70 };
-  const markOf = pid => at(panelOf(pid) && (panelOf(pid).querySelector('.mk') || panelOf(pid).querySelector('.statrow'))) || { x: 1090, y: pid === ME ? 740 : 120 };
+  const markOf = pid => { const w = pid === ME ? 's' : 'o', q = deathPos(w, 0); return at(stage.querySelector('.deathtok[data-who="' + w + '"]')) || { x: q.x + 28, y: q.y + 28 }; };
   const drawOf = pid => { const L = pid === ME ? L_MY : L_OP; return pid === ME ? (at(stage.querySelector('.freedraw:not(.opp)')) || { x: L.draw.x + CW * L.ps / 2, y: L.draw.y - 20 }) : { x: L.draw.x + CW * L.ps / 2, y: L.draw.y + CH * L.ps / 2 }; };
   const pileOf = pid => { const L = pid === ME ? L_MY : L_OP; return { x: L.disc.x + CW * L.ps / 2, y: L.disc.y + CH * L.ps / 2 }; };
   const handOf = pid => { const L = pid === ME ? L_MY : L_OP; return { x: L.cx, y: L.y + CH * L.s / 2 }; };
@@ -3911,7 +3900,7 @@ function showStart(pg) {
     h += '<img class="logo" alt="" src="assets/img/logo.webp"><div class="menulist">' +
       (run ? menuBtn('resume', 'Spiel fortsetzen', '', 'primary') : '') +
       menuTo('single', 'Einzelspieler', run ? '' : 'primary') + menuTo('multi', 'Mehrspieler') + menuTo('settings', 'Einstellungen') + menuBtn('quit', 'Beenden') + '</div>' +
-      '<div class="menufoot">' + menuTo('about', 'Neu in Version 0.5.3', 'link') + '</div>';
+      '<div class="menufoot">' + menuTo('about', 'Neu in Version 0.5.3.1', 'link') + '</div>';
   } else if (pg === 'single') {
     h += '<h2>Einzelspieler</h2><div class="menulist">' +
       menuBtn('newgame', run ? 'Neues Spiel gegen den Computer' : 'Gegen den Computer spielen', '', run ? '' : 'primary') +
@@ -3924,7 +3913,7 @@ function showStart(pg) {
   } else if (pg === 'settings') {
     h += '<h2>Einstellungen</h2><div class="menulist">' + settingsHTML() + back + '</div>';
   } else if (pg === 'about') {
-    h += '<p class="note intro" style="margin-top:-2px"><b>Danke, dass du Trimagus testest!</b> <b>Neu in Version 0.5.3:</b> Alle Knöpfe links (Opfern, HP, Mana, Limit) stehen jetzt auf einer Linie unter dem Münzknopf. HP und Mana stehen nicht mehr als Balken in den Zeilen, sondern als gebogene Linien links (HP) und rechts (Mana) neben der Magiescheibe. <b>Version 0.5.2.2:</b> Die Pfeile ◀ ▶ zum Opfern stehen jetzt links und rechts neben dem Münzknopf. <b>Version 0.5.2.1:</b> Die Versionsbeschreibung nennt nur noch die Versionen ab 0.4. <b>Version 0.5.2:</b> <b>Opfern wie die anderen Knöpfe:</b> Ein goldener Münzknopf steht links neben dem Gold, die Zahl der geopferten Münzen zeigt er als Plakette. Mit den Pfeilen ◀ ▶ daneben stellst du die Anzahl ein; die Schaltfläche „Opfern“ ist entfallen. <b>Version 0.5.1:</b> <b>Das Spiel heißt jetzt Trimagus.</b> Du startest mit <b>Ausspiellimit 1</b> (vorher 2). Jede Weiterentwicklung wird mit jedem Kauf teurer: die erste kostet 1 Gold, die zweite 2 Gold (gilt für Ausspiellimit, Handplätze, Nachziehlimit, max. HP und max. Mana; die Magie kostet wie bisher 1, 2, 3 … Upgrade-Punkte). Jede Entwicklung ist auf <b>Stufe 3</b> begrenzt, also auf zwei Ausbauten: Ausspiellimit 1 bis 3, Handplätze 3 bis 5, Nachziehlimit 1 bis 3, max. HP 4 bis 8, max. Mana 4 bis 6, Magie 1 bis 3. Die Monster behalten ihre Werte. Der Computer ist noch nicht neu abgestimmt. <b>Version 0.4.1:</b> Keine Spieländerung: Vier weitere Ideen sind als Notizen festgehalten (Umbenennung in Trimagus, Upgrades höchstens 3, Start mit 3 Siegpunkten, Siegpunkt-Belohnung 2 in Stufe 2 und 3 in Stufe 3). <b>Neu in Version 0.4:</b> Vier Regeländerungen. <b>Monster:</b> Die zweite Magie eines Monsters ist jetzt die <b>überlegene</b> (Feuer-Monster: Wasser, Erde-Monster: Feuer, Wasser-Monster: Erde). <b>Combo zuerst:</b> Auch in der Verteidigung wirkt der Combo-Effekt vor der Verteidigung selbst; die Heilung füllt die HP also auf, bevor der Schaden trifft, und ein Spiegel-Combo wirkt sofort gegen den laufenden Angriff. <b>Ausgleich:</b> Nach einer Niederlage gegen ein Monster erhält ihn nur noch der Verlierer. <b>Nur Gold:</b> Der Abschnittsbonus beträgt je Monster 1, 2 und 3 Gold (3, 6, 9 Gold je Abschnitt), der Ausgleich nach einer Niederlage 1, 2 und 3 Gold; es gibt keine Upgrade-Punkte mehr als Bonus. Computer neu abgestimmt.</p><div class="menulist">' + back + '</div>';
+    h += '<p class="note intro" style="margin-top:-2px"><b>Danke, dass du Trimagus testest!</b> <b>Neu in Version 0.5.3.1:</b> Die Todesmarker stehen nicht mehr als kleine Symbole in der Limit-Zeile, sondern liegen als einzelne, größere Marker neben den Nachziehtokens auf dem Tisch (eigene über deinem Nachziehstapel, die des Gegners neben seinem). <b>Version 0.5.3:</b> Alle Knöpfe links (Opfern, HP, Mana, Limit) stehen jetzt auf einer Linie unter dem Münzknopf. HP und Mana stehen nicht mehr als Balken in den Zeilen, sondern als gebogene Linien links (HP) und rechts (Mana) neben der Magiescheibe. <b>Version 0.5.2.2:</b> Die Pfeile ◀ ▶ zum Opfern stehen jetzt links und rechts neben dem Münzknopf. <b>Version 0.5.2.1:</b> Die Versionsbeschreibung nennt nur noch die Versionen ab 0.4. <b>Version 0.5.2:</b> <b>Opfern wie die anderen Knöpfe:</b> Ein goldener Münzknopf steht links neben dem Gold, die Zahl der geopferten Münzen zeigt er als Plakette. Mit den Pfeilen ◀ ▶ daneben stellst du die Anzahl ein; die Schaltfläche „Opfern“ ist entfallen. <b>Version 0.5.1:</b> <b>Das Spiel heißt jetzt Trimagus.</b> Du startest mit <b>Ausspiellimit 1</b> (vorher 2). Jede Weiterentwicklung wird mit jedem Kauf teurer: die erste kostet 1 Gold, die zweite 2 Gold (gilt für Ausspiellimit, Handplätze, Nachziehlimit, max. HP und max. Mana; die Magie kostet wie bisher 1, 2, 3 … Upgrade-Punkte). Jede Entwicklung ist auf <b>Stufe 3</b> begrenzt, also auf zwei Ausbauten: Ausspiellimit 1 bis 3, Handplätze 3 bis 5, Nachziehlimit 1 bis 3, max. HP 4 bis 8, max. Mana 4 bis 6, Magie 1 bis 3. Die Monster behalten ihre Werte. Der Computer ist noch nicht neu abgestimmt. <b>Version 0.4.1:</b> Keine Spieländerung: Vier weitere Ideen sind als Notizen festgehalten (Umbenennung in Trimagus, Upgrades höchstens 3, Start mit 3 Siegpunkten, Siegpunkt-Belohnung 2 in Stufe 2 und 3 in Stufe 3). <b>Neu in Version 0.4:</b> Vier Regeländerungen. <b>Monster:</b> Die zweite Magie eines Monsters ist jetzt die <b>überlegene</b> (Feuer-Monster: Wasser, Erde-Monster: Feuer, Wasser-Monster: Erde). <b>Combo zuerst:</b> Auch in der Verteidigung wirkt der Combo-Effekt vor der Verteidigung selbst; die Heilung füllt die HP also auf, bevor der Schaden trifft, und ein Spiegel-Combo wirkt sofort gegen den laufenden Angriff. <b>Ausgleich:</b> Nach einer Niederlage gegen ein Monster erhält ihn nur noch der Verlierer. <b>Nur Gold:</b> Der Abschnittsbonus beträgt je Monster 1, 2 und 3 Gold (3, 6, 9 Gold je Abschnitt), der Ausgleich nach einer Niederlage 1, 2 und 3 Gold; es gibt keine Upgrade-Punkte mehr als Bonus. Computer neu abgestimmt.</p><div class="menulist">' + back + '</div>';
   } else if (pg === 'quit') {
     h += '<p class="note" style="text-align:center;font-size:19px">Danke fürs Spielen!<br>Ein Browser-Tab lässt sich vom Spiel aus nicht immer schließen. Schließe diesen Tab oder dieses Fenster einfach selbst.</p><div class="menulist">' + back + '</div>';
   }

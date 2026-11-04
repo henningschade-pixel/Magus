@@ -118,10 +118,6 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .rg.on{border:2.5px solid #f2c850;box-shadow:0 0 6px #f2c850aa;background:rgba(242,200,80,.18)}
 .lfsel{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;flex-basis:100%}.lfsel .mini{font-size:13px;padding:2px 7px}.mini{font:700 14px Alegreya,serif;padding:2px 8px;border-radius:10px;border:1px solid #8a7a50;background:#2b2b30;color:#d8c9a0;cursor:var(--cp)}.mini.on{background:#e8c35a;color:#2a1a05}
 .mr{color:#7fd4ff;font-size:18px;font-weight:700;margin-left:8px;white-space:nowrap;cursor:help}
-.mk{color:#c58cf0;letter-spacing:2px;font-size:20px}
-.mkimg{width:22px;height:22px;vertical-align:middle;margin-right:2px}.mkimg.off{opacity:.22}
-.sbody .statrow .mk{display:flex;flex-wrap:nowrap;gap:1px;white-space:nowrap;margin-left:0}
-.sbody .statrow .mk img{width:15px;height:15px}
 .lead{display:inline-flex;flex:none;width:0;overflow:hidden;margin-right:-6px;justify-content:center;transition:width .28s ease,margin .28s ease}   /* alle Knöpfe der Spalte sitzen mittig auf einer senkrechten Linie unter dem Münzknopf */
 .sbody.hasup .lead{width:30px;margin-right:0;overflow:visible}
 .lead .up{margin:0}
@@ -142,13 +138,6 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .mtok.lf.sel{box-shadow:0 0 0 3px #f2d27a,0 0 16px 5px rgba(242,210,122,.9)}
 .mtok.lf.sel::after{border:2px solid #f2d27a}
 .lfb{position:absolute;right:-10px;top:-10px;min-width:22px;height:18px;padding:0 3px;border-radius:9px;background:#f2d27a;color:#2a1a05;font:700 12px/18px Alegreya,serif;text-align:center;font-style:normal;box-shadow:0 0 0 1px #2a1a05;z-index:3}
-.mkb{background:none;border:0;padding:0;margin:0;cursor:var(--cp);position:relative;border-radius:50%;line-height:0;display:block}
-.mkb img{display:block}
-.mkb.lf::after{content:"";position:absolute;inset:-3px;border:1.5px dashed rgba(210,173,79,.65);border-radius:50%;pointer-events:none}
-.mkb.lf:hover img{filter:brightness(1.4)}
-.mkb.lf.sel{background:radial-gradient(circle,rgba(242,210,122,.6),transparent 72%)}
-.mkb.lf.sel::after{border:2px solid #f2d27a;box-shadow:0 0 8px 2px rgba(242,210,122,.85)}
-.mkb.lf.sel img{filter:brightness(1.6) drop-shadow(0 0 3px #f2d27a)}
 .lfchips{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0}.lfchip{padding:1px 9px;border-radius:11px;background:rgba(242,210,122,.2);border:1px solid #f2d27a;color:#f2d27a;font-size:15px}
 .lfsum{margin-top:6px}.lfsum .note{font-size:15px}.lfsum b{color:#f2d27a}
 .up.costly::after{content:attr(data-c);position:absolute;right:-5px;top:-6px;min-width:15px;height:15px;border-radius:8px;background:#e8c35a;color:#2a1a05;font:700 12px/15px Alegreya,serif;text-align:center;box-shadow:0 0 0 1px #2a1a05}
@@ -230,12 +219,12 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .mrsel{margin-top:6px}.mrsel b{font-size:20px;margin:0 4px}
 .bar.tp{position:relative}.bar.tp>i{position:absolute;left:0;top:0;bottom:0}.bar.tp>i.pre{background:repeating-linear-gradient(45deg,#6fbf73,#6fbf73 4px,#9bdca0 4px,#9bdca0 8px);opacity:.9}
 .temple .bar.sb{height:12px}
-.mkcol{display:inline-flex;flex-direction:column;gap:0;vertical-align:middle;line-height:1}
-.mkcol .mk{display:flex;flex-wrap:nowrap;gap:1px;white-space:nowrap;margin:0}
-.mkcol .mk img{width:15px;height:15px;margin:0}
-.mkimg.mir{filter:hue-rotate(-95deg) saturate(1.4) brightness(1.15)}
-.mkcol .mr{font-size:13px;margin:0;line-height:1.1}
 
+.deathtok{position:absolute;z-index:61;display:block;width:56px;height:56px;padding:0;border:0;background:none;transform:rotate(var(--r,0deg));cursor:help;filter:drop-shadow(0 3px 4px rgba(0,0,0,.75))}
+.deathtok img{width:100%;height:100%;object-fit:contain;display:block}
+.deathtok.lf{cursor:var(--cp);transition:transform .12s}.deathtok.lf:hover{transform:rotate(var(--r,0deg)) scale(1.08)}
+.deathtok.lf::after{content:"";position:absolute;inset:-3px;border:1.5px dashed rgba(210,173,79,.65);border-radius:50%;pointer-events:none}
+.deathtok.lf.sel{filter:drop-shadow(0 0 7px #f2d27a) drop-shadow(0 0 3px #f2d27a)}.deathtok.lf.sel::after{border:2px solid #f2d27a}
 .mirstack{position:absolute;display:flex;flex-direction:column;gap:4px;z-index:70}
 .mtok{width:34px;height:34px;border-radius:50%;border:3px solid currentColor;display:flex;align-items:center;justify-content:center;font:700 20px Alegreya,serif;background:radial-gradient(circle at 35% 30%,#fff9 0,#ffffff22 35%,#0006 100%),#1d1d21;box-shadow:0 0 8px currentColor;cursor:help}
 .msh{position:relative;width:40px;height:52px;flex:none;cursor:help;filter:drop-shadow(0 2px 4px rgba(0,0,0,.65))}.msh img{width:100%;height:100%;object-fit:contain;display:block}.msh .mul{position:absolute;right:-7px;bottom:-4px;font:700 20px Alegreya,serif;color:#f2d27a;text-shadow:0 0 2px #000,0 0 3px #000,0 0 6px #000}button.msh{background:none;border:0;padding:0}.msh.lf{cursor:var(--cp);transition:transform .12s}.msh.lf:hover{transform:scale(1.08)}.msh.lf.sel{filter:drop-shadow(0 0 7px #f2d27a) drop-shadow(0 0 3px #f2d27a)}.mtok.F{color:var(--fire)}.mtok.E{color:var(--earth)}.mtok.W{color:var(--water)}
