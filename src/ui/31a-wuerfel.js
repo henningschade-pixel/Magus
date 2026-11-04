@@ -13,7 +13,7 @@ const DiceKit = (() => {
     mana: '<path d="M24 5C32 16 38 23.5 38 30.5a14 14 0 0 1-28 0C10 23.5 16 16 24 5Z" fill="currentColor"/><path d="M17.5 31a6.5 6.5 0 0 0 5 6.2" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="3" stroke-linecap="round"/>',
     limit: '<rect x="6" y="10" width="20" height="28" rx="3.5" fill="none" stroke="currentColor" stroke-width="3.4"/><path d="M30 24h13m-5.5-6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>',
     draws: '<path d="M35.5 13.6 A15.5 15.5 0 1 0 37 32.4" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><path d="M40.9 25.7L42 36.1L31.3 29.9Z" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
-    hand: '<g fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"><path d="M24 7.8A2.8 2.8 0 0 0 21.2 5H10.8 A2.8 2.8 0 0 0 8 7.8V24.2 A2.8 2.8 0 0 0 10.8 27"/><path d="M32 15.8A2.8 2.8 0 0 0 29.2 13H18.8 A2.8 2.8 0 0 0 16 15.8V32.2 A2.8 2.8 0 0 0 18.8 35"/><rect x="24" y="21" width="16" height="22" rx="2.8"/></g>',
+    hand: '<path d="M15 25V15M21.5 25V10M28 25V11.5M34.5 25V16.5" fill="none" stroke="currentColor" stroke-width="5.2" stroke-linecap="round"/><path d="M12.4 24h24.2v7.5c0 6.6-5.4 11.5-12.1 11.5S12.4 38 12.4 31.5z" fill="currentColor"/><path d="M13.5 32.5 7.5 25.5" fill="none" stroke="currentColor" stroke-width="5.4" stroke-linecap="round"/>',   // offene Hand (seit 0.5.5; vorher drei Karten)
     mag: '<path d="M24 42V11M11 24 24 11 37 24" fill="none" stroke="currentColor" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>',   // Magiestufe: Pfeil nach oben
     none: '',   // leere Seite: keine Grafik
   };
