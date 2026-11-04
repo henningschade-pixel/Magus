@@ -112,6 +112,9 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .sbody .statrow{gap:6px;margin:3px 0}.sbody .statrow img{width:22px;height:22px}.sbody .statrow b{min-width:33px}
 .bar.sb{flex:1;min-width:24px;height:9px}
 .bd{position:relative;flex:none}.bd img{width:100%;height:100%;display:block}
+.bwrap{position:relative;flex:none;margin-right:-9px}   /* die Bögen dürfen ins Polster des Panels ragen */.bwrap .bd{position:absolute;top:0}
+.arcs{position:absolute;left:0;top:0;overflow:visible;pointer-events:none}.arcs path{fill:none}
+.arcs .arcbg{stroke:#141416;pointer-events:stroke}.arcs .arcv{stroke-linecap:butt}.arcs .arcv.hp{stroke:#e0653f}.arcs .arcv.mana{stroke:#4a9be0}.arcs .arcsep{stroke:#17171b}
 .rg{position:absolute;border-radius:50%;box-sizing:border-box;pointer-events:none}
 .rg.pv{border:2.5px solid #5fe07f;box-shadow:0 0 9px #5fe07faa;background:rgba(95,224,127,.25)}
 .pvdn{color:var(--bad);font-weight:700}
@@ -128,10 +131,10 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .mk{color:#c58cf0;letter-spacing:2px;font-size:20px}
 .mkimg{width:22px;height:22px;vertical-align:middle;margin-right:2px}.mkimg.off{opacity:.22}
 .sbody .statrow .mk{display:flex;flex-wrap:nowrap;gap:1px;white-space:nowrap;margin-left:0}
-.sbody .statrow .mk img{width:18px;height:18px}
-.lead{display:inline-flex;flex:none;width:0;overflow:hidden;margin-right:-6px;transition:width .28s ease,margin .28s ease}
+.sbody .statrow .mk img{width:15px;height:15px}
+.lead{display:inline-flex;flex:none;width:0;overflow:hidden;margin-right:-6px;justify-content:center;transition:width .28s ease,margin .28s ease}   /* alle Knöpfe der Spalte sitzen mittig auf einer senkrechten Linie unter dem Münzknopf */
 .sbody.hasup .lead{width:30px;margin-right:0;overflow:visible}
-.lead .up{margin:0 6px 0 0}
+.lead .up{margin:0}
 .sbody .statrow .plcol{margin-left:auto;display:flex}
 .pendhdr{float:right;color:var(--gold);font-size:15px;font-weight:400}.pendhdr b{font-size:19px;font-weight:700}
 
@@ -170,7 +173,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .upgpts img{width:34px;height:50px;object-fit:contain}
 
 /* Opfern: goldener Münzknopf (Klasse up gc sacbtn) links neben dem Gold, die Pfeile ◀ ▶ stehen links und rechts neben dem Münzknopf; die Spalte der Knöpfe ist dann breiter, die übrigen Knöpfe stehen rechtsbündig unter der Münze */
-.sbody.hasup.hassac .lead{width:56px;justify-content:flex-end}
+.sbody.hasup.hassac .lead{width:56px}
 .lead .up.sacbtn{margin:0}
 .lead .arr{flex:none;align-self:center}
 .arr{background:none;border:0;color:var(--gold);font-size:12px;padding:0 1px;cursor:var(--cp)}.arr:disabled{opacity:.3;cursor:var(--cd)}.arr:hover:not(:disabled){color:#fff}
@@ -2563,6 +2566,20 @@ function boardHTML(mag, size) {
   });
   return h + '</div>';
 }
+// HP (links, rot) und Mana (rechts, blau) als gebogene Linien neben der Magiescheibe: je ein Bogen von 90 Grad, von unten nach oben gefüllt; feine Kerben trennen die einzelnen Punkte.
+function arcsHTML(s, bsz, pad, R) {
+  const W = bsz + 2 * pad, cx = W / 2, cy = bsz / 2, sw = 6;
+  const pt = deg => { const t = deg * Math.PI / 180; return (cx + R * Math.cos(t)).toFixed(1) + ' ' + (cy + R * Math.sin(t)).toFixed(1); };
+  const arc = (a1, a2, sweep, v, mx, cls, title) => {
+    const d = 'M' + pt(a1) + ' A' + R + ' ' + R + ' 0 0 ' + sweep + ' ' + pt(a2), L = 100 / Math.max(1, mx), g = 1.4, pct = Math.max(0, Math.min(1, v / Math.max(1, mx))) * 100;
+    return '<path class="arcbg" d="' + d + '" pathLength="100" stroke-width="' + sw + '"><title>' + title + '</title></path>' +
+      '<path class="arcv ' + cls + '" d="' + d + '" pathLength="100" stroke-width="' + sw + '" stroke-dasharray="' + pct.toFixed(2) + ' 100"/>' +
+      '<path class="arcsep" d="' + d + '" pathLength="100" stroke-width="' + (sw + 2) + '" stroke-dasharray="' + g + ' ' + (L - g).toFixed(3) + '" stroke-dashoffset="' + (g / 2).toFixed(2) + '"/>';
+  };
+  return '<svg class="arcs" width="' + W + '" height="' + bsz + '" viewBox="0 0 ' + W + ' ' + bsz + '">' +
+    arc(135, 225, 1, Math.max(0, s.hp), s.maxHp, 'hp', 'HP ' + Math.max(0, s.hp) + '/' + s.maxHp) +
+    arc(45, -45, 0, s.mana, s.maxMana, 'mana', 'Mana ' + s.mana + '/' + s.maxMana) + '</svg>';
+}
 function statsBlock(name, s, p, size, up, full) {
   const img = k => '<img src="' + IMG[k] + '">', compact = !full;
   const lfc = lfCtx(), who = lfc ? (s === lfc.cx.myStats ? 's' : s === lfc.cx.oppStats ? 'o' : null) : null;
@@ -2574,7 +2591,6 @@ function statsBlock(name, s, p, size, up, full) {
   const hpPl = M.maxed(s, 'hp') ? '' : hc > 1 ? plc(up && anyT && pend > 0, pend >= hc, 'hp', '+' + (G.rules.hpPerPoint || 1) + ' max. HP', hc) : pl(up && anyT && pend > 0, 'hp', '+' + (G.rules.hpPerPoint || 1) + ' max. HP (' + one + ')');
   const manaPl = M.maxed(s, 'mana') ? '' : mc > 1 ? plc(up && anyT && pend > 0, pend >= mc, 'mana', '+1 max. Mana', mc) : pl(up && anyT && pend > 0, 'mana', '+1 max. Mana (' + one + ')');
   const limPl = lc > 1 ? plc(up && anyT && pend > 0 && s.limit < M.MAX_LIMIT, pend >= lc, 'limit', '+1 Ausspiellimit', lc) : pl(up && anyT && pend >= lc && s.limit < M.MAX_LIMIT, 'limit', '+1 Ausspiellimit (' + one + ')');
-  const sbar = (v, mx, cls) => '<div class="bar sb ' + cls + '"><i style="width:' + Math.max(0, v) / mx * 100 + '%"></i></div>';
   const lead = b => compact ? '' : '<span class="lead">' + (b || '') + '</span>';   // Upgrade-Knöpfe stehen links neben dem Symbol; ohne Knöpfe schrumpft die Spalte auf 0 (Ausrichtung wie beim Gegner)
   // Opfern: goldener Münzknopf links neben dem Gold (wie die Upgrade-Knöpfe, die Zahl als Plakette); die Pfeile ◀ ▶ daneben stellen die Anzahl ein
   let sacCoin = '', sacArr = '', sacArr2 = '';
@@ -2585,8 +2601,8 @@ function statsBlock(name, s, p, size, up, full) {
     sacArr2 = '<button class="arr" data-act="sacup" title="Mehr opfern"' + (n < Math.min(s.gold, 4) ? '' : ' disabled') + '>▶</button>';
   }
   const hasUp = !compact && !!(hpPl || manaPl || limPl || sacCoin);
-  const hp = '<div class="statrow">' + lead(hpPl) + img('hp') + '<b data-pv="hp">' + Math.max(0, s.hp) + '/' + s.maxHp + '</b>' + sbar(s.hp, s.maxHp, '') + '</div>';
-  const mana = '<div class="statrow">' + lead(manaPl) + img('mana') + '<b data-pv="mana">' + s.mana + '/' + s.maxMana + '</b>' + sbar(s.mana, s.maxMana, 'mana') + '</div>';
+  const hp = '<div class="statrow">' + lead(hpPl) + img('hp') + '<b data-pv="hp">' + Math.max(0, s.hp) + '/' + s.maxHp + '</b></div>';
+  const mana = '<div class="statrow">' + lead(manaPl) + img('mana') + '<b data-pv="mana">' + s.mana + '/' + s.maxMana + '</b></div>';
   let h = '<h3><span class="hdr"><span class="hn">' + name + '</span>@@T@@@@G@@' + (p ? '<span class="hsp" title="Siegpunkte">★ <b>' + p.sp + '</b></span>' : '') + '</span></h3><div class="sbody' + (hasUp ? ' hasup' : '') + (sacCoin ? ' hassac' : '') + '"' + (compact ? '' : ' data-lead="1"') + '><div class="scol">';
   let ptsHdr = '';
   if (p) {   // offene Upgrade-Punkte, dahinter als Bruch der Fortschritt zur nächsten Tempelstufe; das Ergebnis eines Opfers zeigt die Vorschau beim Überfahren des Opfern-Knopfes
@@ -2619,7 +2635,8 @@ function statsBlock(name, s, p, size, up, full) {
     }
     bd = bd.replace(/<\/div>$/, btn + '</div>');
   }
-  h += '</div><div class="bcol">' + bd + '</div></div>';
+  const aR = compact ? bsz / 2 + 11 : bsz / 2 + 23, aPad = Math.ceil(aR - bsz / 2 + 4);   // Bögen: beim Spieler außerhalb der Magie-Knöpfe, beim Gegner dicht am Brett
+  h += '</div><div class="bcol"><div class="bwrap" style="width:' + (bsz + 2 * aPad) + 'px;height:' + bsz + 'px">' + arcsHTML(s, bsz, aPad, aR) + bd.replace('<div class="bd" style="', '<div class="bd" style="left:' + aPad + 'px;') + '</div></div></div>';
   return h;
 }
 // Monstername mit Besonderheit; die Beschreibung erscheint beim Darüberfahren, für beide Spieler.
@@ -3894,7 +3911,7 @@ function showStart(pg) {
     h += '<img class="logo" alt="" src="assets/img/logo.webp"><div class="menulist">' +
       (run ? menuBtn('resume', 'Spiel fortsetzen', '', 'primary') : '') +
       menuTo('single', 'Einzelspieler', run ? '' : 'primary') + menuTo('multi', 'Mehrspieler') + menuTo('settings', 'Einstellungen') + menuBtn('quit', 'Beenden') + '</div>' +
-      '<div class="menufoot">' + menuTo('about', 'Neu in Version 0.5.2.2', 'link') + '</div>';
+      '<div class="menufoot">' + menuTo('about', 'Neu in Version 0.5.3', 'link') + '</div>';
   } else if (pg === 'single') {
     h += '<h2>Einzelspieler</h2><div class="menulist">' +
       menuBtn('newgame', run ? 'Neues Spiel gegen den Computer' : 'Gegen den Computer spielen', '', run ? '' : 'primary') +
@@ -3907,7 +3924,7 @@ function showStart(pg) {
   } else if (pg === 'settings') {
     h += '<h2>Einstellungen</h2><div class="menulist">' + settingsHTML() + back + '</div>';
   } else if (pg === 'about') {
-    h += '<p class="note intro" style="margin-top:-2px"><b>Danke, dass du Trimagus testest!</b> <b>Neu in Version 0.5.2.2:</b> Die Pfeile ◀ ▶ zum Opfern stehen jetzt links und rechts neben dem Münzknopf. <b>Version 0.5.2.1:</b> Die Versionsbeschreibung nennt nur noch die Versionen ab 0.4. <b>Version 0.5.2:</b> <b>Opfern wie die anderen Knöpfe:</b> Ein goldener Münzknopf steht links neben dem Gold, die Zahl der geopferten Münzen zeigt er als Plakette. Mit den Pfeilen ◀ ▶ daneben stellst du die Anzahl ein; die Schaltfläche „Opfern“ ist entfallen. <b>Version 0.5.1:</b> <b>Das Spiel heißt jetzt Trimagus.</b> Du startest mit <b>Ausspiellimit 1</b> (vorher 2). Jede Weiterentwicklung wird mit jedem Kauf teurer: die erste kostet 1 Gold, die zweite 2 Gold (gilt für Ausspiellimit, Handplätze, Nachziehlimit, max. HP und max. Mana; die Magie kostet wie bisher 1, 2, 3 … Upgrade-Punkte). Jede Entwicklung ist auf <b>Stufe 3</b> begrenzt, also auf zwei Ausbauten: Ausspiellimit 1 bis 3, Handplätze 3 bis 5, Nachziehlimit 1 bis 3, max. HP 4 bis 8, max. Mana 4 bis 6, Magie 1 bis 3. Die Monster behalten ihre Werte. Der Computer ist noch nicht neu abgestimmt. <b>Version 0.4.1:</b> Keine Spieländerung: Vier weitere Ideen sind als Notizen festgehalten (Umbenennung in Trimagus, Upgrades höchstens 3, Start mit 3 Siegpunkten, Siegpunkt-Belohnung 2 in Stufe 2 und 3 in Stufe 3). <b>Neu in Version 0.4:</b> Vier Regeländerungen. <b>Monster:</b> Die zweite Magie eines Monsters ist jetzt die <b>überlegene</b> (Feuer-Monster: Wasser, Erde-Monster: Feuer, Wasser-Monster: Erde). <b>Combo zuerst:</b> Auch in der Verteidigung wirkt der Combo-Effekt vor der Verteidigung selbst; die Heilung füllt die HP also auf, bevor der Schaden trifft, und ein Spiegel-Combo wirkt sofort gegen den laufenden Angriff. <b>Ausgleich:</b> Nach einer Niederlage gegen ein Monster erhält ihn nur noch der Verlierer. <b>Nur Gold:</b> Der Abschnittsbonus beträgt je Monster 1, 2 und 3 Gold (3, 6, 9 Gold je Abschnitt), der Ausgleich nach einer Niederlage 1, 2 und 3 Gold; es gibt keine Upgrade-Punkte mehr als Bonus. Computer neu abgestimmt.</p><div class="menulist">' + back + '</div>';
+    h += '<p class="note intro" style="margin-top:-2px"><b>Danke, dass du Trimagus testest!</b> <b>Neu in Version 0.5.3:</b> Alle Knöpfe links (Opfern, HP, Mana, Limit) stehen jetzt auf einer Linie unter dem Münzknopf. HP und Mana stehen nicht mehr als Balken in den Zeilen, sondern als gebogene Linien links (HP) und rechts (Mana) neben der Magiescheibe. <b>Version 0.5.2.2:</b> Die Pfeile ◀ ▶ zum Opfern stehen jetzt links und rechts neben dem Münzknopf. <b>Version 0.5.2.1:</b> Die Versionsbeschreibung nennt nur noch die Versionen ab 0.4. <b>Version 0.5.2:</b> <b>Opfern wie die anderen Knöpfe:</b> Ein goldener Münzknopf steht links neben dem Gold, die Zahl der geopferten Münzen zeigt er als Plakette. Mit den Pfeilen ◀ ▶ daneben stellst du die Anzahl ein; die Schaltfläche „Opfern“ ist entfallen. <b>Version 0.5.1:</b> <b>Das Spiel heißt jetzt Trimagus.</b> Du startest mit <b>Ausspiellimit 1</b> (vorher 2). Jede Weiterentwicklung wird mit jedem Kauf teurer: die erste kostet 1 Gold, die zweite 2 Gold (gilt für Ausspiellimit, Handplätze, Nachziehlimit, max. HP und max. Mana; die Magie kostet wie bisher 1, 2, 3 … Upgrade-Punkte). Jede Entwicklung ist auf <b>Stufe 3</b> begrenzt, also auf zwei Ausbauten: Ausspiellimit 1 bis 3, Handplätze 3 bis 5, Nachziehlimit 1 bis 3, max. HP 4 bis 8, max. Mana 4 bis 6, Magie 1 bis 3. Die Monster behalten ihre Werte. Der Computer ist noch nicht neu abgestimmt. <b>Version 0.4.1:</b> Keine Spieländerung: Vier weitere Ideen sind als Notizen festgehalten (Umbenennung in Trimagus, Upgrades höchstens 3, Start mit 3 Siegpunkten, Siegpunkt-Belohnung 2 in Stufe 2 und 3 in Stufe 3). <b>Neu in Version 0.4:</b> Vier Regeländerungen. <b>Monster:</b> Die zweite Magie eines Monsters ist jetzt die <b>überlegene</b> (Feuer-Monster: Wasser, Erde-Monster: Feuer, Wasser-Monster: Erde). <b>Combo zuerst:</b> Auch in der Verteidigung wirkt der Combo-Effekt vor der Verteidigung selbst; die Heilung füllt die HP also auf, bevor der Schaden trifft, und ein Spiegel-Combo wirkt sofort gegen den laufenden Angriff. <b>Ausgleich:</b> Nach einer Niederlage gegen ein Monster erhält ihn nur noch der Verlierer. <b>Nur Gold:</b> Der Abschnittsbonus beträgt je Monster 1, 2 und 3 Gold (3, 6, 9 Gold je Abschnitt), der Ausgleich nach einer Niederlage 1, 2 und 3 Gold; es gibt keine Upgrade-Punkte mehr als Bonus. Computer neu abgestimmt.</p><div class="menulist">' + back + '</div>';
   } else if (pg === 'quit') {
     h += '<p class="note" style="text-align:center;font-size:19px">Danke fürs Spielen!<br>Ein Browser-Tab lässt sich vom Spiel aus nicht immer schließen. Schließe diesen Tab oder dieses Fenster einfach selbst.</p><div class="menulist">' + back + '</div>';
   }
