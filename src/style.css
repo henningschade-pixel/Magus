@@ -345,10 +345,9 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 b.dfl{border-radius:6px;animation:dflb .37s ease-in-out 3}
 b.dfl.pos{--c:127,208,138}b.dfl.neg{--c:234,90,94}
 @keyframes dflb{0%,100%{background:rgba(var(--c),0);box-shadow:none}50%{background:rgba(var(--c),.5);box-shadow:0 0 10px 3px rgba(var(--c),.85)}}
-.arcs .arcv.dfl{animation:dfla .37s ease-in-out 3}
-.arcs .arcv.dfl.pos{--g:#7fd08a}.arcs .arcv.dfl.neg{--g:#ff5a5e}
-@keyframes dfla{0%,100%{filter:none}50%{filter:drop-shadow(0 0 6px var(--g)) drop-shadow(0 0 3px var(--g)) brightness(1.8)}}
-b.dfl.inf,.arcs .arcv.dfl.inf{animation-iteration-count:infinite}
-/* Vorschau (seit 0.5.6.1): der zugehörige Bogen blendet beim Überfahren sanft ein und aus */
-.arcs .arcv.dfl.inf{animation:dflfade .9s ease-in-out infinite}
-@keyframes dflfade{0%,100%{opacity:1;filter:drop-shadow(0 0 6px var(--g)) brightness(1.6)}50%{opacity:.12;filter:none}}
+b.dfl.inf{animation-iteration-count:infinite}
+/* Bogen (seit 0.5.6.2): nur der betroffene Anteil blinkt, grün bei Zuwachs, rot bei Verlust */
+.arcs .arcfx{animation:dflseg .37s ease-in-out 3;stroke-linecap:butt}
+.arcs .arcfx.pos{stroke:#7fd08a}.arcs .arcfx.neg{stroke:#ff5a5e}
+.arcs .arcfx.inf{animation-duration:.8s;animation-iteration-count:infinite}
+@keyframes dflseg{0%,100%{opacity:1}50%{opacity:.1}}

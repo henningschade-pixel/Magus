@@ -358,7 +358,7 @@ test('Wertänderungen: Zahl grün (+) bzw. rot (−) bei Gold, HP und Mana; HP u
     await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(1000);
     await p.evaluate(() => { const s = window.__magus.state.players[0].stats; s.gold += 3; s.hp -= 2; s.mana += 1; window.__magus.pump(); });
     await p.waitForTimeout(300);
-    const r = await p.evaluate(() => ({ dlt: [...document.querySelectorAll('.dlt')].map(e => e.textContent + ' ' + (e.classList.contains('pos') ? 'pos' : e.classList.contains('neg') ? 'neg' : '')), fl: [...document.querySelectorAll('b.dfl')].map(e => e.dataset.pv + ' ' + (e.classList.contains('pos') ? 'pos' : 'neg')), arcs: document.querySelectorAll('.arcv.dfl').length }));
+    const r = await p.evaluate(() => ({ dlt: [...document.querySelectorAll('.dlt')].map(e => e.textContent + ' ' + (e.classList.contains('pos') ? 'pos' : e.classList.contains('neg') ? 'neg' : '')), fl: [...document.querySelectorAll('b.dfl')].map(e => e.dataset.pv + ' ' + (e.classList.contains('pos') ? 'pos' : 'neg')), arcs: document.querySelectorAll('.arcfx').length }));
     assert.deepEqual(r.dlt.sort(), ['+1 pos', '+3 pos', '−2 neg']);
     assert.deepEqual(r.fl.sort(), ['hp neg', 'mana pos']);
     assert.equal(r.arcs, 2);
