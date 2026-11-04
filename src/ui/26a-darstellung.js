@@ -17,13 +17,17 @@ function fxSound(f) {
 // Kombo-Effekte: Die Animation läuft zuerst, die Wirkung (Flüche im Ablagestapel, Zerrüttungs-Abfrage, Heilung und entfernte Marker) wird erst angezeigt, wenn sie ankommt – wie beim Angriff.
 // Die Engine hat die Wirkung schon angewendet; bis ‚until‘ zeigt die Oberfläche den Stand davor. pre: Werte vor der Aktion (preStats).
 let comboHold = [];
+function comboSeconds(f) {   // Sekunden bis zur Ankunft einer Kombo-Animation (passend zu den Animationen in 22-lifeflow-aggro.js); 0 bei allem anderen
+  if (f.kind === 'aggro') return .3 + (Math.max(1, f.n || 1) - 1) * .22 + .75;
+  if (f.kind === 'ruin') return .12 + .55 + .05;
+  if (f.kind === 'lifeflow') return (.1 + (Math.max(1, f.removed || 1) - 1) * .06 + .37) * 2.6;
+  if (f.kind === 'mirrorcast') return .6;
+  return 0;
+}
 function holdCombo(f, delay) {
   if (FAST || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
-  let dur;   // Sekunden bis zur Ankunft (passend zu den Animationen in 22-lifeflow-aggro.js)
-  if (f.kind === 'aggro') dur = .3 + (Math.max(1, f.n || 1) - 1) * .22 + .75;
-  else if (f.kind === 'ruin') dur = .12 + .55 + .05;
-  else if (f.kind === 'lifeflow') dur = (.1 + (Math.max(1, f.removed || 1) - 1) * .06 + .37) * 2.6;
-  else return;
+  const dur = comboSeconds(f);
+  if (!dur || f.kind === 'mirrorcast') return;
   const ms = delay + Math.round(dur * 1000) + 40;
   comboHold.push({ f, from: Date.now() + delay * 0, until: Date.now() + ms, pre: preStats ? JSON.parse(JSON.stringify(preStats)) : null });
   setTimeout(render, ms + 30);
@@ -54,11 +58,19 @@ function withComboHold(fn) {
 }
 function showFx() {
   if (fxFor !== G) { fxFor = G; fxLast = G.logN; FlowFx.resetEx(); return; }
-  let k = 0;
+  let k = 0, preMs = 0;   // preMs: Wartezeit der Verteidigungsanimation hinter einer Kombo-Animation derselben Aktion
   for (const e of G.log) {
     if (e.n <= fxLast) continue;
     const go = f => { if (!FAST) fxSound(f); if (f.kind === 'lifeflow') FlowFx.lifeflow(f); else if (f.kind === 'aggro') FlowFx.aggro(f); else if (f.kind === 'drain') FlowFx.drain(f); else if (f.kind === 'ruin') FlowFx.ruin(f); else if (f.kind === 'attack') FlowFx.attack(f); else if (f.kind === 'defense') FlowFx.defense(f); };
-    [].concat(e.fx || []).forEach(f => { if (f.late) { lateN++; setTimeout(() => { lateN--; go(f); }, Math.round(1000 * FlowFx.wait()) + 150); } else go(f); });   // Kombo der Verteidigung erst nach der Kampfanimation
+    [].concat(e.fx || []).forEach(f => {
+      if (f.late) { lateN++; setTimeout(() => { lateN--; go(f); }, Math.round(1000 * FlowFx.wait()) + 150); return; }
+      if (f.first) preMs = Math.max(preMs, Math.round(1000 * comboSeconds(f)) + 100);   // seit 0.18: Kombo der Verteidigung zuerst
+      if (f.kind === 'defense' && preMs > 0 && !FAST) {   // die Verteidigungsanimation beginnt erst, wenn die Kombo-Animation durch ist; bis dahin zeigen die HP-Balken den Stand vor dem Schaden
+        const wait = preMs; preMs = 0;
+        if (f.hpPre) { hpHold = { until: Date.now() + wait + 60, pre: f.hpPre, un: { [f.who]: Date.now() + wait, [f.to]: Date.now() + wait } }; setTimeout(() => { if (G) render(); }, wait + 80); }
+        lateN++; setTimeout(() => { lateN--; go(f); }, wait);
+      } else go(f);
+    });
     const m = /^(Spiegel|Todes-Fluch): /.exec(e.txt); if (!m) continue;
     if (m[1] === 'Todes-Fluch') Snd.play('curse', 0, 0.95);   // Fluch-Sound, wenn der Todes-Fluch Schaden macht
     const mirror = m[1] === 'Spiegel', victimMe = mirror ? e.pid !== ME : e.pid === ME;
@@ -161,7 +173,7 @@ function showStart(pg) {
     h += '<img class="logo" alt="" src="assets/img/logo.webp"><div class="menulist">' +
       (run ? menuBtn('resume', 'Spiel fortsetzen', '', 'primary') : '') +
       menuTo('single', 'Einzelspieler', run ? '' : 'primary') + menuTo('multi', 'Mehrspieler') + menuTo('settings', 'Einstellungen') + menuBtn('quit', 'Beenden') + '</div>' +
-      '<div class="menufoot">' + menuTo('about', 'Neu in Version 0.15', 'link') + '</div>';
+      '<div class="menufoot">' + menuTo('about', 'Neu in Version 0.18', 'link') + '</div>';
   } else if (pg === 'single') {
     h += '<h2>Einzelspieler</h2><div class="menulist">' +
       menuBtn('newgame', run ? 'Neues Spiel gegen den Computer' : 'Gegen den Computer spielen', '', run ? '' : 'primary') +
@@ -174,7 +186,7 @@ function showStart(pg) {
   } else if (pg === 'settings') {
     h += '<h2>Einstellungen</h2><div class="menulist">' + settingsHTML() + back + '</div>';
   } else if (pg === 'about') {
-    h += '<p class="note intro" style="margin-top:-2px"><b>Danke, dass du Magus testest!</b> <b>Neu in Version 0.17:</b> Keine Spieländerung: Drei offene Punkte sind als Notizen festgehalten (Magierichtung der Monster, Combo zuerst auslösen, Ausgleich nach einer Monsterniederlage nur für den Verlierer und nur in Gold). <b>Neu in Version 0.16.2:</b> Der <b>Computer</b> geht mit den <b>Spiegeln je Farbe</b> um: Er zählt nur, was ein neuer Spiegel gegenüber dem schon liegenden bringt, gewichtet die Farbe danach, wie oft du sie spielst, und räumt mit der <b>Läuterung</b> deine Spiegel zuerst in der Farbe ab, mit der er selbst am stärksten angreift. Die Balance habe ich neu gemessen: Die Regeländerung verschiebt in Computer-Partien nichts messbar. <b>Neu in Version 0.16.1:</b> Das Limit der <b>Spiegelmarker</b> gilt jetzt <b>je Farbe</b>: Feuer- und Erde-Marker sind verschiedene Marker, es können also bis zu <b>3 Feuer- und 3 Erde-Marker</b> gleichzeitig liegen (bisher höchstens 3 insgesamt, sodass ein Erde-Spiegel den Feuer-Spiegel verhinderte). <b>Neu in Version 0.16:</b> Stehen die Angriffs- oder Verteidigungssymbole in <b>zwei Zeilen</b>, sind die Zeilen jetzt auch bei <b>7 und 9 Symbolen</b> gegeneinander versetzt (bisher nur bei gerader Zahl). <b>Neu in Version 0.15:</b> Die Vorschau beim Darüberfahren mit der Maus (Erholen, Nachziehen, Verteidigen, Passen) zeigt im Kampf jetzt die <b>richtigen Mana- und HP-Höchstwerte</b> des Monsters, das du führst. <b>Neu in Version 0.14.1:</b> Auch <b>gleiche Elemente</b> haben jetzt ihren eigenen Effekt: <b>Feuer gegen Feuer</b> ergibt einen <b>Feuerball</b>, der in alle Richtungen explodiert, <b>Erde gegen Erde</b> ein <b>Bersten</b> mit Brocken, Staub und Rissen im Boden, <b>Wasser gegen Wasser</b> eine <b>Woge</b> mit Tropfen und Ringwellen. Sind es so viele Angriffssymbole, dass sie in <b>zwei Zeilen</b> stehen, sind die Zeilen jetzt <b>gegeneinander versetzt</b>. <b>Neu in Version 0.14:</b> Treffen im Kampf zwei verschiedene Elemente aufeinander, hat jede Kombination ihren eigenen Effekt: <b>Feuer gegen Wasser</b> ergibt <b>Dampf</b>, <b>Feuer gegen Erde</b> <b>Lava</b> mit glühenden Brocken, Funken und Rauch, <b>Erde gegen Wasser</b> <b>Schlamm</b> mit Spritzern, einer Pfütze und Blasen. <b>Neu in Version 0.13:</b> Die <b>Vorschau</b>, die bisher nur bei Gold und Upgrade-Punkten erschien, zeigt jetzt auch weitere zu erwartende Änderungen: Fährst du mit der Maus über <b>Verteidigen</b>, <b>Passen</b>, <b>Erholen</b> oder den <b>Nachziehstapel</b>, erscheinen die zu erwartenden Änderungen von HP, Mana und Gold, sinkende Werte in <b>Rot</b>, steigende in <b>Grün</b>. Bei <b>rotem Nachziehmarker</b> kostet das Nachziehen im Kampf jetzt <b>1 Mana</b>, in der Weltphase bekommt der Gegner Gold. <b>Neu in Version 0.11:</b> Der <b>Computer</b> entscheidet sich in festgefahrenen Kämpfen schneller zum Angriff; lange Pattphasen, vor allem im ersten Abschnitt, werden dadurch seltener. Beim Spielstart <b>drehen sich die Monsterkarten</b> jetzt richtig um und die <b>Handkarten</b> drehen sich beim Austeilen und Aufdecken mit Schwung um.</p><div class="menulist">' + back + '</div>';
+    h += '<p class="note intro" style="margin-top:-2px"><b>Danke, dass du Magus testest!</b> <b>Neu in Version 0.18:</b> Vier Regeländerungen. <b>Monster:</b> Die zweite Magie eines Monsters ist jetzt die <b>überlegene</b> (Feuer-Monster: Wasser, Erde-Monster: Feuer, Wasser-Monster: Erde). <b>Combo zuerst:</b> Auch in der Verteidigung wirkt der Combo-Effekt vor der Verteidigung selbst; die Heilung füllt die HP also auf, bevor der Schaden trifft, und ein Spiegel-Combo wirkt sofort gegen den laufenden Angriff. <b>Ausgleich:</b> Nach einer Niederlage gegen ein Monster erhält ihn nur noch der Verlierer. <b>Nur Gold:</b> Der Abschnittsbonus beträgt je Monster 1, 2 und 3 Gold (3, 6, 9 Gold je Abschnitt), der Ausgleich nach einer Niederlage 1, 2 und 3 Gold; es gibt keine Upgrade-Punkte mehr als Bonus. Computer neu abgestimmt. <b>Neu in Version 0.17:</b> Keine Spieländerung: Drei offene Punkte sind als Notizen festgehalten (Magierichtung der Monster, Combo zuerst auslösen, Ausgleich nach einer Monsterniederlage nur für den Verlierer und nur in Gold). <b>Neu in Version 0.16.2:</b> Der <b>Computer</b> geht mit den <b>Spiegeln je Farbe</b> um: Er zählt nur, was ein neuer Spiegel gegenüber dem schon liegenden bringt, gewichtet die Farbe danach, wie oft du sie spielst, und räumt mit der <b>Läuterung</b> deine Spiegel zuerst in der Farbe ab, mit der er selbst am stärksten angreift. Die Balance habe ich neu gemessen: Die Regeländerung verschiebt in Computer-Partien nichts messbar. <b>Neu in Version 0.16.1:</b> Das Limit der <b>Spiegelmarker</b> gilt jetzt <b>je Farbe</b>: Feuer- und Erde-Marker sind verschiedene Marker, es können also bis zu <b>3 Feuer- und 3 Erde-Marker</b> gleichzeitig liegen (bisher höchstens 3 insgesamt, sodass ein Erde-Spiegel den Feuer-Spiegel verhinderte). <b>Neu in Version 0.16:</b> Stehen die Angriffs- oder Verteidigungssymbole in <b>zwei Zeilen</b>, sind die Zeilen jetzt auch bei <b>7 und 9 Symbolen</b> gegeneinander versetzt (bisher nur bei gerader Zahl). <b>Neu in Version 0.15:</b> Die Vorschau beim Darüberfahren mit der Maus (Erholen, Nachziehen, Verteidigen, Passen) zeigt im Kampf jetzt die <b>richtigen Mana- und HP-Höchstwerte</b> des Monsters, das du führst. <b>Neu in Version 0.14.1:</b> Auch <b>gleiche Elemente</b> haben jetzt ihren eigenen Effekt: <b>Feuer gegen Feuer</b> ergibt einen <b>Feuerball</b>, der in alle Richtungen explodiert, <b>Erde gegen Erde</b> ein <b>Bersten</b> mit Brocken, Staub und Rissen im Boden, <b>Wasser gegen Wasser</b> eine <b>Woge</b> mit Tropfen und Ringwellen. Sind es so viele Angriffssymbole, dass sie in <b>zwei Zeilen</b> stehen, sind die Zeilen jetzt <b>gegeneinander versetzt</b>. <b>Neu in Version 0.14:</b> Treffen im Kampf zwei verschiedene Elemente aufeinander, hat jede Kombination ihren eigenen Effekt: <b>Feuer gegen Wasser</b> ergibt <b>Dampf</b>, <b>Feuer gegen Erde</b> <b>Lava</b> mit glühenden Brocken, Funken und Rauch, <b>Erde gegen Wasser</b> <b>Schlamm</b> mit Spritzern, einer Pfütze und Blasen. <b>Neu in Version 0.13:</b> Die <b>Vorschau</b>, die bisher nur bei Gold und Upgrade-Punkten erschien, zeigt jetzt auch weitere zu erwartende Änderungen: Fährst du mit der Maus über <b>Verteidigen</b>, <b>Passen</b>, <b>Erholen</b> oder den <b>Nachziehstapel</b>, erscheinen die zu erwartenden Änderungen von HP, Mana und Gold, sinkende Werte in <b>Rot</b>, steigende in <b>Grün</b>. Bei <b>rotem Nachziehmarker</b> kostet das Nachziehen im Kampf jetzt <b>1 Mana</b>, in der Weltphase bekommt der Gegner Gold. <b>Neu in Version 0.11:</b> Der <b>Computer</b> entscheidet sich in festgefahrenen Kämpfen schneller zum Angriff; lange Pattphasen, vor allem im ersten Abschnitt, werden dadurch seltener. Beim Spielstart <b>drehen sich die Monsterkarten</b> jetzt richtig um und die <b>Handkarten</b> drehen sich beim Austeilen und Aufdecken mit Schwung um.</p><div class="menulist">' + back + '</div>';
   } else if (pg === 'quit') {
     h += '<p class="note" style="text-align:center;font-size:19px">Danke fürs Spielen!<br>Ein Browser-Tab lässt sich vom Spiel aus nicht immer schließen. Schließe diesen Tab oder dieses Fenster einfach selbst.</p><div class="menulist">' + back + '</div>';
   }

@@ -81,11 +81,15 @@ function endCombat(state, end) {
       gain(A, c.att);
     } else if (end.winner === 'b') {   // Niederlage gegen das Monster: kein Gold, das Monster zieht sich zurück
       log(state, m.name + ' gewinnt den Kampf.', c.def);
-      const hf = state.rules.lossHelp || 0;   // Hilfe: Gewinnt das Monster, erhalten beide Spieler die Boni des Abschnittsbeginns (Gold und Upgrade-Punkte), mal lossHelp; das Monster verschwindet danach (sonst ließe sich die Hilfe durch absichtliche Niederlagen farmen)
+      const hf = state.rules.lossHelp || 0;   // Ausgleich (früher „Hilfe“): Gewinnt das Monster, bekommt der Verlierer (der Angreifer) Gold je Abschnitt (lossGold: 1/2/3, seit 0.18 nur Gold, keine Upgrade-Punkte: lossPoints 0) – nur er, nicht mehr beide Spieler (lossBoth 1 stellt das alte Verhalten wieder her); das Monster verschwindet danach (sonst ließe sich der Ausgleich durch absichtliche Niederlagen farmen)
       m.stats.hp = 0; m.stats.gold = 0; m.retreated = true; res.monsterGone = true; log(state, m.name + ' zieht sich zurück.', c.def);
       if (hf > 0) {
-        const hp = Math.round(((state.rules.stagePoints || [])[state.stage] || 0) * hf), hg = Math.round(((state.rules.stageGold || [])[state.stage] || 0) * hf);
-        if (hp > 0 || hg > 0) { state.players.forEach(p => { p.stats.pending += hp; p.stats.gold += hg; p.stats.upGot += hp; p.stats.goldGot += hg; }); res.help = { points: hp, gold: hg }; log(state, 'Hilfe: Jeder Spieler erhält ' + [hp ? hp + ' Upgrade-Punkt' + (hp > 1 ? 'e' : '') : '', hg ? hg + ' Gold' : ''].filter(Boolean).join(' und ') + '.'); }
+        const hp = Math.round(((state.rules.lossPoints || [])[state.stage] || 0) * hf), hg = Math.round(((state.rules.lossGold || [])[state.stage] || 0) * hf), both = !!state.rules.lossBoth;
+        if (hp > 0 || hg > 0) {
+          (both ? state.players : [A]).forEach(p => { p.stats.pending += hp; p.stats.gold += hg; p.stats.upGot += hp; p.stats.goldGot += hg; });
+          res.help = { points: hp, gold: hg, both, to: both ? null : c.att };
+          log(state, 'Ausgleich: ' + (both ? 'Jeder Spieler erhält ' : A.name + ' erhält als Verlierer ') + [hp ? hp + ' Upgrade-Punkt' + (hp > 1 ? 'e' : '') : '', hg ? hg + ' Gold' : ''].filter(Boolean).join(' und ') + '.', both ? undefined : c.att);
+        }
       }
       if (msp) { const lost = Math.min(msp, A.sp); A.sp -= lost; res.sp = { winner: 0, loser: -lost }; if (lost) log(state, A.name + ' verliert ' + lost + ' Siegpunkt' + (lost > 1 ? 'e' : '') + '; das Monster bringt seinem Führer keine.', c.att); }   // Niederlage kostet den Angreifer, bringt dem Monsterführer aber nichts (sonst lässt sich ein unbesiegtes Monster endlos farmen)
     }
@@ -249,24 +253,31 @@ function canFlee(state, pid) {
   return me.ctrl === pid && opp.stats.mana <= 0 && !(me.stats.death > 0);
 }
 function recoverGain(state) { const r = state.rules.recoverByStage; return r ? (r[Math.min(r.length, Math.max(1, state.stage)) - 1] || 1) : 1; }
-// Ergebnis einer Verteidigung (Spiegel, Rückwurf, Restschaden): gemeinsam für die Ausführung (execDefense) und die Vorschau der Oberfläche (previewDefense).
-function defenseOutcome(stats, color, pending, block) {
-  const mLvl = mirrorOf(stats, color), missing = Math.max(0, pending - block), excess = Math.max(0, block - pending);
+// Ergebnis einer Verteidigung (Spiegel, Rückwurf, Restschaden): gemeinsam für die Ausführung (execDefense) und die Vorschau der Oberfläche (previewDefense). mir: Spiegelstufe der Angriffsfarbe nach dem Kombo (seit 0.18 wirkt der Kombo vor der Verteidigung); ohne Angabe zählt der Spiegel, der jetzt liegt.
+function defenseOutcome(stats, color, pending, block, mir) {
+  const mLvl = mir === undefined ? mirrorOf(stats, color) : mir, missing = Math.max(0, pending - block), excess = Math.max(0, block - pending);
   const absorb = Math.min(mLvl, missing), refl = Math.min(mLvl, excess, pending);
   return { mLvl, absorb, refl, lost: absorb + refl, leftover: missing - absorb };
+}
+// Was ein Kombo der Verteidigung vor dem Schaden ändert (seit 0.18): Heilung (HP vor dem Schaden, höchstens bis zum Maximum) und der Spiegel der Angriffsfarbe (wirkt schon gegen diesen Angriff).
+function defenseComboPre(stats, ev, color) {
+  const lvs = ev && ev.ord && !(ev.levels && ev.levels.ulti > 0) ? levelsFor(ev) : null, own = mirrorOf(stats, color);
+  if (!lvs) return { heal: 0, hp: stats.hp, mir: own };
+  const heal = Math.max(0, Math.min(stats.maxHp, stats.hp + lvs.gh) - stats.hp);
+  return { heal, hp: stats.hp + heal, mir: lvs.fw > 0 && ev.ord.el === color ? Math.max(own, Math.min(lvs.fw, MAX_MIRROR)) : own };
 }
 // Vorschau für die Knöpfe „Verteidigen“ und „Passen“, ohne etwas zu ändern: Mana-Kosten, Block, Restschaden und die HP danach (beim Verteidiger und, durch den Spiegelrückwurf, beim Angreifer). null, wenn gerade keine Verteidigung ansteht oder die Auswahl nicht geht.
 function previewDefense(state, passOnly) {
   const c = state.combat;
   if (!c || c.forced || c.action !== 'defense') return null;
   const side = c.sides[c.turn], att = c.sides[c.turn === 'a' ? 'b' : 'a'];
-  let block = 0, cost = 0;
+  let block = 0, cost = 0, pre = { heal: 0, hp: side.stats.hp, mir: mirrorOf(side.stats, c.color) };
   if (!passOnly) {
     const sel = selection(side.deck);
-    if (sel.length) { const ev = evalDefense(side.stats, sel, c.color); if (!ev.valid || ev.affordable === false) return null; block = ev.block || 0; cost = ev.cost || 0; }
+    if (sel.length) { const ev = evalDefense(side.stats, sel, c.color); if (!ev.valid || ev.affordable === false) return null; block = ev.block || 0; cost = ev.cost || 0; pre = defenseComboPre(side.stats, ev, c.color); }
   }
-  const o = defenseOutcome(side.stats, c.color, c.pending, block);
-  return Object.assign({ who: side.ctrl, att: att.ctrl, cost, block, hpAfter: Math.max(0, side.stats.hp - o.leftover), attHpAfter: Math.max(0, att.stats.hp - o.refl) }, o);
+  const o = defenseOutcome(side.stats, c.color, c.pending, block, pre.mir);
+  return Object.assign({ who: side.ctrl, att: att.ctrl, cost, block, heal: pre.heal, hpAfter: Math.max(0, pre.hp - o.leftover), attHpAfter: Math.max(0, att.stats.hp - o.refl) }, o);
 }
 function execDefense(state, passOnly) {
   const c = state.combat, side = c.sides[c.turn], c0pending = c.pending;
@@ -280,17 +291,30 @@ function execDefense(state, passOnly) {
     block = ev.block || 0; cost = ev.cost || 0; defEv = ev;
   }
   side.stats.mana -= cost;
-  const gain = recoverGain(state);
   // Passen in der Verteidigung bringt kein Mana (nur im Angriffszug gibt es Erholen)
   if (sel.length) consumeSelection(d, sel); else d.marks = [];
+  const attacker = c.sides[c.turn === 'a' ? 'b' : 'a'];
+  // Seit 0.18 wirkt der Kombo zuerst, danach die Verteidigung (wie im Angriff, wo der Kombo ebenfalls vor dem Schaden kommt): Eine Heilung gleicht jetzt keinen Schaden mehr nachträglich aus, sie füllt die HP vor dem Schaden auf (nur bis zum Maximum), und ein Spiegel dieser Farbe wirkt schon gegen den Angriff, auf den verteidigt wird.
+  if (defEv && defEv.levels && defEv.levels.ulti > 0) {   // Ultimate in der Verteidigung: Todes-Fluch für den Angreifer
+    if (attacker.stats.deathPhase === undefined) attacker.stats.deathPhase = attacker.stats.death || 0;
+    attacker.stats.death = Math.max(attacker.stats.death || 0, defEv.levels.ulti);
+    log(state, side.name + ' wirkt eine Ultimate: Ultimate ' + defEv.levels.ulti + ': Todes-Fluch für ' + attacker.name + ' (' + attacker.stats.death + ' HP am Ende jeder seiner Angriffsphasen bis Kampfende).', side.ctrl, { kind: 'aggro', who: side.ctrl, to: attacker.ctrl, n: defEv.levels.ulti, first: true, ult: true });
+  }
+  if (defEv && defEv.ord) {
+    const lvs = levelsFor(defEv), plan = [], texts = [], fxs = [];
+    for (const k of ['fw', 'fe', 'ew', 'rm', 'gh']) if (lvs[k] > 0) plan.push([k, lvs[k]]);
+    applyComboPlan(state, side, attacker, plan, defEv, texts, fxs);
+    fxs.forEach(f => { f.first = true; });   // Oberfläche: Kombo-Animation läuft vor der Verteidigungsanimation
+    if (texts.length) log(state, side.name + ' wirkt einen Kombo: ' + texts.join(', ') + '.', side.ctrl, fxs.length ? fxs : undefined);
+  }
   // Spiegel (dauerhaft, je Farbe eine Stufe von höchstens 3, die Farben zählen getrennt). Gegen einen Angriff in seiner Farbe gleicht er zuerst fehlende Verteidigung aus
   // (höchstens seine Stufe) und verliert dafür je ausgeglichenen Schaden eine Stufe. Nur wenn der Verteidiger mehr verteidigt als nötig, wirft er den
   // Überschuss zurück (ebenfalls höchstens seine Stufe und höchstens der eingehende Schaden) und verliert dafür je zurückgeworfenen Schaden eine Stufe. Das gilt auch beim Passen.
   const { mLvl, absorb, refl, lost, leftover } = defenseOutcome(side.stats, c.color, c.pending, block);
-  const hpPre = { [side.ctrl]: side.stats.hp, [c.sides[c.turn === 'a' ? 'b' : 'a'].ctrl]: c.sides[c.turn === 'a' ? 'b' : 'a'].stats.hp };   // HP vor dem Schaden (Oberfläche zeigt sie, bis der Schild-Effekt durch ist)
+  const hpPre = { [side.ctrl]: side.stats.hp, [attacker.ctrl]: attacker.stats.hp };   // HP vor dem Schaden, aber nach dem Kombo (Oberfläche zeigt sie, bis die Geschosse einschlagen)
   side.stats.hp = Math.max(0, side.stats.hp - leftover);
-  const attacker = c.sides[c.turn === 'a' ? 'b' : 'a'], defEl = sel.length && sel[0].el && !sel[0].curse ? sel[0].el : c.color;
-  const defFx = { kind: 'defense', rec: !!passOnly, who: side.ctrl, to: attacker.ctrl, attElem: c.color, defElem: defEl, pending: c.pending, block, hpPre };   // hpPre: HP vor dem Schaden, die Oberfläche zeigt sie, bis die Geschosse einschlagen
+  const defEl = sel.length && sel[0].el && !sel[0].curse ? sel[0].el : c.color;
+  const defFx = { kind: 'defense', rec: !!passOnly, who: side.ctrl, to: attacker.ctrl, attElem: c.color, defElem: defEl, pending: c.pending, block, hpPre, afterCombo: !!(defEv && (defEv.ord || (defEv.levels && defEv.levels.ulti > 0))) };   // hpPre: HP vor dem Schaden, die Oberfläche zeigt sie, bis die Geschosse einschlagen
   log(state, side.name + (passOnly ? ' passt und nimmt den Schaden hin' : ' verteidigt' + (block ? ' (Block ' + block + ')' : ' ohne Block')) + ' und verliert ' + leftover + ' HP' + '.', side.ctrl, defFx);
   if (lost > 0) {
     if (refl > 0) attacker.stats.hp = Math.max(0, attacker.stats.hp - refl);
@@ -299,19 +323,7 @@ function execDefense(state, passOnly) {
     log(state, 'Spiegel: ' + side.name + (refl > 0 ? ' wirft ' + refl + ' Schaden auf ' + attacker.name + ' zurück' : ' gleicht ' + absorb + ' Schaden aus') + ' und verliert ' + stufen + '.', side.ctrl, undefined);
     defFx.mirror = { hpPre, elem: c.color, markers: mLvl, broken: lost, who: side.ctrl, att: attacker.ctrl, r: refl, abs: absorb, d: c.pending, blk: block };   // der Schild-Effekt läuft in der Verteidigungsanimation, vor dem Schaden auf den HP
   }
-  if (defEv && defEv.levels && defEv.levels.ulti > 0 && side.stats.hp > 0) {   // Ultimate in der Verteidigung: Todes-Fluch für den Angreifer
-    if (attacker.stats.deathPhase === undefined) attacker.stats.deathPhase = attacker.stats.death || 0;
-    attacker.stats.death = Math.max(attacker.stats.death || 0, defEv.levels.ulti);
-    log(state, side.name + ' wirkt eine Ultimate: Ultimate ' + defEv.levels.ulti + ': Todes-Fluch für ' + attacker.name + ' (' + attacker.stats.death + ' HP am Ende jeder seiner Angriffsphasen bis Kampfende).', side.ctrl, { kind: 'aggro', who: side.ctrl, to: attacker.ctrl, n: defEv.levels.ulti, late: true, ult: true });
-  }
-  if (defEv && defEv.ord && side.stats.hp > 0) {   // Kombo der Verteidigung: erst nach der Verteidigung (und dem Spiegelrückwurf)
-    const lvs = levelsFor(defEv), plan = [], texts = [], fxs = [];
-    for (const k of ['fw', 'fe', 'ew', 'rm', 'gh']) if (lvs[k] > 0) plan.push([k, lvs[k]]);
-    applyComboPlan(state, side, attacker, plan, defEv, texts, fxs);
-    fxs.forEach(f => { f.late = true; });
-    if (texts.length) log(state, side.name + ' wirkt einen Kombo: ' + texts.join(', ') + '.', side.ctrl, fxs.length ? fxs : undefined);
-  }
-  const attSide = c.sides[c.turn === 'a' ? 'b' : 'a'];   // wer gerade angegriffen hat: seine Angriffsphase endet mit dieser Verteidigung
+  const attSide = attacker;   // wer gerade angegriffen hat: seine Angriffsphase endet mit dieser Verteidigung
   c.action = 'attack'; c.color = null; c.pending = 0;
   deathTick(state, attSide);
   const res = finishStep(state, { k: 'V', who: side.key === 'a' ? 0 : 1, v: block, b: c0pending, left: leftover });

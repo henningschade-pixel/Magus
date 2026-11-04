@@ -516,7 +516,7 @@ test('Überschusspunkte: Sind alle Magien auf Stufe 3, werden Upgrade-Punkte (ni
   assert.ok(M.apply(s, { pid: 0, type: 'magic', elem: 'W' }).ok);   // erster Magie-Kauf kostet 1 Punkt, 3 bleiben übrig, nun ist alles auf Stufe 3
   assert.deepEqual([me.pending, p.sp, me.gold], [0, 5, 5], '1 Überschusspunkt = 1 Siegpunkt (2 Start), Gold bleibt');
   s.turn = 1; s.players[1].stats.gold = 3; assert.ok(M.apply(s, { pid: 1, type: 'temple', amount: 2 }).ok);   // Gegner ohne volle Magie behält seine Punkte
-  assert.equal(s.players[1].stats.pending, 3, '1 Bonuspunkt + 2 aus dem Tempel'); assert.equal(s.players[1].sp, 2);
+  assert.equal(s.players[1].stats.pending, 2, 'kein Bonuspunkt (seit 0.18 nur Gold) + 2 aus dem Tempel'); assert.equal(s.players[1].sp, 2);
   const t = M.newGame({ seed: 5, ai: [false, false], first: 0, rules: { surplusSp: 0 } }); t.players[0].stats.mag = { F: 3, E: 3, W: 3 }; t.players[0].stats.pending = 2; t.players[0].stats.gold = 0;
   assert.ok(M.apply(t, { pid: 0, type: 'draw' }).ok); assert.deepEqual([t.players[0].stats.pending, t.players[0].sp], [2, 2], 'ohne Regel bleibt es');
 });
@@ -535,10 +535,10 @@ test('Start-HP der Spieler 4 (startHp), Monster beginnen weiter mit eigenen Wert
   assert.equal(M.spawnMonsters(1, s.rng).F.stats.maxHp >= 1, true);
 });
 
-test('Steigende Preise (priceRise): jeder Kauf einer Kategorie verteuert die nächste Stufe um den Grundpreis; Einnahmen je Abschnitt 2/3/4', () => {
-  assert.deepEqual(M.DEFAULT_RULES.stageGold, [0, 1, 2, 3]); assert.deepEqual(M.DEFAULT_RULES.stagePoints, [0, 1, 2, 3]); assert.equal(M.DEFAULT_RULES.priceRise, 1);
+test('Steigende Preise (priceRise): jeder Kauf einer Kategorie verteuert die nächste Stufe um den Grundpreis; Einnahmen je Abschnitt 3/6/9 Gold (seit 0.18)', () => {
+  assert.deepEqual(M.DEFAULT_RULES.stageGold, [0, 3, 6, 9]); assert.deepEqual(M.DEFAULT_RULES.stagePoints, [0, 0, 0, 0]); assert.deepEqual(M.DEFAULT_RULES.lossGold, [0, 1, 2, 3]); assert.equal(M.DEFAULT_RULES.priceRise, 1);
   const s = M.newGame({ seed: 5, ai: [false, false], first: 0 }), p = s.players[0], st = p.stats;
-  assert.deepEqual([st.gold, st.pending], [1, 1], 'Start: 1 Gold und 1 Upgrade-Punkt (Stufe I)');
+  assert.deepEqual([st.gold, st.pending], [3, 0], 'Start: 3 Gold (3 Monster × 1 Gold), keine Upgrade-Punkte (Abschnitt 1)');
   const prices = fn => [0, 1, 2].map(() => { const c = fn(); st.buys = st.buys || {}; return c; });
   const seq = (cat, fn) => { const out = []; for (let i = 0; i < 3; i++) { out.push(fn()); st.buys = st.buys || {}; st.buys[cat] = (st.buys[cat] || 0) + 1; } st.buys[cat] = 0; return out; };
   assert.deepEqual(seq('hp', () => M.hpStepCost(s, st)), [1, 2, 3], 'HP: 1, 2, 3');
@@ -593,7 +593,7 @@ test('Todes-Fluch aus der Verteidigung wirkt nicht sofort, sondern erst in der n
   assert.ok(me.stats.hp >= hp0 - 5 && !s.log.slice(-6).some(e => /Todes-Fluch: /.test(e.txt)), 'kein Fluchschaden am Ende dieser Phase');
 });
 
-test('Pluswürfel „Magie“: eine Magiestufe mehr auf der Folgemagie des Monsters (Feuer → Erde, Erde → Wasser, Wasser → Feuer), mit passender Karte', () => {
+test('Pluswürfel „Magie“: eine Magiestufe mehr auf der Folgemagie des Monsters (das überlegene Element: Feuer → Wasser, Erde → Feuer, Wasser → Erde), mit passender Karte', () => {
   const D = M.MONSTER.variants.dice, st = M.newGame({ seed: 9, ai: [true, true] });
   const save = D.plus.slice(), mag = D.plus.find(f => f.k === 'mag'), none = D.minus.find(f => f.k === 'none');
   D.plus.fill(mag); D.minus.fill(none);
@@ -621,7 +621,7 @@ test('Monsterkarte (Weltphase): die Standardwerte base enthalten auch die Magie 
   D.plus.fill(mag); D.minus.fill(none);
   try {
     const r = M.spawnMonsters(2, st.rng);
-    for (const k of Object.keys(r)) { const m = r[k], S = M.MONSTER.profile[m.el].secondary; assert.equal(m.stats.mag[S], m.base.mag[S] + 1, 'mit Würfel +1'); assert.deepEqual(m.base.mag, { F: m.el === 'F' ? 3 : m.el === 'W' ? 2 : 1, E: m.el === 'E' ? 3 : m.el === 'F' ? 2 : 1, W: m.el === 'W' ? 3 : m.el === 'E' ? 2 : 1 }); }
+    for (const k of Object.keys(r)) { const m = r[k], S = M.MONSTER.profile[m.el].secondary; assert.equal(m.stats.mag[S], m.base.mag[S] + 1, 'mit Würfel +1'); assert.deepEqual(m.base.mag, { F: m.el === 'F' ? 3 : m.el === 'E' ? 2 : 1, E: m.el === 'E' ? 3 : m.el === 'W' ? 2 : 1, W: m.el === 'W' ? 3 : m.el === 'F' ? 2 : 1 }); }   // Haupt 3, Nebenelement (überlegen) 2, drittes 1
   } finally { D.plus.splice(0, 6, ...save); }
 });
 
@@ -661,4 +661,76 @@ test('Vorschau Nachziehen: Strafe nur bei rotem Marker (Weltphase Gold für den 
   assert.ok(M.apply(k, { pid: 0, type: 'draw' }).ok); assert.ok(M.apply(k, { pid: 1, type: 'draw' }).ok);
   assert.equal(M.drawManaCost(k, 0), 1, 'roter Marker im Kampf: 1 Mana');
   assert.ok(me);
+});
+
+// ---- Version 0.18 ----
+test('Monster: Das Nebenelement (Folgemagie) ist das überlegene Element (Feuer → Wasser, Erde → Feuer, Wasser → Erde)', () => {
+  for (const el of M.ELEMENTS) {
+    const S = M.MONSTER.profile[el].secondary;
+    assert.equal(S, M.SUPERIOR[el], el + ': Nebenelement ist das überlegene Element');
+    for (const stage of [1, 2, 3]) {
+      const m = M.spawnMonsters(stage)[el], mag = m.stats.mag;
+      assert.equal(mag[el], stage === 1 ? 2 : 3, 'Hauptmagie');
+      if (stage > 1) { assert.equal(mag[S], 2, 'Nebenmagie 2'); assert.equal(mag[M.ELEMENTS.find(e => e !== el && e !== S)], 1, 'drittes Element 1'); }
+      assert.ok(m.deckIds.some(id => id[0] === S), stage + ' ' + el + ': Karten der Nebenfarbe im Deck');
+    }
+  }
+});
+
+test('Kombo zuerst: Heilung der Verteidigung füllt die HP vor dem Schaden auf (nur bis zum Maximum)', () => {
+  const { s, c, me } = combatSetup(11, ['E3', 'W3']);   // gegen Wasser verteidigt Erde (überlegen, gratis), Wasser ist Kombokarte: Heilung 3
+  me.stats.hp = 8; me.stats.maxHp = 9; c.turn = 'a'; c.action = 'defense'; c.color = 'W'; c.pending = 6;
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
+  const pv = M.previewDefense(s, false);
+  assert.ok(M.apply(s, { pid: 0, type: 'defend' }).ok);
+  assert.equal(me.stats.hp, 6, 'erst Heilung (8 → 9, 2 verfallen), dann 3 Restschaden; früher (Heilung nach dem Schaden) wären es 8');
+  assert.equal(pv.hpAfter, 6, 'Vorschau stimmt');
+  const txt = s.log.map(l => l.txt), iC = txt.findIndex(t => /wirkt einen Kombo/.test(t)), iD = txt.findIndex(t => /verteidigt/.test(t));
+  assert.ok(iC >= 0 && iD > iC, 'Protokoll: erst der Kombo, dann die Verteidigung');
+  const defFx = s.log.find(l => /verteidigt/.test(l.txt)).fx;
+  assert.equal(defFx.hpPre[0], 9, 'HP vor dem Schaden, nach der Heilung');
+  assert.ok(s.log.find(l => /wirkt einen Kombo/.test(l.txt)).fx.every(f => f.first && !f.late), 'Kombo-Effekte laufen vor der Verteidigung');
+});
+
+test('Kombo zuerst: Eine Heilung kann einen sonst tödlichen Schaden abfangen', () => {
+  const { s, c, me } = combatSetup(11, ['E3', 'W3']);
+  me.stats.hp = 1; me.stats.maxHp = 9; c.turn = 'a'; c.action = 'defense'; c.color = 'W'; c.pending = 4;
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
+  assert.ok(M.apply(s, { pid: 0, type: 'defend' }).ok);
+  assert.ok(s.combat, 'der Kampf geht weiter');
+  assert.equal(me.stats.hp, 3, '1 + 3 Heilung − 1 Restschaden');
+});
+
+test('Kombo zuerst: Ein Spiegel-Kombo der Verteidigung wirkt schon gegen den Angriff, auf den verteidigt wird', () => {
+  const { s, c, me } = combatSetup(11, ['W3', 'F3']);   // Wasser verteidigt gegen Feuer, Feuer als Kombokarte: roter Spiegel 3
+  me.stats.hp = 9; c.turn = 'a'; c.action = 'defense'; c.color = 'F'; c.pending = 5;
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
+  const pv = M.previewDefense(s, false);
+  assert.ok(M.apply(s, { pid: 0, type: 'defend' }).ok);
+  assert.equal(me.stats.hp, 9, 'Block 3, der Spiegel gleicht die fehlenden 2 aus');
+  assert.equal(M.mirrorOf(me.stats, 'F'), 1, 'der Spiegel hat dafür 2 von 3 Stufen verloren');
+  assert.equal(pv.hpAfter, 9, 'Vorschau stimmt');
+});
+
+test('Ausgleich nach einer Monsterniederlage: nur der Verlierer, nur Gold (1/2/3 je Abschnitt)', () => {
+  assert.deepEqual([M.DEFAULT_RULES.lossGold, M.DEFAULT_RULES.lossPoints, M.DEFAULT_RULES.lossBoth], [[0, 1, 2, 3], [0, 0, 0, 0], 0]);
+  for (const [rules, stage, to] of [[{}, 1, [1, 0]], [{}, 2, [2, 0]], [{}, 3, [3, 0]], [{ lossBoth: 1 }, 2, [2, 2]]]) {
+    const { s, c, me, op } = combatSetup(11, [], { limit: 2 });
+    s.stage = stage; Object.assign(s.rules, rules);
+    me.stats.hp = 1; const g0 = s.players.map(p => p.stats.gold), up0 = s.players.map(p => p.stats.pending), sp0 = s.players[0].sp;
+    op.deck.hand[0] = Object.assign({}, op.deck.hand[0], { id: 'F3' }); op.stats.mana = 5; op.stats.mag.F = 3;
+    assert.ok(M.apply(s, { pid: 0, type: 'pass' }).ok);   // der Angreifer lässt aus, das Monster greift an
+    assert.ok(M.apply(s, { pid: 1, type: 'mark', slot: 0 }).ok); assert.ok(M.apply(s, { pid: 1, type: 'attack' }).ok);
+    const r = M.apply(s, { pid: 0, type: 'pass' });
+    assert.ok(r.ok && r.combatEnd && r.combatEnd.winner === 'b', 'das Monster gewinnt');
+    assert.deepEqual(s.players.map((p, i) => p.stats.gold - g0[i]), to, 'Gold: Verlierer ' + to[0] + (to[1] ? ', Gegner ' + to[1] : ', Gegner nichts') + ' (Abschnitt ' + stage + ')');
+    assert.deepEqual(s.players.map((p, i) => p.stats.pending - up0[i]), [0, 0], 'keine Upgrade-Punkte');
+    assert.equal(s.players[0].sp, Math.max(0, sp0 - 1), 'der Angreifer verliert 1 Siegpunkt');
+  }
+});
+
+test('Abschnittsbonus: 3 Gold (Abschnitt 1), 6 (2), 9 (3) und keine Upgrade-Punkte', () => {
+  const s = M.newGame({ seed: 5, ai: [false, false] });
+  assert.deepEqual(s.players.map(p => [p.stats.gold, p.stats.pending]), [[3, 0], [3, 0]]);
+  assert.deepEqual(M.DEFAULT_RULES.stageGold, [0, 3, 6, 9]); assert.deepEqual(M.DEFAULT_RULES.stagePoints, [0, 0, 0, 0]);
 });

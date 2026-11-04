@@ -1,5 +1,5 @@
 /* ---------- Ablauf ---------- */
-function helpTxt(res) { return res.help ? 'Hilfe für beide: ' + [res.help.points ? res.help.points + ' Upgrade-Punkt' + (res.help.points > 1 ? 'e' : '') : '', res.help.gold ? res.help.gold + ' Gold' : ''].filter(Boolean).join(' und ') : ''; }
+function helpTxt(res) { return res.help ? 'Ausgleich ' + (res.help.both ? 'für beide' : 'für den Verlierer') + ': ' + [res.help.points ? res.help.points + ' Upgrade-Punkt' + (res.help.points > 1 ? 'e' : '') : '', res.help.gold ? res.help.gold + ' Gold' : ''].filter(Boolean).join(' und ') : ''; }
 function newGame(spec) {
   if (MP) mpLeave();
   SPEC = !!spec; clearTimeout(specT); specT = 0; setSpecSpeed(1);

@@ -2,7 +2,9 @@
 
 Gedanken zu Regeln und Balance, über die noch nicht entschieden ist. Neue Einträge oben.
 
-## Offene Punkte aus dem Spiel (04.11.)
+## Offene Punkte aus dem Spiel (04.11.) – umgesetzt in 0.18
+
+Alle drei Punkte sind in Version 0.18 umgesetzt (Monster-Zweitmagie überlegen, Combo vor der Verteidigung, Ausgleich nur für den Verlierer und nur in Gold 1/2/3), siehe `docs/regelwerk.md`, Abschnitt „Änderungen 0.18“.
 
 - **Monster mit erhöhter Magierichtung:** Ein Monster, das eine erhöhte Magierichtung hat, sollte die überlegene Magierichtung ausgebaut haben, nicht die unterlegene. Zu prüfen: Wo wird die erhöhte Richtung beim Monster bestimmt, und warum kann dort die unterlegene Richtung ausgebaut sein?
 - **Combo zuerst:** Eine Combo sollte als erstes getriggert werden. Schwierig ist das vor allem bei der Heilung, die momentan eher als Verteidigung wirkt. Zu prüfen: Reihenfolge der Auflösung im Kampf, und wie die Heilung dabei eingeordnet wird.

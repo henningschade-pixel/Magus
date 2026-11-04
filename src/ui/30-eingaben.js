@@ -112,7 +112,7 @@ function pvShow(b) {
       const pd = myTurn() && G.phase === 'combat' ? M.previewDefense(G, act === 'pass') : null;
       if (!pd || pd.who !== ME) return;
       set(ME, 'mana', (pd.cost > 0 ? dn(Math.max(0, cst.mana - pd.cost)) : cst.mana) + '/' + cst.maxMana);   // beim Passen wird nichts gespielt, auch wenn Karten markiert sind
-      if (pd.leftover > 0) set(ME, 'hp', dn(pd.hpAfter) + '/' + cst.maxHp);
+      if (pd.leftover > 0 || pd.heal > 0) set(ME, 'hp', (pd.hpAfter < cst.hp ? dn(pd.hpAfter) : pd.hpAfter > cst.hp ? up(pd.hpAfter) : pd.hpAfter) + '/' + cst.maxHp);   // Heilung wirkt seit 0.18 vor dem Schaden (Kombo zuerst)
       if (pd.refl > 0) { const cs = G.combat.sides.a.ctrl === pd.att ? G.combat.sides.a : G.combat.sides.b; set(pd.att, 'hp', dn(pd.attHpAfter) + '/' + cs.stats.maxHp); }
     }
   } else if (act === 'temple') {   // Opfern: Gold sinkt (rot), Upgrade-Punkte steigen (grün)
