@@ -77,7 +77,7 @@ Der aktive Spieler wählt ein lebendes Monster und greift an, der Mitspieler fü
 
 ## Kombos und Ultimate
 
-Die Farbe der ersten markierten Karte bestimmt die Rolle (Feuer aggressiv, Wasser defensiv, Erde heilend), die zweite Farbe die Wirkung. Kombos gelten im Angriff und in der Verteidigung (dort wirken sie nach der Verteidigung und dem Spiegelrückwurf). Kombokarten kosten seit v7 wie alle Karten 1 Mana.
+Die Farbe der ersten markierten Karte bestimmt die Rolle (Feuer aggressiv, Wasser defensiv, Erde heilend), die zweite Farbe die Wirkung. Kombos gelten im Angriff und in der Verteidigung (dort wirken Zerrüttung, Lähmung, Läuterung und Spiegel vor der Verteidigung, die Heilung danach). Kombokarten kosten seit v7 wie alle Karten 1 Mana.
 
 **Kombostufe S:** je Farbe die Summe der markierten Kartenwerte (jede Karte höchstens so hoch wie die Magiestufe), davon die kleinere der beiden Summen, höchstens 3.
 
@@ -294,7 +294,7 @@ Treffen Angriff und Verteidigung im **gleichen Element** aufeinander, wählt `cl
 ## Änderungen 0.4 (04.11.)
 
 - **Monster-Zweitmagie überlegen:** `profile` der Monster: Feuer → Wasser, Erde → Feuer, Wasser → Erde (überlegen gegenüber der Primärmagie, `SUPERIOR`). Die Grundform-Aufwertung nimmt die dritte Farbe als Kartenquelle.
-- **Combo zuerst, auch in der Verteidigung:** Reihenfolge: Mana zahlen, Karten abgeben, Ultimate und Combo, danach die Verteidigung. Heilung hebt die HP vor dem Schaden an. Ein Spiegel-Combo (roter/grüner Spiegel) wirkt sofort gegen den laufenden Angriff (`defenseComboPre`). Vorschau und Animation folgen derselben Reihenfolge.
+- **Combo zuerst, auch in der Verteidigung:** Reihenfolge: Mana zahlen, Karten abgeben, Ultimate und Combo, danach die Verteidigung. Heilung wirkt seit 0.5.4 wieder nach dem Schaden (siehe unten). Ein Spiegel-Combo (roter/grüner Spiegel) wirkt sofort gegen den laufenden Angriff (`defenseComboPre`). Vorschau und Animation folgen derselben Reihenfolge.
 - **Ausgleich nur für den Verlierer, nur Gold:** siehe oben. Abschnittsbonus `stageGold` [0,3,6,9], `stagePoints` 0.
 - Upgrade-Punkte kommen mit `swapCosts` damit nur noch aus dem Tempel (Gold opfern); die KI kauft Magie über `sacG`/`mgGoal`/`sacRes`.
 - **KI nachtrainiert (0.4):** `sacG` 1, `mgGoal` 2 (Gold für die erste Magiestufe über den Tempel opfern), `manaA` 4, `minMana` 2. Messung (3000 KI-Partien): Beginner 47,6 % / Zweiter 52,2 % / Unentschieden 0,2 %, Median 444 Aktionen. Showdown-Angreifer gewinnt 55,1 / 45,6 / 38,4 % (0.17: 48,4 / 41,1 / 41,1 %). Endwerte: Magie im Mittel 2,0, Gold 1,2, Tempel 3,0. Monster Stufe III: Niederlage der Spieler 43–46 %.
@@ -314,3 +314,8 @@ Das Spiel heißt jetzt **Trimagus** (Repository und Adresse bleiben „Magus“;
 ## Änderungen 0.5.2 (04.11.)
 
 Keine Regeländerung, nur die Bedienung des Tempels: Das Opfern läuft wie die Upgrade-Knöpfe. Ein goldener **Münzknopf** steht links neben dem Gold; die Zahl der geopferten Münzen (0 bis 4) zeigt er als Plakette. Die Pfeile ◀ ▶ rechts neben der Goldzahl stellen die Anzahl ein. Die Schaltfläche „Opfern“ ist entfallen.
+
+
+## Änderungen 0.5.4 (04.11.)
+
+- **Heilung wieder nach Angriff und Verteidigung:** Die Heilung eines Kombos in der Verteidigung (Erde + Wasser) wirkt erst nach dem Schaden und dem Spiegelrückwurf und gleicht ihn nachträglich aus, höchstens bis zu den maximalen HP; ein sonst tödlicher Restschaden lässt sich so noch ausgleichen (HP − Restschaden + Heilung, nie unter 0, nie über dem Maximum). Zerrüttung, Lähmung, Läuterung und Spiegel wirken wie seit 0.4 **vor** der Verteidigung. Im Angriff ändert sich nichts. Umsetzung: `execDefense` und `defenseComboPre` in `src/engine/65-kampfablauf.js`; Vorschau (`previewDefense`) und Animation folgen derselben Reihenfolge (Heilungseffekt mit `late`).

@@ -679,28 +679,27 @@ test('Monster: Das Nebenelement (Folgemagie) ist das überlegene Element (Feuer 
   }
 });
 
-test('Kombo zuerst: Heilung der Verteidigung füllt die HP vor dem Schaden auf (nur bis zum Maximum)', () => {
+test('Heilung der Verteidigung wirkt nach dem Schaden (seit 0.5.4, nur bis zum Maximum)', () => {
   const { s, c, me } = combatSetup(11, ['E3', 'W3']);   // gegen Wasser verteidigt Erde (überlegen, gratis), Wasser ist Kombokarte: Heilung 3
   me.stats.hp = 8; me.stats.maxHp = 9; c.turn = 'a'; c.action = 'defense'; c.color = 'W'; c.pending = 6;
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
   const pv = M.previewDefense(s, false);
   assert.ok(M.apply(s, { pid: 0, type: 'defend' }).ok);
-  assert.equal(me.stats.hp, 6, 'erst Heilung (8 → 9, 2 verfallen), dann 3 Restschaden; früher (Heilung nach dem Schaden) wären es 8');
-  assert.equal(pv.hpAfter, 6, 'Vorschau stimmt');
-  const txt = s.log.map(l => l.txt), iC = txt.findIndex(t => /wirkt einen Kombo/.test(t)), iD = txt.findIndex(t => /verteidigt/.test(t));
-  assert.ok(iC >= 0 && iD > iC, 'Protokoll: erst der Kombo, dann die Verteidigung');
-  const defFx = s.log.find(l => /verteidigt/.test(l.txt)).fx;
-  assert.equal(defFx.hpPre[0], 9, 'HP vor dem Schaden, nach der Heilung');
-  assert.ok(s.log.find(l => /wirkt einen Kombo/.test(l.txt)).fx.every(f => f.first && !f.late), 'Kombo-Effekte laufen vor der Verteidigung');
+  assert.equal(me.stats.hp, 8, '8 − 3 Restschaden = 5, danach Heilung 3 (seit 0.4 bis 0.5.3 wären es 6)');
+  assert.equal(pv.hpAfter, 8, 'Vorschau stimmt');
+  const txt = s.log.map(l => l.txt), iD = txt.findIndex(t => /verteidigt/.test(t)), iH = txt.findIndex(t => /heilt nach der Verteidigung/.test(t));
+  assert.ok(iD >= 0 && iH > iD, 'Protokoll: erst die Verteidigung, dann die Heilung');
+  assert.equal(s.log.find(l => /verteidigt/.test(l.txt)).fx.hpPre[0], 8, 'HP vor dem Schaden, ohne Heilung');
+  assert.ok(s.log[iH].fx.every(f => f.late && f.kind === 'lifeflow'), 'Heilungseffekt läuft nach der Verteidigung');
 });
 
-test('Kombo zuerst: Eine Heilung kann einen sonst tödlichen Schaden abfangen', () => {
+test('Heilung nach dem Schaden: gleicht einen sonst tödlichen Schaden nachträglich aus', () => {
   const { s, c, me } = combatSetup(11, ['E3', 'W3']);
   me.stats.hp = 1; me.stats.maxHp = 9; c.turn = 'a'; c.action = 'defense'; c.color = 'W'; c.pending = 4;
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
   assert.ok(M.apply(s, { pid: 0, type: 'defend' }).ok);
   assert.ok(s.combat, 'der Kampf geht weiter');
-  assert.equal(me.stats.hp, 3, '1 + 3 Heilung − 1 Restschaden');
+  assert.equal(me.stats.hp, 3, '1 − 1 Restschaden + 3 Heilung');
 });
 
 test('Kombo zuerst: Ein Spiegel-Kombo der Verteidigung wirkt schon gegen den Angriff, auf den verteidigt wird', () => {
