@@ -2,6 +2,13 @@
 
 Gedanken zu Regeln und Balance, über die noch nicht entschieden ist. Neue Einträge oben.
 
+## Weitere Ideen (04.11.)
+
+- **Umbenennung:** Das Spiel soll auf „Trimagus“ umbenannt werden.
+- **Upgrades:** Jedes Upgrade soll auf höchstens 3 begrenzt werden.
+- **Start:** Beide beginnen mit 3 Siegpunkten.
+- **Siegpunkt-Belohnung:** In Stufe 2 soll sie 2 betragen, in Stufe 3 soll sie 3 betragen.
+
 ## Offene Punkte aus dem Spiel (04.11.) – umgesetzt in 0.4
 
 Alle drei Punkte sind in Version 0.4 umgesetzt (Monster-Zweitmagie überlegen, Combo vor der Verteidigung, Ausgleich nur für den Verlierer und nur in Gold 1/2/3), siehe `docs/regelwerk.md`, Abschnitt „Änderungen 0.4“.
