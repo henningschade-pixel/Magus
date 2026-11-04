@@ -298,3 +298,7 @@ Treffen Angriff und Verteidigung im **gleichen Element** aufeinander, wählt `cl
 - **Ausgleich nur für den Verlierer, nur Gold:** siehe oben. Abschnittsbonus `stageGold` [0,3,6,9], `stagePoints` 0.
 - Upgrade-Punkte kommen mit `swapCosts` damit nur noch aus dem Tempel (Gold opfern); die KI kauft Magie über `sacG`/`mgGoal`/`sacRes`.
 - **KI nachtrainiert (0.4):** `sacG` 1, `mgGoal` 2 (Gold für die erste Magiestufe über den Tempel opfern), `manaA` 4, `minMana` 2. Messung (3000 KI-Partien): Beginner 47,6 % / Zweiter 52,2 % / Unentschieden 0,2 %, Median 444 Aktionen. Showdown-Angreifer gewinnt 55,1 / 45,6 / 38,4 % (0.17: 48,4 / 41,1 / 41,1 %). Endwerte: Magie im Mittel 2,0, Gold 1,2, Tempel 3,0. Monster Stufe III: Niederlage der Spieler 43–46 %.
+
+## Änderung 0.4.2 (04.11.)
+
+- **Dauerhafte Verteidigungs-Vorschau:** Ist der Mensch in der Verteidigung am Zug, stehen der zu erwartende HP-Verlust und die Mana-Kosten schon ohne Überfahren in den Werten (rot, Spiegelrückwurf beim Angreifer). Mit markierten Karten gilt die Vorschau von „Verteidigen“, sonst die von „Passen“. Beim Überfahren der Knöpfe gilt weiter deren Vorschau. (`pvSticky` in `src/ui/30-eingaben.js`)

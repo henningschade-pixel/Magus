@@ -341,7 +341,7 @@ test('Vorschau beim Überfahren: Nachziehstapel bei rotem Marker (Gold des Gegne
     await p.hover('[data-act="pass"]');
     assert.equal(await p.locator('.sbody[data-lead] [data-pv="hp"] .pvdn').textContent(), '3', 'HP nach dem Passen in Rot');
     await p.mouse.move(5, 5);
-    assert.equal(await p.locator('.sbody[data-lead] [data-pv="hp"] .pvdn').count(), 0);
+    assert.equal(await p.locator('.sbody[data-lead] [data-pv="hp"] .pvdn').textContent(), '3', 'seit 0.4.2 steht der zu erwartende HP-Verlust auch ohne Überfahren (wie beim Passen, solange keine Karten markiert sind)');
     await p.evaluate(() => { const G = window.__magus.state, c = G.combat, me = c.sides.a; me.stats.mana = 3; c.action = 'attack'; c.color = null; c.pending = 0; window.__magus.pump(); });
     await p.hover('[data-act="recover"]');
     assert.equal(await p.locator('.sbody[data-lead] [data-pv="mana"] .pvnew').count(), 1, 'Mana nach dem Erholen in Grün');

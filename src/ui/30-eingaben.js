@@ -80,7 +80,12 @@ const PV_SEL = 'button.up, .sacbtn, [data-act="draw"], [data-act="defend"], [dat
 let pvUndo = null;
 function pvClear() { if (pvUndo) { pvUndo(); pvUndo = null; } }
 let pvHover = false;   // true, solange die Maus auf einem Vorschau-Knopf liegt (dann hat dessen Vorschau Vorrang vor der Opfer-Vorschau)
-function pvSticky() { if (pvHover || !G) return; pvClear(); const sb = stage.querySelector('.sacbtn:not([disabled])'); if (sb) pvShow(sb); }   // Opfer-Vorschau steht dauerhaft, passend zur Pfeil-Einstellung
+function pvSticky() {
+  if (pvHover || !G) return; pvClear();
+  const sb = stage.querySelector('.sacbtn:not([disabled])'); if (sb) { pvShow(sb); return; }
+  const d = stage.querySelector('[data-act="defend"]'), ps = stage.querySelector('[data-act="pass"]'), b = d && !d.disabled ? d : ps;   // eigene Verteidigung: zu erwartender HP- und Mana-Verlust steht schon vor dem Überfahren (mit markierten Karten wie bei Verteidigen, sonst wie bei Passen)
+  if (b) pvShow(b);
+}   // Opfer-Vorschau steht dauerhaft, passend zur Pfeil-Einstellung
 stage.addEventListener('mouseover', e => {
   const b = e.target.closest(PV_SEL); if (!b || b.disabled || b.classList.contains('off')) { if (!b) { pvHover = false; pvSticky(); } return; }
   pvHover = true; pvShow(b);
