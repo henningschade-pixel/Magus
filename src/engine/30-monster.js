@@ -56,7 +56,7 @@ function applyDie(stats, face, sign, stage, el) {
   const n = face.n[stage - 1] * sign, k = face.k;
   if (k === 'hp') { stats.maxHp = Math.max(1, stats.maxHp + n); stats.hp = stats.maxHp; }
   else if (k === 'mana') { stats.maxMana = Math.max(1, stats.maxMana + n); stats.mana = stats.maxMana; }
-  else if (k === 'limit') stats.limit = Math.min(MAX_LIMIT, Math.max(1, stats.limit + n));   // bis auf 1, nie auf 0 (Achtung: Limit 1 führt in Stufe I oft zu Patts, siehe Regelwerk)
+  else if (k === 'limit') stats.limit = Math.min(MONSTER_MAX_LIMIT, Math.max(1, stats.limit + n));   // bis auf 1, nie auf 0 (Achtung: Limit 1 führt in Stufe I oft zu Patts, siehe Regelwerk)
   else if (k === 'mag') { const e = MONSTER.profile[el].secondary; stats.mag[e] = Math.min(MAX_MAGIC, Math.max(1, stats.mag[e] + n)); }   // Folgemagie des Monsters (Nebenelement seines Profils)
   else if (k === 'hand') stats.handExtra = (stats.handExtra || 0) + n;
   else if (k === 'draws') stats.drawLimit = Math.min(MAX_DRAW_LIMIT, Math.max(1, stats.drawLimit + n));
@@ -82,7 +82,7 @@ function spawnOne(el, stage, rng, v) {
     const m = M.magic[st];
     stats.mag[P] = Math.max(stats.mag[P], m[0]); stats.mag[S] = Math.max(stats.mag[S], m[1]); stats.mag[T] = Math.max(stats.mag[T], m[2]);
     M.temple[st][el].forEach(f => {
-      if (f === 'limit' && stats.limit >= MAX_LIMIT) f = 'hp';
+      if (f === 'limit' && stats.limit >= MONSTER_MAX_LIMIT) f = 'hp';
       applyTemple(stats, f);
     });
     finalDeck = (st === stage && V.deck[st][v.d]) ? V.deck[st][v.d](P, S, T) : M.deck[st](P, S, T);

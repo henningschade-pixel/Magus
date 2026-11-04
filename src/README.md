@@ -1,4 +1,4 @@
-# Quellen von Magus
+# Quellen von Trimagus
 
 `index.html` wird aus diesen Dateien gebaut (`npm run build`, Reihenfolge in `manifest.json`).
 Engine, KI und Oberfläche sind drei getrennte Schichten; die Oberfläche kennt nur `Magus` (Engine) und `MagusAI`.

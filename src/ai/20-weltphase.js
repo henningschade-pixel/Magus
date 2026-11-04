@@ -34,7 +34,7 @@ function pickSpend(p, state, pid) {
   const s = p.stats, Q = P(pid);
   const lc = M.limitStepCost(state, s);
   const canL = lc <= upv(state, s);
-  const canM = M.manaStepCost(state, s) <= upv(state, s), canH = M.hpStepCost(state, s) <= upv(state, s), canS = p.slots < M.MAX_SLOTS && M.slotStepCost(state, s) <= upv(state, s);   // seit 0.3.2 steigen alle Preise mit jedem Kauf
+  const canM = !M.maxed(s, 'mana') && M.manaStepCost(state, s) <= upv(state, s), canH = !M.maxed(s, 'hp') && M.hpStepCost(state, s) <= upv(state, s), canS = p.slots < M.MAX_SLOTS && M.slotStepCost(state, s) <= upv(state, s);   // seit 0.3.2 steigen alle Preise mit jedem Kauf
   const pl = stratPlan(state, pid);
   if (pl.st === 1 && s.limit < 2) return canL ? 'limit' : null;   // auf Ausspiellimit 2 sparen
   const noSlot = stratSlotLock(state, p, pid);

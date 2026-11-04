@@ -1,4 +1,4 @@
-# Magus – Regelwerk (Stand v8, 20.10.2026; Version 0.3: getauschte Kosten)
+# Trimagus (bis 0.4.1 „Magus“) – Regelwerk (Stand v8, 20.10.2026; Version 0.5.1: Stufe 3 als Maximum)
 
 Dies ist die maßgebliche Fassung der Regeln. Sie ersetzt das Claude-Docs-Dokument „Magus – Regelwerk (bereinigte Fassung)“, dessen Export als Archiv in `docs/regelwerk-v6-aus-claude-docs.md` liegt (Regelstand v6, dort steht auch die gesamte Änderungsgeschichte bis v6). Die Zahlen stehen als Regelflags in `DEFAULT_RULES` und als Abstimmungsdaten (`MONSTER`) in `index.html`.
 
@@ -19,7 +19,7 @@ Eine Partie hat drei Abschnitte (1, 2, 3). Je Abschnitt gibt es drei Monster (St
 | HP | 4 | seit 0.3.1 (`startHp`, vorher 3); jeder Upgrade-Punkt +2 Maximum (seit 0.3 mit Gold bezahlt) |
 | Mana | 4 | jeder Upgrade-Punkt +1 Maximum |
 | Magie Feuer / Erde / Wasser | je 1 | höchstens 3 |
-| Ausspiellimit | 2 | seit 0.3 (`startLimit`, vorher 1); höchstens 5, jeder Schritt kostet 2 Gold (seit 0.3, vorher 2 Upgrade-Punkte) |
+| Ausspiellimit | 1 | seit 0.5.1 (`startLimit`, 0.3 bis 0.4.1: 2); höchstens 3, die Schritte kosten 1 und 2 Gold (`limitCost` 1 mit `priceRise`) |
 | Handplätze | 3 | je Upgrade-Punkt ein weiterer, höchstens 5 |
 
 **Kartenvorrat (neu):** Vom Vorrat jeder Karte gibt es: Stufe 1 je 8 (`supply`), Stufe 2 je 6 (`supply2`), Stufe 3 je 4 (`supply3`), also F1/E1/W1, F2/E2/W2 und F3/E3/W3. Vor der Partie werden die 24 Stufe-1-Karten gemischt und gleichmäßig verteilt: jeder Spieler erhält 12 als Startdeck (`startCards` 0 = alle; die Startdecks sind daher ungleich, zum Beispiel 5/4/3 statt 4/4/4). Im Vorrat der Bibliothek liegen danach nur Stufe-2- und Stufe-3-Karten (je 6 bzw. 4); Stufe-1-Karten tauchen dort erst auf, wenn welche beim Aufwerten zurückgegeben werden. Die Bibliothek zeigt, wie viele Karten jeder Art noch im Vorrat sind; sind sie weg, ist die Karte vergriffen und nicht kaufbar (auch die Gratiskarten F1/E1/W1 nicht). Beim Aufwerten gehen die bezahlten Karten zurück in den Vorrat, die gekaufte Karte kommt heraus. Monsterdecks haben ihren eigenen Vorrat und zählen nicht mit. `supply` 0 schaltet den Vorrat ab (altes Startdeck 3× F1, E1, W1, unbegrenzte Karten). Karten heißen Element plus Stufe (F2 = Feuer, Stufe 2), Stufen 1 bis 3.
@@ -298,3 +298,14 @@ Treffen Angriff und Verteidigung im **gleichen Element** aufeinander, wählt `cl
 - **Ausgleich nur für den Verlierer, nur Gold:** siehe oben. Abschnittsbonus `stageGold` [0,3,6,9], `stagePoints` 0.
 - Upgrade-Punkte kommen mit `swapCosts` damit nur noch aus dem Tempel (Gold opfern); die KI kauft Magie über `sacG`/`mgGoal`/`sacRes`.
 - **KI nachtrainiert (0.4):** `sacG` 1, `mgGoal` 2 (Gold für die erste Magiestufe über den Tempel opfern), `manaA` 4, `minMana` 2. Messung (3000 KI-Partien): Beginner 47,6 % / Zweiter 52,2 % / Unentschieden 0,2 %, Median 444 Aktionen. Showdown-Angreifer gewinnt 55,1 / 45,6 / 38,4 % (0.17: 48,4 / 41,1 / 41,1 %). Endwerte: Magie im Mittel 2,0, Gold 1,2, Tempel 3,0. Monster Stufe III: Niederlage der Spieler 43–46 %.
+
+
+## Änderungen 0.5.1 (04.11.)
+
+Das Spiel heißt jetzt **Trimagus** (Repository und Adresse bleiben „Magus“; die Namen im Code, `Magus` und `MagusAI`, bleiben).
+
+- **Ausspiellimit startet bei 1** (`startLimit` 1, vorher 2). Damit geht zu Beginn nur eine Karte je Zug; die Bibliothek verlangt für „2 gleiche Karten“ Limit 2 (Tausch mit der überlegenen Vorstufe geht mit einer Karte).
+- **Steigende Kosten überall:** Jeder Kauf einer Entwicklung verteuert die nächste um den Grundpreis, also **1 Gold für den ersten Ausbau, 2 Gold für den zweiten**. Das gilt jetzt auch für das Ausspiellimit (`limitCost` 1, vorher 2; Folge 2, 4, 6). Für Handplätze, Nachziehlimit, max. HP und max. Mana galt es schon (`priceRise` 1). Die Magie kostet unverändert 1, 2, 3 … Upgrade-Punkte (unabhängig von Element und Stufe).
+- **Höchstens Stufe 3, also zwei Ausbauten je Entwicklung** (`MAX_UPGRADES` 2): Ausspiellimit 1 bis 3 (`MAX_LIMIT` 3, vorher 5), Handplätze 3 bis 5, Nachziehlimit 1 bis 3, max. HP 4 / 6 / 8 (+2 je Ausbau), max. Mana 4 / 5 / 6, Magie 1 bis 3. Für Spiegel-Marker galt Stufe 3 schon.
+- **Monster unverändert:** Sie behalten ihre Werte; ihr Limit darf weiter bis 5 reichen (`MONSTER_MAX_LIMIT`).
+- **Computer nicht neu abgestimmt:** Die KI-Strategien und die Monster sind noch auf Spieler mit Ausspiellimit 2 abgestimmt. Neu messen: `npm run balance`, Golden-Dateien mit `npm run golden` neu erzeugen.

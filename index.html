@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Magus</title>
+<title>Trimagus</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Alegreya:wght@400;700&family=Alegreya+SC:wght@700&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js" onerror="var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js';document.head.appendChild(s)"></script>
@@ -382,7 +382,7 @@ const ELEMENTS = ['F', 'E', 'W'];
 const SUPERIOR = { F: 'W', W: 'E', E: 'F' };     // überlegenes Element gegen X
 const NAMES = { F: 'Feuer', E: 'Erde', W: 'Wasser' };
 const START_DECK = ['F1','F1','F1','E1','E1','E1','W1','W1','W1'];
-const MAX_MAGIC = 3, MAX_SLOTS = 5, MIN_SLOTS = 3, MAX_LIMIT = 5, MAX_DRAW_LIMIT = 3;
+const MAX_MAGIC = 3, MAX_SLOTS = 5, MIN_SLOTS = 3, MAX_LIMIT = 3, MAX_DRAW_LIMIT = 3, MAX_UPGRADES = 2, MONSTER_MAX_LIMIT = 5;   // seit 0.5.1: jede Entwicklung der Spieler höchstens auf Stufe 3 (zwei Ausbauten: Ausspiellimit 1→3, Handplätze 3→5, Nachziehlimit 1→3, HP und Mana je zwei Käufe); Monster behalten ihr Limit bis 5
 const MAX_COMBAT_TURNS = 400;                      // Sicherung gegen Endlosschleifen, keine Spielregel
 
 /* ---------- Zufall (deterministisch über den Seed) ---------- */
@@ -509,6 +509,7 @@ function regenGain(state) { const r = state.rules.regenByStage; return r ? (r[Ma
 // Kategorien: hp, mana, limit, slot, draw (Nachziehlimit) und mag (Magie, alle drei Richtungen zusammen, unabhängig von der Stufe); s.buys zählt die Käufe des Spielers.
 function bought(s, k) { return (s && s.buys && s.buys[k]) || 0; }
 function risen(state, base, s, k) { return base * (1 + (state.rules.priceRise || 0) * bought(s, k)); }
+function maxed(s, k) { return bought(s, k) >= MAX_UPGRADES; }   // HP und Mana der Spieler: höchstens zwei Ausbauten (Stufe 3)
 function buyCount(s, k) { s.buys = s.buys || {}; s.buys[k] = (s.buys[k] || 0) + 1; }
 function limitStepCost(state, s) { return risen(state, state.rules.limitCost > 0 ? state.rules.limitCost : (s.limit <= 1 ? state.rules.limitFirstStepCost : 1), s, 'limit'); }
 function manaStepCost(state, s) { return risen(state, 1, s, 'mana'); }
@@ -593,7 +594,7 @@ function applyDie(stats, face, sign, stage, el) {
   const n = face.n[stage - 1] * sign, k = face.k;
   if (k === 'hp') { stats.maxHp = Math.max(1, stats.maxHp + n); stats.hp = stats.maxHp; }
   else if (k === 'mana') { stats.maxMana = Math.max(1, stats.maxMana + n); stats.mana = stats.maxMana; }
-  else if (k === 'limit') stats.limit = Math.min(MAX_LIMIT, Math.max(1, stats.limit + n));   // bis auf 1, nie auf 0 (Achtung: Limit 1 führt in Stufe I oft zu Patts, siehe Regelwerk)
+  else if (k === 'limit') stats.limit = Math.min(MONSTER_MAX_LIMIT, Math.max(1, stats.limit + n));   // bis auf 1, nie auf 0 (Achtung: Limit 1 führt in Stufe I oft zu Patts, siehe Regelwerk)
   else if (k === 'mag') { const e = MONSTER.profile[el].secondary; stats.mag[e] = Math.min(MAX_MAGIC, Math.max(1, stats.mag[e] + n)); }   // Folgemagie des Monsters (Nebenelement seines Profils)
   else if (k === 'hand') stats.handExtra = (stats.handExtra || 0) + n;
   else if (k === 'draws') stats.drawLimit = Math.min(MAX_DRAW_LIMIT, Math.max(1, stats.drawLimit + n));
@@ -619,7 +620,7 @@ function spawnOne(el, stage, rng, v) {
     const m = M.magic[st];
     stats.mag[P] = Math.max(stats.mag[P], m[0]); stats.mag[S] = Math.max(stats.mag[S], m[1]); stats.mag[T] = Math.max(stats.mag[T], m[2]);
     M.temple[st][el].forEach(f => {
-      if (f === 'limit' && stats.limit >= MAX_LIMIT) f = 'hp';
+      if (f === 'limit' && stats.limit >= MONSTER_MAX_LIMIT) f = 'hp';
       applyTemple(stats, f);
     });
     finalDeck = (st === stage && V.deck[st][v.d]) ? V.deck[st][v.d](P, S, T) : M.deck[st](P, S, T);
@@ -1228,11 +1229,13 @@ function execSpend(state, pid, what) {
   if (s[f] <= 0) return fail(f === 'gold' ? 'Du hast kein Gold.' : 'Keine offenen Upgrade-Punkte.');
   let cost = 1;
   if (what === 'hp') {
+    if (bought(s, 'hp') >= MAX_UPGRADES) return fail('Die max. HP sind am Maximum (' + MAX_UPGRADES + ' Ausbauten).');
     cost = hpStepCost(state, s);
     if (s[f] < cost) return fail('Die nächsten HP kosten ' + payTxt(state, f, cost) + '.');
     const n = state.rules.hpPerPoint || 1; s.maxHp += n; buyCount(s, 'hp');   // Upgrade erhöht nur das Maximum, die aktuellen HP bleiben
   }
   else if (what === 'mana') {
+    if (bought(s, 'mana') >= MAX_UPGRADES) return fail('Das max. Mana ist am Maximum (' + MAX_UPGRADES + ' Ausbauten).');
     cost = manaStepCost(state, s);
     if (s[f] < cost) return fail('Der nächste Mana-Schritt kostet ' + payTxt(state, f, cost) + '.');
     s.maxMana++; buyCount(s, 'mana');   // nur das Maximum steigt, das aktuelle Mana bleibt
@@ -1327,13 +1330,13 @@ function applyWorld(state, a) {
 /* Magus – Regelkern (Teil 8): Spielstart und Schnittstelle nach außen. */
 
 // Regelwerte (Abstimmungs- und Variantenschalter). ‚curses‘: Fluchsystem, siehe 30-curses.js.
-const DEFAULT_RULES = { priceRise: 1, startHp: 4, startLimit: 2, startSp: 2, surplusSp: 1, swapCosts: 1, limitCost: 2, limitFirstStepCost: 2, hpPerPoint: 2, stagePoints: [0, 0, 0, 0], stageGold: [0, 3, 6, 9], loserUp: 0, loserUp2: 0, winSp: 0, winSpFromShowdown: 2, monsterSp: 1, monsterLoot: 0, idleLimit: 0, drawMarker: 1, drawPenaltyGold: 1, drawPenaltyMana: 1, drawLimitCost: [1, 1], lossHelp: 1, lossGold: [0, 1, 2, 3], lossPoints: [0, 0, 0, 0], lossBoth: 0, showdownSp: 1, lootBoth: true, recoverByStage: [1, 2, 3], regenByStage: [1, 2, 3], supply: 8, supply2: 6, supply3: 4, startCards: 0 };   // Jede gespielte Karte (auch Kombokarten) kostet 1 Mana, nur Verteidigung in der überlegenen Farbe ist gratis. recoverByStage: Mana-Gewinn von „Erholen“ im Kampf je Abschnitt
+const DEFAULT_RULES = { priceRise: 1, startHp: 4, startLimit: 1, startSp: 2, surplusSp: 1, swapCosts: 1, limitCost: 1, limitFirstStepCost: 1, hpPerPoint: 2, stagePoints: [0, 0, 0, 0], stageGold: [0, 3, 6, 9], loserUp: 0, loserUp2: 0, winSp: 0, winSpFromShowdown: 2, monsterSp: 1, monsterLoot: 0, idleLimit: 0, drawMarker: 1, drawPenaltyGold: 1, drawPenaltyMana: 1, drawLimitCost: [1, 1], lossHelp: 1, lossGold: [0, 1, 2, 3], lossPoints: [0, 0, 0, 0], lossBoth: 0, showdownSp: 1, lootBoth: true, recoverByStage: [1, 2, 3], regenByStage: [1, 2, 3], supply: 8, supply2: 6, supply3: 4, startCards: 0 };   // Jede gespielte Karte (auch Kombokarten) kostet 1 Mana, nur Verteidigung in der überlegenen Farbe ist gratis. recoverByStage: Mana-Gewinn von „Erholen“ im Kampf je Abschnitt
 
 function newPlayer(state, name, ai, startIds) {
   const p = { name, ai: !!ai, stats: newStats(), temple: { points: 0, level: 0 }, sp: state.rules.startSp || 0, slots: MIN_SLOTS, drawRed: false, drawN: 0 };   // drawN: Nachziehvorgänge seit der letzten anderen Aktion (höchstens Nachziehlimit), drawRed: Marker rot
   p.stats.gold = 0;   // Das Spiel beginnt ohne Gold; Abschnittsboni kommen in newGame
   p.stats.maxHp = p.stats.hp = state.rules.startHp || 3;   // Start-HP der Spieler (Monster beginnen mit 3 und werden eigens abgestimmt)
-  p.stats.limit = state.rules.startLimit || 1;   // Ausspiellimit zu Beginn (0.3: 2)
+  p.stats.limit = state.rules.startLimit || 1;   // Ausspiellimit zu Beginn (0.3: 2, seit 0.5.1: 1)
   p.deck = newDeck(state, startIds || START_DECK, MIN_SLOTS);
   return p;
 }
@@ -1442,9 +1445,9 @@ function actor(state) {
 }
 function handCounts(d) { const c = {}; d.hand.forEach(x => { if (x) c[x.id] = (c[x.id] || 0) + 1; }); return c; }
 
-return { ELEMENTS, SUPERIOR, NAMES, START_DECK, MAX_MAGIC, MAX_SLOTS, MIN_SLOTS, MAX_LIMIT, MAX_DRAW_LIMIT, DEFAULT_RULES, MONSTER,
+return { ELEMENTS, SUPERIOR, NAMES, START_DECK, MAX_MAGIC, MAX_SLOTS, MIN_SLOTS, MAX_LIMIT, MAX_DRAW_LIMIT, MAX_UPGRADES, MONSTER_MAX_LIMIT, DEFAULT_RULES, MONSTER,
   makeRng, parseCard, selection, newGame, apply, record, prim, actor, other, regen, handCounts,
-  vendorOffers, vendorPlans, previewTemple, pointsForGold, nextLevelCost, limitStepCost, manaStepCost, hpStepCost, slotStepCost, magicCost, drawLimitCost, upField, magicField, payTxt,
+  vendorOffers, vendorPlans, previewTemple, pointsForGold, nextLevelCost, maxed, limitStepCost, manaStepCost, hpStepCost, slotStepCost, magicCost, drawLimitCost, upField, magicField, payTxt,
   evalAttack, evalDefense, canFlee, stockOf, recoverGain, regenGain, comboLevels, levelsFor,
   mirrorOf, monsterAlive, monsterHand, markerOf, drawManaCost, drawGoldPenalty, previewDefense, defenseComboPre, allMonstersDead, magicProgress, spawnMonsters, spawnForGame };
 }));</script>
@@ -1601,7 +1604,7 @@ function pickSpend(p, state, pid) {
   const s = p.stats, Q = P(pid);
   const lc = M.limitStepCost(state, s);
   const canL = lc <= upv(state, s);
-  const canM = M.manaStepCost(state, s) <= upv(state, s), canH = M.hpStepCost(state, s) <= upv(state, s), canS = p.slots < M.MAX_SLOTS && M.slotStepCost(state, s) <= upv(state, s);   // seit 0.3.2 steigen alle Preise mit jedem Kauf
+  const canM = !M.maxed(s, 'mana') && M.manaStepCost(state, s) <= upv(state, s), canH = !M.maxed(s, 'hp') && M.hpStepCost(state, s) <= upv(state, s), canS = p.slots < M.MAX_SLOTS && M.slotStepCost(state, s) <= upv(state, s);   // seit 0.3.2 steigen alle Preise mit jedem Kauf
   const pl = stratPlan(state, pid);
   if (pl.st === 1 && s.limit < 2) return canL ? 'limit' : null;   // auf Ausspiellimit 2 sparen
   const noSlot = stratSlotLock(state, p, pid);
@@ -2569,8 +2572,8 @@ function statsBlock(name, s, p, size, up, full) {
   const pl = (ok, w, title, attr) => ok ? '<button class="up ' + UC + '" data-act="' + (attr || 'spend') + '" ' + (attr ? 'data-e' : 'data-w') + '="' + w + '" title="' + title + '"></button>' : '';
   // Schritte, die mehr als 1 Upgrade-Punkt kosten, bleiben sichtbar (abgedunkelt, solange die Punkte fehlen) und tragen eine Kostenzahl.
   const plc = (show, afford, w, label, c) => !show ? '' : '<button class="up ' + UC + (c > 1 ? ' costly' : '') + (afford ? '' : ' off') + '" data-act="spend" data-w="' + w + '"' + (c > 1 ? ' data-c="' + c + '"' : '') + (afford ? '' : ' disabled') + ' title="' + label + ' (' + M.payTxt(G, UF, c) + (afford ? '' : UF === 'gold' ? ', dir fehlt Gold' : ', dir fehlen Punkte') + ')"></button>';
-  const hpPl = hc > 1 ? plc(up && anyT && pend > 0, pend >= hc, 'hp', '+' + (G.rules.hpPerPoint || 1) + ' max. HP', hc) : pl(up && anyT && pend > 0, 'hp', '+' + (G.rules.hpPerPoint || 1) + ' max. HP (' + one + ')');
-  const manaPl = mc > 1 ? plc(up && anyT && pend > 0, pend >= mc, 'mana', '+1 max. Mana', mc) : pl(up && anyT && pend > 0, 'mana', '+1 max. Mana (' + one + ')');
+  const hpPl = M.maxed(s, 'hp') ? '' : hc > 1 ? plc(up && anyT && pend > 0, pend >= hc, 'hp', '+' + (G.rules.hpPerPoint || 1) + ' max. HP', hc) : pl(up && anyT && pend > 0, 'hp', '+' + (G.rules.hpPerPoint || 1) + ' max. HP (' + one + ')');
+  const manaPl = M.maxed(s, 'mana') ? '' : mc > 1 ? plc(up && anyT && pend > 0, pend >= mc, 'mana', '+1 max. Mana', mc) : pl(up && anyT && pend > 0, 'mana', '+1 max. Mana (' + one + ')');
   const limPl = lc > 1 ? plc(up && anyT && pend > 0 && s.limit < M.MAX_LIMIT, pend >= lc, 'limit', '+1 Ausspiellimit', lc) : pl(up && anyT && pend >= lc && s.limit < M.MAX_LIMIT, 'limit', '+1 Ausspiellimit (' + one + ')');
   const sbar = (v, mx, cls) => '<div class="bar sb ' + cls + '"><i style="width:' + Math.max(0, v) / mx * 100 + '%"></i></div>';
   const lead = b => compact ? '' : '<span class="lead">' + (b || '') + '</span>';   // Upgrade-Knöpfe stehen links neben dem Symbol; ohne Knöpfe schrumpft die Spalte auf 0 (Ausrichtung wie beim Gegner)
@@ -3887,12 +3890,12 @@ function showStart(pg) {
   menuView = () => showStart(pg);
   const run = G && !G.over && !MP && started;
   const back = menuTo('main', 'Zurück');
-  let h = '<div class="box start"><h1>Magus</h1>';
+  let h = '<div class="box start"><h1>Trimagus</h1>';
   if (pg === 'main') {
     h += '<img class="logo" alt="" src="assets/img/logo.webp"><div class="menulist">' +
       (run ? menuBtn('resume', 'Spiel fortsetzen', '', 'primary') : '') +
       menuTo('single', 'Einzelspieler', run ? '' : 'primary') + menuTo('multi', 'Mehrspieler') + menuTo('settings', 'Einstellungen') + menuBtn('quit', 'Beenden') + '</div>' +
-      '<div class="menufoot">' + menuTo('about', 'Neu in Version 0.4.1', 'link') + '</div>';
+      '<div class="menufoot">' + menuTo('about', 'Neu in Version 0.5.1', 'link') + '</div>';
   } else if (pg === 'single') {
     h += '<h2>Einzelspieler</h2><div class="menulist">' +
       menuBtn('newgame', run ? 'Neues Spiel gegen den Computer' : 'Gegen den Computer spielen', '', run ? '' : 'primary') +
@@ -3905,7 +3908,7 @@ function showStart(pg) {
   } else if (pg === 'settings') {
     h += '<h2>Einstellungen</h2><div class="menulist">' + settingsHTML() + back + '</div>';
   } else if (pg === 'about') {
-    h += '<p class="note intro" style="margin-top:-2px"><b>Danke, dass du Magus testest!</b> <b>Neu in Version 0.4.1:</b> Keine Spieländerung: Vier weitere Ideen sind als Notizen festgehalten (Umbenennung in Trimagus, Upgrades höchstens 3, Start mit 3 Siegpunkten, Siegpunkt-Belohnung 2 in Stufe 2 und 3 in Stufe 3). <b>Neu in Version 0.4:</b> Vier Regeländerungen. <b>Monster:</b> Die zweite Magie eines Monsters ist jetzt die <b>überlegene</b> (Feuer-Monster: Wasser, Erde-Monster: Feuer, Wasser-Monster: Erde). <b>Combo zuerst:</b> Auch in der Verteidigung wirkt der Combo-Effekt vor der Verteidigung selbst; die Heilung füllt die HP also auf, bevor der Schaden trifft, und ein Spiegel-Combo wirkt sofort gegen den laufenden Angriff. <b>Ausgleich:</b> Nach einer Niederlage gegen ein Monster erhält ihn nur noch der Verlierer. <b>Nur Gold:</b> Der Abschnittsbonus beträgt je Monster 1, 2 und 3 Gold (3, 6, 9 Gold je Abschnitt), der Ausgleich nach einer Niederlage 1, 2 und 3 Gold; es gibt keine Upgrade-Punkte mehr als Bonus. Computer neu abgestimmt. <b>Neu in Version 0.17:</b> Keine Spieländerung: Drei offene Punkte sind als Notizen festgehalten (Magierichtung der Monster, Combo zuerst auslösen, Ausgleich nach einer Monsterniederlage nur für den Verlierer und nur in Gold). <b>Neu in Version 0.16.2:</b> Der <b>Computer</b> geht mit den <b>Spiegeln je Farbe</b> um: Er zählt nur, was ein neuer Spiegel gegenüber dem schon liegenden bringt, gewichtet die Farbe danach, wie oft du sie spielst, und räumt mit der <b>Läuterung</b> deine Spiegel zuerst in der Farbe ab, mit der er selbst am stärksten angreift. Die Balance habe ich neu gemessen: Die Regeländerung verschiebt in Computer-Partien nichts messbar. <b>Neu in Version 0.16.1:</b> Das Limit der <b>Spiegelmarker</b> gilt jetzt <b>je Farbe</b>: Feuer- und Erde-Marker sind verschiedene Marker, es können also bis zu <b>3 Feuer- und 3 Erde-Marker</b> gleichzeitig liegen (bisher höchstens 3 insgesamt, sodass ein Erde-Spiegel den Feuer-Spiegel verhinderte). <b>Neu in Version 0.16:</b> Stehen die Angriffs- oder Verteidigungssymbole in <b>zwei Zeilen</b>, sind die Zeilen jetzt auch bei <b>7 und 9 Symbolen</b> gegeneinander versetzt (bisher nur bei gerader Zahl). <b>Neu in Version 0.15:</b> Die Vorschau beim Darüberfahren mit der Maus (Erholen, Nachziehen, Verteidigen, Passen) zeigt im Kampf jetzt die <b>richtigen Mana- und HP-Höchstwerte</b> des Monsters, das du führst. <b>Neu in Version 0.14.1:</b> Auch <b>gleiche Elemente</b> haben jetzt ihren eigenen Effekt: <b>Feuer gegen Feuer</b> ergibt einen <b>Feuerball</b>, der in alle Richtungen explodiert, <b>Erde gegen Erde</b> ein <b>Bersten</b> mit Brocken, Staub und Rissen im Boden, <b>Wasser gegen Wasser</b> eine <b>Woge</b> mit Tropfen und Ringwellen. Sind es so viele Angriffssymbole, dass sie in <b>zwei Zeilen</b> stehen, sind die Zeilen jetzt <b>gegeneinander versetzt</b>. <b>Neu in Version 0.14:</b> Treffen im Kampf zwei verschiedene Elemente aufeinander, hat jede Kombination ihren eigenen Effekt: <b>Feuer gegen Wasser</b> ergibt <b>Dampf</b>, <b>Feuer gegen Erde</b> <b>Lava</b> mit glühenden Brocken, Funken und Rauch, <b>Erde gegen Wasser</b> <b>Schlamm</b> mit Spritzern, einer Pfütze und Blasen. <b>Neu in Version 0.13:</b> Die <b>Vorschau</b>, die bisher nur bei Gold und Upgrade-Punkten erschien, zeigt jetzt auch weitere zu erwartende Änderungen: Fährst du mit der Maus über <b>Verteidigen</b>, <b>Passen</b>, <b>Erholen</b> oder den <b>Nachziehstapel</b>, erscheinen die zu erwartenden Änderungen von HP, Mana und Gold, sinkende Werte in <b>Rot</b>, steigende in <b>Grün</b>. Bei <b>rotem Nachziehmarker</b> kostet das Nachziehen im Kampf jetzt <b>1 Mana</b>, in der Weltphase bekommt der Gegner Gold. <b>Neu in Version 0.11:</b> Der <b>Computer</b> entscheidet sich in festgefahrenen Kämpfen schneller zum Angriff; lange Pattphasen, vor allem im ersten Abschnitt, werden dadurch seltener. Beim Spielstart <b>drehen sich die Monsterkarten</b> jetzt richtig um und die <b>Handkarten</b> drehen sich beim Austeilen und Aufdecken mit Schwung um.</p><div class="menulist">' + back + '</div>';
+    h += '<p class="note intro" style="margin-top:-2px"><b>Danke, dass du Trimagus testest!</b> <b>Neu in Version 0.5.1:</b> <b>Das Spiel heißt jetzt Trimagus.</b> Du startest mit <b>Ausspiellimit 1</b> (vorher 2). Jede Weiterentwicklung wird mit jedem Kauf teurer: die erste kostet 1 Gold, die zweite 2 Gold (gilt für Ausspiellimit, Handplätze, Nachziehlimit, max. HP und max. Mana; die Magie kostet wie bisher 1, 2, 3 … Upgrade-Punkte). Jede Entwicklung ist auf <b>Stufe 3</b> begrenzt, also auf zwei Ausbauten: Ausspiellimit 1 bis 3, Handplätze 3 bis 5, Nachziehlimit 1 bis 3, max. HP 4 bis 8, max. Mana 4 bis 6, Magie 1 bis 3. Die Monster behalten ihre Werte. Der Computer ist noch nicht neu abgestimmt. <b>Version 0.4.1:</b> Keine Spieländerung: Vier weitere Ideen sind als Notizen festgehalten (Umbenennung in Trimagus, Upgrades höchstens 3, Start mit 3 Siegpunkten, Siegpunkt-Belohnung 2 in Stufe 2 und 3 in Stufe 3). <b>Neu in Version 0.4:</b> Vier Regeländerungen. <b>Monster:</b> Die zweite Magie eines Monsters ist jetzt die <b>überlegene</b> (Feuer-Monster: Wasser, Erde-Monster: Feuer, Wasser-Monster: Erde). <b>Combo zuerst:</b> Auch in der Verteidigung wirkt der Combo-Effekt vor der Verteidigung selbst; die Heilung füllt die HP also auf, bevor der Schaden trifft, und ein Spiegel-Combo wirkt sofort gegen den laufenden Angriff. <b>Ausgleich:</b> Nach einer Niederlage gegen ein Monster erhält ihn nur noch der Verlierer. <b>Nur Gold:</b> Der Abschnittsbonus beträgt je Monster 1, 2 und 3 Gold (3, 6, 9 Gold je Abschnitt), der Ausgleich nach einer Niederlage 1, 2 und 3 Gold; es gibt keine Upgrade-Punkte mehr als Bonus. Computer neu abgestimmt. <b>Neu in Version 0.17:</b> Keine Spieländerung: Drei offene Punkte sind als Notizen festgehalten (Magierichtung der Monster, Combo zuerst auslösen, Ausgleich nach einer Monsterniederlage nur für den Verlierer und nur in Gold). <b>Neu in Version 0.16.2:</b> Der <b>Computer</b> geht mit den <b>Spiegeln je Farbe</b> um: Er zählt nur, was ein neuer Spiegel gegenüber dem schon liegenden bringt, gewichtet die Farbe danach, wie oft du sie spielst, und räumt mit der <b>Läuterung</b> deine Spiegel zuerst in der Farbe ab, mit der er selbst am stärksten angreift. Die Balance habe ich neu gemessen: Die Regeländerung verschiebt in Computer-Partien nichts messbar. <b>Neu in Version 0.16.1:</b> Das Limit der <b>Spiegelmarker</b> gilt jetzt <b>je Farbe</b>: Feuer- und Erde-Marker sind verschiedene Marker, es können also bis zu <b>3 Feuer- und 3 Erde-Marker</b> gleichzeitig liegen (bisher höchstens 3 insgesamt, sodass ein Erde-Spiegel den Feuer-Spiegel verhinderte). <b>Neu in Version 0.16:</b> Stehen die Angriffs- oder Verteidigungssymbole in <b>zwei Zeilen</b>, sind die Zeilen jetzt auch bei <b>7 und 9 Symbolen</b> gegeneinander versetzt (bisher nur bei gerader Zahl). <b>Neu in Version 0.15:</b> Die Vorschau beim Darüberfahren mit der Maus (Erholen, Nachziehen, Verteidigen, Passen) zeigt im Kampf jetzt die <b>richtigen Mana- und HP-Höchstwerte</b> des Monsters, das du führst. <b>Neu in Version 0.14.1:</b> Auch <b>gleiche Elemente</b> haben jetzt ihren eigenen Effekt: <b>Feuer gegen Feuer</b> ergibt einen <b>Feuerball</b>, der in alle Richtungen explodiert, <b>Erde gegen Erde</b> ein <b>Bersten</b> mit Brocken, Staub und Rissen im Boden, <b>Wasser gegen Wasser</b> eine <b>Woge</b> mit Tropfen und Ringwellen. Sind es so viele Angriffssymbole, dass sie in <b>zwei Zeilen</b> stehen, sind die Zeilen jetzt <b>gegeneinander versetzt</b>. <b>Neu in Version 0.14:</b> Treffen im Kampf zwei verschiedene Elemente aufeinander, hat jede Kombination ihren eigenen Effekt: <b>Feuer gegen Wasser</b> ergibt <b>Dampf</b>, <b>Feuer gegen Erde</b> <b>Lava</b> mit glühenden Brocken, Funken und Rauch, <b>Erde gegen Wasser</b> <b>Schlamm</b> mit Spritzern, einer Pfütze und Blasen. <b>Neu in Version 0.13:</b> Die <b>Vorschau</b>, die bisher nur bei Gold und Upgrade-Punkten erschien, zeigt jetzt auch weitere zu erwartende Änderungen: Fährst du mit der Maus über <b>Verteidigen</b>, <b>Passen</b>, <b>Erholen</b> oder den <b>Nachziehstapel</b>, erscheinen die zu erwartenden Änderungen von HP, Mana und Gold, sinkende Werte in <b>Rot</b>, steigende in <b>Grün</b>. Bei <b>rotem Nachziehmarker</b> kostet das Nachziehen im Kampf jetzt <b>1 Mana</b>, in der Weltphase bekommt der Gegner Gold. <b>Neu in Version 0.11:</b> Der <b>Computer</b> entscheidet sich in festgefahrenen Kämpfen schneller zum Angriff; lange Pattphasen, vor allem im ersten Abschnitt, werden dadurch seltener. Beim Spielstart <b>drehen sich die Monsterkarten</b> jetzt richtig um und die <b>Handkarten</b> drehen sich beim Austeilen und Aufdecken mit Schwung um.</p><div class="menulist">' + back + '</div>';
   } else if (pg === 'quit') {
     h += '<p class="note" style="text-align:center;font-size:19px">Danke fürs Spielen!<br>Ein Browser-Tab lässt sich vom Spiel aus nicht immer schließen. Schließe diesen Tab oder dieses Fenster einfach selbst.</p><div class="menulist">' + back + '</div>';
   }
@@ -4092,7 +4095,7 @@ let MP = null, roomApi;
 const MP_KEY = 'magus-mp';
 // Kennung dieser Spielversion: beide Geräte müssen denselben Programmtext haben, sonst rechnen sie unterschiedlich.
 const BUILD = (() => { let h = 2166136261; const t = [...document.scripts].map(x => x.text).join(''); for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); })();
-function mpOldVersion(who) { mpWait('Andere Spielversion', '<p class="bad">' + who + ' hat eine andere Version von Magus geladen.</p><p class="note">Bitte auf beiden Geräten die Seite mit Strg+F5 (Handy: Seite neu laden, notfalls Cache leeren) neu laden und danach einen neuen Raum erstellen.</p>'); }
+function mpOldVersion(who) { mpWait('Andere Spielversion', '<p class="bad">' + who + ' hat eine andere Version von Trimagus geladen.</p><p class="note">Bitte auf beiden Geräten die Seite mit Strg+F5 (Handy: Seite neu laden, notfalls Cache leeren) neu laden und danach einen neuen Raum erstellen.</p>'); }
 async function mpRoomApi() {
   if (roomApi) return roomApi;
   try { roomApi = window.claude && window.claude.use ? await window.claude.use('room') : null; } catch (e) { roomApi = null; }
