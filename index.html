@@ -1459,9 +1459,9 @@ return { ELEMENTS, SUPERIOR, NAMES, START_DECK, MAX_MAGIC, MAX_SLOTS, MIN_SLOTS,
 // Alle Gewichte der KI an einer Stelle (abgestimmt per Selbstspiel: Änderungen wurden nur übernommen, wenn sie sich in 800 Partien mit getauschten Plätzen klar durchsetzten). Pro Platz überschreibbar (setParams), damit Varianten gegeneinander spielen können.
 const DEFAULTS = {
   // Ausbaureihenfolge der Upgrade-Punkte
-  limitA: 1, slotA: 5, manaA: 5, hpA: 6, limitB: 3, slotB: 5,
+  limitA: 1, slotA: 5, manaA: 4, hpA: 6, limitB: 3, slotB: 5,
   // Lust, ein Monster anzugreifen
-  cBase: 34, cHp: 3, cMana: 1.5, cWt: 2.8, cMon: 0.8, minHp: 1, minMana: 3,
+  cBase: 34, cHp: 3, cMana: 1.5, cWt: 2.8, cMon: 0.8, minHp: 1, minMana: 2,
   // Nachziehmarker rot (Nachziehen schenkt dem Gegner Gold bzw. ein Nachziehtoken): dRed Abschlag auf das
   // Nachziehen in der Weltphase, dTmp Lust, stattdessen 1 Gold im Tempel zu opfern, dVen Lust, ohne Gold
   // stattdessen gratis in der Bibliothek zu tauschen, rBroke Bonus für einen Monsterangriff, wenn sonst nur das
@@ -1471,7 +1471,7 @@ const DEFAULTS = {
   // swapCosts (0.3): Magie kostet Upgrade-Punkte, die es nur aus dem Tempel gibt. sacG 1: Gold opfern, wenn die
   // Punkte für die nächste Magiestufe nicht reichen; mgGoal: nur solange der Magiefortschritt (Summe der Stufen
   // über 1, höchstens 6) darunter liegt; sacRes: Gold, das dabei übrig bleiben muss (Vorrang der Verbesserungen)
-  sacG: 0, mgGoal: 6, sacRes: 0,
+  sacG: 1, mgGoal: 2, sacRes: 0,
   // rAtk: Angriffslust auf ein Monster, solange der Marker rot ist (statt nachzuziehen und dem Gegner Gold zu
   // schenken); Nachziehlimit (Upgrade-Punkte): dlMax bis zu welcher Stufe die KI es kauft (0 = nie), dlPos
   // Stelle in der Ausbaureihenfolge von pickSpend (0 = vor allem anderen, 4 = nach den A-Zielen, 9 = zuletzt);
