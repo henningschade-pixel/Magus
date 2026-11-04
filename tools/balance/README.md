@@ -145,6 +145,6 @@ KI-Anpassung (0.16.2): `mirMarg` 1 (nur der Zugewinn gegenüber dem Spiegel der 
 Gewicht `wFW` (Spiegel-Kombo) mit beiden Schaltern, Siegquote gegen den Standard (2000 Partien, ±1,1): 0,3 → 50,0 %, 0,7 → 50,0 %, 1,3 (Standard) → 49,9 %, 2 → 49,4 %, 3 → 46,5 %, 4,5 → 41,9 %. Mehr Spiegel schaden der KI also deutlich; `wFW` bleibt 1,3. Gesamtauswertung der neuen KI (4000 Partien): Beginner 48,0 %, Zweiter 49,2 %, Unentschieden 2,8 %; Showdown-Quoten und Monsterquoten innerhalb von ±1 Punkt wie vorher.
 
 
-## Stand 0.18 (04.11.)
+## Stand 0.4 (04.11.)
 
 Regeln: Monster-Zweitmagie überlegen, Combo vor der Verteidigung, Ausgleich nur für den Verlierer und nur in Gold (1/2/3), Abschnittsbonus nur Gold (3/6/9). Ungeschulte KI: Beginner 48,1 / Zweiter 51,8 %; Magie wurde nie gekauft (`sacG` 0). Nachtraining mit `PARAMS=sacG,mgGoal,sacRes,tKeep,hpA,slotA,manaA,limitA,minMana,oHits node tools/balance/opt2.js 3 600 '{"sacG":1,"mgGoal":2}'`: übernommen `manaA` 4, `minMana` 2, `sacG` 1, `mgGoal` 2. Messung danach (3000 Partien): Beginner 47,6 / Zweiter 52,2 / Remis 0,2 %; Showdown-Angreifer 55,1 / 45,6 / 38,4 %. Offen: Showdown 3 begünstigt den Verteidiger (61,6 %).
