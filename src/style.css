@@ -55,7 +55,6 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .card.locked .lockbtn{border-color:var(--gold);background-color:rgba(210,173,79,.28)}
 .fxnote{position:absolute;z-index:260;left:920px;width:336px;box-sizing:border-box;padding:8px 14px 8px 12px;border-radius:12px;font-size:19px;line-height:1.25;pointer-events:none;display:flex;gap:10px;align-items:center;background:rgba(14,10,22,.95);border:1px solid var(--gold);box-shadow:0 4px 18px rgba(0,0,0,.6);animation:fxin 3.2s ease-out forwards}
 .fxnote i{font-style:normal;font-size:28px;line-height:1}
-.fxnote.death{border-color:#b04bd8;box-shadow:0 0 18px rgba(176,75,216,.55)}.fxnote.death i{color:#d98cf5}
 .fxnote.mirror{border-color:var(--water);box-shadow:0 0 18px rgba(82,166,245,.5)}.fxnote.mirror i{color:var(--water)}
 @keyframes fxin{0%{opacity:0;transform:translateY(10px) scale(.96)}10%{opacity:1;transform:none}80%{opacity:1}100%{opacity:0;transform:translateY(-8px)}}
 .card.fadeout{pointer-events:none;z-index:400}
