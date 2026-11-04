@@ -516,7 +516,7 @@ test('Überschusspunkte: Sind alle Magien auf Stufe 3, werden Upgrade-Punkte (ni
   assert.ok(M.apply(s, { pid: 0, type: 'magic', elem: 'W' }).ok);   // erster Magie-Kauf kostet 1 Punkt, 3 bleiben übrig, nun ist alles auf Stufe 3
   assert.deepEqual([me.pending, p.sp, me.gold], [0, 5, 5], '1 Überschusspunkt = 1 Siegpunkt (2 Start), Gold bleibt');
   s.turn = 1; s.players[1].stats.gold = 3; assert.ok(M.apply(s, { pid: 1, type: 'temple', amount: 2 }).ok);   // Gegner ohne volle Magie behält seine Punkte
-  assert.equal(s.players[1].stats.pending, 2, 'kein Bonuspunkt (seit 0.18 nur Gold) + 2 aus dem Tempel'); assert.equal(s.players[1].sp, 2);
+  assert.equal(s.players[1].stats.pending, 2, 'kein Bonuspunkt (seit 0.4 nur Gold) + 2 aus dem Tempel'); assert.equal(s.players[1].sp, 2);
   const t = M.newGame({ seed: 5, ai: [false, false], first: 0, rules: { surplusSp: 0 } }); t.players[0].stats.mag = { F: 3, E: 3, W: 3 }; t.players[0].stats.pending = 2; t.players[0].stats.gold = 0;
   assert.ok(M.apply(t, { pid: 0, type: 'draw' }).ok); assert.deepEqual([t.players[0].stats.pending, t.players[0].sp], [2, 2], 'ohne Regel bleibt es');
 });
@@ -535,7 +535,7 @@ test('Start-HP der Spieler 4 (startHp), Monster beginnen weiter mit eigenen Wert
   assert.equal(M.spawnMonsters(1, s.rng).F.stats.maxHp >= 1, true);
 });
 
-test('Steigende Preise (priceRise): jeder Kauf einer Kategorie verteuert die nächste Stufe um den Grundpreis; Einnahmen je Abschnitt 3/6/9 Gold (seit 0.18)', () => {
+test('Steigende Preise (priceRise): jeder Kauf einer Kategorie verteuert die nächste Stufe um den Grundpreis; Einnahmen je Abschnitt 3/6/9 Gold (seit 0.4)', () => {
   assert.deepEqual(M.DEFAULT_RULES.stageGold, [0, 3, 6, 9]); assert.deepEqual(M.DEFAULT_RULES.stagePoints, [0, 0, 0, 0]); assert.deepEqual(M.DEFAULT_RULES.lossGold, [0, 1, 2, 3]); assert.equal(M.DEFAULT_RULES.priceRise, 1);
   const s = M.newGame({ seed: 5, ai: [false, false], first: 0 }), p = s.players[0], st = p.stats;
   assert.deepEqual([st.gold, st.pending], [3, 0], 'Start: 3 Gold (3 Monster × 1 Gold), keine Upgrade-Punkte (Abschnitt 1)');
@@ -663,7 +663,7 @@ test('Vorschau Nachziehen: Strafe nur bei rotem Marker (Weltphase Gold für den 
   assert.ok(me);
 });
 
-// ---- Version 0.18 ----
+// ---- Version 0.4 ----
 test('Monster: Das Nebenelement (Folgemagie) ist das überlegene Element (Feuer → Wasser, Erde → Feuer, Wasser → Erde)', () => {
   for (const el of M.ELEMENTS) {
     const S = M.MONSTER.profile[el].secondary;

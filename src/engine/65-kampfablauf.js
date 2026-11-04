@@ -81,7 +81,7 @@ function endCombat(state, end) {
       gain(A, c.att);
     } else if (end.winner === 'b') {   // Niederlage gegen das Monster: kein Gold, das Monster zieht sich zurück
       log(state, m.name + ' gewinnt den Kampf.', c.def);
-      const hf = state.rules.lossHelp || 0;   // Ausgleich (früher „Hilfe“): Gewinnt das Monster, bekommt der Verlierer (der Angreifer) Gold je Abschnitt (lossGold: 1/2/3, seit 0.18 nur Gold, keine Upgrade-Punkte: lossPoints 0) – nur er, nicht mehr beide Spieler (lossBoth 1 stellt das alte Verhalten wieder her); das Monster verschwindet danach (sonst ließe sich der Ausgleich durch absichtliche Niederlagen farmen)
+      const hf = state.rules.lossHelp || 0;   // Ausgleich (früher „Hilfe“): Gewinnt das Monster, bekommt der Verlierer (der Angreifer) Gold je Abschnitt (lossGold: 1/2/3, seit 0.4 nur Gold, keine Upgrade-Punkte: lossPoints 0) – nur er, nicht mehr beide Spieler (lossBoth 1 stellt das alte Verhalten wieder her); das Monster verschwindet danach (sonst ließe sich der Ausgleich durch absichtliche Niederlagen farmen)
       m.stats.hp = 0; m.stats.gold = 0; m.retreated = true; res.monsterGone = true; log(state, m.name + ' zieht sich zurück.', c.def);
       if (hf > 0) {
         const hp = Math.round(((state.rules.lossPoints || [])[state.stage] || 0) * hf), hg = Math.round(((state.rules.lossGold || [])[state.stage] || 0) * hf), both = !!state.rules.lossBoth;
@@ -253,13 +253,13 @@ function canFlee(state, pid) {
   return me.ctrl === pid && opp.stats.mana <= 0 && !(me.stats.death > 0);
 }
 function recoverGain(state) { const r = state.rules.recoverByStage; return r ? (r[Math.min(r.length, Math.max(1, state.stage)) - 1] || 1) : 1; }
-// Ergebnis einer Verteidigung (Spiegel, Rückwurf, Restschaden): gemeinsam für die Ausführung (execDefense) und die Vorschau der Oberfläche (previewDefense). mir: Spiegelstufe der Angriffsfarbe nach dem Kombo (seit 0.18 wirkt der Kombo vor der Verteidigung); ohne Angabe zählt der Spiegel, der jetzt liegt.
+// Ergebnis einer Verteidigung (Spiegel, Rückwurf, Restschaden): gemeinsam für die Ausführung (execDefense) und die Vorschau der Oberfläche (previewDefense). mir: Spiegelstufe der Angriffsfarbe nach dem Kombo (seit 0.4 wirkt der Kombo vor der Verteidigung); ohne Angabe zählt der Spiegel, der jetzt liegt.
 function defenseOutcome(stats, color, pending, block, mir) {
   const mLvl = mir === undefined ? mirrorOf(stats, color) : mir, missing = Math.max(0, pending - block), excess = Math.max(0, block - pending);
   const absorb = Math.min(mLvl, missing), refl = Math.min(mLvl, excess, pending);
   return { mLvl, absorb, refl, lost: absorb + refl, leftover: missing - absorb };
 }
-// Was ein Kombo der Verteidigung vor dem Schaden ändert (seit 0.18): Heilung (HP vor dem Schaden, höchstens bis zum Maximum) und der Spiegel der Angriffsfarbe (wirkt schon gegen diesen Angriff).
+// Was ein Kombo der Verteidigung vor dem Schaden ändert (seit 0.4): Heilung (HP vor dem Schaden, höchstens bis zum Maximum) und der Spiegel der Angriffsfarbe (wirkt schon gegen diesen Angriff).
 function defenseComboPre(stats, ev, color) {
   const lvs = ev && ev.ord && !(ev.levels && ev.levels.ulti > 0) ? levelsFor(ev) : null, own = mirrorOf(stats, color);
   if (!lvs) return { heal: 0, hp: stats.hp, mir: own };
@@ -294,7 +294,7 @@ function execDefense(state, passOnly) {
   // Passen in der Verteidigung bringt kein Mana (nur im Angriffszug gibt es Erholen)
   if (sel.length) consumeSelection(d, sel); else d.marks = [];
   const attacker = c.sides[c.turn === 'a' ? 'b' : 'a'];
-  // Seit 0.18 wirkt der Kombo zuerst, danach die Verteidigung (wie im Angriff, wo der Kombo ebenfalls vor dem Schaden kommt): Eine Heilung gleicht jetzt keinen Schaden mehr nachträglich aus, sie füllt die HP vor dem Schaden auf (nur bis zum Maximum), und ein Spiegel dieser Farbe wirkt schon gegen den Angriff, auf den verteidigt wird.
+  // Seit 0.4 wirkt der Kombo zuerst, danach die Verteidigung (wie im Angriff, wo der Kombo ebenfalls vor dem Schaden kommt): Eine Heilung gleicht jetzt keinen Schaden mehr nachträglich aus, sie füllt die HP vor dem Schaden auf (nur bis zum Maximum), und ein Spiegel dieser Farbe wirkt schon gegen den Angriff, auf den verteidigt wird.
   if (defEv && defEv.levels && defEv.levels.ulti > 0) {   // Ultimate in der Verteidigung: Todes-Fluch für den Angreifer
     if (attacker.stats.deathPhase === undefined) attacker.stats.deathPhase = attacker.stats.death || 0;
     attacker.stats.death = Math.max(attacker.stats.death || 0, defEv.levels.ulti);

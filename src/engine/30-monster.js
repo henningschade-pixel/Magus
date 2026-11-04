@@ -10,7 +10,7 @@
 //   Stufe III 7 HP, Mana 6, Limit 4, Hand 5 (Hand höchstens MAX_SLOTS; +1 HP statt der sechsten Handkarte; 0.3.2: 8 HP waren mit den höheren Einnahmen zu hart, 48 % Niederlagen)
 // Das Limit steigt nur dort, wo es gewollt ist: Ein Monster mit Limit 2 und vielen HP verwickelt den Angreifer in endlose Angriffe und Fluchten (bis 27 Angriffe je Partie), erst Limit 3 gibt ihm die nötige Gefahr.
 const MONSTER = {
-  profile: { F: { primary: 'F', secondary: SUPERIOR.F }, E: { primary: 'E', secondary: SUPERIOR.E }, W: { primary: 'W', secondary: SUPERIOR.W } },   // seit 0.18: das Nebenelement ist das überlegene Element (Feuer → Wasser, Erde → Feuer, Wasser → Erde); bis 0.17 war es das unterlegene (Feuer → Erde, Erde → Wasser, Wasser → Feuer)
+  profile: { F: { primary: 'F', secondary: SUPERIOR.F }, E: { primary: 'E', secondary: SUPERIOR.E }, W: { primary: 'W', secondary: SUPERIOR.W } },   // seit 0.4: das Nebenelement ist das überlegene Element (Feuer → Wasser, Erde → Feuer, Wasser → Erde); bis 0.17 war es das unterlegene (Feuer → Erde, Erde → Wasser, Wasser → Feuer)
   stage1Temple: { F: ['mana'], E: ['mana', 'mana'], W: ['mana'] },   // Stufe I: Mana 5 (Erdmonster 6; sonst verlor es die Angreifer nur halb so oft)
   temple: { 2: { F: ['limit', 'hp', 'mana'], E: ['limit', 'hp', 'mana'], W: ['limit', 'hp', 'mana'] }, 3: { F: ['limit', 'hp', 'hp', 'hp', 'mana'], E: ['limit', 'hp', 'hp', 'hp', 'mana'], W: ['limit', 'hp', 'hp', 'hp', 'mana'] } },   // Schritte je Stufe (Stufe III kommt auf Stufe II obendrauf): II = Limit 3, 4 HP, Mana 5; III = Limit 4, 7 HP, Mana 6 (Hand höchstens 5, ein HP mehr als Ausgleich)
   magic: { 2: [3, 2, 1], 3: [3, 2, 1] },                                  // Stufen von Haupt-, Neben- und drittem Element
@@ -28,7 +28,7 @@ const MONSTER = {
       3: [null, (P, S, T) => [P + '3', P + '3', P + '3', P + '2', S + '3', S + '3', S + '2', T + '2', T + '1'], (P, S, T) => [P + '3', P + '3', P + '3', P + '3', P + '1', S + '3', S + '3', T + '2', T + '1']],
     },
     // Die Würfel: sechs Seiten je Würfel, jede Seite ein Wert und sein Ausschlag je Stufe (n: Stufe I, II, III).
-    dice: {   // k: Wert, n: Ausschlag je Stufe (seit der Überarbeitung in allen Stufen gleich). Der Minuswürfel dreht das Vorzeichen um; die sechste Seite ist leer. Seit 0.5 trägt der Pluswürfel statt „Limit“ die Seite „mag“: eine Magiestufe mehr auf der Folgemagie des Monsters (Nebenelement seines Profils, seit 0.18 das überlegene Element: Feuer → Wasser, Erde → Feuer, Wasser → Erde)
+    dice: {   // k: Wert, n: Ausschlag je Stufe (seit der Überarbeitung in allen Stufen gleich). Der Minuswürfel dreht das Vorzeichen um; die sechste Seite ist leer. Seit 0.5 trägt der Pluswürfel statt „Limit“ die Seite „mag“: eine Magiestufe mehr auf der Folgemagie des Monsters (Nebenelement seines Profils, seit 0.4 das überlegene Element: Feuer → Wasser, Erde → Feuer, Wasser → Erde)
       plus:  [{ k: 'hp', n: [1, 1, 1] }, { k: 'mana', n: [1, 1, 1] }, { k: 'mag', n: [1, 1, 1] }, { k: 'draws', n: [1, 1, 1] }, { k: 'hand', n: [1, 1, 1] }, { k: 'none', n: [0, 0, 0] }],
       minus: [{ k: 'hp', n: [1, 1, 1] }, { k: 'mana', n: [1, 1, 1] }, { k: 'limit', n: [1, 1, 1] }, { k: 'draws', n: [1, 1, 1] }, { k: 'hand', n: [1, 1, 1] }, { k: 'none', n: [0, 0, 0] }],
     },
@@ -65,7 +65,7 @@ function applyDie(stats, face, sign, stage, el) {
 function spawnOne(el, stage, rng, v) {
   const M = MONSTER, deck = START_DECK.slice(), V = M.variants;
   v = v || { d: 0, pl: -1, mi: -1 };
-  const T0 = ELEMENTS.find(e => e !== el && e !== M.profile[el].secondary);   // drittes Element: seine Stufe-1-Karten werden in der Grundform zu Karten des eigenen Elements auf Stufe 2 (bis 0.17 war das SUPERIOR[el], dort fiel es mit dem drittes Element zusammen; seit 0.18 ist SUPERIOR[el] das Nebenelement und bleibt im Deck)
+  const T0 = ELEMENTS.find(e => e !== el && e !== M.profile[el].secondary);   // drittes Element: seine Stufe-1-Karten werden in der Grundform zu Karten des eigenen Elements auf Stufe 2 (bis 0.17 war das SUPERIOR[el], dort fiel es mit dem drittes Element zusammen; seit 0.4 ist SUPERIOR[el] das Nebenelement und bleibt im Deck)
   for (let i = 0, src = T0 + '1'; i < (M.upgrades[el] === undefined ? 2 : M.upgrades[el]); i++) { const idx = deck.indexOf(src); if (idx < 0) break; deck[idx] = el + '2'; }
   const stats = newStats();
   { const sIdx = deck.indexOf(M.profile[el].secondary + '1'); if (sIdx >= 0) deck[sIdx] = M.profile[el].secondary + '2'; }   // Folgemagie: eine Karte eine Stufe über der Magie (wirkt erst mit dem Magiebonus des Pluswürfels)
