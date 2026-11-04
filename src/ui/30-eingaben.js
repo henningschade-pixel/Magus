@@ -76,7 +76,7 @@ stage.addEventListener('click', e => {
   }
 });
 /* Vorschau beim Überfahren eines Plus-Knopfes: neue Werte in Grün, neue Magiestufe grün eingekreist. Dazu die Knöpfe Verteidigen, Passen, Erholen und der Nachziehstapel: sinkende Werte in Rot, steigende in Grün */
-const PV_SEL = 'button.up, .sacbtn, [data-act="attack"], [data-act="draw"], [data-act="defend"], [data-act="pass"], [data-act="recover"]';
+const PV_SEL = 'button.up, .sacbtn, [data-act="draw"], [data-act="defend"], [data-act="pass"], [data-act="recover"]';
 let pvUndo = null;
 function pvClear() { if (pvUndo) { pvUndo(); pvUndo = null; } }
 let pvHover = false;   // true, solange die Maus auf einem Vorschau-Knopf liegt (dann hat dessen Vorschau Vorrang vor der Opfer-Vorschau)
@@ -115,9 +115,6 @@ function pvShow(b) {
       if (pd.leftover > 0 || pd.heal > 0) set(ME, 'hp', (pd.hpAfter < cst.hp ? dn(pd.hpAfter) : pd.hpAfter > cst.hp ? up(pd.hpAfter) : pd.hpAfter) + '/' + cst.maxHp);   // Heilung wirkt nach dem Schaden (seit 0.5.4) vor dem Schaden (Kombo zuerst)
       if (pd.refl > 0) { const cs = G.combat.sides.a.ctrl === pd.att ? G.combat.sides.a : G.combat.sides.b; set(pd.att, 'hp', dn(pd.attHpAfter) + '/' + cs.stats.maxHp); }
     }
-  } else if (act === 'attack') {   // Angriff: die Manakosten der markierten Karten (rot am Wert, schon durch das Zeichnen) blenden zusätzlich auf dem Mana-Bogen aus und ein
-    const mv = G.phase === 'combat' && manaPv > 0 ? stage.querySelector('.sbody[data-lead] [data-pv="mana"]') : null, cst = mv && ctx().myStats;
-    if (mv) ArcFx.mark(mv, cst.mana + '/' + cst.maxMana, undos);
   } else if (act === 'temple') {   // Opfern: Gold sinkt (rot), Upgrade-Punkte steigen (grün)
     const n = +b.dataset.n, pv = M.previewTemple(G.players[ME], n);
     redo('gold', n);

@@ -364,7 +364,7 @@ test('Vorschau auf den Bögen: Plus-Knopf (HP) und Angriff (Mana) lassen den bet
     assert.equal(a.tags, 0); assert.ok(a.neu > 0);
     await p.mouse.move(600, 100); await p.waitForTimeout(300);
     assert.equal(await p.evaluate(() => document.querySelectorAll('.arcfx').length), 0);
-    // Angriff: die Manakosten der markierten Karten blenden auf dem Mana-Bogen aus und ein
+    // markierte Karten: ihre Manakosten blenden (mit dem roten Wert) auf dem Mana-Bogen aus und ein, auch ohne Überfahren eines Knopfes
     await p.evaluate(() => {
       const G = window.__magus.state, M = window.Magus;
       M.apply(G, { pid: 0, type: 'combat', elem: 'F' });
@@ -373,10 +373,12 @@ test('Vorschau auf den Bögen: Plus-Knopf (HP) und Angriff (Mana) lassen den bet
       M.apply(G, { pid: 0, type: 'mark', slot: 0 }); window.__magus.pump();
     });
     await p.waitForTimeout(300);
-    await p.hover('[data-act="attack"]'); await p.waitForTimeout(300);
     const m = await p.evaluate(() => [...document.querySelectorAll('.arcfx')].map(e => e.getAttribute('class')));
     assert.deepEqual(m, ['arcfx mana bg']);   // gefüllter Teil des Mana-Bogens, der verbraucht würde
     await p.mouse.move(600, 100); await p.waitForTimeout(300);
+    assert.equal(await p.evaluate(() => document.querySelectorAll('.arcfx').length), 1, 'bleibt, solange die Karten markiert sind');
+    await p.evaluate(() => { window.Magus.apply(window.__magus.state, { pid: 0, type: 'mark', slot: 0 }); window.__magus.pump(); });   // Markierung aufheben
+    await p.waitForTimeout(300);
     assert.equal(await p.evaluate(() => document.querySelectorAll('.arcfx').length), 0);
     assert.deepEqual(errs, []);
   } finally { await b.close(); }

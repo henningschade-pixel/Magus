@@ -2664,7 +2664,7 @@ function sidePanels(cx) {
     '<div class="panel" style="' + box(LAYOUT.oppPanel, 'padding:6px 12px;font-size:16px') + '">' + op.replace(/<h3>/, '<h3 style="font-size:17px;margin-bottom:2px">') + '</div>';
 }
 /* ---------- Vorschau-Blinken auf den Bögen von HP und Mana (seit 0.5.6.4) ----------
-   Beim Überfahren eines Knopfes (Angriff, Verteidigen, Passen, Erholen, Nachziehen, Plus-Knöpfe) blendet auf dem HP- bzw. Mana-Bogen der betroffene Anteil aus und ein:
+   Solange Karten markiert sind, blendet der Mana-Anteil ihrer Kosten aus und ein (seit 0.5.6.5, zusammen mit dem roten Manawert). Beim Überfahren eines Knopfes (Verteidigen, Passen, Erholen, Nachziehen, Plus-Knöpfe) blendet auf dem HP- bzw. Mana-Bogen der betroffene Anteil aus und ein:
    ein Stück über dem Bogen zwischen altem und neuem Wert (bei nur geändertem Maximum der neu hinzukommende Teil). Die Werte selbst bleiben bei der alten Darstellung (30-eingaben.js: weniger = rot, mehr = grün). */
 const ArcFx = (() => {
   const FLASH = ['hp', 'mana'];
@@ -2678,15 +2678,17 @@ const ArcFx = (() => {
   }
   // el: der Wert (data-pv hp/mana) mit dem Vorschautext, oldText: der Text vor der Änderung („5/7“). Der Bogen zeigt noch den alten Stand:
   // liegt der Anteil im gefüllten Teil (Verlust), blendet ein Stück in Hintergrundfarbe darüber ein und aus; sonst ein Stück in der Farbe des Bogens (Zuwachs)
-  function mark(el, oldText, undos) {
+  // keep: das Stück bleibt bis zum nächsten Zeichnen stehen (Manakosten markierter Karten); eine Vorschau beim Überfahren legt dann kein zweites darüber
+  function mark(el, oldText, undos, keep) {
     const key = el.dataset.pv; if (FLASH.indexOf(key) < 0) return;
     const sb = el.closest('.sbody'), arc = sb && sb.querySelector('.arcv.' + key), reg = region(oldText, el.textContent);
-    if (!arc || !reg || reg.b <= reg.a) return;
+    if (!arc || !reg || reg.b <= reg.a || sb.querySelector('.arcfx.' + key + '[data-keep]')) return;
     const om = max(oldText), filled = om ? reg.b <= num(oldText) / om + 1e-6 : false;
     const n = arc.cloneNode(false); n.setAttribute('class', 'arcfx ' + key + (filled ? ' bg' : ''));
     n.setAttribute('stroke-dasharray', ((reg.b - reg.a) * 100).toFixed(2) + ' 100'); n.setAttribute('stroke-dashoffset', (-reg.a * 100).toFixed(2));
+    if (keep) n.setAttribute('data-keep', '1');
     arc.parentNode.insertBefore(n, arc.nextSibling);   // vor den Kerben, damit diese darüber liegen
-    undos.push(() => n.remove());
+    if (undos) undos.push(() => n.remove());
   }
   return { mark };
 })();
@@ -3957,7 +3959,7 @@ function renderInner() {
     if (dthSeen && dthSeen.c === G.combat && dd > dthSeen.n) CurseFx.play();
     dthSeen = { c: G.combat, n: dd };
   } else { mkSeen = null; dthSeen = null; }
-  if (manaPv > 0 && cx.combat) { const mv = panels.querySelector('.sbody[data-lead] [data-pv="mana"]'), st = cx.myStats; if (mv) mv.innerHTML = '<span class="pvdn">' + Math.max(0, st.mana - manaPv) + '</span>/' + st.maxMana; }   // Mana nach dem Ausspielen in Rot
+  if (manaPv > 0 && cx.combat) { const mv = panels.querySelector('.sbody[data-lead] [data-pv="mana"]'), st = cx.myStats; if (mv) { mv.innerHTML = '<span class="pvdn">' + Math.max(0, st.mana - manaPv) + '</span>/' + st.maxMana; ArcFx.mark(mv, st.mana + '/' + st.maxMana, null, true); } }   // Mana nach dem Ausspielen in Rot; der Anteil auf dem Mana-Bogen blinkt dazu (seit 0.5.6.5)
   { const mine = panels.querySelector('.sbody[data-lead]');   // Knopfspalte weich ein- und ausfahren
     if (mine) { const now = mine.classList.contains('hasup'); if (leadPrev !== null && leadPrev !== now) { mine.classList.toggle('hasup', leadPrev); void mine.offsetWidth; mine.classList.toggle('hasup', now); } leadPrev = now; } }
   showFx();
@@ -3987,7 +3989,7 @@ function showStart(pg) {
     h += '<img class="logo" alt="" src="assets/img/logo.webp"><div class="menulist">' +
       (run ? menuBtn('resume', 'Spiel fortsetzen', '', 'primary') : '') +
       menuTo('single', 'Einzelspieler', run ? '' : 'primary') + menuTo('multi', 'Mehrspieler') + menuTo('settings', 'Einstellungen') + menuBtn('quit', 'Beenden') + '</div>' +
-      '<div class="menufoot">' + menuTo('about', 'Neu in Version 0.5.6.4', 'link') + '</div>';
+      '<div class="menufoot">' + menuTo('about', 'Neu in Version 0.5.6.5', 'link') + '</div>';
   } else if (pg === 'single') {
     h += '<h2>Einzelspieler</h2><div class="menulist">' +
       menuBtn('newgame', run ? 'Neues Spiel gegen den Computer' : 'Gegen den Computer spielen', '', run ? '' : 'primary') +
@@ -4000,7 +4002,7 @@ function showStart(pg) {
   } else if (pg === 'settings') {
     h += '<h2>Einstellungen</h2><div class="menulist">' + settingsHTML() + back + '</div>';
   } else if (pg === 'about') {
-    h += '<p class="note intro" style="margin-top:-2px"><b>Danke, dass du Trimagus testest!</b> <b>Neu in Version 0.5.6.4:</b> Beim Überfahren eines Knopfes (Angriff, Verteidigen, Passen, Erholen, Nachziehen, Plus-Knöpfe) blendet auf dem gebogenen HP- bzw. Mana-Balken der betroffene Anteil aus und ein, zum Beispiel der eine Manapunkt, den ein Angriff kostet. Die Werte erscheinen dabei weiter in Rot (weniger) oder Grün (mehr). <b>Version 0.5.5:</b> Die Würfelseite „Hand“ (mehr Handkarten) zeigt jetzt eine Hand statt dreier Karten. <b>Version 0.5.4.1:</b> Der Todes-Fluch zeigt keine Textzeile mehr: Aus jedem Todesmarker steigt eine violette Wolke auf, fliegt zur Lebensanzeige und zehrt dort die HP; bis zum Einschlag zeigt die Anzeige noch den alten Stand. <b>Version 0.5.4:</b> Die Heilung der Verteidigung wirkt wieder nach Angriff und Verteidigung: Sie gleicht den Schaden nachträglich aus (höchstens bis zu den maximalen HP). Die Zerrüttung und die übrigen Kombos wirken weiterhin davor. <b>Version 0.5.3.1:</b> Die Todesmarker stehen nicht mehr als kleine Symbole in der Limit-Zeile, sondern liegen als einzelne, größere Marker neben den Nachziehtokens auf dem Tisch (eigene über deinem Nachziehstapel, die des Gegners neben seinem). <b>Version 0.5.3:</b> Alle Knöpfe links (Opfern, HP, Mana, Limit) stehen jetzt auf einer Linie unter dem Münzknopf. HP und Mana stehen nicht mehr als Balken in den Zeilen, sondern als gebogene Linien links (HP) und rechts (Mana) neben der Magiescheibe. <b>Version 0.5.2.2:</b> Die Pfeile ◀ ▶ zum Opfern stehen jetzt links und rechts neben dem Münzknopf. <b>Version 0.5.2.1:</b> Die Versionsbeschreibung nennt nur noch die Versionen ab 0.4. <b>Version 0.5.2:</b> <b>Opfern wie die anderen Knöpfe:</b> Ein goldener Münzknopf steht links neben dem Gold, die Zahl der geopferten Münzen zeigt er als Plakette. Mit den Pfeilen ◀ ▶ daneben stellst du die Anzahl ein; die Schaltfläche „Opfern“ ist entfallen. <b>Version 0.5.1:</b> <b>Das Spiel heißt jetzt Trimagus.</b> Du startest mit <b>Ausspiellimit 1</b> (vorher 2). Jede Weiterentwicklung wird mit jedem Kauf teurer: die erste kostet 1 Gold, die zweite 2 Gold (gilt für Ausspiellimit, Handplätze, Nachziehlimit, max. HP und max. Mana; die Magie kostet wie bisher 1, 2, 3 … Upgrade-Punkte). Jede Entwicklung ist auf <b>Stufe 3</b> begrenzt, also auf zwei Ausbauten: Ausspiellimit 1 bis 3, Handplätze 3 bis 5, Nachziehlimit 1 bis 3, max. HP 4 bis 8, max. Mana 4 bis 6, Magie 1 bis 3. Die Monster behalten ihre Werte. Der Computer ist noch nicht neu abgestimmt. <b>Version 0.4.1:</b> Keine Spieländerung: Vier weitere Ideen sind als Notizen festgehalten (Umbenennung in Trimagus, Upgrades höchstens 3, Start mit 3 Siegpunkten, Siegpunkt-Belohnung 2 in Stufe 2 und 3 in Stufe 3). <b>Neu in Version 0.4:</b> Vier Regeländerungen. <b>Monster:</b> Die zweite Magie eines Monsters ist jetzt die <b>überlegene</b> (Feuer-Monster: Wasser, Erde-Monster: Feuer, Wasser-Monster: Erde). <b>Combo zuerst:</b> Auch in der Verteidigung wirkt der Combo-Effekt vor der Verteidigung selbst; die Heilung füllt die HP also auf, bevor der Schaden trifft, und ein Spiegel-Combo wirkt sofort gegen den laufenden Angriff. <b>Ausgleich:</b> Nach einer Niederlage gegen ein Monster erhält ihn nur noch der Verlierer. <b>Nur Gold:</b> Der Abschnittsbonus beträgt je Monster 1, 2 und 3 Gold (3, 6, 9 Gold je Abschnitt), der Ausgleich nach einer Niederlage 1, 2 und 3 Gold; es gibt keine Upgrade-Punkte mehr als Bonus. Computer neu abgestimmt.</p><div class="menulist">' + back + '</div>';
+    h += '<p class="note intro" style="margin-top:-2px"><b>Danke, dass du Trimagus testest!</b> <b>Neu in Version 0.5.6.5:</b> Solange Karten markiert sind, blendet der Manapunkt, den sie kosten, auf dem Mana-Bogen aus und ein (zusammen mit dem roten Manawert). <b>Version 0.5.6.4:</b> Beim Überfahren eines Knopfes (Verteidigen, Passen, Erholen, Nachziehen, Plus-Knöpfe) blendet auf dem gebogenen HP- bzw. Mana-Balken der betroffene Anteil aus und ein, zum Beispiel der eine Manapunkt, den ein Angriff kostet. Die Werte erscheinen dabei weiter in Rot (weniger) oder Grün (mehr). <b>Version 0.5.5:</b> Die Würfelseite „Hand“ (mehr Handkarten) zeigt jetzt eine Hand statt dreier Karten. <b>Version 0.5.4.1:</b> Der Todes-Fluch zeigt keine Textzeile mehr: Aus jedem Todesmarker steigt eine violette Wolke auf, fliegt zur Lebensanzeige und zehrt dort die HP; bis zum Einschlag zeigt die Anzeige noch den alten Stand. <b>Version 0.5.4:</b> Die Heilung der Verteidigung wirkt wieder nach Angriff und Verteidigung: Sie gleicht den Schaden nachträglich aus (höchstens bis zu den maximalen HP). Die Zerrüttung und die übrigen Kombos wirken weiterhin davor. <b>Version 0.5.3.1:</b> Die Todesmarker stehen nicht mehr als kleine Symbole in der Limit-Zeile, sondern liegen als einzelne, größere Marker neben den Nachziehtokens auf dem Tisch (eigene über deinem Nachziehstapel, die des Gegners neben seinem). <b>Version 0.5.3:</b> Alle Knöpfe links (Opfern, HP, Mana, Limit) stehen jetzt auf einer Linie unter dem Münzknopf. HP und Mana stehen nicht mehr als Balken in den Zeilen, sondern als gebogene Linien links (HP) und rechts (Mana) neben der Magiescheibe. <b>Version 0.5.2.2:</b> Die Pfeile ◀ ▶ zum Opfern stehen jetzt links und rechts neben dem Münzknopf. <b>Version 0.5.2.1:</b> Die Versionsbeschreibung nennt nur noch die Versionen ab 0.4. <b>Version 0.5.2:</b> <b>Opfern wie die anderen Knöpfe:</b> Ein goldener Münzknopf steht links neben dem Gold, die Zahl der geopferten Münzen zeigt er als Plakette. Mit den Pfeilen ◀ ▶ daneben stellst du die Anzahl ein; die Schaltfläche „Opfern“ ist entfallen. <b>Version 0.5.1:</b> <b>Das Spiel heißt jetzt Trimagus.</b> Du startest mit <b>Ausspiellimit 1</b> (vorher 2). Jede Weiterentwicklung wird mit jedem Kauf teurer: die erste kostet 1 Gold, die zweite 2 Gold (gilt für Ausspiellimit, Handplätze, Nachziehlimit, max. HP und max. Mana; die Magie kostet wie bisher 1, 2, 3 … Upgrade-Punkte). Jede Entwicklung ist auf <b>Stufe 3</b> begrenzt, also auf zwei Ausbauten: Ausspiellimit 1 bis 3, Handplätze 3 bis 5, Nachziehlimit 1 bis 3, max. HP 4 bis 8, max. Mana 4 bis 6, Magie 1 bis 3. Die Monster behalten ihre Werte. Der Computer ist noch nicht neu abgestimmt. <b>Version 0.4.1:</b> Keine Spieländerung: Vier weitere Ideen sind als Notizen festgehalten (Umbenennung in Trimagus, Upgrades höchstens 3, Start mit 3 Siegpunkten, Siegpunkt-Belohnung 2 in Stufe 2 und 3 in Stufe 3). <b>Neu in Version 0.4:</b> Vier Regeländerungen. <b>Monster:</b> Die zweite Magie eines Monsters ist jetzt die <b>überlegene</b> (Feuer-Monster: Wasser, Erde-Monster: Feuer, Wasser-Monster: Erde). <b>Combo zuerst:</b> Auch in der Verteidigung wirkt der Combo-Effekt vor der Verteidigung selbst; die Heilung füllt die HP also auf, bevor der Schaden trifft, und ein Spiegel-Combo wirkt sofort gegen den laufenden Angriff. <b>Ausgleich:</b> Nach einer Niederlage gegen ein Monster erhält ihn nur noch der Verlierer. <b>Nur Gold:</b> Der Abschnittsbonus beträgt je Monster 1, 2 und 3 Gold (3, 6, 9 Gold je Abschnitt), der Ausgleich nach einer Niederlage 1, 2 und 3 Gold; es gibt keine Upgrade-Punkte mehr als Bonus. Computer neu abgestimmt.</p><div class="menulist">' + back + '</div>';
   } else if (pg === 'quit') {
     h += '<p class="note" style="text-align:center;font-size:19px">Danke fürs Spielen!<br>Ein Browser-Tab lässt sich vom Spiel aus nicht immer schließen. Schließe diesen Tab oder dieses Fenster einfach selbst.</p><div class="menulist">' + back + '</div>';
   }
@@ -4380,7 +4382,7 @@ stage.addEventListener('click', e => {
   }
 });
 /* Vorschau beim Überfahren eines Plus-Knopfes: neue Werte in Grün, neue Magiestufe grün eingekreist. Dazu die Knöpfe Verteidigen, Passen, Erholen und der Nachziehstapel: sinkende Werte in Rot, steigende in Grün */
-const PV_SEL = 'button.up, .sacbtn, [data-act="attack"], [data-act="draw"], [data-act="defend"], [data-act="pass"], [data-act="recover"]';
+const PV_SEL = 'button.up, .sacbtn, [data-act="draw"], [data-act="defend"], [data-act="pass"], [data-act="recover"]';
 let pvUndo = null;
 function pvClear() { if (pvUndo) { pvUndo(); pvUndo = null; } }
 let pvHover = false;   // true, solange die Maus auf einem Vorschau-Knopf liegt (dann hat dessen Vorschau Vorrang vor der Opfer-Vorschau)
@@ -4419,9 +4421,6 @@ function pvShow(b) {
       if (pd.leftover > 0 || pd.heal > 0) set(ME, 'hp', (pd.hpAfter < cst.hp ? dn(pd.hpAfter) : pd.hpAfter > cst.hp ? up(pd.hpAfter) : pd.hpAfter) + '/' + cst.maxHp);   // Heilung wirkt nach dem Schaden (seit 0.5.4) vor dem Schaden (Kombo zuerst)
       if (pd.refl > 0) { const cs = G.combat.sides.a.ctrl === pd.att ? G.combat.sides.a : G.combat.sides.b; set(pd.att, 'hp', dn(pd.attHpAfter) + '/' + cs.stats.maxHp); }
     }
-  } else if (act === 'attack') {   // Angriff: die Manakosten der markierten Karten (rot am Wert, schon durch das Zeichnen) blenden zusätzlich auf dem Mana-Bogen aus und ein
-    const mv = G.phase === 'combat' && manaPv > 0 ? stage.querySelector('.sbody[data-lead] [data-pv="mana"]') : null, cst = mv && ctx().myStats;
-    if (mv) ArcFx.mark(mv, cst.mana + '/' + cst.maxMana, undos);
   } else if (act === 'temple') {   // Opfern: Gold sinkt (rot), Upgrade-Punkte steigen (grün)
     const n = +b.dataset.n, pv = M.previewTemple(G.players[ME], n);
     redo('gold', n);

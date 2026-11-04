@@ -1,5 +1,5 @@
 /* ---------- Vorschau-Blinken auf den Bögen von HP und Mana (seit 0.5.6.4) ----------
-   Beim Überfahren eines Knopfes (Angriff, Verteidigen, Passen, Erholen, Nachziehen, Plus-Knöpfe) blendet auf dem HP- bzw. Mana-Bogen der betroffene Anteil aus und ein:
+   Solange Karten markiert sind, blendet der Mana-Anteil ihrer Kosten aus und ein (seit 0.5.6.5, zusammen mit dem roten Manawert). Beim Überfahren eines Knopfes (Verteidigen, Passen, Erholen, Nachziehen, Plus-Knöpfe) blendet auf dem HP- bzw. Mana-Bogen der betroffene Anteil aus und ein:
    ein Stück über dem Bogen zwischen altem und neuem Wert (bei nur geändertem Maximum der neu hinzukommende Teil). Die Werte selbst bleiben bei der alten Darstellung (30-eingaben.js: weniger = rot, mehr = grün). */
 const ArcFx = (() => {
   const FLASH = ['hp', 'mana'];
@@ -13,15 +13,17 @@ const ArcFx = (() => {
   }
   // el: der Wert (data-pv hp/mana) mit dem Vorschautext, oldText: der Text vor der Änderung („5/7“). Der Bogen zeigt noch den alten Stand:
   // liegt der Anteil im gefüllten Teil (Verlust), blendet ein Stück in Hintergrundfarbe darüber ein und aus; sonst ein Stück in der Farbe des Bogens (Zuwachs)
-  function mark(el, oldText, undos) {
+  // keep: das Stück bleibt bis zum nächsten Zeichnen stehen (Manakosten markierter Karten); eine Vorschau beim Überfahren legt dann kein zweites darüber
+  function mark(el, oldText, undos, keep) {
     const key = el.dataset.pv; if (FLASH.indexOf(key) < 0) return;
     const sb = el.closest('.sbody'), arc = sb && sb.querySelector('.arcv.' + key), reg = region(oldText, el.textContent);
-    if (!arc || !reg || reg.b <= reg.a) return;
+    if (!arc || !reg || reg.b <= reg.a || sb.querySelector('.arcfx.' + key + '[data-keep]')) return;
     const om = max(oldText), filled = om ? reg.b <= num(oldText) / om + 1e-6 : false;
     const n = arc.cloneNode(false); n.setAttribute('class', 'arcfx ' + key + (filled ? ' bg' : ''));
     n.setAttribute('stroke-dasharray', ((reg.b - reg.a) * 100).toFixed(2) + ' 100'); n.setAttribute('stroke-dashoffset', (-reg.a * 100).toFixed(2));
+    if (keep) n.setAttribute('data-keep', '1');
     arc.parentNode.insertBefore(n, arc.nextSibling);   // vor den Kerben, damit diese darüber liegen
-    undos.push(() => n.remove());
+    if (undos) undos.push(() => n.remove());
   }
   return { mark };
 })();
