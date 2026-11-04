@@ -348,3 +348,23 @@ test('Vorschau beim Überfahren: Nachziehstapel bei rotem Marker (Gold des Gegne
     assert.deepEqual(errs, []);
   } finally { await b.close(); }
 });
+
+test('Wertänderungen: Zahl grün (+) bzw. rot (−) bei Gold, HP und Mana; HP und Mana blinken; Vorschau zeigt die Änderung als Zahl', { skip: !chromium && 'Playwright nicht installiert', timeout: 60000 }, async () => {
+  const b = await chromium.launch({ executablePath: exe });
+  try {
+    const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
+    p.on('pageerror', e => errs.push(e.message));
+    await p.goto(url); await p.waitForTimeout(500);
+    await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(1000);
+    await p.evaluate(() => { const s = window.__magus.state.players[0].stats; s.gold += 3; s.hp -= 2; s.mana += 1; window.__magus.pump(); });
+    await p.waitForTimeout(300);
+    const r = await p.evaluate(() => ({ dlt: [...document.querySelectorAll('.dlt')].map(e => e.textContent + ' ' + (e.classList.contains('pos') ? 'pos' : e.classList.contains('neg') ? 'neg' : '')), fl: [...document.querySelectorAll('b.dfl')].map(e => e.dataset.pv + ' ' + (e.classList.contains('pos') ? 'pos' : 'neg')), arcs: document.querySelectorAll('.arcv.dfl').length }));
+    assert.deepEqual(r.dlt.sort(), ['+1 pos', '+3 pos', '−2 neg']);
+    assert.deepEqual(r.fl.sort(), ['hp neg', 'mana pos']);
+    assert.equal(r.arcs, 2);
+    await p.click('[data-act="sacup"]'); await p.waitForTimeout(300);   // Opfern-Vorschau: Gold sinkt um 1, Punkte steigen um 1
+    const pv = await p.evaluate(() => [...document.querySelectorAll('.pvd')].map(e => e.parentElement.dataset.pv + ' ' + e.textContent));
+    assert.deepEqual(pv.sort(), ['gold −1', 'pts +1']);
+    assert.deepEqual(errs, []);
+  } finally { await b.close(); }
+});

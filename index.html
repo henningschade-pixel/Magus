@@ -347,6 +347,19 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 #statsbtn{position:absolute;left:56px;top:12px;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:rgba(10,8,14,.7);line-height:1;cursor:var(--cp);z-index:250;padding:0;color:var(--bone);display:flex;align-items:center;justify-content:center}
 #statsbtn:hover{border-color:var(--gold);color:var(--gold)}
 
+/* Wertänderungen (seit 0.5.6): Zahl grün (+) oder rot (−); HP und Mana blinken */
+.dlt{position:absolute;z-index:275;pointer-events:none;font:700 26px/1 Alegreya,serif;font-variant-numeric:tabular-nums;white-space:nowrap;text-shadow:0 0 5px #000,0 0 3px #000,0 0 9px #000;animation:dltrise 1.6s ease-out forwards}
+.dlt.pos,.pvd.pos{color:var(--good)}.dlt.neg,.pvd.neg{color:var(--bad)}
+@keyframes dltrise{0%{opacity:0;transform:translate(-50%,-50%) scale(.7)}12%{opacity:1;transform:translate(-50%,-70%) scale(1.2)}65%{opacity:1}100%{opacity:0;transform:translate(-50%,-140%) scale(1)}}
+.pvd{font-size:.82em;font-weight:700;margin-left:4px;white-space:nowrap}
+b.dfl{border-radius:6px;animation:dflb .37s ease-in-out 3}
+b.dfl.pos{--c:127,208,138}b.dfl.neg{--c:234,90,94}
+@keyframes dflb{0%,100%{background:rgba(var(--c),0);box-shadow:none}50%{background:rgba(var(--c),.5);box-shadow:0 0 10px 3px rgba(var(--c),.85)}}
+.arcs .arcv.dfl{animation:dfla .37s ease-in-out 3}
+.arcs .arcv.dfl.pos{--g:#7fd08a}.arcs .arcv.dfl.neg{--g:#ff5a5e}
+@keyframes dfla{0%,100%{filter:none}50%{filter:drop-shadow(0 0 6px var(--g)) drop-shadow(0 0 3px var(--g)) brightness(1.8)}}
+b.dfl.inf,.arcs .arcv.dfl.inf{animation-iteration-count:infinite}
+
 </style>
 </head>
 <body>
@@ -2601,7 +2614,7 @@ function statsBlock(name, s, p, size, up, full) {
   const hasUp = !compact && !!(hpPl || manaPl || limPl || sacCoin);
   const hp = '<div class="statrow">' + lead(hpPl) + img('hp') + '<b data-pv="hp">' + Math.max(0, s.hp) + '/' + s.maxHp + '</b></div>';
   const mana = '<div class="statrow">' + lead(manaPl) + img('mana') + '<b data-pv="mana">' + s.mana + '/' + s.maxMana + '</b></div>';
-  let h = '<h3><span class="hdr"><span class="hn">' + name + '</span>@@T@@@@G@@' + (p ? '<span class="hsp" title="Siegpunkte">★ <b>' + p.sp + '</b></span>' : '') + '</span></h3><div class="sbody' + (hasUp ? ' hasup' : '') + (sacCoin ? ' hassac' : '') + '"' + (compact ? '' : ' data-lead="1"') + '><div class="scol">';
+  let h = '<h3><span class="hdr"><span class="hn">' + name + '</span>@@T@@@@G@@' + (p ? '<span class="hsp" title="Siegpunkte">★ <b data-pv="sp">' + p.sp + '</b></span>' : '') + '</span></h3><div class="sbody' + (hasUp ? ' hasup' : '') + (sacCoin ? ' hassac' : '') + '"' + (compact ? '' : ' data-lead="1"') + '><div class="scol">';
   let ptsHdr = '';
   if (p) {   // offene Upgrade-Punkte, dahinter als Bruch der Fortschritt zur nächsten Tempelstufe; das Ergebnis eines Opfers zeigt die Vorschau beim Überfahren des Opfern-Knopfes
     const lvl = p.temple.level;
@@ -2659,6 +2672,61 @@ function sidePanels(cx) {
   return '<div class="panel" style="' + box(LAYOUT.mePanel, 'padding:6px 12px') + '">' + me + '</div>' +
     '<div class="panel" style="' + box(LAYOUT.oppPanel, 'padding:6px 12px;font-size:16px') + '">' + op.replace(/<h3>/, '<h3 style="font-size:17px;margin-bottom:2px">') + '</div>';
 }
+/* ---------- Wertänderungen (seit 0.5.6) ----------
+   Ändert sich ein Wert in den Seitenleisten (Gold, HP, Mana, Limit, Upgrade-Punkte, Siegpunkte), steht die Änderung als Zahl dabei:
+   grün mit „+“ bei Zuwachs, rot mit „−“ bei Verlust. HP und Mana blinken zusätzlich (Zahl und Bogen).
+   - echte Änderungen: track() vergleicht nach jedem Zeichnen die angezeigten Zahlen mit dem letzten Stand; die Änderung steigt als Zahl aus dem Wert auf
+   - Vorschau beim Überfahren der Knöpfe (30-eingaben.js): mark() hängt die Änderung an den Vorschauwert, HP und Mana blinken, solange die Maus auf dem Knopf liegt */
+const Delta = (() => {
+  const KEYS = ['gold', 'hp', 'mana', 'limit', 'pts', 'sp'], FLASH = ['hp', 'mana'], FLASH_MS = 1110;
+  let snap = null;
+  const flashes = {};   // laufende Blinker: Kennung -> { t: Startzeit, x: Änderung }; ein neues Zeichnen setzt sie fort, statt sie abzubrechen
+  const rootOf = w => { const b = w === 'me' ? stage.querySelector('.sbody[data-lead]') : stage.querySelector('.sbody:not([data-lead])'); return b && (b.closest('.panel') || b); };
+  const num = t => { const m = /-?\d+/.exec(t); return m ? +m[0] : 0; };
+  const max = t => { const m = /\/\s*(\d+)/.exec(t); return m ? +m[1] : null; };
+  const sign = x => (x > 0 ? '+' : '−') + Math.abs(x);
+  const tag = x => '<span class="pvd ' + (x > 0 ? 'pos' : 'neg') + '">' + sign(x) + '</span>';
+  const arcOf = el => { const sb = el.closest('.sbody'); return sb && FLASH.indexOf(el.dataset.pv) >= 0 ? sb.querySelector('.arcv.' + el.dataset.pv) : null; };
+  const targets = el => { const a = arcOf(el); return a ? [el, a] : [el]; };
+  // Änderung zwischen zwei angezeigten Texten („5/7“ -> „3/7“); steht nur das Maximum anders da, zählt dessen Änderung
+  const diff = (oldT, nowT) => { const d = num(nowT) - num(oldT), o = max(oldT), n = max(nowT); return d || (o !== null && n !== null ? n - o : 0); };
+  const at = el => { const r = el.getBoundingClientRect(), sr = stage.getBoundingClientRect(), k = sr.width / stage.offsetWidth; return { x: (r.right - sr.left) / k + 22, y: (r.top + r.height / 2 - sr.top) / k }; };   // rechts neben dem Wert, damit die Zahlen der übereinanderliegenden Zeilen sich nicht überdecken
+  function fly(el, x) {   // die Zahl steigt aus dem Wert auf und blendet aus
+    const p = at(el), d = document.createElement('div');
+    d.className = 'dlt ' + (x > 0 ? 'pos' : 'neg'); d.textContent = sign(x); d.style.left = p.x + 'px'; d.style.top = p.y + 'px';
+    stage.appendChild(d); setTimeout(() => d.remove(), 1700);
+  }
+  function setFlash(list, x, inf, delayMs) {
+    const add = x > 0 ? 'pos' : 'neg', del = x > 0 ? 'neg' : 'pos';
+    list.forEach(t => { t.classList.remove(del); t.classList.add('dfl', add); if (inf) t.classList.add('inf'); t.style.animationDelay = delayMs ? (-delayMs) + 'ms' : ''; });
+    return () => list.forEach(t => { t.classList.remove('dfl', 'inf', 'pos', 'neg'); t.style.animationDelay = ''; });
+  }
+  // Vorschau: Änderung als Zahl an den Vorschauwert hängen; bei HP und Mana blinken Zahl und Bogen, bis die Vorschau endet
+  function mark(el, oldText, undos) {
+    const x = diff(oldText, el.textContent); if (!x) return;
+    el.insertAdjacentHTML('beforeend', tag(x));
+    if (FLASH.indexOf(el.dataset.pv) >= 0) undos.push(setFlash(targets(el), x, true, 0));
+  }
+  function track() {   // nach jedem Zeichnen der Seitenleisten
+    if (!G) { snap = null; return; }
+    const cur = {};
+    ['me', 'op'].forEach(w => { const r = rootOf(w); if (r) r.querySelectorAll('[data-pv]').forEach(el => { const k = el.dataset.pv; if (KEYS.indexOf(k) >= 0) cur[w + '.' + k] = { n: num(el.textContent), m: max(el.textContent), t: el.textContent, el }; }); });
+    const same = snap && snap.g === G && snap.ph === G.phase && snap.c === G.combat && snap.ev === !!endView;   // neues Spiel, Phasen- oder Kampfwechsel: neuer Vergleichsstand statt falscher Änderungen
+    if (same && !FAST) Object.keys(cur).forEach(id => {
+      const o = snap.v[id]; if (!o) return;
+      const x = diff(o.t, cur[id].t); if (!x) return;
+      fly(cur[id].el, x);
+      if (FLASH.indexOf(id.split('.')[1]) >= 0) flashes[id] = { t: Date.now(), x };
+    });
+    snap = { g: G, ph: G.phase, c: G.combat, ev: !!endView, v: Object.keys(cur).reduce((a, id) => { a[id] = { t: cur[id].t }; return a; }, {}) };
+    Object.keys(flashes).forEach(id => {
+      const age = Date.now() - flashes[id].t;
+      if (age >= FLASH_MS || !cur[id]) { delete flashes[id]; return; }
+      setFlash(targets(cur[id].el), flashes[id].x, false, age);
+    });
+  }
+  return { track, mark, tag };
+})();
 /* ---------- Weltphase: Bibliothek, Monster ---------- */
 function vendorPanel() {
   const p = G.players[ME];
@@ -3905,6 +3973,7 @@ function renderInner() {
   if (cx.combat) h += combatCenter(cx) + comboRef(cx);
   else h += vendorPanel() + monsterCards();
   panels.innerHTML = h;
+  Delta.track();   // Wertänderungen (grün +, rot −; HP und Mana blinken), vor den Vorschau-Anpassungen unten
   const lg0 = logEl.querySelector('.logl'), lgKeep = lg0 && lg0.scrollHeight - lg0.scrollTop - lg0.clientHeight > 24 ? lg0.scrollTop : null;   // nicht am Ende: Leseposition merken
   if (cx.combat) {   // links: nur der Kampflog (Einträge seit Kampfbeginn)
     const from = cx.c.logFrom || 0;
@@ -3956,7 +4025,7 @@ function showStart(pg) {
     h += '<img class="logo" alt="" src="assets/img/logo.webp"><div class="menulist">' +
       (run ? menuBtn('resume', 'Spiel fortsetzen', '', 'primary') : '') +
       menuTo('single', 'Einzelspieler', run ? '' : 'primary') + menuTo('multi', 'Mehrspieler') + menuTo('settings', 'Einstellungen') + menuBtn('quit', 'Beenden') + '</div>' +
-      '<div class="menufoot">' + menuTo('about', 'Neu in Version 0.5.5', 'link') + '</div>';
+      '<div class="menufoot">' + menuTo('about', 'Neu in Version 0.5.6', 'link') + '</div>';
   } else if (pg === 'single') {
     h += '<h2>Einzelspieler</h2><div class="menulist">' +
       menuBtn('newgame', run ? 'Neues Spiel gegen den Computer' : 'Gegen den Computer spielen', '', run ? '' : 'primary') +
@@ -3969,7 +4038,7 @@ function showStart(pg) {
   } else if (pg === 'settings') {
     h += '<h2>Einstellungen</h2><div class="menulist">' + settingsHTML() + back + '</div>';
   } else if (pg === 'about') {
-    h += '<p class="note intro" style="margin-top:-2px"><b>Danke, dass du Trimagus testest!</b> <b>Neu in Version 0.5.5:</b> Die Würfelseite „Hand“ (mehr Handkarten) zeigt jetzt eine Hand statt dreier Karten. <b>Version 0.5.4.1:</b> Der Todes-Fluch zeigt keine Textzeile mehr: Aus jedem Todesmarker steigt eine violette Wolke auf, fliegt zur Lebensanzeige und zehrt dort die HP; bis zum Einschlag zeigt die Anzeige noch den alten Stand. <b>Version 0.5.4:</b> Die Heilung der Verteidigung wirkt wieder nach Angriff und Verteidigung: Sie gleicht den Schaden nachträglich aus (höchstens bis zu den maximalen HP). Die Zerrüttung und die übrigen Kombos wirken weiterhin davor. <b>Version 0.5.3.1:</b> Die Todesmarker stehen nicht mehr als kleine Symbole in der Limit-Zeile, sondern liegen als einzelne, größere Marker neben den Nachziehtokens auf dem Tisch (eigene über deinem Nachziehstapel, die des Gegners neben seinem). <b>Version 0.5.3:</b> Alle Knöpfe links (Opfern, HP, Mana, Limit) stehen jetzt auf einer Linie unter dem Münzknopf. HP und Mana stehen nicht mehr als Balken in den Zeilen, sondern als gebogene Linien links (HP) und rechts (Mana) neben der Magiescheibe. <b>Version 0.5.2.2:</b> Die Pfeile ◀ ▶ zum Opfern stehen jetzt links und rechts neben dem Münzknopf. <b>Version 0.5.2.1:</b> Die Versionsbeschreibung nennt nur noch die Versionen ab 0.4. <b>Version 0.5.2:</b> <b>Opfern wie die anderen Knöpfe:</b> Ein goldener Münzknopf steht links neben dem Gold, die Zahl der geopferten Münzen zeigt er als Plakette. Mit den Pfeilen ◀ ▶ daneben stellst du die Anzahl ein; die Schaltfläche „Opfern“ ist entfallen. <b>Version 0.5.1:</b> <b>Das Spiel heißt jetzt Trimagus.</b> Du startest mit <b>Ausspiellimit 1</b> (vorher 2). Jede Weiterentwicklung wird mit jedem Kauf teurer: die erste kostet 1 Gold, die zweite 2 Gold (gilt für Ausspiellimit, Handplätze, Nachziehlimit, max. HP und max. Mana; die Magie kostet wie bisher 1, 2, 3 … Upgrade-Punkte). Jede Entwicklung ist auf <b>Stufe 3</b> begrenzt, also auf zwei Ausbauten: Ausspiellimit 1 bis 3, Handplätze 3 bis 5, Nachziehlimit 1 bis 3, max. HP 4 bis 8, max. Mana 4 bis 6, Magie 1 bis 3. Die Monster behalten ihre Werte. Der Computer ist noch nicht neu abgestimmt. <b>Version 0.4.1:</b> Keine Spieländerung: Vier weitere Ideen sind als Notizen festgehalten (Umbenennung in Trimagus, Upgrades höchstens 3, Start mit 3 Siegpunkten, Siegpunkt-Belohnung 2 in Stufe 2 und 3 in Stufe 3). <b>Neu in Version 0.4:</b> Vier Regeländerungen. <b>Monster:</b> Die zweite Magie eines Monsters ist jetzt die <b>überlegene</b> (Feuer-Monster: Wasser, Erde-Monster: Feuer, Wasser-Monster: Erde). <b>Combo zuerst:</b> Auch in der Verteidigung wirkt der Combo-Effekt vor der Verteidigung selbst; die Heilung füllt die HP also auf, bevor der Schaden trifft, und ein Spiegel-Combo wirkt sofort gegen den laufenden Angriff. <b>Ausgleich:</b> Nach einer Niederlage gegen ein Monster erhält ihn nur noch der Verlierer. <b>Nur Gold:</b> Der Abschnittsbonus beträgt je Monster 1, 2 und 3 Gold (3, 6, 9 Gold je Abschnitt), der Ausgleich nach einer Niederlage 1, 2 und 3 Gold; es gibt keine Upgrade-Punkte mehr als Bonus. Computer neu abgestimmt.</p><div class="menulist">' + back + '</div>';
+    h += '<p class="note intro" style="margin-top:-2px"><b>Danke, dass du Trimagus testest!</b> <b>Neu in Version 0.5.6:</b> Ändert sich ein Wert (Gold, HP, Mana, Limit, Upgrade-Punkte, Siegpunkte), steht die Änderung jetzt als Zahl dabei: grün mit „+“ bei Zuwachs, rot mit „−“ bei Verlust. HP und Mana blinken zusätzlich. Das gilt auch für die Vorschau beim Überfahren der Knöpfe. <b>Version 0.5.5:</b> Die Würfelseite „Hand“ (mehr Handkarten) zeigt jetzt eine Hand statt dreier Karten. <b>Version 0.5.4.1:</b> Der Todes-Fluch zeigt keine Textzeile mehr: Aus jedem Todesmarker steigt eine violette Wolke auf, fliegt zur Lebensanzeige und zehrt dort die HP; bis zum Einschlag zeigt die Anzeige noch den alten Stand. <b>Version 0.5.4:</b> Die Heilung der Verteidigung wirkt wieder nach Angriff und Verteidigung: Sie gleicht den Schaden nachträglich aus (höchstens bis zu den maximalen HP). Die Zerrüttung und die übrigen Kombos wirken weiterhin davor. <b>Version 0.5.3.1:</b> Die Todesmarker stehen nicht mehr als kleine Symbole in der Limit-Zeile, sondern liegen als einzelne, größere Marker neben den Nachziehtokens auf dem Tisch (eigene über deinem Nachziehstapel, die des Gegners neben seinem). <b>Version 0.5.3:</b> Alle Knöpfe links (Opfern, HP, Mana, Limit) stehen jetzt auf einer Linie unter dem Münzknopf. HP und Mana stehen nicht mehr als Balken in den Zeilen, sondern als gebogene Linien links (HP) und rechts (Mana) neben der Magiescheibe. <b>Version 0.5.2.2:</b> Die Pfeile ◀ ▶ zum Opfern stehen jetzt links und rechts neben dem Münzknopf. <b>Version 0.5.2.1:</b> Die Versionsbeschreibung nennt nur noch die Versionen ab 0.4. <b>Version 0.5.2:</b> <b>Opfern wie die anderen Knöpfe:</b> Ein goldener Münzknopf steht links neben dem Gold, die Zahl der geopferten Münzen zeigt er als Plakette. Mit den Pfeilen ◀ ▶ daneben stellst du die Anzahl ein; die Schaltfläche „Opfern“ ist entfallen. <b>Version 0.5.1:</b> <b>Das Spiel heißt jetzt Trimagus.</b> Du startest mit <b>Ausspiellimit 1</b> (vorher 2). Jede Weiterentwicklung wird mit jedem Kauf teurer: die erste kostet 1 Gold, die zweite 2 Gold (gilt für Ausspiellimit, Handplätze, Nachziehlimit, max. HP und max. Mana; die Magie kostet wie bisher 1, 2, 3 … Upgrade-Punkte). Jede Entwicklung ist auf <b>Stufe 3</b> begrenzt, also auf zwei Ausbauten: Ausspiellimit 1 bis 3, Handplätze 3 bis 5, Nachziehlimit 1 bis 3, max. HP 4 bis 8, max. Mana 4 bis 6, Magie 1 bis 3. Die Monster behalten ihre Werte. Der Computer ist noch nicht neu abgestimmt. <b>Version 0.4.1:</b> Keine Spieländerung: Vier weitere Ideen sind als Notizen festgehalten (Umbenennung in Trimagus, Upgrades höchstens 3, Start mit 3 Siegpunkten, Siegpunkt-Belohnung 2 in Stufe 2 und 3 in Stufe 3). <b>Neu in Version 0.4:</b> Vier Regeländerungen. <b>Monster:</b> Die zweite Magie eines Monsters ist jetzt die <b>überlegene</b> (Feuer-Monster: Wasser, Erde-Monster: Feuer, Wasser-Monster: Erde). <b>Combo zuerst:</b> Auch in der Verteidigung wirkt der Combo-Effekt vor der Verteidigung selbst; die Heilung füllt die HP also auf, bevor der Schaden trifft, und ein Spiegel-Combo wirkt sofort gegen den laufenden Angriff. <b>Ausgleich:</b> Nach einer Niederlage gegen ein Monster erhält ihn nur noch der Verlierer. <b>Nur Gold:</b> Der Abschnittsbonus beträgt je Monster 1, 2 und 3 Gold (3, 6, 9 Gold je Abschnitt), der Ausgleich nach einer Niederlage 1, 2 und 3 Gold; es gibt keine Upgrade-Punkte mehr als Bonus. Computer neu abgestimmt.</p><div class="menulist">' + back + '</div>';
   } else if (pg === 'quit') {
     h += '<p class="note" style="text-align:center;font-size:19px">Danke fürs Spielen!<br>Ein Browser-Tab lässt sich vom Spiel aus nicht immer schließen. Schließe diesen Tab oder dieses Fenster einfach selbst.</p><div class="menulist">' + back + '</div>';
   }
@@ -4364,12 +4433,12 @@ function pvShow(b) {
   if (!st) return;
   const UK = M.upField(G) === 'gold' ? 'gold' : 'pts', undos = [], redo = (key, cost) => {   // sinkende Werte (Gold, Upgrade-Punkte) gleichzeitig rot markieren
     const el = stage.querySelector('[data-pv="' + key + '"]'); if (!el || !(cost > 0)) return;
-    const old = el.innerHTML, cur = key === 'gold' ? st.gold : st.pending;
-    el.innerHTML = '<span class="pvdn">' + Math.max(0, cur - cost) + '</span>'; undos.push(() => { el.innerHTML = old; });
+    const old = el.innerHTML, oldT = el.textContent, cur = key === 'gold' ? st.gold : st.pending;
+    el.innerHTML = '<span class="pvdn">' + Math.max(0, cur - cost) + '</span>'; undos.push(() => { el.innerHTML = old; }); Delta.mark(el, oldT, undos);
   };
   if (act === 'draw' || act === 'defend' || act === 'pass' || act === 'recover') {   // Kampfaktionen und Nachziehen: zu erwartende Veränderungen
     const pnl = pid => pid === ME ? stage.querySelector('.sbody[data-lead]') : stage.querySelector('.sbody:not([data-lead])');
-    const set = (pid, key, html) => { const p = pnl(pid), el = p && p.querySelector('[data-pv="' + key + '"]'); if (!el) return; const old = el.innerHTML; el.innerHTML = html; undos.push(() => { el.innerHTML = old; }); };
+    const set = (pid, key, html) => { const p = pnl(pid), el = p && p.querySelector('[data-pv="' + key + '"]'); if (!el) return; const old = el.innerHTML, oldT = el.textContent; el.innerHTML = html; undos.push(() => { el.innerHTML = old; }); Delta.mark(el, oldT, undos); };
     const cst = G.phase === 'combat' ? ctx().myStats : st;   // im Kampf zählen die Werte des geführten Monsters, nicht die Weltphasen-Werte des Spielers
     const dn = x => '<span class="pvdn">' + x + '</span>', up = x => '<span class="pvnew">' + x + '</span>';
     if (act === 'draw') {   // roter Nachziehmarker: im Kampf kostet es Mana, in der Weltphase bekommt der Gegner Gold
@@ -4392,7 +4461,7 @@ function pvShow(b) {
     const n = +b.dataset.n, pv = M.previewTemple(G.players[ME], n);
     redo('gold', n);
     const el = stage.querySelector('[data-pv="pts"]');
-    if (el && pv.gained > 0) { const old = el.innerHTML; el.innerHTML = '<span class="pvnew">' + (st.pending + pv.gained) + '</span>'; undos.push(() => { el.innerHTML = old; }); }
+    if (el && pv.gained > 0) { const old = el.innerHTML, oldT = el.textContent; el.innerHTML = '<span class="pvnew">' + (st.pending + pv.gained) + '</span>'; undos.push(() => { el.innerHTML = old; }); Delta.mark(el, oldT, undos); }
     const fr = stage.querySelector('[data-pv="frac"]');
     if (fr) { const old = fr.innerHTML; fr.innerHTML = '<span class="pvnew">' + fracHTML(pv.pool, pv.level) + '</span>'; undos.push(() => { fr.innerHTML = old; }); }
   } else if (act === 'magic') redo(M.magicField(G) === 'gold' ? 'gold' : 'pts', M.magicCost(G, st.mag[b.dataset.e], st));
@@ -4403,9 +4472,9 @@ function pvShow(b) {
     if (dot) { dot.classList.add('pv'); undos.push(() => dot.classList.remove('pv')); }
   } else if (act === 'spend' && (w === 'hp' || w === 'mana' || w === 'limit')) {
     const v = b.closest('.statrow') && b.closest('.statrow').querySelector('[data-pv="' + w + '"]'); if (!v) return;
-    const n = w === 'hp' ? (G.rules.hpPerPoint || 1) : 1, old = v.innerHTML;
+    const n = w === 'hp' ? (G.rules.hpPerPoint || 1) : 1, old = v.innerHTML, oldT = v.textContent;
     const g = x => '<span class="pvnew">' + x + '</span>';   // bei HP und Mana ändert sich nur das Maximum (Nenner)
-    v.innerHTML = w === 'hp' ? Math.max(0, st.hp) + '/' + g(st.maxHp + n) : w === 'mana' ? st.mana + '/' + g(st.maxMana + 1) : g(st.limit + 1); undos.push(() => { v.innerHTML = old; });
+    v.innerHTML = w === 'hp' ? Math.max(0, st.hp) + '/' + g(st.maxHp + n) : w === 'mana' ? st.mana + '/' + g(st.maxMana + 1) : g(st.limit + 1); undos.push(() => { v.innerHTML = old; }); Delta.mark(v, oldT, undos);
   } else if (act === 'spend' && w === 'slot') {
     const gh = stage.querySelector('.slotgh'); if (gh) { gh.classList.add('on'); undos.push(() => gh.classList.remove('on')); }
   }
