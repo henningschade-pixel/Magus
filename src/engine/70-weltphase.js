@@ -30,11 +30,13 @@ function execSpend(state, pid, what) {
   if (s[f] <= 0) return fail(f === 'gold' ? 'Du hast kein Gold.' : 'Keine offenen Upgrade-Punkte.');
   let cost = 1;
   if (what === 'hp') {
+    if (bought(s, 'hp') >= MAX_UPGRADES) return fail('Die max. HP sind am Maximum (' + MAX_UPGRADES + ' Ausbauten).');
     cost = hpStepCost(state, s);
     if (s[f] < cost) return fail('Die nächsten HP kosten ' + payTxt(state, f, cost) + '.');
     const n = state.rules.hpPerPoint || 1; s.maxHp += n; buyCount(s, 'hp');   // Upgrade erhöht nur das Maximum, die aktuellen HP bleiben
   }
   else if (what === 'mana') {
+    if (bought(s, 'mana') >= MAX_UPGRADES) return fail('Das max. Mana ist am Maximum (' + MAX_UPGRADES + ' Ausbauten).');
     cost = manaStepCost(state, s);
     if (s[f] < cost) return fail('Der nächste Mana-Schritt kostet ' + payTxt(state, f, cost) + '.');
     s.maxMana++; buyCount(s, 'mana');   // nur das Maximum steigt, das aktuelle Mana bleibt

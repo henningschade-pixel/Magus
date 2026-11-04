@@ -47,7 +47,7 @@ function withComboHold(fn) {
     if (f.kind === 'aggro') { const v = sides.find(s => s.ctrl === f.to); if (v) v.deck.discard = v.deck.discard.slice(0, Math.max(0, v.deck.discard.length - 2 * Math.max(1, Math.min(3, f.n || 1)))); }   // Lähmung S legt 2 S Flüche
     else if (f.kind === 'ruin') c.forced = null;
     else if (f.kind === 'lifeflow' && h.pre) {
-      sides.forEach((s, i) => { const p = i ? h.pre.b : h.pre.a; ['death', 'mirror', 'mirrorEl', 'freeDraws'].forEach(k => { if (p[k] === undefined) delete s.stats[k]; else s.stats[k] = p[k]; }); });
+      if (f.removed > 0 || !(f.heal > 0)) sides.forEach((s, i) => { const p = i ? h.pre.b : h.pre.a; ['death', 'mirror', 'mirrorEl', 'freeDraws'].forEach(k => { if (p[k] === undefined) delete s.stats[k]; else s.stats[k] = p[k]; }); });
       const w = sides.find(s => s.ctrl === f.who); if (w && f.heal > 0) w.stats.hp = Math.max(0, w.stats.hp - f.heal);
     }
   }
@@ -72,12 +72,20 @@ function showFx() {
       } else go(f);
     });
     const m = /^(Spiegel|Todes-Fluch): /.exec(e.txt); if (!m) continue;
-    if (m[1] === 'Todes-Fluch') Snd.play('curse', 0, 0.95);   // Fluch-Sound, wenn der Todes-Fluch Schaden macht
+    if (m[1] === 'Todes-Fluch') {   // statt einer Textzeile: Wolke aus den Todesmarkern zur Lebensanzeige; die HP zeigen bis zum Einschlag noch den alten Stand
+      const nd = +((/verliert (\d+) HP/.exec(e.txt) || [0, 1])[1]), victim = e.pid, wait = FAST ? 0 : Math.round(1000 * FlowFx.wait()), fly = FlowFx.curseMs(nd);
+      Snd.play('curse', wait / 1000, 0.95);   // Fluch-Sound, wenn die Wolke losfliegt
+      if (!FAST) {
+        const now = Date.now(); curseHold[victim] = { until: now + wait + fly, add: nd };
+        setTimeout(() => FlowFx.curse({ who: victim, n: nd }), wait); setTimeout(() => { if (G) render(); }, 0); setTimeout(() => { if (G) render(); }, wait + fly + 60);
+      }
+      continue;
+    }
     const mirror = m[1] === 'Spiegel', victimMe = mirror ? e.pid !== ME : e.pid === ME;
-    const d = document.createElement('div'); d.className = 'fxnote ' + (mirror ? 'mirror' : 'death');
+    const d = document.createElement('div'); d.className = 'fxnote mirror';
     d.style.top = (victimMe ? 546 - k * 54 : 172 + k * 54) + 'px';
-    d.innerHTML = '<i>' + (mirror ? '⟲' : '☠') + '</i><span>' + esc(e.txt) + '</span>';
-    setTimeout(() => { stage.appendChild(d); setTimeout(() => d.remove(), 3300); }, mirror ? Math.round(1000 * FlowFx.wait()) : 0); k++;   // Spiegel-Hinweis erst nach dem Schild-Effekt
+    d.innerHTML = '<i>⟲</i><span>' + esc(e.txt) + '</span>';
+    setTimeout(() => { stage.appendChild(d); setTimeout(() => d.remove(), 3300); }, Math.round(1000 * FlowFx.wait())); k++;   // Spiegel-Hinweis erst nach dem Schild-Effekt
   }
   fxLast = G.logN;
 }
@@ -98,9 +106,14 @@ function render() {   // läuft der Ergebnis-Bildschirm, wird der Endstand des K
     upSeen = up;
   }
   if (!endView) {
-    if (hpHold && Date.now() < hpHold.until && G.phase === 'combat' && G.combat) {   // Schild-Effekt läuft: die HP-Werte zeigen noch den Stand vor dem Schaden
+    const hh = hpHold && Date.now() < hpHold.until, ch = G.phase === 'combat' && G.combat && Object.keys(curseHold).some(k => Date.now() < curseHold[k].until);
+    if ((hh || ch) && G.phase === 'combat' && G.combat) {   // Schild- oder Fluch-Effekt läuft: die HP-Werte zeigen noch den Stand vor dem Schaden
       const sides = [G.combat.sides.a, G.combat.sides.b], keep = sides.map(s => s.stats.hp);
-      sides.forEach(s => { if (hpHold.pre[s.ctrl] !== undefined && Date.now() < (hpHold.un[s.ctrl] || 0)) s.stats.hp = hpHold.pre[s.ctrl]; });
+      sides.forEach(s => {
+        const held = hh && hpHold.pre[s.ctrl] !== undefined && Date.now() < (hpHold.un[s.ctrl] || 0);
+        if (held) s.stats.hp = hpHold.pre[s.ctrl];
+        else if (curseHold[s.ctrl] && Date.now() < curseHold[s.ctrl].until) s.stats.hp = Math.min(s.stats.maxHp, s.stats.hp + curseHold[s.ctrl].add);   // Todes-Fluch: Wolke noch unterwegs
+      });
       try { withComboHold(renderInner); } finally { sides.forEach((s, i) => { s.stats.hp = keep[i]; }); }
     } else withComboHold(renderInner);
   }
@@ -143,7 +156,7 @@ function renderInner() {
     if (dthSeen && dthSeen.c === G.combat && dd > dthSeen.n) CurseFx.play();
     dthSeen = { c: G.combat, n: dd };
   } else { mkSeen = null; dthSeen = null; }
-  if (manaPv > 0 && cx.combat) { const mv = panels.querySelector('.sbody[data-lead] [data-pv="mana"]'), st = cx.myStats; if (mv) mv.innerHTML = '<span class="pvdn">' + Math.max(0, st.mana - manaPv) + '</span>/' + st.maxMana; }   // Mana nach dem Ausspielen in Rot
+  if (manaPv > 0 && cx.combat) { const mv = panels.querySelector('.sbody[data-lead] [data-pv="mana"]'), st = cx.myStats; if (mv) { mv.innerHTML = '<span class="pvdn">' + Math.max(0, st.mana - manaPv) + '</span>/' + st.maxMana; ArcFx.mark(mv, st.mana + '/' + st.maxMana, null, true); } }   // Mana nach dem Ausspielen in Rot; der Anteil auf dem Mana-Bogen blinkt dazu (seit 0.5.6.5)
   { const mine = panels.querySelector('.sbody[data-lead]');   // Knopfspalte weich ein- und ausfahren
     if (mine) { const now = mine.classList.contains('hasup'); if (leadPrev !== null && leadPrev !== now) { mine.classList.toggle('hasup', leadPrev); void mine.offsetWidth; mine.classList.toggle('hasup', now); } leadPrev = now; } }
   showFx();
@@ -168,12 +181,12 @@ function showStart(pg) {
   menuView = () => showStart(pg);
   const run = G && !G.over && !MP && started;
   const back = menuTo('main', 'Zurück');
-  let h = '<div class="box start"><h1>Magus</h1>';
+  let h = '<div class="box start"><h1>Trimagus</h1>';
   if (pg === 'main') {
     h += '<img class="logo" alt="" src="assets/img/logo.webp"><div class="menulist">' +
       (run ? menuBtn('resume', 'Spiel fortsetzen', '', 'primary') : '') +
       menuTo('single', 'Einzelspieler', run ? '' : 'primary') + menuTo('multi', 'Mehrspieler') + menuTo('settings', 'Einstellungen') + menuBtn('quit', 'Beenden') + '</div>' +
-      '<div class="menufoot">' + menuTo('about', 'Neu in Version 0.4.2', 'link') + '</div>';
+      '<div class="menufoot">' + menuTo('about', 'Neu in Version 0.5.7', 'link') + '</div>';
   } else if (pg === 'single') {
     h += '<h2>Einzelspieler</h2><div class="menulist">' +
       menuBtn('newgame', run ? 'Neues Spiel gegen den Computer' : 'Gegen den Computer spielen', '', run ? '' : 'primary') +
@@ -186,7 +199,7 @@ function showStart(pg) {
   } else if (pg === 'settings') {
     h += '<h2>Einstellungen</h2><div class="menulist">' + settingsHTML() + back + '</div>';
   } else if (pg === 'about') {
-    h += '<p class="note intro" style="margin-top:-2px"><b>Danke, dass du Magus testest!</b> <b>Neu in Version 0.4.1:</b> Keine Spieländerung: Vier weitere Ideen sind als Notizen festgehalten (Umbenennung in Trimagus, Upgrades höchstens 3, Start mit 3 Siegpunkten, Siegpunkt-Belohnung 2 in Stufe 2 und 3 in Stufe 3). <b>Neu in Version 0.4.2:</b> In der Verteidigung steht der <b>zu erwartende HP- und Mana-Verlust</b> schon vor dem Überfahren mit der Maus in den Werten (rot), und er ändert sich mit den markierten Karten. <b>Neu in Version 0.4:</b> Vier Regeländerungen. <b>Monster:</b> Die zweite Magie eines Monsters ist jetzt die <b>überlegene</b> (Feuer-Monster: Wasser, Erde-Monster: Feuer, Wasser-Monster: Erde). <b>Combo zuerst:</b> Auch in der Verteidigung wirkt der Combo-Effekt vor der Verteidigung selbst; die Heilung füllt die HP also auf, bevor der Schaden trifft, und ein Spiegel-Combo wirkt sofort gegen den laufenden Angriff. <b>Ausgleich:</b> Nach einer Niederlage gegen ein Monster erhält ihn nur noch der Verlierer. <b>Nur Gold:</b> Der Abschnittsbonus beträgt je Monster 1, 2 und 3 Gold (3, 6, 9 Gold je Abschnitt), der Ausgleich nach einer Niederlage 1, 2 und 3 Gold; es gibt keine Upgrade-Punkte mehr als Bonus. Computer neu abgestimmt. <b>Neu in Version 0.17:</b> Keine Spieländerung: Drei offene Punkte sind als Notizen festgehalten (Magierichtung der Monster, Combo zuerst auslösen, Ausgleich nach einer Monsterniederlage nur für den Verlierer und nur in Gold). <b>Neu in Version 0.16.2:</b> Der <b>Computer</b> geht mit den <b>Spiegeln je Farbe</b> um: Er zählt nur, was ein neuer Spiegel gegenüber dem schon liegenden bringt, gewichtet die Farbe danach, wie oft du sie spielst, und räumt mit der <b>Läuterung</b> deine Spiegel zuerst in der Farbe ab, mit der er selbst am stärksten angreift. Die Balance habe ich neu gemessen: Die Regeländerung verschiebt in Computer-Partien nichts messbar. <b>Neu in Version 0.16.1:</b> Das Limit der <b>Spiegelmarker</b> gilt jetzt <b>je Farbe</b>: Feuer- und Erde-Marker sind verschiedene Marker, es können also bis zu <b>3 Feuer- und 3 Erde-Marker</b> gleichzeitig liegen (bisher höchstens 3 insgesamt, sodass ein Erde-Spiegel den Feuer-Spiegel verhinderte). <b>Neu in Version 0.16:</b> Stehen die Angriffs- oder Verteidigungssymbole in <b>zwei Zeilen</b>, sind die Zeilen jetzt auch bei <b>7 und 9 Symbolen</b> gegeneinander versetzt (bisher nur bei gerader Zahl). <b>Neu in Version 0.15:</b> Die Vorschau beim Darüberfahren mit der Maus (Erholen, Nachziehen, Verteidigen, Passen) zeigt im Kampf jetzt die <b>richtigen Mana- und HP-Höchstwerte</b> des Monsters, das du führst. <b>Neu in Version 0.14.1:</b> Auch <b>gleiche Elemente</b> haben jetzt ihren eigenen Effekt: <b>Feuer gegen Feuer</b> ergibt einen <b>Feuerball</b>, der in alle Richtungen explodiert, <b>Erde gegen Erde</b> ein <b>Bersten</b> mit Brocken, Staub und Rissen im Boden, <b>Wasser gegen Wasser</b> eine <b>Woge</b> mit Tropfen und Ringwellen. Sind es so viele Angriffssymbole, dass sie in <b>zwei Zeilen</b> stehen, sind die Zeilen jetzt <b>gegeneinander versetzt</b>. <b>Neu in Version 0.14:</b> Treffen im Kampf zwei verschiedene Elemente aufeinander, hat jede Kombination ihren eigenen Effekt: <b>Feuer gegen Wasser</b> ergibt <b>Dampf</b>, <b>Feuer gegen Erde</b> <b>Lava</b> mit glühenden Brocken, Funken und Rauch, <b>Erde gegen Wasser</b> <b>Schlamm</b> mit Spritzern, einer Pfütze und Blasen. <b>Neu in Version 0.13:</b> Die <b>Vorschau</b>, die bisher nur bei Gold und Upgrade-Punkten erschien, zeigt jetzt auch weitere zu erwartende Änderungen: Fährst du mit der Maus über <b>Verteidigen</b>, <b>Passen</b>, <b>Erholen</b> oder den <b>Nachziehstapel</b>, erscheinen die zu erwartenden Änderungen von HP, Mana und Gold, sinkende Werte in <b>Rot</b>, steigende in <b>Grün</b>. Bei <b>rotem Nachziehmarker</b> kostet das Nachziehen im Kampf jetzt <b>1 Mana</b>, in der Weltphase bekommt der Gegner Gold. <b>Neu in Version 0.11:</b> Der <b>Computer</b> entscheidet sich in festgefahrenen Kämpfen schneller zum Angriff; lange Pattphasen, vor allem im ersten Abschnitt, werden dadurch seltener. Beim Spielstart <b>drehen sich die Monsterkarten</b> jetzt richtig um und die <b>Handkarten</b> drehen sich beim Austeilen und Aufdecken mit Schwung um.</p><div class="menulist">' + back + '</div>';
+    h += '<p class="note intro" style="margin-top:-2px"><b>Danke, dass du Trimagus testest!</b> <b>Neu in Version 0.5.7:</b> In der Verteidigung steht der <b>zu erwartende HP- und Mana-Verlust</b> schon vor dem Überfahren mit der Maus in den Werten und ändert sich mit den markierten Karten. <b>Neu in Version 0.5.6.6:</b> Beim Opfern zeigt der Münzknopf die Zahl der Münzen erst ab 2 als Plakette; bei 1 steht er ohne Zahl, bei 0 ist er durchsichtig. <b>Version 0.5.6.5:</b> Solange Karten markiert sind, blendet der Manapunkt, den sie kosten, auf dem Mana-Bogen aus und ein (zusammen mit dem roten Manawert). <b>Version 0.5.6.4:</b> Beim Überfahren eines Knopfes (Verteidigen, Passen, Erholen, Nachziehen, Plus-Knöpfe) blendet auf dem gebogenen HP- bzw. Mana-Balken der betroffene Anteil aus und ein, zum Beispiel der eine Manapunkt, den ein Angriff kostet. Die Werte erscheinen dabei weiter in Rot (weniger) oder Grün (mehr). <b>Version 0.5.5:</b> Die Würfelseite „Hand“ (mehr Handkarten) zeigt jetzt eine Hand statt dreier Karten. <b>Version 0.5.4.1:</b> Der Todes-Fluch zeigt keine Textzeile mehr: Aus jedem Todesmarker steigt eine violette Wolke auf, fliegt zur Lebensanzeige und zehrt dort die HP; bis zum Einschlag zeigt die Anzeige noch den alten Stand. <b>Version 0.5.4:</b> Die Heilung der Verteidigung wirkt wieder nach Angriff und Verteidigung: Sie gleicht den Schaden nachträglich aus (höchstens bis zu den maximalen HP). Die Zerrüttung und die übrigen Kombos wirken weiterhin davor. <b>Version 0.5.3.1:</b> Die Todesmarker stehen nicht mehr als kleine Symbole in der Limit-Zeile, sondern liegen als einzelne, größere Marker neben den Nachziehtokens auf dem Tisch (eigene über deinem Nachziehstapel, die des Gegners neben seinem). <b>Version 0.5.3:</b> Alle Knöpfe links (Opfern, HP, Mana, Limit) stehen jetzt auf einer Linie unter dem Münzknopf. HP und Mana stehen nicht mehr als Balken in den Zeilen, sondern als gebogene Linien links (HP) und rechts (Mana) neben der Magiescheibe. <b>Version 0.5.2.2:</b> Die Pfeile ◀ ▶ zum Opfern stehen jetzt links und rechts neben dem Münzknopf. <b>Version 0.5.2.1:</b> Die Versionsbeschreibung nennt nur noch die Versionen ab 0.4. <b>Version 0.5.2:</b> <b>Opfern wie die anderen Knöpfe:</b> Ein goldener Münzknopf steht links neben dem Gold, die Zahl der geopferten Münzen zeigt er als Plakette. Mit den Pfeilen ◀ ▶ daneben stellst du die Anzahl ein; die Schaltfläche „Opfern“ ist entfallen. <b>Version 0.5.1:</b> <b>Das Spiel heißt jetzt Trimagus.</b> Du startest mit <b>Ausspiellimit 1</b> (vorher 2). Jede Weiterentwicklung wird mit jedem Kauf teurer: die erste kostet 1 Gold, die zweite 2 Gold (gilt für Ausspiellimit, Handplätze, Nachziehlimit, max. HP und max. Mana; die Magie kostet wie bisher 1, 2, 3 … Upgrade-Punkte). Jede Entwicklung ist auf <b>Stufe 3</b> begrenzt, also auf zwei Ausbauten: Ausspiellimit 1 bis 3, Handplätze 3 bis 5, Nachziehlimit 1 bis 3, max. HP 4 bis 8, max. Mana 4 bis 6, Magie 1 bis 3. Die Monster behalten ihre Werte. Der Computer ist noch nicht neu abgestimmt. <b>Version 0.4.1:</b> Keine Spieländerung: Vier weitere Ideen sind als Notizen festgehalten (Umbenennung in Trimagus, Upgrades höchstens 3, Start mit 3 Siegpunkten, Siegpunkt-Belohnung 2 in Stufe 2 und 3 in Stufe 3). <b>Neu in Version 0.4:</b> Vier Regeländerungen. <b>Monster:</b> Die zweite Magie eines Monsters ist jetzt die <b>überlegene</b> (Feuer-Monster: Wasser, Erde-Monster: Feuer, Wasser-Monster: Erde). <b>Combo zuerst:</b> Auch in der Verteidigung wirkt der Combo-Effekt vor der Verteidigung selbst; die Heilung füllt die HP also auf, bevor der Schaden trifft, und ein Spiegel-Combo wirkt sofort gegen den laufenden Angriff. <b>Ausgleich:</b> Nach einer Niederlage gegen ein Monster erhält ihn nur noch der Verlierer. <b>Nur Gold:</b> Der Abschnittsbonus beträgt je Monster 1, 2 und 3 Gold (3, 6, 9 Gold je Abschnitt), der Ausgleich nach einer Niederlage 1, 2 und 3 Gold; es gibt keine Upgrade-Punkte mehr als Bonus. Computer neu abgestimmt.</p><div class="menulist">' + back + '</div>';
   } else if (pg === 'quit') {
     h += '<p class="note" style="text-align:center;font-size:19px">Danke fürs Spielen!<br>Ein Browser-Tab lässt sich vom Spiel aus nicht immer schließen. Schließe diesen Tab oder dieses Fenster einfach selbst.</p><div class="menulist">' + back + '</div>';
   }

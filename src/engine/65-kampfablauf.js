@@ -190,6 +190,8 @@ function passAttackTurn(state) {
   c.turn = c.turn === 'a' ? 'b' : 'a'; c.action = 'attack'; c.color = null; c.pending = 0;
 }
 
+// HP nach einer Heilung um lvl: höchstens bis zu den maximalen HP, nie weniger als vorher
+function healedHp(stats, hp, lvl) { return lvl > 0 ? Math.max(hp, Math.min(stats.maxHp, hp + lvl)) : hp; }
 // Wirkung der Kombos (Angriff und nach der Verteidigung): plan = [[Schlüssel, Stufe], ...]
 function applyComboPlan(state, side, opp, plan, ev, texts, fxs) {
   const c = state.combat;
@@ -202,7 +204,7 @@ function applyComboPlan(state, side, opp, plan, ev, texts, fxs) {
       texts.push('Zerrüttung ' + lvl + ': ' + opp.name + ' muss ' + n + ' Handkarte' + (n === 1 ? '' : 'n') + ' seiner Wahl abwerfen');
     }
     else if (k === 'gh') {
-      const before = side.stats.hp; side.stats.hp = Math.min(side.stats.maxHp, before + lvl);
+      const before = side.stats.hp; side.stats.hp = healedHp(side.stats, before, lvl);
       texts.push('Heilung ' + lvl + ': +' + (side.stats.hp - before) + ' HP'); fxs.push({ kind: 'lifeflow', who: side.ctrl, to: opp.ctrl, got: {}, removed: 0, heal: side.stats.hp - before, draws: 0 });
     }
     else if (k === 'ew') {   // Läuterung: S Marker beliebig vom Brett nehmen, je entferntem Marker 1 Gratis-Nachziehen
@@ -259,25 +261,24 @@ function defenseOutcome(stats, color, pending, block, mir) {
   const absorb = Math.min(mLvl, missing), refl = Math.min(mLvl, excess, pending);
   return { mLvl, absorb, refl, lost: absorb + refl, leftover: missing - absorb };
 }
-// Was ein Kombo der Verteidigung vor dem Schaden ändert (seit 0.4): Heilung (HP vor dem Schaden, höchstens bis zum Maximum) und der Spiegel der Angriffsfarbe (wirkt schon gegen diesen Angriff).
+// Was ein Kombo der Verteidigung für den laufenden Angriff ändert: der Spiegel der Angriffsfarbe wirkt seit 0.4 schon gegen diesen Angriff. Die Heilung wirkt seit 0.5.4 wieder nach dem Schaden (heal: Stufe, hp: HP vor dem Schaden).
 function defenseComboPre(stats, ev, color) {
   const lvs = ev && ev.ord && !(ev.levels && ev.levels.ulti > 0) ? levelsFor(ev) : null, own = mirrorOf(stats, color);
   if (!lvs) return { heal: 0, hp: stats.hp, mir: own };
-  const heal = Math.max(0, Math.min(stats.maxHp, stats.hp + lvs.gh) - stats.hp);
-  return { heal, hp: stats.hp + heal, mir: lvs.fw > 0 && ev.ord.el === color ? Math.max(own, Math.min(lvs.fw, MAX_MIRROR)) : own };
+  return { heal: lvs.gh || 0, hp: stats.hp, mir: lvs.fw > 0 && ev.ord.el === color ? Math.max(own, Math.min(lvs.fw, MAX_MIRROR)) : own };
 }
 // Vorschau für die Knöpfe „Verteidigen“ und „Passen“, ohne etwas zu ändern: Mana-Kosten, Block, Restschaden und die HP danach (beim Verteidiger und, durch den Spiegelrückwurf, beim Angreifer). null, wenn gerade keine Verteidigung ansteht oder die Auswahl nicht geht.
 function previewDefense(state, passOnly) {
   const c = state.combat;
   if (!c || c.forced || c.action !== 'defense') return null;
   const side = c.sides[c.turn], att = c.sides[c.turn === 'a' ? 'b' : 'a'];
-  let block = 0, cost = 0, pre = { heal: 0, hp: side.stats.hp, mir: mirrorOf(side.stats, c.color) };
+  let block = 0, cost = 0, pre = { heal: 0, hp: side.stats.hp, mir: mirrorOf(side.stats, c.color) };   // Heilung (heal) wirkt nach dem Schaden
   if (!passOnly) {
     const sel = selection(side.deck);
     if (sel.length) { const ev = evalDefense(side.stats, sel, c.color); if (!ev.valid || ev.affordable === false) return null; block = ev.block || 0; cost = ev.cost || 0; pre = defenseComboPre(side.stats, ev, c.color); }
   }
   const o = defenseOutcome(side.stats, c.color, c.pending, block, pre.mir);
-  return Object.assign({ who: side.ctrl, att: att.ctrl, cost, block, heal: pre.heal, hpAfter: Math.max(0, pre.hp - o.leftover), attHpAfter: Math.max(0, att.stats.hp - o.refl) }, o);
+  return Object.assign({ who: side.ctrl, att: att.ctrl, cost, block, heal: pre.heal, hpAfter: Math.max(0, healedHp(side.stats, pre.hp - o.leftover, pre.heal)), attHpAfter: Math.max(0, att.stats.hp - o.refl) }, o);
 }
 function execDefense(state, passOnly) {
   const c = state.combat, side = c.sides[c.turn], c0pending = c.pending;
@@ -294,15 +295,17 @@ function execDefense(state, passOnly) {
   // Passen in der Verteidigung bringt kein Mana (nur im Angriffszug gibt es Erholen)
   if (sel.length) consumeSelection(d, sel); else d.marks = [];
   const attacker = c.sides[c.turn === 'a' ? 'b' : 'a'];
-  // Seit 0.4 wirkt der Kombo zuerst, danach die Verteidigung (wie im Angriff, wo der Kombo ebenfalls vor dem Schaden kommt): Eine Heilung gleicht jetzt keinen Schaden mehr nachträglich aus, sie füllt die HP vor dem Schaden auf (nur bis zum Maximum), und ein Spiegel dieser Farbe wirkt schon gegen den Angriff, auf den verteidigt wird.
+  // Seit 0.4 wirkt der Kombo zuerst, danach die Verteidigung: Ein Spiegel dieser Farbe wirkt schon gegen den Angriff, auf den verteidigt wird. Seit 0.5.4 gilt das nicht mehr für die Heilung: Sie wirkt wieder nach Angriff und Verteidigung (Zerrüttung und die übrigen Kombos bleiben davor).
   if (defEv && defEv.levels && defEv.levels.ulti > 0) {   // Ultimate in der Verteidigung: Todes-Fluch für den Angreifer
     if (attacker.stats.deathPhase === undefined) attacker.stats.deathPhase = attacker.stats.death || 0;
     attacker.stats.death = Math.max(attacker.stats.death || 0, defEv.levels.ulti);
     log(state, side.name + ' wirkt eine Ultimate: Ultimate ' + defEv.levels.ulti + ': Todes-Fluch für ' + attacker.name + ' (' + attacker.stats.death + ' HP am Ende jeder seiner Angriffsphasen bis Kampfende).', side.ctrl, { kind: 'aggro', who: side.ctrl, to: attacker.ctrl, n: defEv.levels.ulti, first: true, ult: true });
   }
+  let healLvl = 0;
   if (defEv && defEv.ord) {
     const lvs = levelsFor(defEv), plan = [], texts = [], fxs = [];
-    for (const k of ['fw', 'fe', 'ew', 'rm', 'gh']) if (lvs[k] > 0) plan.push([k, lvs[k]]);
+    for (const k of ['fw', 'fe', 'ew', 'rm']) if (lvs[k] > 0) plan.push([k, lvs[k]]);   // Heilung (gh) wirkt seit 0.5.4 wieder erst nach dem Schaden, Zerrüttung und die übrigen Kombos davor
+    healLvl = lvs.gh || 0;
     applyComboPlan(state, side, attacker, plan, defEv, texts, fxs);
     fxs.forEach(f => { f.first = true; });   // Oberfläche: Kombo-Animation läuft vor der Verteidigungsanimation
     if (texts.length) log(state, side.name + ' wirkt einen Kombo: ' + texts.join(', ') + '.', side.ctrl, fxs.length ? fxs : undefined);
@@ -312,7 +315,7 @@ function execDefense(state, passOnly) {
   // Überschuss zurück (ebenfalls höchstens seine Stufe und höchstens der eingehende Schaden) und verliert dafür je zurückgeworfenen Schaden eine Stufe. Das gilt auch beim Passen.
   const { mLvl, absorb, refl, lost, leftover } = defenseOutcome(side.stats, c.color, c.pending, block);
   const hpPre = { [side.ctrl]: side.stats.hp, [attacker.ctrl]: attacker.stats.hp };   // HP vor dem Schaden, aber nach dem Kombo (Oberfläche zeigt sie, bis die Geschosse einschlagen)
-  side.stats.hp = Math.max(0, side.stats.hp - leftover);
+  side.stats.hp = side.stats.hp - leftover;   // vorläufig, die Heilung (seit 0.5.4 nach dem Schaden) gleicht ihn noch aus; danach nie unter 0
   const defEl = sel.length && sel[0].el && !sel[0].curse ? sel[0].el : c.color;
   const defFx = { kind: 'defense', rec: !!passOnly, who: side.ctrl, to: attacker.ctrl, attElem: c.color, defElem: defEl, pending: c.pending, block, hpPre, afterCombo: !!(defEv && (defEv.ord || (defEv.levels && defEv.levels.ulti > 0))) };   // hpPre: HP vor dem Schaden, die Oberfläche zeigt sie, bis die Geschosse einschlagen
   log(state, side.name + (passOnly ? ' passt und nimmt den Schaden hin' : ' verteidigt' + (block ? ' (Block ' + block + ')' : ' ohne Block')) + ' und verliert ' + leftover + ' HP' + '.', side.ctrl, defFx);
@@ -323,6 +326,13 @@ function execDefense(state, passOnly) {
     log(state, 'Spiegel: ' + side.name + (refl > 0 ? ' wirft ' + refl + ' Schaden auf ' + attacker.name + ' zurück' : ' gleicht ' + absorb + ' Schaden aus') + ' und verliert ' + stufen + '.', side.ctrl, undefined);
     defFx.mirror = { hpPre, elem: c.color, markers: mLvl, broken: lost, who: side.ctrl, att: attacker.ctrl, r: refl, abs: absorb, d: c.pending, blk: block };   // der Schild-Effekt läuft in der Verteidigungsanimation, vor dem Schaden auf den HP
   }
+  if (healLvl > 0) {   // Heilung nach Angriff und Verteidigung (seit 0.5.4): gleicht den Schaden nachträglich aus, höchstens bis zum Maximum
+    const hTexts = [], hFxs = [];
+    applyComboPlan(state, side, attacker, [['gh', healLvl]], defEv, hTexts, hFxs);
+    hFxs.forEach(f => { f.late = true; });   // Oberfläche: Heilungsanimation nach der Verteidigungsanimation
+    log(state, side.name + ' heilt nach der Verteidigung: ' + hTexts.join(', ') + '.', side.ctrl, hFxs);
+  }
+  side.stats.hp = Math.max(0, side.stats.hp);
   const attSide = attacker;   // wer gerade angegriffen hat: seine Angriffsphase endet mit dieser Verteidigung
   c.action = 'attack'; c.color = null; c.pending = 0;
   deathTick(state, attSide);

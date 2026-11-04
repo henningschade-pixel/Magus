@@ -132,6 +132,9 @@
   "file": "ui/16-seitenleisten.js"
  },
  {
+  "file": "ui/16a-balkenblinken.js"
+ },
+ {
   "file": "ui/17-weltphase.js"
  },
  {

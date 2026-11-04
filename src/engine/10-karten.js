@@ -6,7 +6,7 @@ const ELEMENTS = ['F', 'E', 'W'];
 const SUPERIOR = { F: 'W', W: 'E', E: 'F' };     // überlegenes Element gegen X
 const NAMES = { F: 'Feuer', E: 'Erde', W: 'Wasser' };
 const START_DECK = ['F1','F1','F1','E1','E1','E1','W1','W1','W1'];
-const MAX_MAGIC = 3, MAX_SLOTS = 5, MIN_SLOTS = 3, MAX_LIMIT = 5, MAX_DRAW_LIMIT = 3;
+const MAX_MAGIC = 3, MAX_SLOTS = 5, MIN_SLOTS = 3, MAX_LIMIT = 3, MAX_DRAW_LIMIT = 3, MAX_UPGRADES = 2, MONSTER_MAX_LIMIT = 5;   // seit 0.5.1: jede Entwicklung der Spieler höchstens auf Stufe 3 (zwei Ausbauten: Ausspiellimit 1→3, Handplätze 3→5, Nachziehlimit 1→3, HP und Mana je zwei Käufe); Monster behalten ihr Limit bis 5
 const MAX_COMBAT_TURNS = 400;                      // Sicherung gegen Endlosschleifen, keine Spielregel
 
 /* ---------- Zufall (deterministisch über den Seed) ---------- */

@@ -11,7 +11,7 @@ const FlowFx = (() => {
   function at(el) { if (!el) return null; const r = el.getBoundingClientRect(), sr = stage.getBoundingClientRect(), k = sr.width / stage.offsetWidth; return { x: (r.left + r.width / 2 - sr.left) / k, y: (r.top + r.height / 2 - sr.top) / k }; }
   const panelOf = pid => pid === ME ? stage.querySelector('.sbody[data-lead]') : stage.querySelector('.sbody:not([data-lead])');
   const hpOf = pid => at(panelOf(pid) && panelOf(pid).querySelector('[data-pv="hp"]')) || { x: pid === ME ? 1000 : 1000, y: pid === ME ? 700 : 70 };
-  const markOf = pid => at(panelOf(pid) && (panelOf(pid).querySelector('.mk') || panelOf(pid).querySelector('.statrow'))) || { x: 1090, y: pid === ME ? 740 : 120 };
+  const markOf = pid => { const w = pid === ME ? 's' : 'o', q = deathPos(w, 0); return at(stage.querySelector('.deathtok[data-who="' + w + '"]')) || { x: q.x + 28, y: q.y + 28 }; };
   const drawOf = pid => { const L = pid === ME ? L_MY : L_OP; return pid === ME ? (at(stage.querySelector('.freedraw:not(.opp)')) || { x: L.draw.x + CW * L.ps / 2, y: L.draw.y - 20 }) : { x: L.draw.x + CW * L.ps / 2, y: L.draw.y + CH * L.ps / 2 }; };
   const pileOf = pid => { const L = pid === ME ? L_MY : L_OP; return { x: L.disc.x + CW * L.ps / 2, y: L.disc.y + CH * L.ps / 2 }; };
   const handOf = pid => { const L = pid === ME ? L_MY : L_OP; return { x: L.cx, y: L.y + CH * L.s / 2 }; };
@@ -135,7 +135,41 @@ const FlowFx = (() => {
       if (tu > 0) { ctx.save(); ctx.font = '700 22px Alegreya, serif'; ctx.textAlign = 'center'; ctx.fillStyle = rgba('#ffb347', tu); ctx.shadowColor = F; ctx.shadowBlur = 10; ctx.fillText('−' + n + (n === 1 ? ' Karte' : ' Karten'), T.x, T.y - 70 - 12 * seg(t, t0 + .1, t0 + 1)); ctx.restore(); }
     });
   }
+  /* Todes-Fluch zehrt: aus jedem Todesmarker steigt eine violette Wolke auf, zieht in weichem Bogen zur Lebensanzeige und schlägt dort ein (kein Text) */
+  const CURSE_F = .85, curseStart = i => .1 + i * .12;
+  const curseMs = n => Math.round(1000 * (curseStart(Math.max(0, n - 1)) + CURSE_F));   // Dauer bis zum Einschlag der letzten Wolke
+  function curse(fx) {
+    if (off()) return;
+    const who = fx.who, w = who === ME ? 's' : 'o', n = Math.max(1, Math.min(fx.n || 1, 4)), hp = hpOf(who), toks = [...stage.querySelectorAll('.deathtok[data-who="' + w + '"]')], C = '#a67bff', D = '#4a1f86';
+    const srcs = []; for (let i = 0; i < n; i++) { const q = deathPos(w, i); srcs.push(at(toks[i]) || { x: q.x + 28, y: q.y + 28 }); }
+    const life = .75, N = 36, dur = curseStart(n - 1) + CURSE_F + .65;
+    const puff = (ctx, x, y, r, a, col) => { if (a <= 0.01) return; const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, rgba(lighten(col, .3), a)); g.addColorStop(.45, rgba(col, a * .65)); g.addColorStop(1, rgba(D, 0)); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); };
+    run(dur, (ctx, t) => {
+      srcs.forEach((sr, i) => {
+        const d = curseStart(i), rr = rng(17 + i * 29), cx = (sr.x + hp.x) / 2 + (rr() - .5) * 90, cy = Math.min(sr.y, hp.y) - 60 - rr() * 50;
+        const bez = q => { const e = eio(clamp(q)); return [(1 - e) * (1 - e) * sr.x + 2 * (1 - e) * e * cx + e * e * hp.x, (1 - e) * (1 - e) * sr.y + 2 * (1 - e) * e * cy + e * e * hp.y]; };
+        const gl = seg(t, d - .12, d + .1) * (1 - seg(t, d + .1, d + .4));   // der Marker glimmt auf, wenn die Wolke aufsteigt
+        if (gl > 0) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; puff(ctx, sr.x, sr.y, 38, gl * .8, C); ctx.restore(); }
+        for (let k = 0; k < N; k++) {   // Schweif aus weichen Wolkenballen, die entlang der Bahn zurückbleiben, aufquellen und vergehen
+          const r = rng(900 + i * 97 + k * 7), ts = d + k / N * CURSE_F * .95, age = (t - ts) / life; if (age <= 0 || age >= 1) continue;
+          const [bx, by] = bez((ts - d) / CURSE_F), x = bx + (r() - .5) * 26 + Math.sin(k * 1.7 + age * 5) * 7 * age, y = by + (r() - .5) * 18 - 30 * age;
+          const rad = (9 + 24 * Math.pow(age, .7)) * (.75 + .6 * r()), al = Math.pow(1 - age, 1.4) * .6 * seg(age, 0, .08) * (1 - seg(t, d + CURSE_F, d + CURSE_F + .5) * .0);
+          puff(ctx, x, y, rad, al, k % 3 === 0 ? D : C);
+          if (k % 4 === 0) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; puff(ctx, x, y, rad * .45, al * .5, C); ctx.restore(); }
+        }
+        const tau = (t - d) / CURSE_F;
+        if (tau > 0 && tau < 1) { const [hx, hy] = bez(tau); ctx.save(); ctx.globalCompositeOperation = 'lighter'; puff(ctx, hx, hy, 22, .9, C); orb(ctx, hx, hy, 5, C, '#ffffff'); ctx.restore(); }
+        const im = seg(t, d + CURSE_F, d + CURSE_F + .55);   // Einschlag an der Lebensanzeige
+        if (im > 0 && im < 1) {
+          ctx.save(); ctx.globalCompositeOperation = 'lighter';
+          puff(ctx, hp.x, hp.y, 20 + 46 * eo(im), (1 - im) * .85, C);
+          ctx.strokeStyle = rgba(lighten(C, .5), (1 - im) * .9); ctx.lineWidth = 4 * (1 - im) + 1; ctx.shadowColor = C; ctx.shadowBlur = 12; ctx.beginPath(); ctx.ellipse(hp.x, hp.y, 14 + im * 62, 8 + im * 24, 0, 0, 7); ctx.stroke(); ctx.restore();
+          for (let k = 0; k < 7; k++) { const a = k / 7 * 6.28 + i, rd = 10 + 52 * eo(im); puff(ctx, hp.x + Math.cos(a) * rd, hp.y + Math.sin(a) * rd * .6, 10 * (1 - im) + 4, (1 - im) * .5, C); }
+        }
+      });
+    });
+  }
   const attack = fx => KampfFx.attack(fx), defense = fx => KampfFx.defense(fx), resetEx = () => KampfFx.reset();
-  return { lifeflow, aggro, drain, ruin, attack, defense, resetEx, wait: () => KampfFx.remaining(), busy: () => KampfFx.busy(), hp: pid => hpOf(pid) };
+  return { lifeflow, aggro, drain, ruin, curse, curseMs, attack, defense, resetEx, wait: () => KampfFx.remaining(), busy: () => KampfFx.busy(), hp: pid => hpOf(pid) };
 })();
 

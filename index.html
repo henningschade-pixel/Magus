@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Magus</title>
+<title>Trimagus</title>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Alegreya:wght@400;700&family=Alegreya+SC:wght@700&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js" onerror="var s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js';document.head.appendChild(s)"></script>
@@ -65,7 +65,6 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .card.locked .lockbtn{border-color:var(--gold);background-color:rgba(210,173,79,.28)}
 .fxnote{position:absolute;z-index:260;left:920px;width:336px;box-sizing:border-box;padding:8px 14px 8px 12px;border-radius:12px;font-size:19px;line-height:1.25;pointer-events:none;display:flex;gap:10px;align-items:center;background:rgba(14,10,22,.95);border:1px solid var(--gold);box-shadow:0 4px 18px rgba(0,0,0,.6);animation:fxin 3.2s ease-out forwards}
 .fxnote i{font-style:normal;font-size:28px;line-height:1}
-.fxnote.death{border-color:#b04bd8;box-shadow:0 0 18px rgba(176,75,216,.55)}.fxnote.death i{color:#d98cf5}
 .fxnote.mirror{border-color:var(--water);box-shadow:0 0 18px rgba(82,166,245,.5)}.fxnote.mirror i{color:var(--water)}
 @keyframes fxin{0%{opacity:0;transform:translateY(10px) scale(.96)}10%{opacity:1;transform:none}80%{opacity:1}100%{opacity:0;transform:translateY(-8px)}}
 .card.fadeout{pointer-events:none;z-index:400}
@@ -112,6 +111,9 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .sbody .statrow{gap:6px;margin:3px 0}.sbody .statrow img{width:22px;height:22px}.sbody .statrow b{min-width:33px}
 .bar.sb{flex:1;min-width:24px;height:9px}
 .bd{position:relative;flex:none}.bd img{width:100%;height:100%;display:block}
+.bwrap{position:relative;flex:none;margin-right:-9px}   /* die Bögen dürfen ins Polster des Panels ragen */.bwrap .bd{position:absolute;top:0}
+.arcs{position:absolute;left:0;top:0;overflow:visible;pointer-events:none}.arcs path{fill:none}
+.arcs .arcbg{stroke:#141416;pointer-events:stroke}.arcs .arcv{stroke-linecap:butt}.arcs .arcv.hp{stroke:#e0653f}.arcs .arcv.mana{stroke:#4a9be0}.arcs .arcsep{stroke:#17171b}
 .rg{position:absolute;border-radius:50%;box-sizing:border-box;pointer-events:none}
 .rg.pv{border:2.5px solid #5fe07f;box-shadow:0 0 9px #5fe07faa;background:rgba(95,224,127,.25)}
 .pvdn{color:var(--bad);font-weight:700}
@@ -125,13 +127,9 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .rg.on{border:2.5px solid #f2c850;box-shadow:0 0 6px #f2c850aa;background:rgba(242,200,80,.18)}
 .lfsel{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;flex-basis:100%}.lfsel .mini{font-size:13px;padding:2px 7px}.mini{font:700 14px Alegreya,serif;padding:2px 8px;border-radius:10px;border:1px solid #8a7a50;background:#2b2b30;color:#d8c9a0;cursor:var(--cp)}.mini.on{background:#e8c35a;color:#2a1a05}
 .mr{color:#7fd4ff;font-size:18px;font-weight:700;margin-left:8px;white-space:nowrap;cursor:help}
-.mk{color:#c58cf0;letter-spacing:2px;font-size:20px}
-.mkimg{width:22px;height:22px;vertical-align:middle;margin-right:2px}.mkimg.off{opacity:.22}
-.sbody .statrow .mk{display:flex;flex-wrap:nowrap;gap:1px;white-space:nowrap;margin-left:0}
-.sbody .statrow .mk img{width:18px;height:18px}
-.lead{display:inline-flex;flex:none;width:0;overflow:hidden;margin-right:-6px;transition:width .28s ease,margin .28s ease}
+.lead{display:inline-flex;flex:none;width:0;overflow:hidden;margin-right:-6px;justify-content:center;transition:width .28s ease,margin .28s ease}   /* alle Knöpfe der Spalte sitzen mittig auf einer senkrechten Linie unter dem Münzknopf */
 .sbody.hasup .lead{width:30px;margin-right:0;overflow:visible}
-.lead .up{margin:0 6px 0 0}
+.lead .up{margin:0}
 .sbody .statrow .plcol{margin-left:auto;display:flex}
 .pendhdr{float:right;color:var(--gold);font-size:15px;font-weight:400}.pendhdr b{font-size:19px;font-weight:700}
 
@@ -149,13 +147,6 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .mtok.lf.sel{box-shadow:0 0 0 3px #f2d27a,0 0 16px 5px rgba(242,210,122,.9)}
 .mtok.lf.sel::after{border:2px solid #f2d27a}
 .lfb{position:absolute;right:-10px;top:-10px;min-width:22px;height:18px;padding:0 3px;border-radius:9px;background:#f2d27a;color:#2a1a05;font:700 12px/18px Alegreya,serif;text-align:center;font-style:normal;box-shadow:0 0 0 1px #2a1a05;z-index:3}
-.mkb{background:none;border:0;padding:0;margin:0;cursor:var(--cp);position:relative;border-radius:50%;line-height:0;display:block}
-.mkb img{display:block}
-.mkb.lf::after{content:"";position:absolute;inset:-3px;border:1.5px dashed rgba(210,173,79,.65);border-radius:50%;pointer-events:none}
-.mkb.lf:hover img{filter:brightness(1.4)}
-.mkb.lf.sel{background:radial-gradient(circle,rgba(242,210,122,.6),transparent 72%)}
-.mkb.lf.sel::after{border:2px solid #f2d27a;box-shadow:0 0 8px 2px rgba(242,210,122,.85)}
-.mkb.lf.sel img{filter:brightness(1.6) drop-shadow(0 0 3px #f2d27a)}
 .lfchips{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0}.lfchip{padding:1px 9px;border-radius:11px;background:rgba(242,210,122,.2);border:1px solid #f2d27a;color:#f2d27a;font-size:15px}
 .lfsum{margin-top:6px}.lfsum .note{font-size:15px}.lfsum b{color:#f2d27a}
 .up.costly::after{content:attr(data-c);position:absolute;right:-5px;top:-6px;min-width:15px;height:15px;border-radius:8px;background:#e8c35a;color:#2a1a05;font:700 12px/15px Alegreya,serif;text-align:center;box-shadow:0 0 0 1px #2a1a05}
@@ -169,11 +160,11 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .upgpts{position:absolute;display:flex;align-items:center;gap:2px;color:var(--good);font-size:28px;pointer-events:auto;z-index:70}
 .upgpts img{width:34px;height:50px;object-fit:contain}
 
-/* Opfern: Auswahl links, Knopf rechts, zusammen so lang wie die Balken */
-.sacbox{flex:1;display:flex;align-items:center;justify-content:space-between;min-width:0}
-.sacbox .stepper{flex:none;display:flex;align-items:center;gap:1px;justify-content:flex-start;font-size:16px;color:var(--gold)}
-.sacbox .stepper b{min-width:0;color:#fff}
-.sacbox .sacbtn{margin:0;padding:0 5px;font-size:13px;line-height:20px}
+/* Opfern: goldener Münzknopf (Klasse up gc sacbtn) links neben dem Gold, die Pfeile ◀ ▶ stehen links und rechts neben dem Münzknopf; die Spalte der Knöpfe ist dann breiter, die übrigen Knöpfe stehen rechtsbündig unter der Münze */
+.sbody.hasup.hassac .lead{width:56px}
+.lead .up.sacbtn{margin:0}
+.lead .up.sacbtn.sac0{opacity:0;pointer-events:none}   /* 0 Münzen: Knopf bleibt als Platzhalter, ist aber durchsichtig (seit 0.5.6.6) */
+.lead .arr{flex:none;align-self:center}
 .arr{background:none;border:0;color:var(--gold);font-size:12px;padding:0 1px;cursor:var(--cp)}.arr:disabled{opacity:.3;cursor:var(--cd)}.arr:hover:not(:disabled){color:#fff}
 
 /* Monster */
@@ -238,12 +229,12 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .mrsel{margin-top:6px}.mrsel b{font-size:20px;margin:0 4px}
 .bar.tp{position:relative}.bar.tp>i{position:absolute;left:0;top:0;bottom:0}.bar.tp>i.pre{background:repeating-linear-gradient(45deg,#6fbf73,#6fbf73 4px,#9bdca0 4px,#9bdca0 8px);opacity:.9}
 .temple .bar.sb{height:12px}
-.mkcol{display:inline-flex;flex-direction:column;gap:0;vertical-align:middle;line-height:1}
-.mkcol .mk{display:flex;flex-wrap:nowrap;gap:1px;white-space:nowrap;margin:0}
-.mkcol .mk img{width:15px;height:15px;margin:0}
-.mkimg.mir{filter:hue-rotate(-95deg) saturate(1.4) brightness(1.15)}
-.mkcol .mr{font-size:13px;margin:0;line-height:1.1}
 
+.deathtok{position:absolute;z-index:61;display:block;width:56px;height:56px;padding:0;border:0;background:none;transform:rotate(var(--r,0deg));cursor:help;filter:drop-shadow(0 3px 4px rgba(0,0,0,.75))}
+.deathtok img{width:100%;height:100%;object-fit:contain;display:block}
+.deathtok.lf{cursor:var(--cp);transition:transform .12s}.deathtok.lf:hover{transform:rotate(var(--r,0deg)) scale(1.08)}
+.deathtok.lf::after{content:"";position:absolute;inset:-3px;border:1.5px dashed rgba(210,173,79,.65);border-radius:50%;pointer-events:none}
+.deathtok.lf.sel{filter:drop-shadow(0 0 7px #f2d27a) drop-shadow(0 0 3px #f2d27a)}.deathtok.lf.sel::after{border:2px solid #f2d27a}
 .mirstack{position:absolute;display:flex;flex-direction:column;gap:4px;z-index:70}
 .mtok{width:34px;height:34px;border-radius:50%;border:3px solid currentColor;display:flex;align-items:center;justify-content:center;font:700 20px Alegreya,serif;background:radial-gradient(circle at 35% 30%,#fff9 0,#ffffff22 35%,#0006 100%),#1d1d21;box-shadow:0 0 8px currentColor;cursor:help}
 .msh{position:relative;width:40px;height:52px;flex:none;cursor:help;filter:drop-shadow(0 2px 4px rgba(0,0,0,.65))}.msh img{width:100%;height:100%;object-fit:contain;display:block}.msh .mul{position:absolute;right:-7px;bottom:-4px;font:700 20px Alegreya,serif;color:#f2d27a;text-shadow:0 0 2px #000,0 0 3px #000,0 0 6px #000}button.msh{background:none;border:0;padding:0}.msh.lf{cursor:var(--cp);transition:transform .12s}.msh.lf:hover{transform:scale(1.08)}.msh.lf.sel{filter:drop-shadow(0 0 7px #f2d27a) drop-shadow(0 0 3px #f2d27a)}.mtok.F{color:var(--fire)}.mtok.E{color:var(--earth)}.mtok.W{color:var(--water)}
@@ -356,6 +347,10 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 
 #statsbtn{position:absolute;left:56px;top:12px;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:rgba(10,8,14,.7);line-height:1;cursor:var(--cp);z-index:250;padding:0;color:var(--bone);display:flex;align-items:center;justify-content:center}
 #statsbtn:hover{border-color:var(--gold);color:var(--gold)}
+/* Vorschau (seit 0.5.6.4): der betroffene Anteil des HP- bzw. Mana-Bogens blendet beim Überfahren eines Knopfes aus und ein */
+.arcs .arcfx{animation:arcfx .9s ease-in-out infinite;stroke-linecap:butt}
+.arcs .arcfx.hp{stroke:#e0653f}.arcs .arcfx.mana{stroke:#4a9be0}.arcs .arcfx.bg{stroke:#141416}
+@keyframes arcfx{0%,100%{opacity:0}50%{opacity:1}}
 
 </style>
 </head>
@@ -382,7 +377,7 @@ const ELEMENTS = ['F', 'E', 'W'];
 const SUPERIOR = { F: 'W', W: 'E', E: 'F' };     // überlegenes Element gegen X
 const NAMES = { F: 'Feuer', E: 'Erde', W: 'Wasser' };
 const START_DECK = ['F1','F1','F1','E1','E1','E1','W1','W1','W1'];
-const MAX_MAGIC = 3, MAX_SLOTS = 5, MIN_SLOTS = 3, MAX_LIMIT = 5, MAX_DRAW_LIMIT = 3;
+const MAX_MAGIC = 3, MAX_SLOTS = 5, MIN_SLOTS = 3, MAX_LIMIT = 3, MAX_DRAW_LIMIT = 3, MAX_UPGRADES = 2, MONSTER_MAX_LIMIT = 5;   // seit 0.5.1: jede Entwicklung der Spieler höchstens auf Stufe 3 (zwei Ausbauten: Ausspiellimit 1→3, Handplätze 3→5, Nachziehlimit 1→3, HP und Mana je zwei Käufe); Monster behalten ihr Limit bis 5
 const MAX_COMBAT_TURNS = 400;                      // Sicherung gegen Endlosschleifen, keine Spielregel
 
 /* ---------- Zufall (deterministisch über den Seed) ---------- */
@@ -509,6 +504,7 @@ function regenGain(state) { const r = state.rules.regenByStage; return r ? (r[Ma
 // Kategorien: hp, mana, limit, slot, draw (Nachziehlimit) und mag (Magie, alle drei Richtungen zusammen, unabhängig von der Stufe); s.buys zählt die Käufe des Spielers.
 function bought(s, k) { return (s && s.buys && s.buys[k]) || 0; }
 function risen(state, base, s, k) { return base * (1 + (state.rules.priceRise || 0) * bought(s, k)); }
+function maxed(s, k) { return bought(s, k) >= MAX_UPGRADES; }   // HP und Mana der Spieler: höchstens zwei Ausbauten (Stufe 3)
 function buyCount(s, k) { s.buys = s.buys || {}; s.buys[k] = (s.buys[k] || 0) + 1; }
 function limitStepCost(state, s) { return risen(state, state.rules.limitCost > 0 ? state.rules.limitCost : (s.limit <= 1 ? state.rules.limitFirstStepCost : 1), s, 'limit'); }
 function manaStepCost(state, s) { return risen(state, 1, s, 'mana'); }
@@ -593,7 +589,7 @@ function applyDie(stats, face, sign, stage, el) {
   const n = face.n[stage - 1] * sign, k = face.k;
   if (k === 'hp') { stats.maxHp = Math.max(1, stats.maxHp + n); stats.hp = stats.maxHp; }
   else if (k === 'mana') { stats.maxMana = Math.max(1, stats.maxMana + n); stats.mana = stats.maxMana; }
-  else if (k === 'limit') stats.limit = Math.min(MAX_LIMIT, Math.max(1, stats.limit + n));   // bis auf 1, nie auf 0 (Achtung: Limit 1 führt in Stufe I oft zu Patts, siehe Regelwerk)
+  else if (k === 'limit') stats.limit = Math.min(MONSTER_MAX_LIMIT, Math.max(1, stats.limit + n));   // bis auf 1, nie auf 0 (Achtung: Limit 1 führt in Stufe I oft zu Patts, siehe Regelwerk)
   else if (k === 'mag') { const e = MONSTER.profile[el].secondary; stats.mag[e] = Math.min(MAX_MAGIC, Math.max(1, stats.mag[e] + n)); }   // Folgemagie des Monsters (Nebenelement seines Profils)
   else if (k === 'hand') stats.handExtra = (stats.handExtra || 0) + n;
   else if (k === 'draws') stats.drawLimit = Math.min(MAX_DRAW_LIMIT, Math.max(1, stats.drawLimit + n));
@@ -619,7 +615,7 @@ function spawnOne(el, stage, rng, v) {
     const m = M.magic[st];
     stats.mag[P] = Math.max(stats.mag[P], m[0]); stats.mag[S] = Math.max(stats.mag[S], m[1]); stats.mag[T] = Math.max(stats.mag[T], m[2]);
     M.temple[st][el].forEach(f => {
-      if (f === 'limit' && stats.limit >= MAX_LIMIT) f = 'hp';
+      if (f === 'limit' && stats.limit >= MONSTER_MAX_LIMIT) f = 'hp';
       applyTemple(stats, f);
     });
     finalDeck = (st === stage && V.deck[st][v.d]) ? V.deck[st][v.d](P, S, T) : M.deck[st](P, S, T);
@@ -993,6 +989,8 @@ function passAttackTurn(state) {
   c.turn = c.turn === 'a' ? 'b' : 'a'; c.action = 'attack'; c.color = null; c.pending = 0;
 }
 
+// HP nach einer Heilung um lvl: höchstens bis zu den maximalen HP, nie weniger als vorher
+function healedHp(stats, hp, lvl) { return lvl > 0 ? Math.max(hp, Math.min(stats.maxHp, hp + lvl)) : hp; }
 // Wirkung der Kombos (Angriff und nach der Verteidigung): plan = [[Schlüssel, Stufe], ...]
 function applyComboPlan(state, side, opp, plan, ev, texts, fxs) {
   const c = state.combat;
@@ -1005,7 +1003,7 @@ function applyComboPlan(state, side, opp, plan, ev, texts, fxs) {
       texts.push('Zerrüttung ' + lvl + ': ' + opp.name + ' muss ' + n + ' Handkarte' + (n === 1 ? '' : 'n') + ' seiner Wahl abwerfen');
     }
     else if (k === 'gh') {
-      const before = side.stats.hp; side.stats.hp = Math.min(side.stats.maxHp, before + lvl);
+      const before = side.stats.hp; side.stats.hp = healedHp(side.stats, before, lvl);
       texts.push('Heilung ' + lvl + ': +' + (side.stats.hp - before) + ' HP'); fxs.push({ kind: 'lifeflow', who: side.ctrl, to: opp.ctrl, got: {}, removed: 0, heal: side.stats.hp - before, draws: 0 });
     }
     else if (k === 'ew') {   // Läuterung: S Marker beliebig vom Brett nehmen, je entferntem Marker 1 Gratis-Nachziehen
@@ -1062,25 +1060,24 @@ function defenseOutcome(stats, color, pending, block, mir) {
   const absorb = Math.min(mLvl, missing), refl = Math.min(mLvl, excess, pending);
   return { mLvl, absorb, refl, lost: absorb + refl, leftover: missing - absorb };
 }
-// Was ein Kombo der Verteidigung vor dem Schaden ändert (seit 0.4): Heilung (HP vor dem Schaden, höchstens bis zum Maximum) und der Spiegel der Angriffsfarbe (wirkt schon gegen diesen Angriff).
+// Was ein Kombo der Verteidigung für den laufenden Angriff ändert: der Spiegel der Angriffsfarbe wirkt seit 0.4 schon gegen diesen Angriff. Die Heilung wirkt seit 0.5.4 wieder nach dem Schaden (heal: Stufe, hp: HP vor dem Schaden).
 function defenseComboPre(stats, ev, color) {
   const lvs = ev && ev.ord && !(ev.levels && ev.levels.ulti > 0) ? levelsFor(ev) : null, own = mirrorOf(stats, color);
   if (!lvs) return { heal: 0, hp: stats.hp, mir: own };
-  const heal = Math.max(0, Math.min(stats.maxHp, stats.hp + lvs.gh) - stats.hp);
-  return { heal, hp: stats.hp + heal, mir: lvs.fw > 0 && ev.ord.el === color ? Math.max(own, Math.min(lvs.fw, MAX_MIRROR)) : own };
+  return { heal: lvs.gh || 0, hp: stats.hp, mir: lvs.fw > 0 && ev.ord.el === color ? Math.max(own, Math.min(lvs.fw, MAX_MIRROR)) : own };
 }
 // Vorschau für die Knöpfe „Verteidigen“ und „Passen“, ohne etwas zu ändern: Mana-Kosten, Block, Restschaden und die HP danach (beim Verteidiger und, durch den Spiegelrückwurf, beim Angreifer). null, wenn gerade keine Verteidigung ansteht oder die Auswahl nicht geht.
 function previewDefense(state, passOnly) {
   const c = state.combat;
   if (!c || c.forced || c.action !== 'defense') return null;
   const side = c.sides[c.turn], att = c.sides[c.turn === 'a' ? 'b' : 'a'];
-  let block = 0, cost = 0, pre = { heal: 0, hp: side.stats.hp, mir: mirrorOf(side.stats, c.color) };
+  let block = 0, cost = 0, pre = { heal: 0, hp: side.stats.hp, mir: mirrorOf(side.stats, c.color) };   // Heilung (heal) wirkt nach dem Schaden
   if (!passOnly) {
     const sel = selection(side.deck);
     if (sel.length) { const ev = evalDefense(side.stats, sel, c.color); if (!ev.valid || ev.affordable === false) return null; block = ev.block || 0; cost = ev.cost || 0; pre = defenseComboPre(side.stats, ev, c.color); }
   }
   const o = defenseOutcome(side.stats, c.color, c.pending, block, pre.mir);
-  return Object.assign({ who: side.ctrl, att: att.ctrl, cost, block, heal: pre.heal, hpAfter: Math.max(0, pre.hp - o.leftover), attHpAfter: Math.max(0, att.stats.hp - o.refl) }, o);
+  return Object.assign({ who: side.ctrl, att: att.ctrl, cost, block, heal: pre.heal, hpAfter: Math.max(0, healedHp(side.stats, pre.hp - o.leftover, pre.heal)), attHpAfter: Math.max(0, att.stats.hp - o.refl) }, o);
 }
 function execDefense(state, passOnly) {
   const c = state.combat, side = c.sides[c.turn], c0pending = c.pending;
@@ -1097,15 +1094,17 @@ function execDefense(state, passOnly) {
   // Passen in der Verteidigung bringt kein Mana (nur im Angriffszug gibt es Erholen)
   if (sel.length) consumeSelection(d, sel); else d.marks = [];
   const attacker = c.sides[c.turn === 'a' ? 'b' : 'a'];
-  // Seit 0.4 wirkt der Kombo zuerst, danach die Verteidigung (wie im Angriff, wo der Kombo ebenfalls vor dem Schaden kommt): Eine Heilung gleicht jetzt keinen Schaden mehr nachträglich aus, sie füllt die HP vor dem Schaden auf (nur bis zum Maximum), und ein Spiegel dieser Farbe wirkt schon gegen den Angriff, auf den verteidigt wird.
+  // Seit 0.4 wirkt der Kombo zuerst, danach die Verteidigung: Ein Spiegel dieser Farbe wirkt schon gegen den Angriff, auf den verteidigt wird. Seit 0.5.4 gilt das nicht mehr für die Heilung: Sie wirkt wieder nach Angriff und Verteidigung (Zerrüttung und die übrigen Kombos bleiben davor).
   if (defEv && defEv.levels && defEv.levels.ulti > 0) {   // Ultimate in der Verteidigung: Todes-Fluch für den Angreifer
     if (attacker.stats.deathPhase === undefined) attacker.stats.deathPhase = attacker.stats.death || 0;
     attacker.stats.death = Math.max(attacker.stats.death || 0, defEv.levels.ulti);
     log(state, side.name + ' wirkt eine Ultimate: Ultimate ' + defEv.levels.ulti + ': Todes-Fluch für ' + attacker.name + ' (' + attacker.stats.death + ' HP am Ende jeder seiner Angriffsphasen bis Kampfende).', side.ctrl, { kind: 'aggro', who: side.ctrl, to: attacker.ctrl, n: defEv.levels.ulti, first: true, ult: true });
   }
+  let healLvl = 0;
   if (defEv && defEv.ord) {
     const lvs = levelsFor(defEv), plan = [], texts = [], fxs = [];
-    for (const k of ['fw', 'fe', 'ew', 'rm', 'gh']) if (lvs[k] > 0) plan.push([k, lvs[k]]);
+    for (const k of ['fw', 'fe', 'ew', 'rm']) if (lvs[k] > 0) plan.push([k, lvs[k]]);   // Heilung (gh) wirkt seit 0.5.4 wieder erst nach dem Schaden, Zerrüttung und die übrigen Kombos davor
+    healLvl = lvs.gh || 0;
     applyComboPlan(state, side, attacker, plan, defEv, texts, fxs);
     fxs.forEach(f => { f.first = true; });   // Oberfläche: Kombo-Animation läuft vor der Verteidigungsanimation
     if (texts.length) log(state, side.name + ' wirkt einen Kombo: ' + texts.join(', ') + '.', side.ctrl, fxs.length ? fxs : undefined);
@@ -1115,7 +1114,7 @@ function execDefense(state, passOnly) {
   // Überschuss zurück (ebenfalls höchstens seine Stufe und höchstens der eingehende Schaden) und verliert dafür je zurückgeworfenen Schaden eine Stufe. Das gilt auch beim Passen.
   const { mLvl, absorb, refl, lost, leftover } = defenseOutcome(side.stats, c.color, c.pending, block);
   const hpPre = { [side.ctrl]: side.stats.hp, [attacker.ctrl]: attacker.stats.hp };   // HP vor dem Schaden, aber nach dem Kombo (Oberfläche zeigt sie, bis die Geschosse einschlagen)
-  side.stats.hp = Math.max(0, side.stats.hp - leftover);
+  side.stats.hp = side.stats.hp - leftover;   // vorläufig, die Heilung (seit 0.5.4 nach dem Schaden) gleicht ihn noch aus; danach nie unter 0
   const defEl = sel.length && sel[0].el && !sel[0].curse ? sel[0].el : c.color;
   const defFx = { kind: 'defense', rec: !!passOnly, who: side.ctrl, to: attacker.ctrl, attElem: c.color, defElem: defEl, pending: c.pending, block, hpPre, afterCombo: !!(defEv && (defEv.ord || (defEv.levels && defEv.levels.ulti > 0))) };   // hpPre: HP vor dem Schaden, die Oberfläche zeigt sie, bis die Geschosse einschlagen
   log(state, side.name + (passOnly ? ' passt und nimmt den Schaden hin' : ' verteidigt' + (block ? ' (Block ' + block + ')' : ' ohne Block')) + ' und verliert ' + leftover + ' HP' + '.', side.ctrl, defFx);
@@ -1126,6 +1125,13 @@ function execDefense(state, passOnly) {
     log(state, 'Spiegel: ' + side.name + (refl > 0 ? ' wirft ' + refl + ' Schaden auf ' + attacker.name + ' zurück' : ' gleicht ' + absorb + ' Schaden aus') + ' und verliert ' + stufen + '.', side.ctrl, undefined);
     defFx.mirror = { hpPre, elem: c.color, markers: mLvl, broken: lost, who: side.ctrl, att: attacker.ctrl, r: refl, abs: absorb, d: c.pending, blk: block };   // der Schild-Effekt läuft in der Verteidigungsanimation, vor dem Schaden auf den HP
   }
+  if (healLvl > 0) {   // Heilung nach Angriff und Verteidigung (seit 0.5.4): gleicht den Schaden nachträglich aus, höchstens bis zum Maximum
+    const hTexts = [], hFxs = [];
+    applyComboPlan(state, side, attacker, [['gh', healLvl]], defEv, hTexts, hFxs);
+    hFxs.forEach(f => { f.late = true; });   // Oberfläche: Heilungsanimation nach der Verteidigungsanimation
+    log(state, side.name + ' heilt nach der Verteidigung: ' + hTexts.join(', ') + '.', side.ctrl, hFxs);
+  }
+  side.stats.hp = Math.max(0, side.stats.hp);
   const attSide = attacker;   // wer gerade angegriffen hat: seine Angriffsphase endet mit dieser Verteidigung
   c.action = 'attack'; c.color = null; c.pending = 0;
   deathTick(state, attSide);
@@ -1228,11 +1234,13 @@ function execSpend(state, pid, what) {
   if (s[f] <= 0) return fail(f === 'gold' ? 'Du hast kein Gold.' : 'Keine offenen Upgrade-Punkte.');
   let cost = 1;
   if (what === 'hp') {
+    if (bought(s, 'hp') >= MAX_UPGRADES) return fail('Die max. HP sind am Maximum (' + MAX_UPGRADES + ' Ausbauten).');
     cost = hpStepCost(state, s);
     if (s[f] < cost) return fail('Die nächsten HP kosten ' + payTxt(state, f, cost) + '.');
     const n = state.rules.hpPerPoint || 1; s.maxHp += n; buyCount(s, 'hp');   // Upgrade erhöht nur das Maximum, die aktuellen HP bleiben
   }
   else if (what === 'mana') {
+    if (bought(s, 'mana') >= MAX_UPGRADES) return fail('Das max. Mana ist am Maximum (' + MAX_UPGRADES + ' Ausbauten).');
     cost = manaStepCost(state, s);
     if (s[f] < cost) return fail('Der nächste Mana-Schritt kostet ' + payTxt(state, f, cost) + '.');
     s.maxMana++; buyCount(s, 'mana');   // nur das Maximum steigt, das aktuelle Mana bleibt
@@ -1327,13 +1335,13 @@ function applyWorld(state, a) {
 /* Magus – Regelkern (Teil 8): Spielstart und Schnittstelle nach außen. */
 
 // Regelwerte (Abstimmungs- und Variantenschalter). ‚curses‘: Fluchsystem, siehe 30-curses.js.
-const DEFAULT_RULES = { priceRise: 1, startHp: 4, startLimit: 2, startSp: 2, surplusSp: 1, swapCosts: 1, limitCost: 2, limitFirstStepCost: 2, hpPerPoint: 2, stagePoints: [0, 0, 0, 0], stageGold: [0, 3, 6, 9], loserUp: 0, loserUp2: 0, winSp: 0, winSpFromShowdown: 2, monsterSp: 1, monsterLoot: 0, idleLimit: 0, drawMarker: 1, drawPenaltyGold: 1, drawPenaltyMana: 1, drawLimitCost: [1, 1], lossHelp: 1, lossGold: [0, 1, 2, 3], lossPoints: [0, 0, 0, 0], lossBoth: 0, showdownSp: 1, lootBoth: true, recoverByStage: [1, 2, 3], regenByStage: [1, 2, 3], supply: 8, supply2: 6, supply3: 4, startCards: 0 };   // Jede gespielte Karte (auch Kombokarten) kostet 1 Mana, nur Verteidigung in der überlegenen Farbe ist gratis. recoverByStage: Mana-Gewinn von „Erholen“ im Kampf je Abschnitt
+const DEFAULT_RULES = { priceRise: 1, startHp: 4, startLimit: 1, startSp: 2, surplusSp: 1, swapCosts: 1, limitCost: 1, limitFirstStepCost: 1, hpPerPoint: 2, stagePoints: [0, 0, 0, 0], stageGold: [0, 3, 6, 9], loserUp: 0, loserUp2: 0, winSp: 0, winSpFromShowdown: 2, monsterSp: 1, monsterLoot: 0, idleLimit: 0, drawMarker: 1, drawPenaltyGold: 1, drawPenaltyMana: 1, drawLimitCost: [1, 1], lossHelp: 1, lossGold: [0, 1, 2, 3], lossPoints: [0, 0, 0, 0], lossBoth: 0, showdownSp: 1, lootBoth: true, recoverByStage: [1, 2, 3], regenByStage: [1, 2, 3], supply: 8, supply2: 6, supply3: 4, startCards: 0 };   // Jede gespielte Karte (auch Kombokarten) kostet 1 Mana, nur Verteidigung in der überlegenen Farbe ist gratis. recoverByStage: Mana-Gewinn von „Erholen“ im Kampf je Abschnitt
 
 function newPlayer(state, name, ai, startIds) {
   const p = { name, ai: !!ai, stats: newStats(), temple: { points: 0, level: 0 }, sp: state.rules.startSp || 0, slots: MIN_SLOTS, drawRed: false, drawN: 0 };   // drawN: Nachziehvorgänge seit der letzten anderen Aktion (höchstens Nachziehlimit), drawRed: Marker rot
   p.stats.gold = 0;   // Das Spiel beginnt ohne Gold; Abschnittsboni kommen in newGame
   p.stats.maxHp = p.stats.hp = state.rules.startHp || 3;   // Start-HP der Spieler (Monster beginnen mit 3 und werden eigens abgestimmt)
-  p.stats.limit = state.rules.startLimit || 1;   // Ausspiellimit zu Beginn (0.3: 2)
+  p.stats.limit = state.rules.startLimit || 1;   // Ausspiellimit zu Beginn (0.3: 2, seit 0.5.1: 1)
   p.deck = newDeck(state, startIds || START_DECK, MIN_SLOTS);
   return p;
 }
@@ -1442,9 +1450,9 @@ function actor(state) {
 }
 function handCounts(d) { const c = {}; d.hand.forEach(x => { if (x) c[x.id] = (c[x.id] || 0) + 1; }); return c; }
 
-return { ELEMENTS, SUPERIOR, NAMES, START_DECK, MAX_MAGIC, MAX_SLOTS, MIN_SLOTS, MAX_LIMIT, MAX_DRAW_LIMIT, DEFAULT_RULES, MONSTER,
+return { ELEMENTS, SUPERIOR, NAMES, START_DECK, MAX_MAGIC, MAX_SLOTS, MIN_SLOTS, MAX_LIMIT, MAX_DRAW_LIMIT, MAX_UPGRADES, MONSTER_MAX_LIMIT, DEFAULT_RULES, MONSTER,
   makeRng, parseCard, selection, newGame, apply, record, prim, actor, other, regen, handCounts,
-  vendorOffers, vendorPlans, previewTemple, pointsForGold, nextLevelCost, limitStepCost, manaStepCost, hpStepCost, slotStepCost, magicCost, drawLimitCost, upField, magicField, payTxt,
+  vendorOffers, vendorPlans, previewTemple, pointsForGold, nextLevelCost, maxed, limitStepCost, manaStepCost, hpStepCost, slotStepCost, magicCost, drawLimitCost, upField, magicField, payTxt,
   evalAttack, evalDefense, canFlee, stockOf, recoverGain, regenGain, comboLevels, levelsFor,
   mirrorOf, monsterAlive, monsterHand, markerOf, drawManaCost, drawGoldPenalty, previewDefense, defenseComboPre, allMonstersDead, magicProgress, spawnMonsters, spawnForGame };
 }));</script>
@@ -1601,7 +1609,7 @@ function pickSpend(p, state, pid) {
   const s = p.stats, Q = P(pid);
   const lc = M.limitStepCost(state, s);
   const canL = lc <= upv(state, s);
-  const canM = M.manaStepCost(state, s) <= upv(state, s), canH = M.hpStepCost(state, s) <= upv(state, s), canS = p.slots < M.MAX_SLOTS && M.slotStepCost(state, s) <= upv(state, s);   // seit 0.3.2 steigen alle Preise mit jedem Kauf
+  const canM = !M.maxed(s, 'mana') && M.manaStepCost(state, s) <= upv(state, s), canH = !M.maxed(s, 'hp') && M.hpStepCost(state, s) <= upv(state, s), canS = p.slots < M.MAX_SLOTS && M.slotStepCost(state, s) <= upv(state, s);   // seit 0.3.2 steigen alle Preise mit jedem Kauf
   const pl = stratPlan(state, pid);
   if (pl.st === 1 && s.limit < 2) return canL ? 'limit' : null;   // auf Ausspiellimit 2 sparen
   const noSlot = stratSlotLock(state, p, pid);
@@ -2034,7 +2042,7 @@ const stage = $('stage'), layerPh = $('ph'), layerCards = $('cards'), panels = $
 let fxUntil = 0, lateN = 0;   // Zeitpunkt, bis zu dem eine Kampfanimation läuft (die Siegmeldung wartet darauf)
 let fleeAsk = false;   // Fliehen: Bestätigung wird gezeigt
 let SPEC = false, specT = 0, specSpeed = 1;   // SPEC: Zuschauermodus, zwei Computerspieler spielen gegeneinander
-let upSeen = null, hpHold = null, stageSeen = 1, endSnd = null, sacN = 0, G = null, hold = 0, aiTimer = null, endView = null, modal = null, introSeen = -1, preStats = null, seenCombat = null, toastTimer = null, started = false;
+let upSeen = null, hpHold = null, curseHold = {}, stageSeen = 1, endSnd = null, sacN = 0, G = null, hold = 0, aiTimer = null, endView = null, modal = null, introSeen = -1, preStats = null, seenCombat = null, toastTimer = null, started = false;
 
 /* ---------- Layout: alle Maße der 1280×800-Bühne an einer Stelle ---------- */
 const CW = 128, CH = 194;                                   // Kartengröße
@@ -2142,8 +2150,6 @@ function ctx() {
   }
   return { combat: false, myDeck: G.players[ME].deck, oppDeck: G.players[OPP].deck, myStats: G.players[ME].stats, oppStats: G.players[OPP].stats };
 }
-const MAX_MARKS = 3;   // Anzahl der Totenkopf-Plätze neben dem Limit
-function marks(n, cls) { let t = ''; for (let i = 0; i < MAX_MARKS; i++) t += '<img class="mkimg' + (cls ? ' ' + cls : '') + (i < n ? '' : ' off') + '" src="' + IMG.curse + '">'; return t; }
 // Todes-Fluch (Ultimate): HP-Verlust am Ende jeder eigenen Angriffsphase, bis Kampfende.
 // Spiegel: je Element ein Stein neben dem Handbrett, mit Stufenzähler ab 2.
 function mirrorStack(s, x, y, who) {
@@ -2162,18 +2168,20 @@ function mirrorStack(s, x, y, who) {
   }
   return '<div class="mirstack" data-who="' + (who || '') + '" style="left:' + x + 'px;top:' + y + 'px">' + t + '</div>';
 }
-// Marker-Symbole (Totenköpfe/Flüche); im Lifeflow-Angriff anklickbar, gewählte leuchten
-function markIcons(n, kind, L, cls) {
-  const sel = L ? L.picks.filter(p => p === kind).length : 0; let t = '';
-  for (let i = 0; i < MAX_MARKS; i++) {
-    const img = '<img class="mkimg' + (cls ? ' ' + cls : '') + (i < n ? '' : ' off') + '" src="' + IMG.curse + '">';
-    t += L && i < n ? '<button class="mkb lf' + (i < sel ? ' sel' : '') + '" data-act="lfm" data-k="' + kind[0] + kind[1] + '" data-i="' + i + '" title="Lifeflow: diesen Marker wählen oder abwählen">' + img + '</button>' : img;
+// Todesmarker: jeder Marker liegt als eigener, größerer Token auf dem Tisch (wie die Nachziehtokens), leicht verdreht und versetzt; im Läuterungs-Angriff anklickbar.
+// Eigene Marker liegen rechts neben den Nachziehtokens über dem Nachziehstapel, die des Gegners rechts neben dessen Nachziehstapel (frei von den Panels).
+function deathPos(who, i) {
+  const L = who === 's' ? L_MY : L_OP, rot = [-7, 5, -3, 8][i % 4], dy = [0, -3, 2, -2][i % 4];
+  return { x: L.draw.x + (who === 's' ? 58 : 100) + i * 52, y: (who === 's' ? L.draw.y - 62 : L.draw.y + CH * L.ps - 4) + dy, rot };
+}
+function deathTokens(s, who) {
+  const n = Math.min(s.death || 0, 4), L = lfCtx(), sel = L ? L.picks.filter(p => p === who + 'd').length : 0; let t = '';
+  for (let i = 0; i < n; i++) {
+    const q = deathPos(who, i), pos = 'left:' + q.x + 'px;top:' + q.y + 'px;--r:' + q.rot + 'deg', tip = 'Todesmarker: ' + (s.death || 0) + ' HP Verlust am Ende jeder eigenen Angriffsphase bis Kampfende. Nur Läuterung kann Marker entfernen.';
+    t += L ? '<button class="deathtok lf' + (i < sel ? ' sel' : '') + '" data-who="' + who + '" data-act="lfm" data-k="' + who + 'd" data-i="' + i + '" title="Läuterung: diesen Marker wählen oder abwählen" style="' + pos + '"><img src="' + IMG.curse + '"></button>'
+      : '<div class="deathtok" data-who="' + who + '" title="' + tip + '" style="' + pos + '"><img src="' + IMG.curse + '"></div>';
   }
   return t;
-}
-function markCol(s, who) {   // Todesmarker neben dem Limit; im Läuterungs-Angriff anklickbar
-  const L = who ? lfCtx() : null;
-  return '<span class="mkcol"><span class="mk" title="Todesmarker: ' + (s.death || 0) + ' HP Verlust am Ende jeder eigenen Angriffsphase bis Kampfende. Nur Läuterung kann Marker entfernen.">' + (who ? markIcons(s.death || 0, who + 'd', L) : marks(s.death || 0)) + '</span></span>';
 }
 /* ---------- Zugwechsel (Werte der Zugwechsel-Werkstatt): Der Rand teilt sich in der Mitte, zwei Linien laufen links und rechts zur anderen Seite ---------- */
 let turnSide = null, turnAnim = null, turnWait = 0, cardsUntil = 0;   // cardsUntil: bis wann Karten fliegen oder verbrennen
@@ -2461,6 +2469,7 @@ function renderCards() {
     const lf = lfCtx(), sel = lf ? lf.picks.filter(p => p === 'ot').length : 0, pos = 'left:' + L_OP.draw.x + 'px;top:' + (L_OP.draw.y + CH * L_OP.ps + (G.rules.drawMarker ? 48 : 22)) + 'px', inner = '<img src="' + IMG.gratis + '">' + (cx.oppStats.freeDraws > 1 ? '<b class="mul">×' + cx.oppStats.freeDraws + '</b>' : '') + (sel ? '<i class="lfb">✓' + sel + '</i>' : '');
     ph += lf ? '<button class="freedraw opp lf' + (sel ? ' sel' : '') + '" data-act="lfm" data-k="ot" title="Läuterung: gegnerische Nachziehtokens zerstören (Klick: einen mehr, nach dem Maximum wieder alle weg). Sie werden nicht gutgeschrieben." style="' + pos + '">' + inner + '</button>' : '<div class="freedraw opp" title="Gratis-Nachziehen des Gegners: ' + cx.oppStats.freeDraws + 'x" style="' + pos + '">' + inner + '</div>';
   }
+  if (cx.combat) ph += deathTokens(cx.myStats, 's') + deathTokens(cx.oppStats, 'o');   // Todesmarker als einzelne Tokens auf dem Tisch
   const pnd = G.players[ME].stats[M.upField(G)], slotC = M.slotStepCost(G, G.players[ME].stats);
   if (!cx.combat && pnd >= slotC && G.players[ME].slots < M.MAX_SLOTS) {
     const canSlot = myTurn();
@@ -2561,23 +2570,43 @@ function boardHTML(mag, size) {
   });
   return h + '</div>';
 }
+// HP (links, rot) und Mana (rechts, blau) als gebogene Linien neben der Magiescheibe: je ein Bogen von 90 Grad, von unten nach oben gefüllt; feine Kerben trennen die einzelnen Punkte.
+function arcsHTML(s, bsz, pad, R) {
+  const W = bsz + 2 * pad, cx = W / 2, cy = bsz / 2, sw = 6;
+  const pt = deg => { const t = deg * Math.PI / 180; return (cx + R * Math.cos(t)).toFixed(1) + ' ' + (cy + R * Math.sin(t)).toFixed(1); };
+  const arc = (a1, a2, sweep, v, mx, cls, title) => {
+    const d = 'M' + pt(a1) + ' A' + R + ' ' + R + ' 0 0 ' + sweep + ' ' + pt(a2), L = 100 / Math.max(1, mx), g = 1.4, pct = Math.max(0, Math.min(1, v / Math.max(1, mx))) * 100;
+    return '<path class="arcbg" d="' + d + '" pathLength="100" stroke-width="' + sw + '"><title>' + title + '</title></path>' +
+      '<path class="arcv ' + cls + '" d="' + d + '" pathLength="100" stroke-width="' + sw + '" stroke-dasharray="' + pct.toFixed(2) + ' 100"/>' +
+      '<path class="arcsep" d="' + d + '" pathLength="100" stroke-width="' + (sw + 2) + '" stroke-dasharray="' + g + ' ' + (L - g).toFixed(3) + '" stroke-dashoffset="' + (g / 2).toFixed(2) + '"/>';
+  };
+  return '<svg class="arcs" width="' + W + '" height="' + bsz + '" viewBox="0 0 ' + W + ' ' + bsz + '">' +
+    arc(135, 225, 1, Math.max(0, s.hp), s.maxHp, 'hp', 'HP ' + Math.max(0, s.hp) + '/' + s.maxHp) +
+    arc(45, -45, 0, s.mana, s.maxMana, 'mana', 'Mana ' + s.mana + '/' + s.maxMana) + '</svg>';
+}
 function statsBlock(name, s, p, size, up, full) {
   const img = k => '<img src="' + IMG[k] + '">', compact = !full;
-  const lfc = lfCtx(), who = lfc ? (s === lfc.cx.myStats ? 's' : s === lfc.cx.oppStats ? 'o' : null) : null;
-  const mk = markCol(s, who), mr = '';
+  const mk = '', mr = '';
   const my = myTurn(), anyT = my, UF = M.upField(G), UC = UF === 'gold' ? 'gc' : 'pt', one = M.payTxt(G, UF, 1), pend = up ? s[UF] : 0, lc = up ? M.limitStepCost(G, s) : 1, mc = up ? M.manaStepCost(G, s) : 1, hc = up ? M.hpStepCost(G, s) : 1;
   const pl = (ok, w, title, attr) => ok ? '<button class="up ' + UC + '" data-act="' + (attr || 'spend') + '" ' + (attr ? 'data-e' : 'data-w') + '="' + w + '" title="' + title + '"></button>' : '';
   // Schritte, die mehr als 1 Upgrade-Punkt kosten, bleiben sichtbar (abgedunkelt, solange die Punkte fehlen) und tragen eine Kostenzahl.
   const plc = (show, afford, w, label, c) => !show ? '' : '<button class="up ' + UC + (c > 1 ? ' costly' : '') + (afford ? '' : ' off') + '" data-act="spend" data-w="' + w + '"' + (c > 1 ? ' data-c="' + c + '"' : '') + (afford ? '' : ' disabled') + ' title="' + label + ' (' + M.payTxt(G, UF, c) + (afford ? '' : UF === 'gold' ? ', dir fehlt Gold' : ', dir fehlen Punkte') + ')"></button>';
-  const hpPl = hc > 1 ? plc(up && anyT && pend > 0, pend >= hc, 'hp', '+' + (G.rules.hpPerPoint || 1) + ' max. HP', hc) : pl(up && anyT && pend > 0, 'hp', '+' + (G.rules.hpPerPoint || 1) + ' max. HP (' + one + ')');
-  const manaPl = mc > 1 ? plc(up && anyT && pend > 0, pend >= mc, 'mana', '+1 max. Mana', mc) : pl(up && anyT && pend > 0, 'mana', '+1 max. Mana (' + one + ')');
+  const hpPl = M.maxed(s, 'hp') ? '' : hc > 1 ? plc(up && anyT && pend > 0, pend >= hc, 'hp', '+' + (G.rules.hpPerPoint || 1) + ' max. HP', hc) : pl(up && anyT && pend > 0, 'hp', '+' + (G.rules.hpPerPoint || 1) + ' max. HP (' + one + ')');
+  const manaPl = M.maxed(s, 'mana') ? '' : mc > 1 ? plc(up && anyT && pend > 0, pend >= mc, 'mana', '+1 max. Mana', mc) : pl(up && anyT && pend > 0, 'mana', '+1 max. Mana (' + one + ')');
   const limPl = lc > 1 ? plc(up && anyT && pend > 0 && s.limit < M.MAX_LIMIT, pend >= lc, 'limit', '+1 Ausspiellimit', lc) : pl(up && anyT && pend >= lc && s.limit < M.MAX_LIMIT, 'limit', '+1 Ausspiellimit (' + one + ')');
-  const sbar = (v, mx, cls) => '<div class="bar sb ' + cls + '"><i style="width:' + Math.max(0, v) / mx * 100 + '%"></i></div>';
   const lead = b => compact ? '' : '<span class="lead">' + (b || '') + '</span>';   // Upgrade-Knöpfe stehen links neben dem Symbol; ohne Knöpfe schrumpft die Spalte auf 0 (Ausrichtung wie beim Gegner)
-  const hasUp = !compact && !!(hpPl || manaPl || limPl);
-  const hp = '<div class="statrow">' + lead(hpPl) + img('hp') + '<b data-pv="hp">' + Math.max(0, s.hp) + '/' + s.maxHp + '</b>' + sbar(s.hp, s.maxHp, '') + '</div>';
-  const mana = '<div class="statrow">' + lead(manaPl) + img('mana') + '<b data-pv="mana">' + s.mana + '/' + s.maxMana + '</b>' + sbar(s.mana, s.maxMana, 'mana') + '</div>';
-  let h = '<h3><span class="hdr"><span class="hn">' + name + '</span>@@T@@@@G@@' + (p ? '<span class="hsp" title="Siegpunkte">★ <b>' + p.sp + '</b></span>' : '') + '</span></h3><div class="sbody' + (hasUp ? ' hasup' : '') + '"' + (compact ? '' : ' data-lead="1"') + '><div class="scol">';
+  // Opfern: goldener Münzknopf links neben dem Gold (wie die Upgrade-Knöpfe, die Zahl als Plakette erst ab 2; bei 0 transparent, seit 0.5.6.6); die Pfeile ◀ ▶ daneben stellen die Anzahl ein
+  let sacCoin = '', sacArr = '', sacArr2 = '';
+  if (!compact && p && up && s.gold >= 1) {
+    const n = Math.max(0, Math.min(sacN, s.gold, 4)), pv = M.previewTemple(p, n), okS = my && n > 0;
+    sacCoin = '<button class="up gc sacbtn' + (n > 1 ? ' costly' : '') + (n === 0 ? ' sac0' : '') + (okS ? '' : ' off') + '" data-act="temple" data-n="' + n + '"' + (n > 1 ? ' data-c="' + n + '"' : '') + (okS ? '' : ' disabled') + ' title="Opfern: ' + n + ' Gold im Tempel (+' + pv.points + ' Punkte → ' + (pv.gained ? '+' + pv.gained + ' Upgrade' : 'kein Upgrade') + '). Tempel: Punkte ' + p.temple.points + ', Stufe ' + p.temple.level + ', nächste Stufe kostet ' + M.nextLevelCost(p.temple.level) + '"></button>';
+    sacArr = '<button class="arr" data-act="sacdn" title="Weniger opfern"' + (n > 0 ? '' : ' disabled') + '>◀</button>';
+    sacArr2 = '<button class="arr" data-act="sacup" title="Mehr opfern"' + (n < Math.min(s.gold, 4) ? '' : ' disabled') + '>▶</button>';
+  }
+  const hasUp = !compact && !!(hpPl || manaPl || limPl || sacCoin);
+  const hp = '<div class="statrow">' + lead(hpPl) + img('hp') + '<b data-pv="hp">' + Math.max(0, s.hp) + '/' + s.maxHp + '</b></div>';
+  const mana = '<div class="statrow">' + lead(manaPl) + img('mana') + '<b data-pv="mana">' + s.mana + '/' + s.maxMana + '</b></div>';
+  let h = '<h3><span class="hdr"><span class="hn">' + name + '</span>@@T@@@@G@@' + (p ? '<span class="hsp" title="Siegpunkte">★ <b>' + p.sp + '</b></span>' : '') + '</span></h3><div class="sbody' + (hasUp ? ' hasup' : '') + (sacCoin ? ' hassac' : '') + '"' + (compact ? '' : ' data-lead="1"') + '><div class="scol">';
   let ptsHdr = '';
   if (p) {   // offene Upgrade-Punkte, dahinter als Bruch der Fortschritt zur nächsten Tempelstufe; das Ergebnis eines Opfers zeigt die Vorschau beim Überfahren des Opfern-Knopfes
     const lvl = p.temple.level;
@@ -2589,18 +2618,10 @@ function statsBlock(name, s, p, size, up, full) {
     h += '<div class="statrow">' + img('gold') + '<b data-pv="gold">' + s.gold + '</b></div>' + hp + mana;   // gleiche Reihenfolge wie beim Spieler: Gold, HP, Mana, Limit
     h += '<div class="statrow">' + img('limit') + '<b data-pv="limit">' + s.limit + '</b>' + mk + mr + '</div>';
   } else {
-    let sac = '', sacBtn = '';
-    if (up && s.gold >= 1) {
-      const can = my;
-      const n = Math.max(0, Math.min(sacN, s.gold, 4)), pv = M.previewTemple(p, n);
-      sacBtn = '<button class="btn small sacbtn" data-act="temple" data-n="' + n + '" ' + (can && n > 0 ? '' : 'disabled') + ' title="Tempel: Punkte ' + p.temple.points + ', Stufe ' + p.temple.level + ', nächste Stufe kostet ' + M.nextLevelCost(p.temple.level) + '">Opfern</button>';
-      const stp = '<div class="stepper"><button class="arr" data-act="sacdn" ' + (n > 0 ? '' : 'disabled') + '>◀</button><b title="+' + pv.points + ' Punkte → ' + (pv.gained ? '+' + pv.gained + ' Upgrade' : 'kein Upgrade') + '">' + n + '</b><button class="arr" data-act="sacup" ' + (n < Math.min(s.gold, 4) ? '' : 'disabled') + '>▶</button></div>';
-      sac = '<div class="sacbox">' + stp + sacBtn + '</div>';
-    }
     const ph = '<span class="up ph"></span>';
     const tempRow = '';
     h = h.replace('@@T@@', tempRow);
-    h += '<div class="statrow">' + lead('') + img('gold') + '<b data-pv="gold">' + s.gold + '</b>' + sac + '</div>' + hp + mana;
+    h += '<div class="statrow">' + lead(sacArr + sacCoin + sacArr2) + img('gold') + '<b data-pv="gold">' + s.gold + '</b></div>' + hp + mana;
     h += '<div class="statrow">' + lead(limPl) + img('limit') + '<b data-pv="limit">' + s.limit + '</b>' + mk + mr + '</div>';
   }
   h = h.replace('@@G@@', '').replace('@@T@@', '');
@@ -2617,7 +2638,8 @@ function statsBlock(name, s, p, size, up, full) {
     }
     bd = bd.replace(/<\/div>$/, btn + '</div>');
   }
-  h += '</div><div class="bcol">' + bd + '</div></div>';
+  const aR = compact ? bsz / 2 + 11 : bsz / 2 + 23, aPad = Math.ceil(aR - bsz / 2 + 4);   // Bögen: beim Spieler außerhalb der Magie-Knöpfe, beim Gegner dicht am Brett
+  h += '</div><div class="bcol"><div class="bwrap" style="width:' + (bsz + 2 * aPad) + 'px;height:' + bsz + 'px">' + arcsHTML(s, bsz, aPad, aR) + bd.replace('<div class="bd" style="', '<div class="bd" style="left:' + aPad + 'px;') + '</div></div></div>';
   return h;
 }
 // Monstername mit Besonderheit; die Beschreibung erscheint beim Darüberfahren, für beide Spieler.
@@ -2642,6 +2664,35 @@ function sidePanels(cx) {
   return '<div class="panel" style="' + box(LAYOUT.mePanel, 'padding:6px 12px') + '">' + me + '</div>' +
     '<div class="panel" style="' + box(LAYOUT.oppPanel, 'padding:6px 12px;font-size:16px') + '">' + op.replace(/<h3>/, '<h3 style="font-size:17px;margin-bottom:2px">') + '</div>';
 }
+/* ---------- Vorschau-Blinken auf den Bögen von HP und Mana (seit 0.5.6.4) ----------
+   Solange Karten markiert sind, blendet der Mana-Anteil ihrer Kosten aus und ein (seit 0.5.6.5, zusammen mit dem roten Manawert). Beim Überfahren eines Knopfes (Verteidigen, Passen, Erholen, Nachziehen, Plus-Knöpfe) blendet auf dem HP- bzw. Mana-Bogen der betroffene Anteil aus und ein:
+   ein Stück über dem Bogen zwischen altem und neuem Wert (bei nur geändertem Maximum der neu hinzukommende Teil). Die Werte selbst bleiben bei der alten Darstellung (30-eingaben.js: weniger = rot, mehr = grün). */
+const ArcFx = (() => {
+  const FLASH = ['hp', 'mana'];
+  const num = t => { const m = /-?\d+/.exec(t); return m ? +m[0] : 0; };
+  const max = t => { const m = /\/\s*(\d+)/.exec(t); return m ? +m[1] : null; };
+  // betroffener Anteil als Bruchteil (0..1) der Bogenlänge
+  function region(oldT, nowT) {
+    const o = num(oldT), n = num(nowT), om = max(oldT), nm = max(nowT); if (om === null || !nm) return null;
+    if (n !== o) return { a: Math.max(0, Math.min(o, n) / nm), b: Math.min(1, Math.max(o, n) / nm) };
+    return om !== nm ? { a: Math.min(om, nm) / Math.max(om, nm), b: 1 } : null;
+  }
+  // el: der Wert (data-pv hp/mana) mit dem Vorschautext, oldText: der Text vor der Änderung („5/7“). Der Bogen zeigt noch den alten Stand:
+  // liegt der Anteil im gefüllten Teil (Verlust), blendet ein Stück in Hintergrundfarbe darüber ein und aus; sonst ein Stück in der Farbe des Bogens (Zuwachs)
+  // keep: das Stück bleibt bis zum nächsten Zeichnen stehen (Manakosten markierter Karten); eine Vorschau beim Überfahren legt dann kein zweites darüber
+  function mark(el, oldText, undos, keep) {
+    const key = el.dataset.pv; if (FLASH.indexOf(key) < 0) return;
+    const sb = el.closest('.sbody'), arc = sb && sb.querySelector('.arcv.' + key), reg = region(oldText, el.textContent);
+    if (!arc || !reg || reg.b <= reg.a || sb.querySelector('.arcfx.' + key + '[data-keep]')) return;
+    const om = max(oldText), filled = om ? reg.b <= num(oldText) / om + 1e-6 : false;
+    const n = arc.cloneNode(false); n.setAttribute('class', 'arcfx ' + key + (filled ? ' bg' : ''));
+    n.setAttribute('stroke-dasharray', ((reg.b - reg.a) * 100).toFixed(2) + ' 100'); n.setAttribute('stroke-dashoffset', (-reg.a * 100).toFixed(2));
+    if (keep) n.setAttribute('data-keep', '1');
+    arc.parentNode.insertBefore(n, arc.nextSibling);   // vor den Kerben, damit diese darüber liegen
+    if (undos) undos.push(() => n.remove());
+  }
+  return { mark };
+})();
 /* ---------- Weltphase: Bibliothek, Monster ---------- */
 function vendorPanel() {
   const p = G.players[ME];
@@ -3014,7 +3065,7 @@ const FlowFx = (() => {
   function at(el) { if (!el) return null; const r = el.getBoundingClientRect(), sr = stage.getBoundingClientRect(), k = sr.width / stage.offsetWidth; return { x: (r.left + r.width / 2 - sr.left) / k, y: (r.top + r.height / 2 - sr.top) / k }; }
   const panelOf = pid => pid === ME ? stage.querySelector('.sbody[data-lead]') : stage.querySelector('.sbody:not([data-lead])');
   const hpOf = pid => at(panelOf(pid) && panelOf(pid).querySelector('[data-pv="hp"]')) || { x: pid === ME ? 1000 : 1000, y: pid === ME ? 700 : 70 };
-  const markOf = pid => at(panelOf(pid) && (panelOf(pid).querySelector('.mk') || panelOf(pid).querySelector('.statrow'))) || { x: 1090, y: pid === ME ? 740 : 120 };
+  const markOf = pid => { const w = pid === ME ? 's' : 'o', q = deathPos(w, 0); return at(stage.querySelector('.deathtok[data-who="' + w + '"]')) || { x: q.x + 28, y: q.y + 28 }; };
   const drawOf = pid => { const L = pid === ME ? L_MY : L_OP; return pid === ME ? (at(stage.querySelector('.freedraw:not(.opp)')) || { x: L.draw.x + CW * L.ps / 2, y: L.draw.y - 20 }) : { x: L.draw.x + CW * L.ps / 2, y: L.draw.y + CH * L.ps / 2 }; };
   const pileOf = pid => { const L = pid === ME ? L_MY : L_OP; return { x: L.disc.x + CW * L.ps / 2, y: L.disc.y + CH * L.ps / 2 }; };
   const handOf = pid => { const L = pid === ME ? L_MY : L_OP; return { x: L.cx, y: L.y + CH * L.s / 2 }; };
@@ -3138,8 +3189,42 @@ const FlowFx = (() => {
       if (tu > 0) { ctx.save(); ctx.font = '700 22px Alegreya, serif'; ctx.textAlign = 'center'; ctx.fillStyle = rgba('#ffb347', tu); ctx.shadowColor = F; ctx.shadowBlur = 10; ctx.fillText('−' + n + (n === 1 ? ' Karte' : ' Karten'), T.x, T.y - 70 - 12 * seg(t, t0 + .1, t0 + 1)); ctx.restore(); }
     });
   }
+  /* Todes-Fluch zehrt: aus jedem Todesmarker steigt eine violette Wolke auf, zieht in weichem Bogen zur Lebensanzeige und schlägt dort ein (kein Text) */
+  const CURSE_F = .85, curseStart = i => .1 + i * .12;
+  const curseMs = n => Math.round(1000 * (curseStart(Math.max(0, n - 1)) + CURSE_F));   // Dauer bis zum Einschlag der letzten Wolke
+  function curse(fx) {
+    if (off()) return;
+    const who = fx.who, w = who === ME ? 's' : 'o', n = Math.max(1, Math.min(fx.n || 1, 4)), hp = hpOf(who), toks = [...stage.querySelectorAll('.deathtok[data-who="' + w + '"]')], C = '#a67bff', D = '#4a1f86';
+    const srcs = []; for (let i = 0; i < n; i++) { const q = deathPos(w, i); srcs.push(at(toks[i]) || { x: q.x + 28, y: q.y + 28 }); }
+    const life = .75, N = 36, dur = curseStart(n - 1) + CURSE_F + .65;
+    const puff = (ctx, x, y, r, a, col) => { if (a <= 0.01) return; const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, rgba(lighten(col, .3), a)); g.addColorStop(.45, rgba(col, a * .65)); g.addColorStop(1, rgba(D, 0)); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); };
+    run(dur, (ctx, t) => {
+      srcs.forEach((sr, i) => {
+        const d = curseStart(i), rr = rng(17 + i * 29), cx = (sr.x + hp.x) / 2 + (rr() - .5) * 90, cy = Math.min(sr.y, hp.y) - 60 - rr() * 50;
+        const bez = q => { const e = eio(clamp(q)); return [(1 - e) * (1 - e) * sr.x + 2 * (1 - e) * e * cx + e * e * hp.x, (1 - e) * (1 - e) * sr.y + 2 * (1 - e) * e * cy + e * e * hp.y]; };
+        const gl = seg(t, d - .12, d + .1) * (1 - seg(t, d + .1, d + .4));   // der Marker glimmt auf, wenn die Wolke aufsteigt
+        if (gl > 0) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; puff(ctx, sr.x, sr.y, 38, gl * .8, C); ctx.restore(); }
+        for (let k = 0; k < N; k++) {   // Schweif aus weichen Wolkenballen, die entlang der Bahn zurückbleiben, aufquellen und vergehen
+          const r = rng(900 + i * 97 + k * 7), ts = d + k / N * CURSE_F * .95, age = (t - ts) / life; if (age <= 0 || age >= 1) continue;
+          const [bx, by] = bez((ts - d) / CURSE_F), x = bx + (r() - .5) * 26 + Math.sin(k * 1.7 + age * 5) * 7 * age, y = by + (r() - .5) * 18 - 30 * age;
+          const rad = (9 + 24 * Math.pow(age, .7)) * (.75 + .6 * r()), al = Math.pow(1 - age, 1.4) * .6 * seg(age, 0, .08) * (1 - seg(t, d + CURSE_F, d + CURSE_F + .5) * .0);
+          puff(ctx, x, y, rad, al, k % 3 === 0 ? D : C);
+          if (k % 4 === 0) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; puff(ctx, x, y, rad * .45, al * .5, C); ctx.restore(); }
+        }
+        const tau = (t - d) / CURSE_F;
+        if (tau > 0 && tau < 1) { const [hx, hy] = bez(tau); ctx.save(); ctx.globalCompositeOperation = 'lighter'; puff(ctx, hx, hy, 22, .9, C); orb(ctx, hx, hy, 5, C, '#ffffff'); ctx.restore(); }
+        const im = seg(t, d + CURSE_F, d + CURSE_F + .55);   // Einschlag an der Lebensanzeige
+        if (im > 0 && im < 1) {
+          ctx.save(); ctx.globalCompositeOperation = 'lighter';
+          puff(ctx, hp.x, hp.y, 20 + 46 * eo(im), (1 - im) * .85, C);
+          ctx.strokeStyle = rgba(lighten(C, .5), (1 - im) * .9); ctx.lineWidth = 4 * (1 - im) + 1; ctx.shadowColor = C; ctx.shadowBlur = 12; ctx.beginPath(); ctx.ellipse(hp.x, hp.y, 14 + im * 62, 8 + im * 24, 0, 0, 7); ctx.stroke(); ctx.restore();
+          for (let k = 0; k < 7; k++) { const a = k / 7 * 6.28 + i, rd = 10 + 52 * eo(im); puff(ctx, hp.x + Math.cos(a) * rd, hp.y + Math.sin(a) * rd * .6, 10 * (1 - im) + 4, (1 - im) * .5, C); }
+        }
+      });
+    });
+  }
   const attack = fx => KampfFx.attack(fx), defense = fx => KampfFx.defense(fx), resetEx = () => KampfFx.reset();
-  return { lifeflow, aggro, drain, ruin, attack, defense, resetEx, wait: () => KampfFx.remaining(), busy: () => KampfFx.busy(), hp: pid => hpOf(pid) };
+  return { lifeflow, aggro, drain, ruin, curse, curseMs, attack, defense, resetEx, wait: () => KampfFx.remaining(), busy: () => KampfFx.busy(), hp: pid => hpOf(pid) };
 })();
 
 /* ---------- Kampffunken (Vorlage „Wucht“ aus der Kampfeffekt-Werkstatt): je Punkt ein Element-Funke von der Hand in die Mitte, Angriff und Verteidigung prallen aufeinander, der Rest trifft die HP ---------- */
@@ -3766,7 +3851,7 @@ function withComboHold(fn) {
     if (f.kind === 'aggro') { const v = sides.find(s => s.ctrl === f.to); if (v) v.deck.discard = v.deck.discard.slice(0, Math.max(0, v.deck.discard.length - 2 * Math.max(1, Math.min(3, f.n || 1)))); }   // Lähmung S legt 2 S Flüche
     else if (f.kind === 'ruin') c.forced = null;
     else if (f.kind === 'lifeflow' && h.pre) {
-      sides.forEach((s, i) => { const p = i ? h.pre.b : h.pre.a; ['death', 'mirror', 'mirrorEl', 'freeDraws'].forEach(k => { if (p[k] === undefined) delete s.stats[k]; else s.stats[k] = p[k]; }); });
+      if (f.removed > 0 || !(f.heal > 0)) sides.forEach((s, i) => { const p = i ? h.pre.b : h.pre.a; ['death', 'mirror', 'mirrorEl', 'freeDraws'].forEach(k => { if (p[k] === undefined) delete s.stats[k]; else s.stats[k] = p[k]; }); });
       const w = sides.find(s => s.ctrl === f.who); if (w && f.heal > 0) w.stats.hp = Math.max(0, w.stats.hp - f.heal);
     }
   }
@@ -3791,12 +3876,20 @@ function showFx() {
       } else go(f);
     });
     const m = /^(Spiegel|Todes-Fluch): /.exec(e.txt); if (!m) continue;
-    if (m[1] === 'Todes-Fluch') Snd.play('curse', 0, 0.95);   // Fluch-Sound, wenn der Todes-Fluch Schaden macht
+    if (m[1] === 'Todes-Fluch') {   // statt einer Textzeile: Wolke aus den Todesmarkern zur Lebensanzeige; die HP zeigen bis zum Einschlag noch den alten Stand
+      const nd = +((/verliert (\d+) HP/.exec(e.txt) || [0, 1])[1]), victim = e.pid, wait = FAST ? 0 : Math.round(1000 * FlowFx.wait()), fly = FlowFx.curseMs(nd);
+      Snd.play('curse', wait / 1000, 0.95);   // Fluch-Sound, wenn die Wolke losfliegt
+      if (!FAST) {
+        const now = Date.now(); curseHold[victim] = { until: now + wait + fly, add: nd };
+        setTimeout(() => FlowFx.curse({ who: victim, n: nd }), wait); setTimeout(() => { if (G) render(); }, 0); setTimeout(() => { if (G) render(); }, wait + fly + 60);
+      }
+      continue;
+    }
     const mirror = m[1] === 'Spiegel', victimMe = mirror ? e.pid !== ME : e.pid === ME;
-    const d = document.createElement('div'); d.className = 'fxnote ' + (mirror ? 'mirror' : 'death');
+    const d = document.createElement('div'); d.className = 'fxnote mirror';
     d.style.top = (victimMe ? 546 - k * 54 : 172 + k * 54) + 'px';
-    d.innerHTML = '<i>' + (mirror ? '⟲' : '☠') + '</i><span>' + esc(e.txt) + '</span>';
-    setTimeout(() => { stage.appendChild(d); setTimeout(() => d.remove(), 3300); }, mirror ? Math.round(1000 * FlowFx.wait()) : 0); k++;   // Spiegel-Hinweis erst nach dem Schild-Effekt
+    d.innerHTML = '<i>⟲</i><span>' + esc(e.txt) + '</span>';
+    setTimeout(() => { stage.appendChild(d); setTimeout(() => d.remove(), 3300); }, Math.round(1000 * FlowFx.wait())); k++;   // Spiegel-Hinweis erst nach dem Schild-Effekt
   }
   fxLast = G.logN;
 }
@@ -3817,9 +3910,14 @@ function render() {   // läuft der Ergebnis-Bildschirm, wird der Endstand des K
     upSeen = up;
   }
   if (!endView) {
-    if (hpHold && Date.now() < hpHold.until && G.phase === 'combat' && G.combat) {   // Schild-Effekt läuft: die HP-Werte zeigen noch den Stand vor dem Schaden
+    const hh = hpHold && Date.now() < hpHold.until, ch = G.phase === 'combat' && G.combat && Object.keys(curseHold).some(k => Date.now() < curseHold[k].until);
+    if ((hh || ch) && G.phase === 'combat' && G.combat) {   // Schild- oder Fluch-Effekt läuft: die HP-Werte zeigen noch den Stand vor dem Schaden
       const sides = [G.combat.sides.a, G.combat.sides.b], keep = sides.map(s => s.stats.hp);
-      sides.forEach(s => { if (hpHold.pre[s.ctrl] !== undefined && Date.now() < (hpHold.un[s.ctrl] || 0)) s.stats.hp = hpHold.pre[s.ctrl]; });
+      sides.forEach(s => {
+        const held = hh && hpHold.pre[s.ctrl] !== undefined && Date.now() < (hpHold.un[s.ctrl] || 0);
+        if (held) s.stats.hp = hpHold.pre[s.ctrl];
+        else if (curseHold[s.ctrl] && Date.now() < curseHold[s.ctrl].until) s.stats.hp = Math.min(s.stats.maxHp, s.stats.hp + curseHold[s.ctrl].add);   // Todes-Fluch: Wolke noch unterwegs
+      });
       try { withComboHold(renderInner); } finally { sides.forEach((s, i) => { s.stats.hp = keep[i]; }); }
     } else withComboHold(renderInner);
   }
@@ -3862,7 +3960,7 @@ function renderInner() {
     if (dthSeen && dthSeen.c === G.combat && dd > dthSeen.n) CurseFx.play();
     dthSeen = { c: G.combat, n: dd };
   } else { mkSeen = null; dthSeen = null; }
-  if (manaPv > 0 && cx.combat) { const mv = panels.querySelector('.sbody[data-lead] [data-pv="mana"]'), st = cx.myStats; if (mv) mv.innerHTML = '<span class="pvdn">' + Math.max(0, st.mana - manaPv) + '</span>/' + st.maxMana; }   // Mana nach dem Ausspielen in Rot
+  if (manaPv > 0 && cx.combat) { const mv = panels.querySelector('.sbody[data-lead] [data-pv="mana"]'), st = cx.myStats; if (mv) { mv.innerHTML = '<span class="pvdn">' + Math.max(0, st.mana - manaPv) + '</span>/' + st.maxMana; ArcFx.mark(mv, st.mana + '/' + st.maxMana, null, true); } }   // Mana nach dem Ausspielen in Rot; der Anteil auf dem Mana-Bogen blinkt dazu (seit 0.5.6.5)
   { const mine = panels.querySelector('.sbody[data-lead]');   // Knopfspalte weich ein- und ausfahren
     if (mine) { const now = mine.classList.contains('hasup'); if (leadPrev !== null && leadPrev !== now) { mine.classList.toggle('hasup', leadPrev); void mine.offsetWidth; mine.classList.toggle('hasup', now); } leadPrev = now; } }
   showFx();
@@ -3887,12 +3985,12 @@ function showStart(pg) {
   menuView = () => showStart(pg);
   const run = G && !G.over && !MP && started;
   const back = menuTo('main', 'Zurück');
-  let h = '<div class="box start"><h1>Magus</h1>';
+  let h = '<div class="box start"><h1>Trimagus</h1>';
   if (pg === 'main') {
     h += '<img class="logo" alt="" src="assets/img/logo.webp"><div class="menulist">' +
       (run ? menuBtn('resume', 'Spiel fortsetzen', '', 'primary') : '') +
       menuTo('single', 'Einzelspieler', run ? '' : 'primary') + menuTo('multi', 'Mehrspieler') + menuTo('settings', 'Einstellungen') + menuBtn('quit', 'Beenden') + '</div>' +
-      '<div class="menufoot">' + menuTo('about', 'Neu in Version 0.4.2', 'link') + '</div>';
+      '<div class="menufoot">' + menuTo('about', 'Neu in Version 0.5.7', 'link') + '</div>';
   } else if (pg === 'single') {
     h += '<h2>Einzelspieler</h2><div class="menulist">' +
       menuBtn('newgame', run ? 'Neues Spiel gegen den Computer' : 'Gegen den Computer spielen', '', run ? '' : 'primary') +
@@ -3905,7 +4003,7 @@ function showStart(pg) {
   } else if (pg === 'settings') {
     h += '<h2>Einstellungen</h2><div class="menulist">' + settingsHTML() + back + '</div>';
   } else if (pg === 'about') {
-    h += '<p class="note intro" style="margin-top:-2px"><b>Danke, dass du Magus testest!</b> <b>Neu in Version 0.4.1:</b> Keine Spieländerung: Vier weitere Ideen sind als Notizen festgehalten (Umbenennung in Trimagus, Upgrades höchstens 3, Start mit 3 Siegpunkten, Siegpunkt-Belohnung 2 in Stufe 2 und 3 in Stufe 3). <b>Neu in Version 0.4.2:</b> In der Verteidigung steht der <b>zu erwartende HP- und Mana-Verlust</b> schon vor dem Überfahren mit der Maus in den Werten (rot), und er ändert sich mit den markierten Karten. <b>Neu in Version 0.4:</b> Vier Regeländerungen. <b>Monster:</b> Die zweite Magie eines Monsters ist jetzt die <b>überlegene</b> (Feuer-Monster: Wasser, Erde-Monster: Feuer, Wasser-Monster: Erde). <b>Combo zuerst:</b> Auch in der Verteidigung wirkt der Combo-Effekt vor der Verteidigung selbst; die Heilung füllt die HP also auf, bevor der Schaden trifft, und ein Spiegel-Combo wirkt sofort gegen den laufenden Angriff. <b>Ausgleich:</b> Nach einer Niederlage gegen ein Monster erhält ihn nur noch der Verlierer. <b>Nur Gold:</b> Der Abschnittsbonus beträgt je Monster 1, 2 und 3 Gold (3, 6, 9 Gold je Abschnitt), der Ausgleich nach einer Niederlage 1, 2 und 3 Gold; es gibt keine Upgrade-Punkte mehr als Bonus. Computer neu abgestimmt. <b>Neu in Version 0.17:</b> Keine Spieländerung: Drei offene Punkte sind als Notizen festgehalten (Magierichtung der Monster, Combo zuerst auslösen, Ausgleich nach einer Monsterniederlage nur für den Verlierer und nur in Gold). <b>Neu in Version 0.16.2:</b> Der <b>Computer</b> geht mit den <b>Spiegeln je Farbe</b> um: Er zählt nur, was ein neuer Spiegel gegenüber dem schon liegenden bringt, gewichtet die Farbe danach, wie oft du sie spielst, und räumt mit der <b>Läuterung</b> deine Spiegel zuerst in der Farbe ab, mit der er selbst am stärksten angreift. Die Balance habe ich neu gemessen: Die Regeländerung verschiebt in Computer-Partien nichts messbar. <b>Neu in Version 0.16.1:</b> Das Limit der <b>Spiegelmarker</b> gilt jetzt <b>je Farbe</b>: Feuer- und Erde-Marker sind verschiedene Marker, es können also bis zu <b>3 Feuer- und 3 Erde-Marker</b> gleichzeitig liegen (bisher höchstens 3 insgesamt, sodass ein Erde-Spiegel den Feuer-Spiegel verhinderte). <b>Neu in Version 0.16:</b> Stehen die Angriffs- oder Verteidigungssymbole in <b>zwei Zeilen</b>, sind die Zeilen jetzt auch bei <b>7 und 9 Symbolen</b> gegeneinander versetzt (bisher nur bei gerader Zahl). <b>Neu in Version 0.15:</b> Die Vorschau beim Darüberfahren mit der Maus (Erholen, Nachziehen, Verteidigen, Passen) zeigt im Kampf jetzt die <b>richtigen Mana- und HP-Höchstwerte</b> des Monsters, das du führst. <b>Neu in Version 0.14.1:</b> Auch <b>gleiche Elemente</b> haben jetzt ihren eigenen Effekt: <b>Feuer gegen Feuer</b> ergibt einen <b>Feuerball</b>, der in alle Richtungen explodiert, <b>Erde gegen Erde</b> ein <b>Bersten</b> mit Brocken, Staub und Rissen im Boden, <b>Wasser gegen Wasser</b> eine <b>Woge</b> mit Tropfen und Ringwellen. Sind es so viele Angriffssymbole, dass sie in <b>zwei Zeilen</b> stehen, sind die Zeilen jetzt <b>gegeneinander versetzt</b>. <b>Neu in Version 0.14:</b> Treffen im Kampf zwei verschiedene Elemente aufeinander, hat jede Kombination ihren eigenen Effekt: <b>Feuer gegen Wasser</b> ergibt <b>Dampf</b>, <b>Feuer gegen Erde</b> <b>Lava</b> mit glühenden Brocken, Funken und Rauch, <b>Erde gegen Wasser</b> <b>Schlamm</b> mit Spritzern, einer Pfütze und Blasen. <b>Neu in Version 0.13:</b> Die <b>Vorschau</b>, die bisher nur bei Gold und Upgrade-Punkten erschien, zeigt jetzt auch weitere zu erwartende Änderungen: Fährst du mit der Maus über <b>Verteidigen</b>, <b>Passen</b>, <b>Erholen</b> oder den <b>Nachziehstapel</b>, erscheinen die zu erwartenden Änderungen von HP, Mana und Gold, sinkende Werte in <b>Rot</b>, steigende in <b>Grün</b>. Bei <b>rotem Nachziehmarker</b> kostet das Nachziehen im Kampf jetzt <b>1 Mana</b>, in der Weltphase bekommt der Gegner Gold. <b>Neu in Version 0.11:</b> Der <b>Computer</b> entscheidet sich in festgefahrenen Kämpfen schneller zum Angriff; lange Pattphasen, vor allem im ersten Abschnitt, werden dadurch seltener. Beim Spielstart <b>drehen sich die Monsterkarten</b> jetzt richtig um und die <b>Handkarten</b> drehen sich beim Austeilen und Aufdecken mit Schwung um.</p><div class="menulist">' + back + '</div>';
+    h += '<p class="note intro" style="margin-top:-2px"><b>Danke, dass du Trimagus testest!</b> <b>Neu in Version 0.5.7:</b> In der Verteidigung steht der <b>zu erwartende HP- und Mana-Verlust</b> schon vor dem Überfahren mit der Maus in den Werten und ändert sich mit den markierten Karten. <b>Neu in Version 0.5.6.6:</b> Beim Opfern zeigt der Münzknopf die Zahl der Münzen erst ab 2 als Plakette; bei 1 steht er ohne Zahl, bei 0 ist er durchsichtig. <b>Version 0.5.6.5:</b> Solange Karten markiert sind, blendet der Manapunkt, den sie kosten, auf dem Mana-Bogen aus und ein (zusammen mit dem roten Manawert). <b>Version 0.5.6.4:</b> Beim Überfahren eines Knopfes (Verteidigen, Passen, Erholen, Nachziehen, Plus-Knöpfe) blendet auf dem gebogenen HP- bzw. Mana-Balken der betroffene Anteil aus und ein, zum Beispiel der eine Manapunkt, den ein Angriff kostet. Die Werte erscheinen dabei weiter in Rot (weniger) oder Grün (mehr). <b>Version 0.5.5:</b> Die Würfelseite „Hand“ (mehr Handkarten) zeigt jetzt eine Hand statt dreier Karten. <b>Version 0.5.4.1:</b> Der Todes-Fluch zeigt keine Textzeile mehr: Aus jedem Todesmarker steigt eine violette Wolke auf, fliegt zur Lebensanzeige und zehrt dort die HP; bis zum Einschlag zeigt die Anzeige noch den alten Stand. <b>Version 0.5.4:</b> Die Heilung der Verteidigung wirkt wieder nach Angriff und Verteidigung: Sie gleicht den Schaden nachträglich aus (höchstens bis zu den maximalen HP). Die Zerrüttung und die übrigen Kombos wirken weiterhin davor. <b>Version 0.5.3.1:</b> Die Todesmarker stehen nicht mehr als kleine Symbole in der Limit-Zeile, sondern liegen als einzelne, größere Marker neben den Nachziehtokens auf dem Tisch (eigene über deinem Nachziehstapel, die des Gegners neben seinem). <b>Version 0.5.3:</b> Alle Knöpfe links (Opfern, HP, Mana, Limit) stehen jetzt auf einer Linie unter dem Münzknopf. HP und Mana stehen nicht mehr als Balken in den Zeilen, sondern als gebogene Linien links (HP) und rechts (Mana) neben der Magiescheibe. <b>Version 0.5.2.2:</b> Die Pfeile ◀ ▶ zum Opfern stehen jetzt links und rechts neben dem Münzknopf. <b>Version 0.5.2.1:</b> Die Versionsbeschreibung nennt nur noch die Versionen ab 0.4. <b>Version 0.5.2:</b> <b>Opfern wie die anderen Knöpfe:</b> Ein goldener Münzknopf steht links neben dem Gold, die Zahl der geopferten Münzen zeigt er als Plakette. Mit den Pfeilen ◀ ▶ daneben stellst du die Anzahl ein; die Schaltfläche „Opfern“ ist entfallen. <b>Version 0.5.1:</b> <b>Das Spiel heißt jetzt Trimagus.</b> Du startest mit <b>Ausspiellimit 1</b> (vorher 2). Jede Weiterentwicklung wird mit jedem Kauf teurer: die erste kostet 1 Gold, die zweite 2 Gold (gilt für Ausspiellimit, Handplätze, Nachziehlimit, max. HP und max. Mana; die Magie kostet wie bisher 1, 2, 3 … Upgrade-Punkte). Jede Entwicklung ist auf <b>Stufe 3</b> begrenzt, also auf zwei Ausbauten: Ausspiellimit 1 bis 3, Handplätze 3 bis 5, Nachziehlimit 1 bis 3, max. HP 4 bis 8, max. Mana 4 bis 6, Magie 1 bis 3. Die Monster behalten ihre Werte. Der Computer ist noch nicht neu abgestimmt. <b>Version 0.4.1:</b> Keine Spieländerung: Vier weitere Ideen sind als Notizen festgehalten (Umbenennung in Trimagus, Upgrades höchstens 3, Start mit 3 Siegpunkten, Siegpunkt-Belohnung 2 in Stufe 2 und 3 in Stufe 3). <b>Neu in Version 0.4:</b> Vier Regeländerungen. <b>Monster:</b> Die zweite Magie eines Monsters ist jetzt die <b>überlegene</b> (Feuer-Monster: Wasser, Erde-Monster: Feuer, Wasser-Monster: Erde). <b>Combo zuerst:</b> Auch in der Verteidigung wirkt der Combo-Effekt vor der Verteidigung selbst; die Heilung füllt die HP also auf, bevor der Schaden trifft, und ein Spiegel-Combo wirkt sofort gegen den laufenden Angriff. <b>Ausgleich:</b> Nach einer Niederlage gegen ein Monster erhält ihn nur noch der Verlierer. <b>Nur Gold:</b> Der Abschnittsbonus beträgt je Monster 1, 2 und 3 Gold (3, 6, 9 Gold je Abschnitt), der Ausgleich nach einer Niederlage 1, 2 und 3 Gold; es gibt keine Upgrade-Punkte mehr als Bonus. Computer neu abgestimmt.</p><div class="menulist">' + back + '</div>';
   } else if (pg === 'quit') {
     h += '<p class="note" style="text-align:center;font-size:19px">Danke fürs Spielen!<br>Ein Browser-Tab lässt sich vom Spiel aus nicht immer schließen. Schließe diesen Tab oder dieses Fenster einfach selbst.</p><div class="menulist">' + back + '</div>';
   }
@@ -4092,7 +4190,7 @@ let MP = null, roomApi;
 const MP_KEY = 'magus-mp';
 // Kennung dieser Spielversion: beide Geräte müssen denselben Programmtext haben, sonst rechnen sie unterschiedlich.
 const BUILD = (() => { let h = 2166136261; const t = [...document.scripts].map(x => x.text).join(''); for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); })();
-function mpOldVersion(who) { mpWait('Andere Spielversion', '<p class="bad">' + who + ' hat eine andere Version von Magus geladen.</p><p class="note">Bitte auf beiden Geräten die Seite mit Strg+F5 (Handy: Seite neu laden, notfalls Cache leeren) neu laden und danach einen neuen Raum erstellen.</p>'); }
+function mpOldVersion(who) { mpWait('Andere Spielversion', '<p class="bad">' + who + ' hat eine andere Version von Trimagus geladen.</p><p class="note">Bitte auf beiden Geräten die Seite mit Strg+F5 (Handy: Seite neu laden, notfalls Cache leeren) neu laden und danach einen neuen Raum erstellen.</p>'); }
 async function mpRoomApi() {
   if (roomApi) return roomApi;
   try { roomApi = window.claude && window.claude.use ? await window.claude.use('room') : null; } catch (e) { roomApi = null; }
@@ -4305,12 +4403,12 @@ function pvShow(b) {
   if (!st) return;
   const UK = M.upField(G) === 'gold' ? 'gold' : 'pts', undos = [], redo = (key, cost) => {   // sinkende Werte (Gold, Upgrade-Punkte) gleichzeitig rot markieren
     const el = stage.querySelector('[data-pv="' + key + '"]'); if (!el || !(cost > 0)) return;
-    const old = el.innerHTML, cur = key === 'gold' ? st.gold : st.pending;
-    el.innerHTML = '<span class="pvdn">' + Math.max(0, cur - cost) + '</span>'; undos.push(() => { el.innerHTML = old; });
+    const old = el.innerHTML, oldT = el.textContent, cur = key === 'gold' ? st.gold : st.pending;
+    el.innerHTML = '<span class="pvdn">' + Math.max(0, cur - cost) + '</span>'; undos.push(() => { el.innerHTML = old; }); ArcFx.mark(el, oldT, undos);
   };
   if (act === 'draw' || act === 'defend' || act === 'pass' || act === 'recover') {   // Kampfaktionen und Nachziehen: zu erwartende Veränderungen
     const pnl = pid => pid === ME ? stage.querySelector('.sbody[data-lead]') : stage.querySelector('.sbody:not([data-lead])');
-    const set = (pid, key, html) => { const p = pnl(pid), el = p && p.querySelector('[data-pv="' + key + '"]'); if (!el) return; const old = el.innerHTML; el.innerHTML = html; undos.push(() => { el.innerHTML = old; }); };
+    const set = (pid, key, html) => { const p = pnl(pid), el = p && p.querySelector('[data-pv="' + key + '"]'); if (!el) return; const old = el.innerHTML, oldT = el.textContent; el.innerHTML = html; undos.push(() => { el.innerHTML = old; }); ArcFx.mark(el, oldT, undos); };
     const cst = G.phase === 'combat' ? ctx().myStats : st;   // im Kampf zählen die Werte des geführten Monsters, nicht die Weltphasen-Werte des Spielers
     const dn = x => '<span class="pvdn">' + x + '</span>', up = x => '<span class="pvnew">' + x + '</span>';
     if (act === 'draw') {   // roter Nachziehmarker: im Kampf kostet es Mana, in der Weltphase bekommt der Gegner Gold
@@ -4326,14 +4424,14 @@ function pvShow(b) {
       const pd = myTurn() && G.phase === 'combat' ? M.previewDefense(G, act === 'pass') : null;
       if (!pd || pd.who !== ME) return;
       set(ME, 'mana', (pd.cost > 0 ? dn(Math.max(0, cst.mana - pd.cost)) : cst.mana) + '/' + cst.maxMana);   // beim Passen wird nichts gespielt, auch wenn Karten markiert sind
-      if (pd.leftover > 0 || pd.heal > 0) set(ME, 'hp', (pd.hpAfter < cst.hp ? dn(pd.hpAfter) : pd.hpAfter > cst.hp ? up(pd.hpAfter) : pd.hpAfter) + '/' + cst.maxHp);   // Heilung wirkt seit 0.4 vor dem Schaden (Kombo zuerst)
+      if (pd.leftover > 0 || pd.heal > 0) set(ME, 'hp', (pd.hpAfter < cst.hp ? dn(pd.hpAfter) : pd.hpAfter > cst.hp ? up(pd.hpAfter) : pd.hpAfter) + '/' + cst.maxHp);   // Heilung wirkt nach dem Schaden (seit 0.5.4) vor dem Schaden (Kombo zuerst)
       if (pd.refl > 0) { const cs = G.combat.sides.a.ctrl === pd.att ? G.combat.sides.a : G.combat.sides.b; set(pd.att, 'hp', dn(pd.attHpAfter) + '/' + cs.stats.maxHp); }
     }
   } else if (act === 'temple') {   // Opfern: Gold sinkt (rot), Upgrade-Punkte steigen (grün)
     const n = +b.dataset.n, pv = M.previewTemple(G.players[ME], n);
     redo('gold', n);
     const el = stage.querySelector('[data-pv="pts"]');
-    if (el && pv.gained > 0) { const old = el.innerHTML; el.innerHTML = '<span class="pvnew">' + (st.pending + pv.gained) + '</span>'; undos.push(() => { el.innerHTML = old; }); }
+    if (el && pv.gained > 0) { const old = el.innerHTML, oldT = el.textContent; el.innerHTML = '<span class="pvnew">' + (st.pending + pv.gained) + '</span>'; undos.push(() => { el.innerHTML = old; }); ArcFx.mark(el, oldT, undos); }
     const fr = stage.querySelector('[data-pv="frac"]');
     if (fr) { const old = fr.innerHTML; fr.innerHTML = '<span class="pvnew">' + fracHTML(pv.pool, pv.level) + '</span>'; undos.push(() => { fr.innerHTML = old; }); }
   } else if (act === 'magic') redo(M.magicField(G) === 'gold' ? 'gold' : 'pts', M.magicCost(G, st.mag[b.dataset.e], st));
@@ -4344,9 +4442,9 @@ function pvShow(b) {
     if (dot) { dot.classList.add('pv'); undos.push(() => dot.classList.remove('pv')); }
   } else if (act === 'spend' && (w === 'hp' || w === 'mana' || w === 'limit')) {
     const v = b.closest('.statrow') && b.closest('.statrow').querySelector('[data-pv="' + w + '"]'); if (!v) return;
-    const n = w === 'hp' ? (G.rules.hpPerPoint || 1) : 1, old = v.innerHTML;
+    const n = w === 'hp' ? (G.rules.hpPerPoint || 1) : 1, old = v.innerHTML, oldT = v.textContent;
     const g = x => '<span class="pvnew">' + x + '</span>';   // bei HP und Mana ändert sich nur das Maximum (Nenner)
-    v.innerHTML = w === 'hp' ? Math.max(0, st.hp) + '/' + g(st.maxHp + n) : w === 'mana' ? st.mana + '/' + g(st.maxMana + 1) : g(st.limit + 1); undos.push(() => { v.innerHTML = old; });
+    v.innerHTML = w === 'hp' ? Math.max(0, st.hp) + '/' + g(st.maxHp + n) : w === 'mana' ? st.mana + '/' + g(st.maxMana + 1) : g(st.limit + 1); undos.push(() => { v.innerHTML = old; }); ArcFx.mark(v, oldT, undos);
   } else if (act === 'spend' && w === 'slot') {
     const gh = stage.querySelector('.slotgh'); if (gh) { gh.classList.add('on'); undos.push(() => gh.classList.remove('on')); }
   }
@@ -4564,7 +4662,7 @@ const DiceKit = (() => {
     mana: '<path d="M24 5C32 16 38 23.5 38 30.5a14 14 0 0 1-28 0C10 23.5 16 16 24 5Z" fill="currentColor"/><path d="M17.5 31a6.5 6.5 0 0 0 5 6.2" fill="none" stroke="rgba(0,0,0,.28)" stroke-width="3" stroke-linecap="round"/>',
     limit: '<rect x="6" y="10" width="20" height="28" rx="3.5" fill="none" stroke="currentColor" stroke-width="3.4"/><path d="M30 24h13m-5.5-6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round"/>',
     draws: '<path d="M35.5 13.6 A15.5 15.5 0 1 0 37 32.4" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/><path d="M40.9 25.7L42 36.1L31.3 29.9Z" fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>',
-    hand: '<g fill="none" stroke="currentColor" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"><path d="M24 7.8A2.8 2.8 0 0 0 21.2 5H10.8 A2.8 2.8 0 0 0 8 7.8V24.2 A2.8 2.8 0 0 0 10.8 27"/><path d="M32 15.8A2.8 2.8 0 0 0 29.2 13H18.8 A2.8 2.8 0 0 0 16 15.8V32.2 A2.8 2.8 0 0 0 18.8 35"/><rect x="24" y="21" width="16" height="22" rx="2.8"/></g>',
+    hand: '<path d="M15 25V15M21.5 25V10M28 25V11.5M34.5 25V16.5" fill="none" stroke="currentColor" stroke-width="5.2" stroke-linecap="round"/><path d="M12.4 24h24.2v7.5c0 6.6-5.4 11.5-12.1 11.5S12.4 38 12.4 31.5z" fill="currentColor"/><path d="M13.5 32.5 7.5 25.5" fill="none" stroke="currentColor" stroke-width="5.4" stroke-linecap="round"/>',   // offene Hand (seit 0.5.5; vorher drei Karten)
     mag: '<path d="M24 42V11M11 24 24 11 37 24" fill="none" stroke="currentColor" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>',   // Magiestufe: Pfeil nach oben
     none: '',   // leere Seite: keine Grafik
   };

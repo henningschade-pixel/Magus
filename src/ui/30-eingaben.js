@@ -96,12 +96,12 @@ function pvShow(b) {
   if (!st) return;
   const UK = M.upField(G) === 'gold' ? 'gold' : 'pts', undos = [], redo = (key, cost) => {   // sinkende Werte (Gold, Upgrade-Punkte) gleichzeitig rot markieren
     const el = stage.querySelector('[data-pv="' + key + '"]'); if (!el || !(cost > 0)) return;
-    const old = el.innerHTML, cur = key === 'gold' ? st.gold : st.pending;
-    el.innerHTML = '<span class="pvdn">' + Math.max(0, cur - cost) + '</span>'; undos.push(() => { el.innerHTML = old; });
+    const old = el.innerHTML, oldT = el.textContent, cur = key === 'gold' ? st.gold : st.pending;
+    el.innerHTML = '<span class="pvdn">' + Math.max(0, cur - cost) + '</span>'; undos.push(() => { el.innerHTML = old; }); ArcFx.mark(el, oldT, undos);
   };
   if (act === 'draw' || act === 'defend' || act === 'pass' || act === 'recover') {   // Kampfaktionen und Nachziehen: zu erwartende Veränderungen
     const pnl = pid => pid === ME ? stage.querySelector('.sbody[data-lead]') : stage.querySelector('.sbody:not([data-lead])');
-    const set = (pid, key, html) => { const p = pnl(pid), el = p && p.querySelector('[data-pv="' + key + '"]'); if (!el) return; const old = el.innerHTML; el.innerHTML = html; undos.push(() => { el.innerHTML = old; }); };
+    const set = (pid, key, html) => { const p = pnl(pid), el = p && p.querySelector('[data-pv="' + key + '"]'); if (!el) return; const old = el.innerHTML, oldT = el.textContent; el.innerHTML = html; undos.push(() => { el.innerHTML = old; }); ArcFx.mark(el, oldT, undos); };
     const cst = G.phase === 'combat' ? ctx().myStats : st;   // im Kampf zählen die Werte des geführten Monsters, nicht die Weltphasen-Werte des Spielers
     const dn = x => '<span class="pvdn">' + x + '</span>', up = x => '<span class="pvnew">' + x + '</span>';
     if (act === 'draw') {   // roter Nachziehmarker: im Kampf kostet es Mana, in der Weltphase bekommt der Gegner Gold
@@ -117,14 +117,14 @@ function pvShow(b) {
       const pd = myTurn() && G.phase === 'combat' ? M.previewDefense(G, act === 'pass') : null;
       if (!pd || pd.who !== ME) return;
       set(ME, 'mana', (pd.cost > 0 ? dn(Math.max(0, cst.mana - pd.cost)) : cst.mana) + '/' + cst.maxMana);   // beim Passen wird nichts gespielt, auch wenn Karten markiert sind
-      if (pd.leftover > 0 || pd.heal > 0) set(ME, 'hp', (pd.hpAfter < cst.hp ? dn(pd.hpAfter) : pd.hpAfter > cst.hp ? up(pd.hpAfter) : pd.hpAfter) + '/' + cst.maxHp);   // Heilung wirkt seit 0.4 vor dem Schaden (Kombo zuerst)
+      if (pd.leftover > 0 || pd.heal > 0) set(ME, 'hp', (pd.hpAfter < cst.hp ? dn(pd.hpAfter) : pd.hpAfter > cst.hp ? up(pd.hpAfter) : pd.hpAfter) + '/' + cst.maxHp);   // Heilung wirkt nach dem Schaden (seit 0.5.4) vor dem Schaden (Kombo zuerst)
       if (pd.refl > 0) { const cs = G.combat.sides.a.ctrl === pd.att ? G.combat.sides.a : G.combat.sides.b; set(pd.att, 'hp', dn(pd.attHpAfter) + '/' + cs.stats.maxHp); }
     }
   } else if (act === 'temple') {   // Opfern: Gold sinkt (rot), Upgrade-Punkte steigen (grün)
     const n = +b.dataset.n, pv = M.previewTemple(G.players[ME], n);
     redo('gold', n);
     const el = stage.querySelector('[data-pv="pts"]');
-    if (el && pv.gained > 0) { const old = el.innerHTML; el.innerHTML = '<span class="pvnew">' + (st.pending + pv.gained) + '</span>'; undos.push(() => { el.innerHTML = old; }); }
+    if (el && pv.gained > 0) { const old = el.innerHTML, oldT = el.textContent; el.innerHTML = '<span class="pvnew">' + (st.pending + pv.gained) + '</span>'; undos.push(() => { el.innerHTML = old; }); ArcFx.mark(el, oldT, undos); }
     const fr = stage.querySelector('[data-pv="frac"]');
     if (fr) { const old = fr.innerHTML; fr.innerHTML = '<span class="pvnew">' + fracHTML(pv.pool, pv.level) + '</span>'; undos.push(() => { fr.innerHTML = old; }); }
   } else if (act === 'magic') redo(M.magicField(G) === 'gold' ? 'gold' : 'pts', M.magicCost(G, st.mag[b.dataset.e], st));
@@ -135,9 +135,9 @@ function pvShow(b) {
     if (dot) { dot.classList.add('pv'); undos.push(() => dot.classList.remove('pv')); }
   } else if (act === 'spend' && (w === 'hp' || w === 'mana' || w === 'limit')) {
     const v = b.closest('.statrow') && b.closest('.statrow').querySelector('[data-pv="' + w + '"]'); if (!v) return;
-    const n = w === 'hp' ? (G.rules.hpPerPoint || 1) : 1, old = v.innerHTML;
+    const n = w === 'hp' ? (G.rules.hpPerPoint || 1) : 1, old = v.innerHTML, oldT = v.textContent;
     const g = x => '<span class="pvnew">' + x + '</span>';   // bei HP und Mana ändert sich nur das Maximum (Nenner)
-    v.innerHTML = w === 'hp' ? Math.max(0, st.hp) + '/' + g(st.maxHp + n) : w === 'mana' ? st.mana + '/' + g(st.maxMana + 1) : g(st.limit + 1); undos.push(() => { v.innerHTML = old; });
+    v.innerHTML = w === 'hp' ? Math.max(0, st.hp) + '/' + g(st.maxHp + n) : w === 'mana' ? st.mana + '/' + g(st.maxMana + 1) : g(st.limit + 1); undos.push(() => { v.innerHTML = old; }); ArcFx.mark(v, oldT, undos);
   } else if (act === 'spend' && w === 'slot') {
     const gh = stage.querySelector('.slotgh'); if (gh) { gh.classList.add('on'); undos.push(() => gh.classList.remove('on')); }
   }

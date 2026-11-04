@@ -143,9 +143,9 @@ test('Läuterung: Todesmarker beider Seiten sind im Kampfbildschirm anklickbar',
       M.apply(G, { pid: 0, type: 'mark', slot: 0 }); M.apply(G, { pid: 0, type: 'mark', slot: 1 }); window.__magus.pump();
     });
     await p.waitForTimeout(300);
-    const ks = await p.$$eval('button.mkb.lf', e => e.map(x => x.dataset.k));
+    const ks = await p.$$eval('button.deathtok.lf', e => e.map(x => x.dataset.k));
     assert.equal(ks.filter(k => k === 'sd').length, 2, 'eigene Marker'); assert.equal(ks.filter(k => k === 'od').length, 3, 'gegnerische Marker');
-    await p.locator('button.mkb.lf').nth(4).click();
+    await p.locator('button.deathtok.lf').nth(4).click();
     assert.deepEqual(await p.evaluate(() => window.__magus.state.combat.lfp), ['od', 'od']);
     assert.deepEqual(errs, []);
   } finally { await b.close(); }
@@ -345,6 +345,41 @@ test('Vorschau beim Überfahren: Nachziehstapel bei rotem Marker (Gold des Gegne
     await p.evaluate(() => { const G = window.__magus.state, c = G.combat, me = c.sides.a; me.stats.mana = 3; c.action = 'attack'; c.color = null; c.pending = 0; window.__magus.pump(); });
     await p.hover('[data-act="recover"]');
     assert.equal(await p.locator('.sbody[data-lead] [data-pv="mana"] .pvnew').count(), 1, 'Mana nach dem Erholen in Grün');
+    assert.deepEqual(errs, []);
+  } finally { await b.close(); }
+});
+
+test('Vorschau auf den Bögen: Plus-Knopf (HP) und Angriff (Mana) lassen den betroffenen Anteil blinken, Werte nur farbig, nichts bleibt nach dem Verlassen', { skip: !chromium && 'Playwright nicht installiert', timeout: 90000 }, async () => {
+  const b = await chromium.launch({ executablePath: exe });
+  try {
+    const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
+    p.on('pageerror', e => errs.push(e.message));
+    await p.goto(url); await p.waitForTimeout(500);
+    await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(1000);
+    await p.evaluate(() => { window.__magus.state.players[0].stats.pending = 2; window.__magus.pump(); });
+    await p.waitForTimeout(200);
+    await p.hover('button.up[data-w="hp"]'); await p.waitForTimeout(300);
+    const a = await p.evaluate(() => ({ fx: [...document.querySelectorAll('.arcfx')].map(e => e.getAttribute('class')), tags: document.querySelectorAll('.pvd, .dlt').length, neu: document.querySelectorAll('.pvnew').length }));
+    assert.equal(a.fx.length, 1); assert.ok(a.fx[0].startsWith('arcfx hp'));   // höheres Maximum: der Anteil, der sich dadurch ändert
+    assert.equal(a.tags, 0); assert.ok(a.neu > 0);
+    await p.mouse.move(600, 100); await p.waitForTimeout(300);
+    assert.equal(await p.evaluate(() => document.querySelectorAll('.arcfx').length), 0);
+    // markierte Karten: ihre Manakosten blenden (mit dem roten Wert) auf dem Mana-Bogen aus und ein, auch ohne Überfahren eines Knopfes
+    await p.evaluate(() => {
+      const G = window.__magus.state, M = window.Magus;
+      M.apply(G, { pid: 0, type: 'combat', elem: 'F' });
+      const me = G.combat.sides.a; me.stats.limit = 2; me.stats.mag = { F: 3, E: 3, W: 3 };
+      me.deck.hand[0] = Object.assign({}, me.deck.hand[0], { id: 'F3' });
+      M.apply(G, { pid: 0, type: 'mark', slot: 0 }); window.__magus.pump();
+    });
+    await p.waitForTimeout(300);
+    const m = await p.evaluate(() => [...document.querySelectorAll('.arcfx')].map(e => e.getAttribute('class')));
+    assert.deepEqual(m, ['arcfx mana bg']);   // gefüllter Teil des Mana-Bogens, der verbraucht würde
+    await p.mouse.move(600, 100); await p.waitForTimeout(300);
+    assert.equal(await p.evaluate(() => document.querySelectorAll('.arcfx').length), 1, 'bleibt, solange die Karten markiert sind');
+    await p.evaluate(() => { window.Magus.apply(window.__magus.state, { pid: 0, type: 'mark', slot: 0 }); window.__magus.pump(); });   // Markierung aufheben
+    await p.waitForTimeout(300);
+    assert.equal(await p.evaluate(() => document.querySelectorAll('.arcfx').length), 0);
     assert.deepEqual(errs, []);
   } finally { await b.close(); }
 });
