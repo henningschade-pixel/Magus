@@ -31,7 +31,14 @@ function statsBlock(name, s, p, size, up, full) {
   const limPl = lc > 1 ? plc(up && anyT && pend > 0 && s.limit < M.MAX_LIMIT, pend >= lc, 'limit', '+1 Ausspiellimit', lc) : pl(up && anyT && pend >= lc && s.limit < M.MAX_LIMIT, 'limit', '+1 Ausspiellimit (' + one + ')');
   const sbar = (v, mx, cls) => '<div class="bar sb ' + cls + '"><i style="width:' + Math.max(0, v) / mx * 100 + '%"></i></div>';
   const lead = b => compact ? '' : '<span class="lead">' + (b || '') + '</span>';   // Upgrade-Knöpfe stehen links neben dem Symbol; ohne Knöpfe schrumpft die Spalte auf 0 (Ausrichtung wie beim Gegner)
-  const hasUp = !compact && !!(hpPl || manaPl || limPl);
+  // Opfern: goldener Münzknopf links neben dem Gold (wie die Upgrade-Knöpfe, die Zahl als Plakette); die Pfeile ◀ ▶ daneben stellen die Anzahl ein
+  let sacCoin = '', sacArr = '';
+  if (!compact && p && up && s.gold >= 1) {
+    const n = Math.max(0, Math.min(sacN, s.gold, 4)), pv = M.previewTemple(p, n), okS = my && n > 0;
+    sacCoin = '<button class="up gc sacbtn costly' + (okS ? '' : ' off') + '" data-act="temple" data-n="' + n + '" data-c="' + n + '"' + (okS ? '' : ' disabled') + ' title="Opfern: ' + n + ' Gold im Tempel (+' + pv.points + ' Punkte → ' + (pv.gained ? '+' + pv.gained + ' Upgrade' : 'kein Upgrade') + '). Tempel: Punkte ' + p.temple.points + ', Stufe ' + p.temple.level + ', nächste Stufe kostet ' + M.nextLevelCost(p.temple.level) + '"></button>';
+    sacArr = '<div class="stepper"><button class="arr" data-act="sacdn" title="Weniger opfern"' + (n > 0 ? '' : ' disabled') + '>◀</button><button class="arr" data-act="sacup" title="Mehr opfern"' + (n < Math.min(s.gold, 4) ? '' : ' disabled') + '>▶</button></div>';
+  }
+  const hasUp = !compact && !!(hpPl || manaPl || limPl || sacCoin);
   const hp = '<div class="statrow">' + lead(hpPl) + img('hp') + '<b data-pv="hp">' + Math.max(0, s.hp) + '/' + s.maxHp + '</b>' + sbar(s.hp, s.maxHp, '') + '</div>';
   const mana = '<div class="statrow">' + lead(manaPl) + img('mana') + '<b data-pv="mana">' + s.mana + '/' + s.maxMana + '</b>' + sbar(s.mana, s.maxMana, 'mana') + '</div>';
   let h = '<h3><span class="hdr"><span class="hn">' + name + '</span>@@T@@@@G@@' + (p ? '<span class="hsp" title="Siegpunkte">★ <b>' + p.sp + '</b></span>' : '') + '</span></h3><div class="sbody' + (hasUp ? ' hasup' : '') + '"' + (compact ? '' : ' data-lead="1"') + '><div class="scol">';
@@ -46,18 +53,10 @@ function statsBlock(name, s, p, size, up, full) {
     h += '<div class="statrow">' + img('gold') + '<b data-pv="gold">' + s.gold + '</b></div>' + hp + mana;   // gleiche Reihenfolge wie beim Spieler: Gold, HP, Mana, Limit
     h += '<div class="statrow">' + img('limit') + '<b data-pv="limit">' + s.limit + '</b>' + mk + mr + '</div>';
   } else {
-    let sac = '', sacBtn = '';
-    if (up && s.gold >= 1) {
-      const can = my;
-      const n = Math.max(0, Math.min(sacN, s.gold, 4)), pv = M.previewTemple(p, n);
-      sacBtn = '<button class="btn small sacbtn" data-act="temple" data-n="' + n + '" ' + (can && n > 0 ? '' : 'disabled') + ' title="Tempel: Punkte ' + p.temple.points + ', Stufe ' + p.temple.level + ', nächste Stufe kostet ' + M.nextLevelCost(p.temple.level) + '">Opfern</button>';
-      const stp = '<div class="stepper"><button class="arr" data-act="sacdn" ' + (n > 0 ? '' : 'disabled') + '>◀</button><b title="+' + pv.points + ' Punkte → ' + (pv.gained ? '+' + pv.gained + ' Upgrade' : 'kein Upgrade') + '">' + n + '</b><button class="arr" data-act="sacup" ' + (n < Math.min(s.gold, 4) ? '' : 'disabled') + '>▶</button></div>';
-      sac = '<div class="sacbox">' + stp + sacBtn + '</div>';
-    }
     const ph = '<span class="up ph"></span>';
     const tempRow = '';
     h = h.replace('@@T@@', tempRow);
-    h += '<div class="statrow">' + lead('') + img('gold') + '<b data-pv="gold">' + s.gold + '</b>' + sac + '</div>' + hp + mana;
+    h += '<div class="statrow">' + lead(sacCoin) + img('gold') + '<b data-pv="gold">' + s.gold + '</b>' + sacArr + '</div>' + hp + mana;
     h += '<div class="statrow">' + lead(limPl) + img('limit') + '<b data-pv="limit">' + s.limit + '</b>' + mk + mr + '</div>';
   }
   h = h.replace('@@G@@', '').replace('@@T@@', '');

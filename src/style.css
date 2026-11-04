@@ -159,11 +159,8 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .upgpts{position:absolute;display:flex;align-items:center;gap:2px;color:var(--good);font-size:28px;pointer-events:auto;z-index:70}
 .upgpts img{width:34px;height:50px;object-fit:contain}
 
-/* Opfern: Auswahl links, Knopf rechts, zusammen so lang wie die Balken */
-.sacbox{flex:1;display:flex;align-items:center;justify-content:space-between;min-width:0}
-.sacbox .stepper{flex:none;display:flex;align-items:center;gap:1px;justify-content:flex-start;font-size:16px;color:var(--gold)}
-.sacbox .stepper b{min-width:0;color:#fff}
-.sacbox .sacbtn{margin:0;padding:0 5px;font-size:13px;line-height:20px}
+/* Opfern: goldener Münzknopf (Klasse up gc sacbtn) links neben dem Gold, die Pfeile ◀ ▶ stehen rechts neben der Goldzahl */
+.stepper{flex:none;display:flex;align-items:center;gap:2px;font-size:16px;color:var(--gold)}
 .arr{background:none;border:0;color:var(--gold);font-size:12px;padding:0 1px;cursor:var(--cp)}.arr:disabled{opacity:.3;cursor:var(--cd)}.arr:hover:not(:disabled){color:#fff}
 
 /* Monster */

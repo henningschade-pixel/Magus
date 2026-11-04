@@ -309,3 +309,8 @@ Das Spiel heißt jetzt **Trimagus** (Repository und Adresse bleiben „Magus“;
 - **Höchstens Stufe 3, also zwei Ausbauten je Entwicklung** (`MAX_UPGRADES` 2): Ausspiellimit 1 bis 3 (`MAX_LIMIT` 3, vorher 5), Handplätze 3 bis 5, Nachziehlimit 1 bis 3, max. HP 4 / 6 / 8 (+2 je Ausbau), max. Mana 4 / 5 / 6, Magie 1 bis 3. Für Spiegel-Marker galt Stufe 3 schon.
 - **Monster unverändert:** Sie behalten ihre Werte; ihr Limit darf weiter bis 5 reichen (`MONSTER_MAX_LIMIT`).
 - **Computer nicht neu abgestimmt:** Die KI-Strategien und die Monster sind noch auf Spieler mit Ausspiellimit 2 abgestimmt. Neu messen: `npm run balance`, Golden-Dateien mit `npm run golden` neu erzeugen.
+
+
+## Änderungen 0.5.2 (04.11.)
+
+Keine Regeländerung, nur die Bedienung des Tempels: Das Opfern läuft wie die Upgrade-Knöpfe. Ein goldener **Münzknopf** steht links neben dem Gold; die Zahl der geopferten Münzen (0 bis 4) zeigt er als Plakette. Die Pfeile ◀ ▶ rechts neben der Goldzahl stellen die Anzahl ein. Die Schaltfläche „Opfern“ ist entfallen.
