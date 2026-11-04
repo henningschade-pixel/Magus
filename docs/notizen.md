@@ -2,6 +2,12 @@
 
 Gedanken zu Regeln und Balance, über die noch nicht entschieden ist. Neue Einträge oben.
 
+## Offene Punkte aus dem Spiel (04.11.)
+
+- **Monster mit erhöhter Magierichtung:** Ein Monster, das eine erhöhte Magierichtung hat, sollte die überlegene Magierichtung ausgebaut haben, nicht die unterlegene. Zu prüfen: Wo wird die erhöhte Richtung beim Monster bestimmt, und warum kann dort die unterlegene Richtung ausgebaut sein?
+- **Combo zuerst:** Eine Combo sollte als erstes getriggert werden. Schwierig ist das vor allem bei der Heilung, die momentan eher als Verteidigung wirkt. Zu prüfen: Reihenfolge der Auflösung im Kampf, und wie die Heilung dabei eingeordnet wird.
+- **Ausgleich bei Monsterniederlage:** Der Ausgleich gegen eine Monsterniederlage sollte nur für den Verlierer gelten. Zu prüfen: Soll er nur in Form von Gold und nicht in Form von Tempelpunkten ausgezahlt werden, weil Tempelpunkte tendenziell knapp sind?
+
 ## Beobachtung aus einem Kampf (17.10.)
 
 Möglicher Schneeballeffekt (wer vorne liegt, baut den Vorsprung aus). Im Kampf kam nicht ein einziges Mal Überverteidigung mit den Schilden vor, also kein Rückwurf. Die Ultimate wurde nicht erreicht. Zu prüfen: Wie oft kommen Rückwurf und Ultimate in KI-Partien vor, und lohnt sich dafür eine Regel- oder Kostenänderung (siehe Rückwurf-Kosten unten)?
