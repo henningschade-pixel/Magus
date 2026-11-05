@@ -16,7 +16,7 @@ function boardHTML(mag, size, sp) {
     const lv = i + 1;
     h += '<i class="rg ' + (lv <= mag[e] ? 'on' : 'off') + '" data-e="' + e + '" data-lv="' + lv + '" style="left:' + (gx * k - dr).toFixed(1) + 'px;top:' + (gy * k - dr).toFixed(1) + 'px;width:' + (2 * dr).toFixed(1) + 'px;height:' + (2 * dr).toFixed(1) + 'px"></i>';
   });
-  if (sp != null) h += '<div class="bsp" title="Siegpunkte" style="font-size:' + (size * 0.17).toFixed(1) + 'px"><span>★</span><b>' + sp + '</b></div>';
+  if (sp != null) h += '<div class="bsp" title="Siegpunkte" style="font-size:' + (size * 0.24).toFixed(1) + 'px"><b>' + sp + '</b></div>';
   return h + '</div>';
 }
 // HP (links, rot) und Mana (rechts, blau) als gebogene Linien neben der Magiescheibe: je ein Bogen von 90 Grad, von unten nach oben gefüllt; feine Kerben trennen die einzelnen Punkte.

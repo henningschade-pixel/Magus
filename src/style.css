@@ -116,7 +116,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .pvnew{color:var(--good);font-weight:700}
 .pvfl{position:absolute;z-index:270;pointer-events:none;color:var(--good);font-weight:700;font-size:18px;background:rgba(14,10,22,.92);border:1px solid var(--good);border-radius:8px;padding:3px 9px;white-space:nowrap}
 .rg.on{box-shadow:0 0 5px 1px #f2c850aa}
-.bsp{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;line-height:.82;pointer-events:auto;cursor:help;text-shadow:0 0 4px #000,0 0 2px #000}.bsp span{display:block;font-size:.62em;color:var(--mute)}.bsp b{display:block;color:var(--gold);font-weight:700}
+.bsp{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);text-align:center;line-height:1;pointer-events:auto;cursor:help;text-shadow:0 0 4px #000,0 0 2px #000}.bsp b{display:block;color:var(--gold);font-weight:700}
 .lfsel{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;flex-basis:100%}.lfsel .mini{font-size:13px;padding:2px 7px}.mini{font:700 14px Alegreya,serif;padding:2px 8px;border-radius:10px;border:1px solid #8a7a50;background:#2b2b30;color:#d8c9a0;cursor:var(--cp)}.mini.on{background:#e8c35a;color:#2a1a05}
 .mr{color:#7fd4ff;font-size:18px;font-weight:700;margin-left:8px;white-space:nowrap;cursor:help}
 .lead{display:inline-flex;flex:none;width:0;overflow:hidden;margin-right:-6px;justify-content:center;transition:width .28s ease,margin .28s ease}   /* alle Knöpfe der Spalte sitzen mittig auf einer senkrechten Linie unter dem Münzknopf */
