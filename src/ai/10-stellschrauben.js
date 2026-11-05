@@ -51,7 +51,7 @@ const DEFAULTS = {
   // Patt-Sicherung: Nach so vielen Weltphasen-Zügen ohne entschiedenen Kampf flieht die KI nicht mehr (sonst
   // konnte ein Spieler, der Gold aus roten Nachziehmarkern des Gegners in HP umsetzt, endlos angreifen und
   // fliehen)
-  fleeIdle: 120,
+  fleeIdle: 30,
   // Fliehen: ab so vielen Kampfschritten ohne brauchbaren Angriff gegen ein Monster ohne Mana (999 = nie; im
   // Selbstspiel verlor die KI mit 14 Schritten 48 %, mit 6 Schritten 42 %)
   fleeT: 999,
@@ -76,7 +76,7 @@ const DEFAULTS = {
   // fleeL × so viele Züge braucht wie das Monster oder das Monster höchstens fleeLHp HP hat, und er selbst
   // mindestens fleeLMana Mana hat. fleeW: Abschlag beim Angriffswunsch je Zug, den das Monster in der Prognose
   // vorn liegt
-  fleeA: 1, fleeA0: 0, fleeW: 0, fleeL: 0, fleeLHp: 2, fleeLMana: 0,
+  fleeA: 2, fleeA0: 0, fleeW: 0, fleeL: 0, fleeLHp: 2, fleeLMana: 0,
   // Fliehen nach Bewertung der Ausgänge (Sieg > Flucht > Niederlage, in Siegpunkten), fleeEV 1 als Gegner des
   // Monsters, 2 als Monsterführer, 3 beides: evLoot Wert der Beute, evHp Wert der vollen HP (eine Niederlage
   // kostet sie), fleeVA Wert der Flucht für den Gegner des Monsters (0 = nur Niederlage abwenden), fleeVL
