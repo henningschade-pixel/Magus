@@ -1,6 +1,6 @@
-# Trimagus
+# Magus
 
-(Bis Version 0.4.1 hieß das Spiel „Magus“. Repository und Adresse behalten den alten Namen.)
+(Von Version 0.5.1 bis 0.5.7.2 hieß das Spiel zeitweise „Trimagus“; seit Version 0.5.7.3 heißt es wieder Magus.)
 
 Duellspiel aus Magie, Monstern und Showdowns für zwei Personen (gegen den Computer oder zu zweit online). Gespielt wird im Browser: **https://henningschade-pixel.github.io/Magus/**
 

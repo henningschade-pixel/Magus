@@ -4,7 +4,7 @@ Gedanken zu Regeln und Balance, über die noch nicht entschieden ist. Neue Eintr
 
 ## Weitere Ideen (04.11.)
 
-- **Umbenennung:** Das Spiel soll auf „Trimagus“ umbenannt werden.
+- **Umbenennung:** Das Spiel sollte auf „Trimagus“ umbenannt werden (umgesetzt in 0.5.1, zurückgenommen in 0.5.7.3: es heißt wieder Magus).
 - **Upgrades:** Jedes Upgrade soll auf höchstens 3 begrenzt werden.
 - **Start:** Beide beginnen mit 3 Siegpunkten.
 - **Siegpunkt-Belohnung:** In Stufe 2 soll sie 2 betragen, in Stufe 3 soll sie 3 betragen.

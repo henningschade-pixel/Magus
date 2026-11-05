@@ -1,4 +1,4 @@
-# Trimagus (bis 0.4.1 „Magus“) – Regelwerk (Stand v8, 20.10.2026; Version 0.5.1: Stufe 3 als Maximum)
+# Magus – Regelwerk (Stand v8, 20.10.2026; Version 0.5.1: Stufe 3 als Maximum)
 
 Dies ist die maßgebliche Fassung der Regeln. Sie ersetzt das Claude-Docs-Dokument „Magus – Regelwerk (bereinigte Fassung)“, dessen Export als Archiv in `docs/regelwerk-v6-aus-claude-docs.md` liegt (Regelstand v6, dort steht auch die gesamte Änderungsgeschichte bis v6). Die Zahlen stehen als Regelflags in `DEFAULT_RULES` und als Abstimmungsdaten (`MONSTER`) in `index.html`.
 
@@ -302,7 +302,7 @@ Treffen Angriff und Verteidigung im **gleichen Element** aufeinander, wählt `cl
 
 ## Änderungen 0.5.1 (04.11.)
 
-Das Spiel heißt jetzt **Trimagus** (Repository und Adresse bleiben „Magus“; die Namen im Code, `Magus` und `MagusAI`, bleiben).
+Das Spiel hieß ab hier **Trimagus**; seit 0.5.7.3 heißt es wieder **Magus** (Repository, Adresse und Namen im Code, `Magus` und `MagusAI`, blieben immer gleich).
 
 - **Ausspiellimit startet bei 1** (`startLimit` 1, vorher 2). Damit geht zu Beginn nur eine Karte je Zug; die Bibliothek verlangt für „2 gleiche Karten“ Limit 2 (Tausch mit der überlegenen Vorstufe geht mit einer Karte).
 - **Steigende Kosten überall:** Jeder Kauf einer Entwicklung verteuert die nächste um den Grundpreis, also **1 Gold für den ersten Ausbau, 2 Gold für den zweiten**. Das gilt jetzt auch für das Ausspiellimit (`limitCost` 1, vorher 2; Folge 2, 4, 6). Für Handplätze, Nachziehlimit, max. HP und max. Mana galt es schon (`priceRise` 1). Die Magie kostet unverändert 1, 2, 3 … Upgrade-Punkte (unabhängig von Element und Stufe).

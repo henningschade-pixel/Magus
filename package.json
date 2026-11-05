@@ -1,7 +1,7 @@
 {
   "name": "magus",
   "private": true,
-  "description": "Trimagus (früher Magus) – Duellspiel aus Magie, Monstern und Showdowns (eine HTML-Datei, gebaut aus src/)",
+  "description": "Magus – Duellspiel aus Magie, Monstern und Showdowns (eine HTML-Datei, gebaut aus src/)",
   "scripts": {
     "build": "node tools/build.js",
     "build:kartendreh": "node tools/build-kartendreh-werkstatt.js",
