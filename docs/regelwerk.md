@@ -323,3 +323,8 @@ Keine Regeländerung, nur die Bedienung des Tempels: Das Opfern läuft wie die U
 ## Änderung 0.5.7 (04.11.)
 
 - **Dauerhafte Verteidigungs-Vorschau:** Ist der Mensch in der Verteidigung am Zug, stehen der zu erwartende HP-Verlust und die Mana-Kosten schon ohne Überfahren in den Werten (rot, Spiegelrückwurf beim Angreifer). Mit markierten Karten gilt die Vorschau von „Verteidigen“, sonst die von „Passen“. Beim Überfahren der Knöpfe gilt weiter deren Vorschau. (`pvSticky` in `src/ui/30-eingaben.js`)
+
+
+## Änderung 0.6 (05.11.)
+
+Keine Regeländerung, nur die Darstellung: Das Magie-Board ist die Grafik „Dreifacher Ouroboros mit Runenkern“ (`assets/img/board.webp`). Feuer liegt oben (rot), Erde rechts unten (grün), Wasser links unten (blau); je Element ein Edelstein pro Ring, innen Stufe 1, außen Stufe 3. Erreichte Stufen leuchten, die übrigen sind abgedunkelt; die Vorschau beim Überfahren des Magie-Knopfes markiert den nächsten Stein grün. Die Siegpunkte stehen jetzt in der Mitte des Rings statt in der Kopfzeile des Panels (nur bei Spielern, Monster haben keine). Die Kaufknöpfe der Magie sitzen auf dem Drachenkörper in Richtung des Elements. Die Boards sind etwas größer (`boardMe` 132, `boardOpp` 116). (`boardHTML` in `src/ui/16-seitenleisten.js`)

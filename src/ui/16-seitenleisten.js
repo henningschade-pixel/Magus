@@ -6,16 +6,17 @@ function discBox(gold, cx, cy, diam) {
   const bz = diam * 64 / 61, bh = bz * 71 / 64;
   return 'left:' + (cx - bz * 32.5 / 64).toFixed(1) + 'px;top:' + (cy - bz * 31 / 64).toFixed(1) + 'px;width:' + bz.toFixed(1) + 'px;height:' + bh.toFixed(1) + 'px';
 }
-function boardHTML(mag, size) {
-  const dr = size * 0.036, orbit = size * 0.11, gap = size * 0.079;
+// Magie-Board (seit 0.6: dreifacher Ouroboros). Die Grafik ist 1254 × 1254 mit der Ringmitte in der Bildmitte; die Edelsteine (Stufe 1 innen, Stufe 3 außen) liegen bei diesen Bildpunkten, Radius 31. Erreichte Stufen leuchten, die übrigen sind abgedunkelt; die Siegpunkte stehen in der freien Mitte.
+const BOARD_GEMS = { F: [[628, 397], [628, 311], [628, 222]], E: [[828.6, 750.5], [909.5, 789.3], [987.3, 834.6]], W: [[422, 750], [342, 786.4], [267.8, 832]] };
+const BOARD_PX = 1254, BOARD_GEM_R = 33;
+function boardHTML(mag, size, sp) {
+  const k = size / BOARD_PX, dr = BOARD_GEM_R * k;
   let h = '<div class="bd" style="width:' + size + 'px;height:' + size + 'px" title="Magie: Feuer oben, Erde rechts unten, Wasser links unten"><img src="' + IMG.board + '">';
-  [['F', 0], ['E', 120], ['W', 240]].forEach(([e, a]) => {
-    const ang = (a - 90) * Math.PI / 180;
-    for (let lv = 1; lv <= 3; lv++) {
-      const r = orbit + lv * gap, x = size / 2 + Math.cos(ang) * r, y = size / 2 + Math.sin(ang) * r;
-      h += '<i class="rg' + (lv <= mag[e] ? ' on' : '') + '" data-e="' + e + '" data-lv="' + lv + '" style="left:' + (x - dr - 1) + 'px;top:' + (y - dr - 1) + 'px;width:' + (2 * dr + 2) + 'px;height:' + (2 * dr + 2) + 'px"></i>';
-    }
+  for (const e of ['F', 'E', 'W']) BOARD_GEMS[e].forEach(([gx, gy], i) => {
+    const lv = i + 1;
+    h += '<i class="rg ' + (lv <= mag[e] ? 'on' : 'off') + '" data-e="' + e + '" data-lv="' + lv + '" style="left:' + (gx * k - dr).toFixed(1) + 'px;top:' + (gy * k - dr).toFixed(1) + 'px;width:' + (2 * dr).toFixed(1) + 'px;height:' + (2 * dr).toFixed(1) + 'px"></i>';
   });
+  if (sp != null) h += '<div class="bsp" title="Siegpunkte" style="font-size:' + (size * 0.17).toFixed(1) + 'px"><span>★</span><b>' + sp + '</b></div>';
   return h + '</div>';
 }
 // HP (links, rot) und Mana (rechts, blau) als gebogene Linien neben der Magiescheibe: je ein Bogen von 90 Grad, von unten nach oben gefüllt; feine Kerben trennen die einzelnen Punkte.
@@ -54,7 +55,7 @@ function statsBlock(name, s, p, size, up, full) {
   const hasUp = !compact && !!(hpPl || manaPl || limPl || sacCoin);
   const hp = '<div class="statrow">' + lead(hpPl) + img('hp') + '<b data-pv="hp">' + Math.max(0, s.hp) + '/' + s.maxHp + '</b></div>';
   const mana = '<div class="statrow">' + lead(manaPl) + img('mana') + '<b data-pv="mana">' + s.mana + '/' + s.maxMana + '</b></div>';
-  let h = '<h3><span class="hdr"><span class="hn">' + name + '</span>@@T@@@@G@@' + (p ? '<span class="hsp" title="Siegpunkte">★ <b>' + p.sp + '</b></span>' : '') + '</span></h3><div class="sbody' + (hasUp ? ' hasup' : '') + (sacCoin ? ' hassac' : '') + '"' + (compact ? '' : ' data-lead="1"') + '><div class="scol">';
+  let h = '<h3><span class="hdr"><span class="hn">' + name + '</span>@@T@@@@G@@</span></h3><div class="sbody' + (hasUp ? ' hasup' : '') + (sacCoin ? ' hassac' : '') + '"' + (compact ? '' : ' data-lead="1"') + '><div class="scol">';
   let ptsHdr = '';
   if (p) {   // offene Upgrade-Punkte, dahinter als Bruch der Fortschritt zur nächsten Tempelstufe; das Ergebnis eines Opfers zeigt die Vorschau beim Überfahren des Opfern-Knopfes
     const lvl = p.temple.level;
@@ -74,19 +75,19 @@ function statsBlock(name, s, p, size, up, full) {
   }
   h = h.replace('@@G@@', '').replace('@@T@@', '');
   const bsz = size || 140;
-  let bd = boardHTML(s.mag, bsz);
+  let bd = boardHTML(s.mag, bsz, p ? p.sp : null);
   if (up && my) {
     const dir = { F: -90, E: 30, W: 150 }, diam = 26;   // Richtung wie die Ringe auf dem Brett (Linie von der Mitte durch die Magie); die Scheibe misst 26 px und liegt ganz auf dem äußeren Randband des Bretts (Band von 0,431 bis 0,475 der Bildgröße)
     let btn = '';
     for (const e of M.ELEMENTS) {
       const MF = M.magicField(G), lv = s.mag[e], mc = M.magicCost(G, lv, s), ok = s[MF] >= mc; if (lv >= M.MAX_MAGIC || s[MF] <= 0) continue;   // wie die Upgrade-Knöpfe: sichtbar, sobald die Währung (Gold, mit swapCosts Upgrade-Punkte) da ist; zu teure Stufen durchscheinend und gesperrt
-      const ang = dir[e] * Math.PI / 180, r = bsz * 0.431 + diam / 2;   // innere Kante der Scheibe liegt auf der inneren Kante des Randbands (0,431 der Bildgröße): sie berührt nur den äußeren Rand, nicht das Innere
+      const ang = dir[e] * Math.PI / 180, r = bsz * 0.405;   // seit 0.6: Mitte der Scheibe auf dem Drachenkörper in Richtung der Magie, knapp außerhalb des äußeren Kupferrings (Radius 0,32 der Bildgröße)
       const x = bsz / 2 + Math.cos(ang) * r, y = bsz / 2 + Math.sin(ang) * r;
       btn += '<button class="up mg ' + (MF === 'gold' ? 'gd' : 'pt') + (mc > 1 ? ' costly' : '') + (ok ? '' : ' off') + '"' + (mc > 1 ? ' data-c="' + mc + '"' : '') + (ok ? '' : ' disabled') + ' style="' + discBox(MF === 'gold', x, y, diam) + '" data-act="magic" data-e="' + e + '" title="' + NAMES[e] + ' Stufe ' + (lv + 1) + ' kaufen (' + M.payTxt(G, MF, mc) + (ok ? '' : ', du hast ' + s[MF]) + ')"></button>';
     }
     bd = bd.replace(/<\/div>$/, btn + '</div>');
   }
-  const aR = compact ? bsz / 2 + 11 : bsz / 2 + 23, aPad = Math.ceil(aR - bsz / 2 + 4);   // Bögen: beim Spieler außerhalb der Magie-Knöpfe, beim Gegner dicht am Brett
+  const aR = bsz / 2 + 11, aPad = Math.ceil(aR - bsz / 2 + 4);   // Bögen: beim Spieler außerhalb der Magie-Knöpfe, beim Gegner dicht am Brett
   h += '</div><div class="bcol"><div class="bwrap" style="width:' + (bsz + 2 * aPad) + 'px;height:' + bsz + 'px">' + arcsHTML(s, bsz, aPad, aR) + bd.replace('<div class="bd" style="', '<div class="bd" style="left:' + aPad + 'px;') + '</div></div></div>';
   return h;
 }
