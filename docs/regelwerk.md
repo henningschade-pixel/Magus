@@ -336,3 +336,7 @@ Der Stern über den Siegpunkten in der Ringmitte entfällt; die Zahl steht allei
 ## Änderung 0.6.0.2 (05.11.)
 
 Darstellung: Magie-Boards 120 px (Spieler) und 108 px (Gegner), ohne Abstand nach oben, damit das Board nicht über den Panelrand ragt. Die Kaufknöpfe der Magie liegen mit ihrer Mitte auf dem äußeren Rand des Boards (Radius 0,5 der Bildgröße), die HP- und Mana-Bögen des Spielers wieder 23 px außerhalb.
+
+## Änderung 0.6.0.3 (05.11.)
+
+Darstellung: Erreichte Magiestufen (Edelsteine im Ouroboros) haben einen hellen Rand und ein stärkeres goldenes Leuchten; noch nicht erreichte Steine sind dunkler und entsättigt (`.rg.on`, `.rg.off` in `src/style.css`).
