@@ -31,13 +31,15 @@ function onAct(d) {
     case 'vendorres': { const o = M.vendorOffers(G, ME).filter(x => !x.free && x.available && x.result === d.r).sort((x, y) => x.cost.length - y.cost.length)[0]; if (o) act({ type: 'vendor', result: o.result, cost: o.cost }); break; }
     case 'vendor': { const o = M.vendorOffers(G, ME)[+d.i]; if (o) act({ type: 'vendor', result: o.result, cost: o.cost }); break; }
     case 'sacdn': sacN = Math.max(0, sacN - 1); render(); break;
-    case 'sacup': sacN = Math.min(4, sacN + 1); render(); break;
+    case 'sacup': sacN = sacN + 1; render(); break;   // seit 0.7 ohne festes Limit: höchstens so viel, wie Gold da ist (die Anzeige begrenzt)
     case 'temple': sacN = 0; act({ type: 'temple', amount: +d.n }); break;
     case 'spend': act({ type: 'spend', what: d.w }); break;
     case 'magic': act({ type: 'magic', elem: d.e }); break;
     case 'drawlimit': act({ type: 'drawlimit' }); break;
     case 'fd': act({ type: 'fd', slots: [...fdSel] }); fdSel.clear(); break;
-    case 'draw': if (canDrawNow()) act({ type: 'draw' }); else if (myTurn()) toast(G.phase === 'combat' && G.combat.action === 'attack' && drawNeedsMana() ? 'Roter Nachziehmarker: Nachziehen kostet ' + M.drawManaCost(G, ME) + ' Mana, du hast nicht genug.' : 'Jetzt ist kein Nachziehen möglich.'); break;
+    case 'draw': if (canDrawNow()) { if (drawPenaltyNow() > 0 && !drawAsk) { drawAsk = true; render(); } else { drawAsk = false; act({ type: 'draw' }); } } else if (myTurn()) toast(G.phase === 'combat' && G.combat.action === 'attack' && drawNeedsMana() ? 'Roter Nachziehmarker: Nachziehen kostet ' + M.drawManaCost(G, ME) + ' Mana, du hast nicht genug.' : 'Jetzt ist kein Nachziehen möglich.'); break;
+    case 'drawyes': drawAsk = false; if (canDrawNow()) act({ type: 'draw' }); else render(); break;
+    case 'drawno': drawAsk = false; render(); break;
     case 'freedraw': act({ type: 'freeDraw' }); break;
     case 'attack': act({ type: 'attack' }); break;
     case 'defend': act({ type: 'defend' }); break;
@@ -49,7 +51,7 @@ function onAct(d) {
     case 'lfm': {
       const L = lfCtx(); if (!L) break;
       const k = d.k, e = d.e || '', key = e ? k + ':' + e : k, have = lfHave(L.cx, k, e), n = L.picks.filter(x => x === key).length;
-      let m = (e || k === 'ot' || k === 'st') ? (n + 1 <= Math.min(have, L.lvl) ? n + 1 : 0) : (n > +d.i ? +d.i : +d.i + 1);   // Spiegelstein: einen mehr, nach dem Maximum alle weg; Totenkopf: bis hierhin wählen oder ab hier abwählen
+      let m = (e || k === 'ot' || k === 'st' || k === 'sr' || k === 'or') ? (n + 1 <= Math.min(have, L.lvl) ? n + 1 : 0) : (n > +d.i ? +d.i : +d.i + 1);   // Spiegelstein: einen mehr, nach dem Maximum alle weg; Totenkopf: bis hierhin wählen oder ab hier abwählen
       m = Math.min(m, have, L.lvl);
       const others = L.picks.filter(x => x !== key);
       while (others.length + m > L.lvl && others.length) others.shift();   // voll: die älteste andere Wahl weicht

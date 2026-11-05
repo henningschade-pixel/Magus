@@ -17,7 +17,7 @@ function ctx() {
 // Todes-Fluch (Ultimate): HP-Verlust am Ende jeder eigenen Angriffsphase, bis Kampfende.
 // Spiegel: je Element ein Stein neben dem Handbrett, mit Stufenzähler ab 2.
 function mirrorStack(s, x, y, who) {
-  if (!(s.mirror > 0)) return '';
+  if (!(s.mirror > 0) && !(s.rainbow > 0)) return '';
   const L = who ? lfCtx() : null;
   let t = '';
   for (const e of M.ELEMENTS) {
@@ -30,6 +30,13 @@ function mirrorStack(s, x, y, who) {
         : '<button class="mtok ' + e + ' lf' + (sel ? ' sel' : '') + '" data-act="lfm" data-k="' + who + 'm" data-e="' + e + '" title="Lifeflow: Spiegelmarker ' + M.NAMES[e] + ' wählen (Klick: einen mehr, nach dem Maximum wieder alle weg). ' + sel + ' von ' + n + ' gewählt.">' + n + (sel ? '<i class="lfb">✓' + sel + '</i>' : '') + '</button>';
     } else t += shield ? '<div class="msh ' + e + '" title="' + tip + '"><img src="' + shield + '">' + mul + '</div>' : '<div class="mtok ' + e + '" title="' + tip + '">' + n + '</div>';
   }
+  if (s.rainbow > 0) {   // Regenbogenschild (Wasser-Ultimate): gegen jede Farbe, verbraucht sich nicht; nur Läuterung entfernt ihn
+    const n = s.rainbow, mul = n > 1 ? '<b class="mul">×' + n + '</b>' : '', sel = L ? L.picks.filter(p => p === who + 'r').length : 0;
+    const tip = 'Regenbogenschild Stufe ' + n + ': Wie ein Spiegel, aber gegen jede Farbe: Er gleicht fehlende Verteidigung bis zu ' + n + ' Schaden aus oder wirft den Überschuss einer zu starken Verteidigung (höchstens ' + n + ') zurück. Er verbraucht sich nicht; nur Läuterung kann ihn entfernen. Gilt der höhere von Farbspiegel und Regenbogenschild.';
+    const svg = '<svg viewBox="0 0 40 52"><defs><linearGradient id="rbw' + (who || 'x') + '" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff5a4d"/><stop offset=".25" stop-color="#ffc83d"/><stop offset=".5" stop-color="#7bd36b"/><stop offset=".75" stop-color="#4aa6f5"/><stop offset="1" stop-color="#a06bff"/></linearGradient></defs><path d="M20 2 L37 9 V26 C37 38 29 46 20 50 C11 46 3 38 3 26 V9 Z" fill="url(#rbw' + (who || 'x') + ')" stroke="#fff" stroke-width="2.2" stroke-opacity=".85"/><path d="M20 8 L31 12.5 V26 C31 34 26 40 20 43 Z" fill="#fff" fill-opacity=".22"/></svg>';
+    t += L ? '<button class="msh R lf' + (sel ? ' sel' : '') + '" data-act="lfm" data-k="' + who + 'r" title="Läuterung: Regenbogenschild wählen (Klick: einen mehr, nach dem Maximum wieder alle weg). ' + sel + ' von ' + n + ' gewählt.">' + svg + mul + (sel ? '<i class="lfb">✓' + sel + '</i>' : '') + '</button>'
+      : '<div class="msh R" title="' + tip + '">' + svg + mul + '</div>';
+  }
   return '<div class="mirstack" data-who="' + (who || '') + '" style="left:' + x + 'px;top:' + y + 'px">' + t + '</div>';
 }
 // Todesmarker: jeder Marker liegt als eigener, größerer Token auf dem Tisch (wie die Nachziehtokens), leicht verdreht und versetzt; im Läuterungs-Angriff anklickbar.
@@ -37,6 +44,17 @@ function mirrorStack(s, x, y, who) {
 function deathPos(who, i) {
   const L = who === 's' ? L_MY : L_OP, rot = [-7, 5, -3, 8][i % 4], dy = [0, -3, 2, -2][i % 4];
   return { x: L.draw.x + (who === 's' ? 58 : 100) + i * 52, y: (who === 's' ? L.draw.y - 62 : L.draw.y + CH * L.ps - 4) + dy, rot };
+}
+// Heilmarker (Erd-Ultimate): grüne Tokens mit Plus; +1 HP je Marker am Ende der eigenen Angriffsphase. Sie liegen hinter den Todesmarkern derselben Seite.
+function healTokens(s, who) {
+  const n = Math.min(s.heal || 0, 4), L = lfCtx(), sel = L ? L.picks.filter(p => p === who + 'h').length : 0, off = Math.min(s.death || 0, 4); let t = '';
+  const img = '<svg viewBox="0 0 56 56"><circle cx="28" cy="28" r="25" fill="#2f7a2f" stroke="#b9f08a" stroke-width="3"/><circle cx="28" cy="28" r="20" fill="#49a23d" stroke="#1e5a1e" stroke-width="1.5"/><path d="M28 14v28M14 28h28" stroke="#fff" stroke-width="7" stroke-linecap="round"/></svg>';
+  for (let i = 0; i < n; i++) {
+    const q = deathPos(who, i + off), pos = 'left:' + q.x + 'px;top:' + q.y + 'px;--r:' + q.rot + 'deg', tip = 'Heilmarker: ' + (s.heal || 0) + ' HP Heilung am Ende jeder eigenen Angriffsphase bis Kampfende. Nur Läuterung kann Marker entfernen.';
+    t += L ? '<button class="healtok lf' + (i < sel ? ' sel' : '') + '" data-who="' + who + '" data-act="lfm" data-k="' + who + 'h" data-i="' + i + '" title="Läuterung: diesen Marker wählen oder abwählen" style="' + pos + '">' + img + '</button>'
+      : '<div class="healtok" data-who="' + who + '" title="' + tip + '" style="' + pos + '">' + img + '</div>';
+  }
+  return t;
 }
 function deathTokens(s, who) {
   const n = Math.min(s.death || 0, 4), L = lfCtx(), sel = L ? L.picks.filter(p => p === who + 'd').length : 0; let t = '';

@@ -1,6 +1,6 @@
 /* Magus – Regelkern (Teil 6): Kampf (Monsterkämpfe und Showdowns).
    Ein Angriffszug: Karten markieren (erste Karte bestimmt das Element), angreifen; die Gegenseite verteidigt.
-   Kombos aus zwei Elementen: Control (F+W), Lähmung (F+E), Lifeflow (E+W); alle drei ergeben eine Ultimate. */
+   Kombos aus zwei Elementen: Control (F+W), Lähmung (F+E), Lifeflow (E+W); alle drei ergeben eine Ultimate, deren Wirkung die Farbe der ersten Karte bestimmt (seit 0.7: Feuer Todes-Fluch, Erde Heilfluss, Wasser Regenbogenschild). */
 
 /* ---------- Kampfberechnung ---------- */
 function comboLevels(tiers, mag, prim) {
@@ -43,7 +43,7 @@ function evalAttack(stats, cards) {
   const levels = comboLevels(tiers, stats.mag, prim);
   if (stats.noCombo) for (const k of stats.noCombo) levels[k] = 0; // nur für Simulationen
   const ord = levels.ord && !(stats.noCombo && stats.noCombo.includes(levels.ord.key)) ? levels.ord : null;
-  return { valid: true, prim, cost, damage, levels, ord, curses: curses.length, affordable: stats.mana >= cost };
+  return { valid: true, prim, cost, damage, levels, ord, curses: curses.length, affordable: stats.mana >= cost, ultiEl: levels.ulti > 0 ? prim : null };
 }
 function evalDefense(stats, cards, color) {
   if (!cards.length) return { valid: true, cost: 0, block: 0, empty: true };
@@ -54,8 +54,8 @@ function evalDefense(stats, cards, color) {
   if (el && el !== color && el !== SUPERIOR[color]) return { valid: false, reason: NAMES[el] + ' kann nicht gegen ' + NAMES[color] + ' verteidigen.' };
   const cost = curses.reduce((n, c) => n + c.tier, 0) + (el === color ? same.length : 0) + other.length;   // Verteidigung in der überlegenen Farbe ist gratis, Kombokarten kosten 1 Mana
   let block = 0; same.forEach(c => { block += Math.min(c.tier, stats.mag[el]); });
-  const out = { valid: true, el, cost, block, affordable: stats.mana >= cost, levels: { fw: 0, fe: 0, ew: 0, ulti: 0 }, ord: null };
-  if (other.length) { const tiers = { F: [], E: [], W: [] }; normals.forEach(c => tiers[c.el].push(c.tier)); const lv = comboLevels(tiers, stats.mag, el); out.ord = !ulti && lv.ord && lv.ord.lvl > 0 ? lv.ord : null; if (ulti) out.levels.ulti = lv.ulti; }
+  const out = { valid: true, el, cost, block, affordable: stats.mana >= cost, levels: { fw: 0, fe: 0, ew: 0, ulti: 0 }, ord: null, ultiEl: null };
+  if (other.length) { const tiers = { F: [], E: [], W: [] }; normals.forEach(c => tiers[c.el].push(c.tier)); const lv = comboLevels(tiers, stats.mag, el); out.ord = !ulti && lv.ord && lv.ord.lvl > 0 ? lv.ord : null; if (ulti) { out.levels.ulti = lv.ulti; if (lv.ulti > 0) out.ultiEl = el; } }
   return out;
 }
 

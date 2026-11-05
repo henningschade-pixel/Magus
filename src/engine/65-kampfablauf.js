@@ -63,9 +63,9 @@ function evaluateEnd(state) {
 function endCombat(state, end) {
   const c = state.combat, res = { mode: c.mode, reason: end.reason, winner: end.winner, monsterDefeated: false, elem: c.elem, stage: state.stage, turns: c.turns, fled: end.fled || null };   // elem/stage/turns: für die Balance-Auswertung
   if (state.keepSnap) res.snap = JSON.parse(JSON.stringify(c));   // Oberfläche: Endstand des Kampfes (vor Zurücksetzen und Rückkehr in die Weltphase)
-  state.players.forEach(p => { p.stats.freeDraws = 0; p.deck.marks = []; delete p.stats.mirror; delete p.stats.mirrorEl; delete p.stats.mirrorFree; delete p.stats.death; delete p.stats.deathPhase; });
+  state.players.forEach(p => { p.stats.freeDraws = 0; p.deck.marks = []; delete p.stats.mirror; delete p.stats.mirrorEl; delete p.stats.mirrorFree; delete p.stats.death; delete p.stats.deathPhase; delete p.stats.heal; delete p.stats.rainbow; });
   state.players.forEach(p => stripCurseCards(state, p.deck));
-  delete c.sides.b.stats.death; delete c.sides.b.stats.deathPhase;
+  delete c.sides.b.stats.death; delete c.sides.b.stats.deathPhase; delete c.sides.b.stats.heal; delete c.sides.b.stats.rainbow;
   if (c.sides.b.monster) { delete c.sides.b.monster.stats.mirror; delete c.sides.b.monster.stats.mirrorEl; delete c.sides.b.monster.stats.mirrorFree; }
   const A = state.players[c.att], B = state.players[c.def];
   if (c.mode === 'monster') {
@@ -166,12 +166,17 @@ function mirrorAdd(stats, el, n) {
 }
 function mirrorTake(stats, el, n) { if (stats.mirrorEl) { stats.mirrorEl[el] = Math.max(0, stats.mirrorEl[el] - n); mirrorSync(stats); } }
 function mirrorTakeAny(stats, n) { for (const el of ELEMENTS) { while (n > 0 && mirrorOf(stats, el) > 0) { mirrorTake(stats, el, 1); n--; } } }
-// Läuterung: gewählte Marker (sm/om/sd/od/ot), höchstens S; ohne Wahl automatisch eigene Todesmarker, dann Spiegel des Gegners.
+// Ultimates (seit 0.7 nach der Farbe der ersten Karte): Feuer = Todes-Fluch (stats.death, Marker beim Gegner), Erde = Heilfluss (stats.heal, grüner Marker mit Plus bei sich selbst: +1 HP je Marker am Ende der eigenen Angriffsphase), Wasser = Regenbogenschild (stats.rainbow, bei sich selbst: wie ein Spiegel, aber gegen jede Farbe und er verbraucht sich nicht). Alle drei Marker entfernt nur die Läuterung.
+// Wirksamer Schild gegen einen Angriff der Farbe el: der höhere von Farbspiegel und Regenbogenschild.
+function shieldOf(stats, el) { return Math.max(mirrorOf(stats, el), stats.rainbow || 0); }
+// Läuterung: gewählte Marker (sm/om/sd/od/sh/oh/sr/or/st/ot), höchstens S; ohne Wahl automatisch eigene Todesmarker, dann Spiegel, Regenbogenschild und Heilmarker des Gegners.
 function lifeflowPicks(state, side, opp, lvl) {
   if (Array.isArray(state.combat.lfp)) return state.combat.lfp.slice(0, lvl);
-  const out = []; let om = opp.stats.mirror || 0, sd = side.stats.death || 0;
+  const out = []; let om = opp.stats.mirror || 0, sd = side.stats.death || 0, orb = opp.stats.rainbow || 0, oh = opp.stats.heal || 0;
   while (out.length < lvl && sd > 0) { out.push('sd'); sd--; }
   while (out.length < lvl && om > 0) { out.push('om'); om--; }
+  while (out.length < lvl && orb > 0) { out.push('or'); orb--; }
+  while (out.length < lvl && oh > 0) { out.push('oh'); oh--; }
   return out;
 }
 // Todes-Fluch: Am Ende der eigenen Angriffsphase (nach Angriff und Verteidigung der Gegenseite) verliert die Seite so viele HP, wie sie Todesmarker trägt.
@@ -180,9 +185,25 @@ function deathTick(state, side) {
   const c = state.combat;
   // Ein Fluch, der erst in dieser Angriffsphase (durch die Ultimate der Verteidigung) gesprochen wurde, wirkt noch nicht: deathPhase merkt die Stufe zu Beginn der Phase.
   const dmg = Math.min(side.stats.death || 0, side.stats.deathPhase === undefined ? Infinity : side.stats.deathPhase); delete side.stats.deathPhase;
-  if (!(dmg > 0) || c.sides.a.stats.hp <= 0 || c.sides.b.stats.hp <= 0) return;
-  side.stats.hp = Math.max(0, side.stats.hp - dmg);
-  log(state, 'Todes-Fluch: ' + side.name + ' verliert ' + dmg + ' HP am Ende der Angriffsphase.', side.ctrl);
+  if (c.sides.a.stats.hp <= 0 || c.sides.b.stats.hp <= 0) return;
+  if (dmg > 0) {
+    side.stats.hp = Math.max(0, side.stats.hp - dmg);
+    log(state, 'Todes-Fluch: ' + side.name + ' verliert ' + dmg + ' HP am Ende der Angriffsphase.', side.ctrl);
+  }
+  // Heilfluss (Erd-Ultimate): am Ende der eigenen Angriffsphase +1 HP je Heilmarker, höchstens bis zu den maximalen HP; nur wer noch steht
+  const hl = side.stats.heal || 0;
+  if (hl > 0 && side.stats.hp > 0) {
+    const before = side.stats.hp; side.stats.hp = Math.min(side.stats.maxHp, side.stats.hp + hl);
+    if (side.stats.hp > before) log(state, 'Heilfluss: ' + side.name + ' heilt ' + (side.stats.hp - before) + ' HP am Ende der Angriffsphase.', side.ctrl, { kind: 'healtick', who: side.ctrl, n: side.stats.hp - before });
+  }
+}
+// Ultimate wirken lassen: die Farbe der ersten Karte (el) bestimmt die Marker. who legt sie bei sich (Erde, Wasser) oder beim Gegner (Feuer).
+function castUltimate(side, opp, el, lvl) {
+  lvl = Math.max(1, Math.min(MAX_MIRROR, lvl));
+  if (el === 'E') { side.stats.heal = Math.max(side.stats.heal || 0, lvl); return { text: 'Ultimate ' + lvl + ' (Erde): Heilfluss, ' + side.stats.heal + ' HP am Ende jeder eigenen Angriffsphase bis Kampfende', fx: { kind: 'ultimate', who: side.ctrl, to: side.ctrl, el: 'E', n: lvl } }; }
+  if (el === 'W') { side.stats.rainbow = Math.max(side.stats.rainbow || 0, lvl); return { text: 'Ultimate ' + lvl + ' (Wasser): Regenbogenschild Stufe ' + side.stats.rainbow + ' (gegen jede Farbe, verbraucht sich nicht)', fx: { kind: 'ultimate', who: side.ctrl, to: side.ctrl, el: 'W', n: lvl } }; }
+  opp.stats.death = Math.max(opp.stats.death || 0, lvl);
+  return { text: 'Ultimate ' + lvl + ' (Feuer): Todes-Fluch für ' + opp.name + ' (' + opp.stats.death + ' HP am Ende jeder seiner Angriffsphasen bis Kampfende)', fx: { kind: 'ultimate', who: side.ctrl, to: opp.ctrl, el: 'F', n: lvl } };
 }
 function passAttackTurn(state) {
   const c = state.combat;
@@ -208,13 +229,13 @@ function applyComboPlan(state, side, opp, plan, ev, texts, fxs) {
       texts.push('Heilung ' + lvl + ': +' + (side.stats.hp - before) + ' HP'); fxs.push({ kind: 'lifeflow', who: side.ctrl, to: opp.ctrl, got: {}, removed: 0, heal: side.stats.hp - before, draws: 0 });
     }
     else if (k === 'ew') {   // Läuterung: S Marker beliebig vom Brett nehmen, je entferntem Marker 1 Gratis-Nachziehen
-      const before = side.stats.hp, picks = lifeflowPicks(state, side, opp, lvl), names = { sd: 'eigene Todesmarker', od: 'Todesmarker des Gegners', sm: 'eigene Spiegelmarker', om: 'Spiegelmarker des Gegners', st: 'eigene Nachziehtokens', ot: 'Nachziehtoken des Gegners' };
+      const before = side.stats.hp, picks = lifeflowPicks(state, side, opp, lvl), names = { sd: 'eigene Todesmarker', od: 'Todesmarker des Gegners', sm: 'eigene Spiegelmarker', om: 'Spiegelmarker des Gegners', sh: 'eigene Heilmarker', oh: 'Heilmarker des Gegners', sr: 'eigene Regenbogenmarker', or: 'Regenbogenmarker des Gegners', st: 'eigene Nachziehtokens', ot: 'Nachziehtoken des Gegners' };
       const got = {}; let removed = 0;
       for (const pk of picks) {
         const [kk, mel] = pk.split(':');   // Spiegelmarker können mit Farbe gewählt werden, z. B. 'om:F'
-        const tgt = kk[0] === 's' ? side : opp, key = kk[1] === 'd' ? 'death' : kk[1] === 't' ? 'freeDraws' : 'mirror';
+        const tgt = kk[0] === 's' ? side : opp, key = kk[1] === 'd' ? 'death' : kk[1] === 't' ? 'freeDraws' : kk[1] === 'h' ? 'heal' : kk[1] === 'r' ? 'rainbow' : 'mirror';
         if ((tgt.stats[key] || 0) <= 0) continue;
-        if (key === 'mirror') { if (mel && mirrorOf(tgt.stats, mel) > 0) mirrorTake(tgt.stats, mel, 1); else mirrorTakeAny(tgt.stats, 1); } else { tgt.stats[key]--; if (key === 'death' && tgt.stats.death <= 0) delete tgt.stats.death; }
+        if (key === 'mirror') { if (mel && mirrorOf(tgt.stats, mel) > 0) mirrorTake(tgt.stats, mel, 1); else mirrorTakeAny(tgt.stats, 1); } else { tgt.stats[key]--; if ((key === 'death' || key === 'heal' || key === 'rainbow') && tgt.stats[key] <= 0) delete tgt.stats[key]; }
         removed++; got[kk] = (got[kk] || 0) + 1;
       }
       const dr = removed - (got.ot || 0) - (got.st || 0);   // Gratis-Nachziehen je entferntem Marker (zerstörte Nachziehtokens, eigene wie gegnerische, zählen nicht)
@@ -237,7 +258,7 @@ function execAttack(state) {
   consumeSelection(d, sel);
   const texts = [], fxs = [];
   applyComboPlan(state, side, opp, plan, ev, texts, fxs);
-  if (death) { opp.stats.death = Math.max(opp.stats.death || 0, ev.levels.ulti); fxs.push({ kind: 'ultimate', who: side.ctrl, to: opp.ctrl, n: ev.levels.ulti }); texts.push('Ultimate ' + ev.levels.ulti + ': Todes-Fluch für ' + opp.name + ' (' + opp.stats.death + ' HP am Ende jeder seiner Angriffsphasen bis Kampfende)'); }
+  if (death) { const u = castUltimate(side, opp, ev.ultiEl || ev.prim, ev.levels.ulti); fxs.push(u.fx); texts.push(u.text); }
   c.lfp = null;
   const dmg = ev.prim ? ev.damage : 0;
   if (dmg > 0) fxs.push({ kind: 'attack', who: side.ctrl, to: opp.ctrl, elem: ev.prim, n: dmg });
@@ -256,15 +277,17 @@ function canFlee(state, pid) {
 }
 function recoverGain(state) { const r = state.rules.recoverByStage; return r ? (r[Math.min(r.length, Math.max(1, state.stage)) - 1] || 1) : 1; }
 // Ergebnis einer Verteidigung (Spiegel, Rückwurf, Restschaden): gemeinsam für die Ausführung (execDefense) und die Vorschau der Oberfläche (previewDefense). mir: Spiegelstufe der Angriffsfarbe nach dem Kombo (seit 0.4 wirkt der Kombo vor der Verteidigung); ohne Angabe zählt der Spiegel, der jetzt liegt.
+// Seit 0.7 zählt auch der Regenbogenschild (stats.rainbow, gegen jede Farbe): Es wirkt der höhere von Farbspiegel und Regenbogenschild; liegt der Regenbogenschild gleich hoch oder höher, ist er der wirksame (perm) und verliert keine Stufen. used: ausgeglichener plus zurückgeworfener Schaden, lost: dabei verbrauchte Spiegelstufen (0 beim Regenbogenschild).
 function defenseOutcome(stats, color, pending, block, mir) {
-  const mLvl = mir === undefined ? mirrorOf(stats, color) : mir, missing = Math.max(0, pending - block), excess = Math.max(0, block - pending);
+  const mLvl = mir === undefined ? shieldOf(stats, color) : mir, missing = Math.max(0, pending - block), excess = Math.max(0, block - pending);
+  const perm = mLvl > 0 && (stats.rainbow || 0) >= mLvl;
   const absorb = Math.min(mLvl, missing), refl = Math.min(mLvl, excess, pending);
-  return { mLvl, absorb, refl, lost: absorb + refl, leftover: missing - absorb };
+  return { mLvl, perm, absorb, refl, used: absorb + refl, lost: perm ? 0 : absorb + refl, leftover: missing - absorb };
 }
 // Was ein Kombo der Verteidigung für den laufenden Angriff ändert: der Spiegel der Angriffsfarbe wirkt seit 0.4 schon gegen diesen Angriff. Die Heilung wirkt seit 0.5.4 wieder nach dem Schaden (heal: Stufe, hp: HP vor dem Schaden).
 function defenseComboPre(stats, ev, color) {
-  const lvs = ev && ev.ord && !(ev.levels && ev.levels.ulti > 0) ? levelsFor(ev) : null, own = mirrorOf(stats, color);
-  if (!lvs) return { heal: 0, hp: stats.hp, mir: own };
+  const lvs = ev && ev.ord && !(ev.levels && ev.levels.ulti > 0) ? levelsFor(ev) : null, own = shieldOf(stats, color);
+  if (!lvs) return { heal: 0, hp: stats.hp, mir: ev && ev.ultiEl === 'W' && ev.levels.ulti > 0 ? Math.max(own, Math.min(ev.levels.ulti, MAX_MIRROR)) : own };   // Ultimate Wasser in der Verteidigung: der Regenbogenschild wirkt schon gegen diesen Angriff
   return { heal: lvs.gh || 0, hp: stats.hp, mir: lvs.fw > 0 && ev.ord.el === color ? Math.max(own, Math.min(lvs.fw, MAX_MIRROR)) : own };
 }
 // Vorschau für die Knöpfe „Verteidigen“ und „Passen“, ohne etwas zu ändern: Mana-Kosten, Block, Restschaden und die HP danach (beim Verteidiger und, durch den Spiegelrückwurf, beim Angreifer). null, wenn gerade keine Verteidigung ansteht oder die Auswahl nicht geht.
@@ -272,7 +295,7 @@ function previewDefense(state, passOnly) {
   const c = state.combat;
   if (!c || c.forced || c.action !== 'defense') return null;
   const side = c.sides[c.turn], att = c.sides[c.turn === 'a' ? 'b' : 'a'];
-  let block = 0, cost = 0, pre = { heal: 0, hp: side.stats.hp, mir: mirrorOf(side.stats, c.color) };   // Heilung (heal) wirkt nach dem Schaden
+  let block = 0, cost = 0, pre = { heal: 0, hp: side.stats.hp, mir: shieldOf(side.stats, c.color) };   // Heilung (heal) wirkt nach dem Schaden
   if (!passOnly) {
     const sel = selection(side.deck);
     if (sel.length) { const ev = evalDefense(side.stats, sel, c.color); if (!ev.valid || ev.affordable === false) return null; block = ev.block || 0; cost = ev.cost || 0; pre = defenseComboPre(side.stats, ev, c.color); }
@@ -296,10 +319,11 @@ function execDefense(state, passOnly) {
   if (sel.length) consumeSelection(d, sel); else d.marks = [];
   const attacker = c.sides[c.turn === 'a' ? 'b' : 'a'];
   // Seit 0.4 wirkt der Kombo zuerst, danach die Verteidigung: Ein Spiegel dieser Farbe wirkt schon gegen den Angriff, auf den verteidigt wird. Seit 0.5.4 gilt das nicht mehr für die Heilung: Sie wirkt wieder nach Angriff und Verteidigung (Zerrüttung und die übrigen Kombos bleiben davor).
-  if (defEv && defEv.levels && defEv.levels.ulti > 0) {   // Ultimate in der Verteidigung: Todes-Fluch für den Angreifer
-    if (attacker.stats.deathPhase === undefined) attacker.stats.deathPhase = attacker.stats.death || 0;
-    attacker.stats.death = Math.max(attacker.stats.death || 0, defEv.levels.ulti);
-    log(state, side.name + ' wirkt eine Ultimate: Ultimate ' + defEv.levels.ulti + ': Todes-Fluch für ' + attacker.name + ' (' + attacker.stats.death + ' HP am Ende jeder seiner Angriffsphasen bis Kampfende).', side.ctrl, { kind: 'aggro', who: side.ctrl, to: attacker.ctrl, n: defEv.levels.ulti, first: true, ult: true });
+  if (defEv && defEv.levels && defEv.levels.ulti > 0) {   // Ultimate in der Verteidigung: je nach Farbe der ersten Karte Todes-Fluch für den Angreifer (Feuer), Heilfluss (Erde) oder Regenbogenschild (Wasser) für den Verteidiger
+    const uel = defEv.ultiEl || defEv.el;
+    if (uel !== 'E' && uel !== 'W' && attacker.stats.deathPhase === undefined) attacker.stats.deathPhase = attacker.stats.death || 0;
+    const u = castUltimate(side, attacker, uel, defEv.levels.ulti);
+    log(state, side.name + ' wirkt eine Ultimate: ' + u.text + '.', side.ctrl, uel === 'E' || uel === 'W' ? Object.assign(u.fx, { first: true }) : { kind: 'aggro', who: side.ctrl, to: attacker.ctrl, n: defEv.levels.ulti, first: true, ult: true });
   }
   let healLvl = 0;
   if (defEv && defEv.ord) {
@@ -313,18 +337,18 @@ function execDefense(state, passOnly) {
   // Spiegel (dauerhaft, je Farbe eine Stufe von höchstens 3, die Farben zählen getrennt). Gegen einen Angriff in seiner Farbe gleicht er zuerst fehlende Verteidigung aus
   // (höchstens seine Stufe) und verliert dafür je ausgeglichenen Schaden eine Stufe. Nur wenn der Verteidiger mehr verteidigt als nötig, wirft er den
   // Überschuss zurück (ebenfalls höchstens seine Stufe und höchstens der eingehende Schaden) und verliert dafür je zurückgeworfenen Schaden eine Stufe. Das gilt auch beim Passen.
-  const { mLvl, absorb, refl, lost, leftover } = defenseOutcome(side.stats, c.color, c.pending, block);
+  const { mLvl, perm, absorb, refl, used, lost, leftover } = defenseOutcome(side.stats, c.color, c.pending, block);
   const hpPre = { [side.ctrl]: side.stats.hp, [attacker.ctrl]: attacker.stats.hp };   // HP vor dem Schaden, aber nach dem Kombo (Oberfläche zeigt sie, bis die Geschosse einschlagen)
   side.stats.hp = side.stats.hp - leftover;   // vorläufig, die Heilung (seit 0.5.4 nach dem Schaden) gleicht ihn noch aus; danach nie unter 0
   const defEl = sel.length && sel[0].el && !sel[0].curse ? sel[0].el : c.color;
   const defFx = { kind: 'defense', rec: !!passOnly, who: side.ctrl, to: attacker.ctrl, attElem: c.color, defElem: defEl, pending: c.pending, block, hpPre, afterCombo: !!(defEv && (defEv.ord || (defEv.levels && defEv.levels.ulti > 0))) };   // hpPre: HP vor dem Schaden, die Oberfläche zeigt sie, bis die Geschosse einschlagen
   log(state, side.name + (passOnly ? ' passt und nimmt den Schaden hin' : ' verteidigt' + (block ? ' (Block ' + block + ')' : ' ohne Block')) + ' und verliert ' + leftover + ' HP' + '.', side.ctrl, defFx);
-  if (lost > 0) {
+  if (used > 0) {
     if (refl > 0) attacker.stats.hp = Math.max(0, attacker.stats.hp - refl);
-    mirrorTake(side.stats, c.color, lost);
+    if (lost > 0) mirrorTake(side.stats, c.color, lost);
     const stufen = lost + ' Stufe' + (lost === 1 ? '' : 'n');
-    log(state, 'Spiegel: ' + side.name + (refl > 0 ? ' wirft ' + refl + ' Schaden auf ' + attacker.name + ' zurück' : ' gleicht ' + absorb + ' Schaden aus') + ' und verliert ' + stufen + '.', side.ctrl, undefined);
-    defFx.mirror = { hpPre, elem: c.color, markers: mLvl, broken: lost, who: side.ctrl, att: attacker.ctrl, r: refl, abs: absorb, d: c.pending, blk: block };   // der Schild-Effekt läuft in der Verteidigungsanimation, vor dem Schaden auf den HP
+    log(state, (perm ? 'Regenbogenschild: ' : 'Spiegel: ') + side.name + (refl > 0 ? ' wirft ' + refl + ' Schaden auf ' + attacker.name + ' zurück' : ' gleicht ' + absorb + ' Schaden aus') + (perm ? ' (der Schild bleibt bestehen).' : ' und verliert ' + stufen + '.'), side.ctrl, undefined);
+    if (!perm) defFx.mirror = { hpPre, elem: c.color, markers: mLvl, broken: lost, who: side.ctrl, att: attacker.ctrl, r: refl, abs: absorb, d: c.pending, blk: block };   // der Schild-Effekt gilt dem Farbspiegel; der Regenbogenschild (perm) verliert nichts und hat keinen Bruch-Effekt   // der Schild-Effekt läuft in der Verteidigungsanimation, vor dem Schaden auf den HP
   }
   if (healLvl > 0) {   // Heilung nach Angriff und Verteidigung (seit 0.5.4): gleicht den Schaden nachträglich aus, höchstens bis zum Maximum
     const hTexts = [], hFxs = [];
@@ -360,7 +384,7 @@ function applyCombat(state, a) {
   if (side.ctrl !== pid) return fail('Die Gegenseite ist am Zug.');
   switch (a.type) {
     case 'mark': { const e = toggleMark(side.deck, a.slot, side.stats.limit); return e ? fail(e) : { ok: true }; }
-    case 'lfp': { if (c.action !== 'attack') return fail('Nur im Angriffszug.'); const ok = ['sm', 'om', 'sd', 'od', 'st', 'ot']; c.lfp = a.pick === null ? null : (Array.isArray(a.pick) ? a.pick : []).filter(x => typeof x === 'string' && ok.includes(x.split(':')[0]) && (x.indexOf(':') < 0 || ELEMENTS.includes(x.split(':')[1]))).slice(0, 3); return { ok: true }; }
+    case 'lfp': { if (c.action !== 'attack') return fail('Nur im Angriffszug.'); const ok = ['sm', 'om', 'sd', 'od', 'sh', 'oh', 'sr', 'or', 'st', 'ot']; c.lfp = a.pick === null ? null : (Array.isArray(a.pick) ? a.pick : []).filter(x => typeof x === 'string' && ok.includes(x.split(':')[0]) && (x.indexOf(':') < 0 || ELEMENTS.includes(x.split(':')[1]))).slice(0, 3); return { ok: true }; }
     case 'attack': if (c.action !== 'attack') return fail('Jetzt wird verteidigt.'); return execAttack(state);
     case 'defend': if (c.action !== 'defense') return fail('Jetzt wird angegriffen.'); return execDefense(state, false);
     case 'pass':

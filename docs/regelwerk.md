@@ -89,7 +89,7 @@ Die Farbe der ersten markierten Karte bestimmt die Rolle (Feuer aggressiv, Wasse
 | Spiegel (grün) | Wasser + Erde | grüner Spiegel auf Stufe S |
 | Heilung | Erde + Wasser | S HP heilen |
 | Läuterung | Erde + Feuer | S beliebige Marker vom Brett entfernen, je entferntem Marker ein Nachziehtoken |
-| Ultimate | alle drei | Todes-Fluch der Stufe S |
+| Ultimate | alle drei | je nach Farbe der ersten Karte: **Feuer** Todes-Fluch, **Erde** Heilfluss, **Wasser** Regenbogenschild (Stufe S) |
 
 **Fluchkarten:** Sie kommen erst in den Zugstapel, wenn der Ablagestapel gemischt wird. Auf der Hand belegen sie einen Platz und wirken nicht. Beim Nachziehen werden sie dauerhaft verworfen, am Kampfende verschwinden alle.
 
@@ -98,6 +98,12 @@ Die Farbe der ersten markierten Karte bestimmt die Rolle (Feuer aggressiv, Wasse
 **Läuterung:** Wählbar sind alle Marker auf dem Brett, auch eigene: Todesmarker, Spiegelmarker und **gegnerische Nachziehtokens**. Gegnerische Tokens werden nur zerstört, sie werden nicht gutgeschrieben. Für jeden anderen entfernten Marker erhält der Angreifer ein Nachziehtoken. Keine Heilung.
 
 **Ultimate (Todes-Fluch):** Die Stufe ist das Minimum aus den drei Magiewerten und den drei höchsten Kartenstufen, höchstens 3. Der Gegner verliert S HP am Ende jeder eigenen Angriffsphase bis Kampfende; nur Läuterung kann Marker entfernen. Die Ultimate **gilt auch in der Verteidigung** (alle drei Farben, die Verteidigungsfarbe blockt, die beiden anderen sind Kombokarten): Nach der Verteidigung erhält der Angreifer den Todes-Fluch.
+
+**Ultimate nach Farbe (seit 0.7):** Die Farbe der ersten Karte entscheidet. Die Stufe S gilt wie bisher (Minimum der drei Kartensummen, höchstens 3); mehrere Marker einer Art werden nicht addiert, es gilt der höchste. Alle drei Marker entfernt nur die Läuterung (sie sind wählbar wie die Todesmarker).
+- **Feuer: Todes-Fluch** wie bisher (S Todesmarker beim Gegner, S HP Verlust am Ende jeder seiner Angriffsphasen).
+- **Erde: Heilfluss.** S grüne Marker mit Plus bei dir selbst: Am Ende jeder deiner Angriffsphasen heilst du S HP (höchstens bis zu den max. HP) bis Kampfende.
+- **Wasser: Regenbogenschild.** Ein Schild der Stufe S bei dir selbst, der gegen **jede** Farbe wirkt und nach der Mechanik der Spiegel arbeitet (gleicht fehlende Verteidigung bis S aus, wirft Überschuss bis S zurück), aber **keine Stufen verliert**. Gegenüber einem Farbspiegel zählt der höhere Wert; bei Gleichstand der Regenbogenschild. In der Verteidigung wirkt er schon gegen den laufenden Angriff.
+
 
 ## Monster
 
@@ -348,3 +354,12 @@ Gegen Patt-Schleifen zwischen zwei KI-Spielern (Auswertung eines Zuschauer-Logs,
 ## Änderung 0.6.1.2 (05.11.)
 
 Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tisch kaum umsetzen. Die Patt-Schleifen der KI werden nur noch über die KI-Parameter vermieden: `fleeIdle` 30 (nach 30 Weltzügen ohne entschiedenen Kampf flieht die KI nicht mehr) und `fleeA` 2 (Flucht erst bei zwei Zügen Rückstand in der Prognose). Der Absatz zu 0.6.1.1 gilt insoweit nicht mehr für `idleLimit`.
+
+
+## Änderung 0.7 (06.11.)
+
+- **Opfern ohne Obergrenze:** Es lässt sich beliebig viel Gold auf einmal opfern (vorher höchstens 4 in der Oberfläche).
+- **Kartenkauf ohne Freischaltung:** Karten der Stufe 2 und 3 sind unabhängig von der entwickelten Magie kaufbar. Die Magie begrenzt nur noch, wie viel eine Karte im Kampf zählt.
+- **Ultimates nach Primärfarbe:** Feuer Todes-Fluch, Erde Heilfluss (grüner Marker mit Plus), Wasser Regenbogenschild (siehe oben). Nur Läuterung entfernt diese Marker.
+- **Nachziehmarker-Strafe nach Abschnitt:** Mana (Kampf) und Gold (Weltphase) kosten 1/2/3 je Abschnitt; vor dem Nachziehen bei rotem Marker erscheint eine Warnung (wie beim Fliehen).
+- Der Hinweistext zur Schildwirkung („Spiegel: …“) im Kampf entfällt.

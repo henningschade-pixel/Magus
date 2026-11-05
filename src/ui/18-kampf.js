@@ -1,5 +1,11 @@
 /* ---------- Kampf ---------- */
 const ORD_ROWS = [['ra', 'Lähmung', 'F', 'E'], ['rm', 'Zerrüttung', 'F', 'W'], ['bm', 'Spiegel', 'W', 'F'], ['bg', 'Spiegel', 'W', 'E'], ['gh', 'Heilung', 'E', 'W'], ['gr', 'Läuterung', 'E', 'F']];
+// Wirkung der Ultimate nach der Farbe der ersten Karte (seit 0.7)
+function ultiText(el, lv) {
+  if (el === 'E') return 'Heilfluss (Erde): Du bekommst ' + lv + ' Heilmarker und heilst ' + lv + ' HP am Ende jeder deiner Angriffsphasen bis Kampfende (höchstens bis zu den max. HP).';
+  if (el === 'W') return 'Regenbogenschild (Wasser): Du bekommst einen Schild der Stufe ' + lv + ' gegen jede Farbe. Er gleicht fehlende Verteidigung aus oder wirft Überschuss zurück, verbraucht sich aber nicht.';
+  return 'Todes-Fluch (Feuer): Der Gegner bekommt ' + lv + ' Todesmarker und verliert ' + lv + ' HP am Ende jeder seiner Angriffsphasen bis Kampfende.';
+}
 function ordText(k, lv, short) {
   if (k === 'ra' && lv === 'S') return 'Lege 2·S Fluchkarten (2/4/6) auf den Ablagestapel der Gegenseite; sie kommen beim nächsten Nachziehen des Gegners zuerst auf seine Hand und werden beim darauffolgenden Nachziehen dauerhaft vernichtet';
   if (k === 'ra') return short ? 2 * lv + ' Flüche auf den Ablagestapel der Gegenseite' : 'Lege ' + 2 * lv + ' Flüche auf den Ablagestapel der Gegenseite; sie kommen beim nächsten Nachziehen des Gegners zuerst auf seine Hand und werden beim darauffolgenden Nachziehen dauerhaft vernichtet';
@@ -12,9 +18,11 @@ function ordText(k, lv, short) {
 function lfPicks(cx, lvl) {
   const c = cx.c;
   if (Array.isArray(c.lfp)) return c.lfp.slice(0, lvl);
-  const out = []; let om = cx.theirs.stats.mirror || 0, sd = cx.myStats.death || 0;
+  const out = []; let om = cx.theirs.stats.mirror || 0, sd = cx.myStats.death || 0, orb = cx.theirs.stats.rainbow || 0, oh = cx.theirs.stats.heal || 0;
   while (out.length < lvl && sd-- > 0) out.push('sd');
   while (out.length < lvl && om-- > 0) out.push('om');
+  while (out.length < lvl && orb-- > 0) out.push('or');
+  while (out.length < lvl && oh-- > 0) out.push('oh');
   return out;
 }
 // Lifeflow: Marker direkt auf dem Brett anklicken. lfCtx liefert die Wahl, solange ich einen Lifeflow-Angriff vorbereite.
@@ -35,14 +43,14 @@ function lfExpand(picks, cx) {
 }
 function lfHave(cx, k, e) {
   const w = k[0] === 's' ? cx.myStats : cx.oppStats, t = k[1];
-  return t === 'c' ? (w.marks || 0) : t === 'd' ? (w.death || 0) : t === 't' ? (w.freeDraws || 0) : (e ? M.mirrorOf(w, e) : (w.mirror || 0));
+  return t === 'c' ? (w.marks || 0) : t === 'd' ? (w.death || 0) : t === 'h' ? (w.heal || 0) : t === 'r' ? (w.rainbow || 0) : t === 't' ? (w.freeDraws || 0) : (e ? M.mirrorOf(w, e) : (w.mirror || 0));
 }
 function lfSummary(cx, lvl) {
   const L = lfCtx(), picks = L ? L.picks : lfExpand(lfPicks(cx, lvl), cx), cnt = {};
   picks.forEach(p => { cnt[p] = (cnt[p] || 0) + 1; });
-  const nm = { sd: 'eigener Todesmarker', od: 'Todesmarker des Gegners', sc: 'eigener Fluch', oc: 'Fluch des Gegners', sm: 'eigener Spiegel', om: 'Spiegel des Gegners', st: 'eigener Nachziehtoken', ot: 'Nachziehtoken des Gegners' };
+  const nm = { sd: 'eigener Todesmarker', od: 'Todesmarker des Gegners', sc: 'eigener Fluch', oc: 'Fluch des Gegners', sm: 'eigener Spiegel', om: 'Spiegel des Gegners', sh: 'eigener Heilmarker', oh: 'Heilmarker des Gegners', sr: 'eigener Regenbogenschild', or: 'Regenbogenschild des Gegners', st: 'eigener Nachziehtoken', ot: 'Nachziehtoken des Gegners' };
   const chips = Object.keys(cnt).map(p => { const [k, e] = p.split(':'); return '<span class="lfchip">' + nm[k] + (e ? ' ' + NAMES[e] : '') + (cnt[p] > 1 ? ' ×' + cnt[p] : '') + '</span>'; }).join('');
-  return '<div class="lfsum"><div class="note">Klicke beliebige Marker auf dem Brett (Totenköpfe und Spiegelsteine, auch deine eigenen). Gewählt: <b>' + picks.length + '/' + lvl + '</b></div><div class="lfchips">' + (chips || '<span class="note">kein Marker gewählt (nur Heilung)</span>') + '</div><button class="mini" data-act="lfauto" title="Wieder die automatische Auswahl verwenden">Automatisch</button></div>';
+  return '<div class="lfsum"><div class="note">Klicke beliebige Marker auf dem Brett (Totenköpfe, Heilmarker, Spiegelsteine und Regenbogenschilde, auch deine eigenen). Gewählt: <b>' + picks.length + '/' + lvl + '</b></div><div class="lfchips">' + (chips || '<span class="note">kein Marker gewählt (nur Heilung)</span>') + '</div><button class="mini" data-act="lfauto" title="Wieder die automatische Auswahl verwenden">Automatisch</button></div>';
 }
 // Gold, das im Tempel eingesetzt werden müsste, um die nächste Tempelstufe zu erreichen (n Gold ergeben n(n+1)/2 Punkte)
 function goldForNext(pool, level) { const need = M.nextLevelCost(level) - pool; let n = 1; while (M.pointsForGold(n) < need && n < 20) n++; return need <= 0 ? 0 : n; }
@@ -111,13 +119,13 @@ function comboRef(cx) {
     } else if (cols.length === 1) {   // eine Farbe: nur die Kombos dieser Rolle, genauer erklärt
       h += '<div class="note" style="margin-bottom:4px;font-size:13px">Erste Karte: ' + el(prim) + '. Markiere eine zweite Farbe:</div>';
       ORD_ROWS.filter(r => r[2] === prim).forEach(r => { h += row(r[1], [r[2], r[3]], 0, 'Mit ' + el(r[3]) + ': ' + ordText(r[0], 'S'), false); });
-      h += row('Ultimate', ['F', 'E', 'W'], 0, 'Mit allen drei Farben: Todes-Fluch, ersetzt die Kombo.', false);
+      h += row('Ultimate', ['F', 'E', 'W'], 0, 'Mit allen drei Farben: ' + ultiText(prim, 'S') + ' Ersetzt die Kombo.', false);
     } else if (cols.length === 2 && o) {   // zwei Farben: genau eine Kombo, mit erreichter Stufe
       const r = ORD_ROWS.find(x => x[0] === o.key);
       h += row(r[1], [r[2], r[3]], o.lvl, ordText(r[0], o.lvl), true);
       h += '<div class="note" style="margin-top:4px;font-size:13px">Stufe = die kleinere der beiden Kartensummen (je Karte höchstens deine Magiestufe), höchstens 3. Mehrere Karten einer Farbe zählen zusammen. Eine dritte Farbe (' + el(M.ELEMENTS.find(x => !cols.includes(x))) + ') würde daraus die Ultimate machen.</div>';
     } else {   // alle drei Farben: Ultimate
-      h += row('Ultimate', ['F', 'E', 'W'], lv.ulti, 'Todes-Fluch: Der Gegner bekommt ' + (lv.ulti || 'S') + ' Todesmarker und verliert ' + (lv.ulti || 'S') + ' HP am Ende jeder seiner Angriffsphasen bis Kampfende. Die Kombos entfallen.', lv.ulti > 0);
+      h += row('Ultimate', ['F', 'E', 'W'], lv.ulti, ultiText(prim, lv.ulti || 'S') + ' Die Kombos entfallen.', lv.ulti > 0);
     }
     return '<div class="panel" style="' + box(LAYOUT.oppInfo, 'overflow-y:auto;padding:10px 12px;scrollbar-width:none') + '">' + h + '</div>';
   }

@@ -94,19 +94,21 @@ function drawMarkerAfter(state, pid, kind, wasRed) {
   if (!wasRed) return;
   if (state.phase === 'combat' && state.combat) return;   // Kampf: die Strafe (drawPenaltyMana Mana) wird schon in der Aktion „Nachziehen“ bezahlt, der Gegner bekommt nichts
   const q = state.players[other(pid)];
-  const g = state.rules.drawPenaltyGold || 0;
+  const g = drawPenaltyAmount(state, 'Gold');
   q.stats.gold += g; q.stats.goldGot += g;
   log(state, p.name + ' zog bei rotem Nachziehmarker nach: ' + q.name + ' erhält ' + g + ' Gold.', pid);
 }
+// Strafe für das Nachziehen bei rotem Marker (seit 0.7 nach der Spielstufe): Grundwert (drawPenaltyMana bzw. drawPenaltyGold) mal Abschnitt 1/2/3.
+function drawPenaltyAmount(state, kind) { const base = kind === 'Mana' ? (state.rules.drawPenaltyMana ?? 1) : (state.rules.drawPenaltyGold || 0); return base * Math.max(1, Math.min(3, state.stage || 1)); }
 // Kampf: Mana, das Nachziehen bei rotem Marker kostet (0, wenn der Marker grün ist oder die Regel fehlt).
 function drawManaCost(state, pid) {
   if (!state.rules.drawMarker || state.phase !== 'combat') return 0;
-  return markerOf(state, pid).h.drawRed ? (state.rules.drawPenaltyMana ?? 1) : 0;
+  return markerOf(state, pid).h.drawRed ? drawPenaltyAmount(state, 'Mana') : 0;
 }
 // Weltphase: Gold, das der Gegner bekommt, wenn pid bei rotem Nachziehmarker nachzieht (0, wenn der Marker grün ist oder die Regel fehlt).
 function drawGoldPenalty(state, pid) {
   if (!state.rules.drawMarker || state.phase !== 'world') return 0;
-  return markerOf(state, pid).h.drawRed ? (state.rules.drawPenaltyGold || 0) : 0;
+  return markerOf(state, pid).h.drawRed ? drawPenaltyAmount(state, 'Gold') : 0;
 }
 // Wer ist gerade am Zug (Spieler-Index) oder null, wenn das Spiel vorbei ist.
 function actor(state) {
@@ -120,5 +122,5 @@ return { ELEMENTS, SUPERIOR, NAMES, START_DECK, MAX_MAGIC, MAX_SLOTS, MIN_SLOTS,
   makeRng, parseCard, selection, newGame, apply, record, prim, actor, other, regen, handCounts,
   vendorOffers, vendorPlans, previewTemple, pointsForGold, nextLevelCost, maxed, limitStepCost, manaStepCost, hpStepCost, slotStepCost, magicCost, drawLimitCost, upField, magicField, payTxt,
   evalAttack, evalDefense, canFlee, stockOf, recoverGain, regenGain, comboLevels, levelsFor,
-  mirrorOf, monsterAlive, monsterHand, markerOf, drawManaCost, drawGoldPenalty, previewDefense, defenseComboPre, allMonstersDead, magicProgress, spawnMonsters, spawnForGame };
+  mirrorOf, shieldOf, drawPenaltyAmount, monsterAlive, monsterHand, markerOf, drawManaCost, drawGoldPenalty, previewDefense, defenseComboPre, allMonstersDead, magicProgress, spawnMonsters, spawnForGame };
 }));

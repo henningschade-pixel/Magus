@@ -47,10 +47,10 @@ function statsBlock(name, s, p, size, up, full) {
   // Opfern: goldener Münzknopf links neben dem Gold (wie die Upgrade-Knöpfe, die Zahl als Plakette erst ab 2; bei 0 transparent, seit 0.5.6.6); die Pfeile ◀ ▶ daneben stellen die Anzahl ein
   let sacCoin = '', sacArr = '', sacArr2 = '';
   if (!compact && p && up && s.gold >= 1) {
-    const n = Math.max(0, Math.min(sacN, s.gold, 4)), pv = M.previewTemple(p, n), okS = my && n > 0;
+    const n = Math.max(0, Math.min(sacN, s.gold)), pv = M.previewTemple(p, n), okS = my && n > 0;
     sacCoin = '<button class="up gc sacbtn' + (n > 1 ? ' costly' : '') + (n === 0 ? ' sac0' : '') + (okS ? '' : ' off') + '" data-act="temple" data-n="' + n + '"' + (n > 1 ? ' data-c="' + n + '"' : '') + (okS ? '' : ' disabled') + ' title="Opfern: ' + n + ' Gold im Tempel (+' + pv.points + ' Punkte → ' + (pv.gained ? '+' + pv.gained + ' Upgrade' : 'kein Upgrade') + '). Tempel: Punkte ' + p.temple.points + ', Stufe ' + p.temple.level + ', nächste Stufe kostet ' + M.nextLevelCost(p.temple.level) + '"></button>';
     sacArr = '<button class="arr" data-act="sacdn" title="Weniger opfern"' + (n > 0 ? '' : ' disabled') + '>◀</button>';
-    sacArr2 = '<button class="arr" data-act="sacup" title="Mehr opfern"' + (n < Math.min(s.gold, 4) ? '' : ' disabled') + '>▶</button>';
+    sacArr2 = '<button class="arr" data-act="sacup" title="Mehr opfern"' + (n < s.gold ? '' : ' disabled') + '>▶</button>';
   }
   const hasUp = !compact && !!(hpPl || manaPl || limPl || sacCoin);
   const hp = '<div class="statrow">' + lead(hpPl) + img('hp') + '<b data-pv="hp">' + Math.max(0, s.hp) + '/' + s.maxHp + '</b></div>';

@@ -88,8 +88,8 @@ function drawTrack(L, mine) {
   const sz = mine ? 24 : 19, gap = mine ? 6 : 4, tk = mine ? 18 : 15, w = CW * L.ps;
   const x0 = L.draw.x + (w - (n * sz + (n - 1) * gap)) / 2, y = L.draw.y + CH * L.ps + 24;   // unter der Stapelbeschriftung
   const red = !!pl.drawRed, at = Math.min((pl.drawN || 0) + 1, lim);   // Stufe des Markers: das wievielte Nachziehen als Nächstes frei wäre
-  const pm = G.rules.drawPenaltyMana ?? 1, who = mine ? 'dich' : 'ihn';
-  const pen = G.phase === 'combat' ? 'kostet ' + who + ' ' + pm + ' Mana (ohne Mana geht es nicht)' : 'gibt dem Gegner ' + G.rules.drawPenaltyGold + ' Gold';
+  const pm = M.drawPenaltyAmount(G, 'Mana'), who = mine ? 'dich' : 'ihn';
+  const pen = G.phase === 'combat' ? 'kostet ' + who + ' ' + pm + ' Mana (ohne Mana geht es nicht)' : 'gibt dem Gegner ' + M.drawPenaltyAmount(G, 'Gold') + ' Gold';
   const tip = (mine ? 'Dein' : 'Gegnerisches') + ' Nachziehlimit ' + lim + ' von ' + n + ': So oft ' + (mine ? 'darfst du' : 'darf er') + ' hintereinander nachziehen (ohne andere Aktion dazwischen), bevor der Marker auf Rot springt. Nachziehen bei rotem Marker ' + pen + '.';
   let h = '';
   for (let i = 1; i <= n; i++) h += '<div class="dlc' + (i <= lim ? '' : ' off') + '" title="' + tip + '" style="left:' + (x0 + (i - 1) * (sz + gap)) + 'px;top:' + y + 'px;width:' + sz + 'px;height:' + sz + 'px"></div>';
@@ -127,6 +127,7 @@ function renderCards() {
   ph += emp(L_MY, cx.myDeck) + emp(L_OP, cx.oppDeck);
   ph += lab(L_MY, cx.myDeck, true) + lab(L_OP, cx.oppDeck, false);
   const canDraw = canDrawNow();
+  ph += drawWarnHTML();
   ph += '<div class="pilehit ' + (canDraw ? '' : 'off') + '" data-act="draw" title="Nachziehen: nicht gesperrte Karten ablegen und neu füllen" style="left:' + L_MY.draw.x + 'px;top:' + L_MY.draw.y + 'px;width:' + CW * L_MY.ps + 'px;height:' + CH * L_MY.ps + 'px"></div>';
   ph += '<div class="pilehit" data-act="deckview" title="Dein Deck als Balkendiagramm (Stufen der Karten)" style="left:' + L_MY.disc.x + 'px;top:' + L_MY.disc.y + 'px;width:' + CW * L_MY.ps + 'px;height:' + CH * L_MY.ps + 'px"></div>';
   $('dimdeck').classList.toggle('on', !!deckView);   // Deckübersicht: Spielfeld dahinter sanft abdunkeln
@@ -139,7 +140,7 @@ function renderCards() {
     const lf = lfCtx(), sel = lf ? lf.picks.filter(p => p === 'ot').length : 0, pos = 'left:' + L_OP.draw.x + 'px;top:' + (L_OP.draw.y + CH * L_OP.ps + (G.rules.drawMarker ? 48 : 22)) + 'px', inner = '<img src="' + IMG.gratis + '">' + (cx.oppStats.freeDraws > 1 ? '<b class="mul">×' + cx.oppStats.freeDraws + '</b>' : '') + (sel ? '<i class="lfb">✓' + sel + '</i>' : '');
     ph += lf ? '<button class="freedraw opp lf' + (sel ? ' sel' : '') + '" data-act="lfm" data-k="ot" title="Läuterung: gegnerische Nachziehtokens zerstören (Klick: einen mehr, nach dem Maximum wieder alle weg). Sie werden nicht gutgeschrieben." style="' + pos + '">' + inner + '</button>' : '<div class="freedraw opp" title="Gratis-Nachziehen des Gegners: ' + cx.oppStats.freeDraws + 'x" style="' + pos + '">' + inner + '</div>';
   }
-  if (cx.combat) ph += deathTokens(cx.myStats, 's') + deathTokens(cx.oppStats, 'o');   // Todesmarker als einzelne Tokens auf dem Tisch
+  if (cx.combat) ph += deathTokens(cx.myStats, 's') + deathTokens(cx.oppStats, 'o') + healTokens(cx.myStats, 's') + healTokens(cx.oppStats, 'o');   // Todesmarker als einzelne Tokens auf dem Tisch
   const pnd = G.players[ME].stats[M.upField(G)], slotC = M.slotStepCost(G, G.players[ME].stats);
   if (!cx.combat && pnd >= slotC && G.players[ME].slots < M.MAX_SLOTS) {
     const canSlot = myTurn();
@@ -170,6 +171,15 @@ function deckPopHTML(deck) {
   });
   const L = L_MY;
   return '<div class="dkpop" data-act="deckclose" style="left:' + Math.max(10, L.disc.x - 330) + 'px;top:' + Math.max(10, L.y - 270) + 'px"><h4>Dein Deck: ' + all.length + ' Karten</h4><div class="dkbars">' + bars + '</div><div class="dklab">' + labs + '</div><small>Stapel ' + deck.draw.length + ' · Hand ' + deck.hand.filter(Boolean).length + ' · Ablage ' + deck.discard.length + '. Klicken zum Schließen.</small></div>';
+}
+// Strafe, die das Nachziehen jetzt kostet (Kampf: Mana, Weltphase: Gold für den Gegner); 0 bei grünem Marker
+function drawPenaltyNow() { return G.phase === 'combat' ? M.drawManaCost(G, ME) : M.drawGoldPenalty(G, ME); }
+// Warnung vor dem Nachziehen bei rotem Marker (wie beim Fliehen), über dem eigenen Nachziehstapel
+function drawWarnHTML() {
+  const pen = drawPenaltyNow();
+  if (!(drawAsk && canDrawNow() && pen > 0)) { drawAsk = false; return ''; }
+  const txt = G.phase === 'combat' ? 'Dein Nachziehmarker ist rot: Nachziehen kostet dich ' + pen + ' Mana.' : 'Dein Nachziehmarker ist rot: Nachziehen schenkt deinem Gegner ' + pen + ' Gold.';
+  return '<div class="fleewarn drawwarn" style="position:absolute;z-index:70;left:' + Math.max(10, L_MY.draw.x - 40) + 'px;top:' + Math.max(10, L_MY.draw.y - 128) + 'px;width:340px;margin:0;background:rgba(70,26,22,.96)"><b>Wirklich nachziehen?</b> ' + txt + '<div class="btnrow" style="margin-top:6px"><button class="btn danger" data-act="drawyes">Nachziehen</button><button class="btn" data-act="drawno">Abbrechen</button></div></div>';
 }
 function canDrawNow() {
   if (!myTurn()) return false;

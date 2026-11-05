@@ -38,6 +38,13 @@ function ordComboWorth(side, opp, Q, rules, lvs, ev) {
   const wEw = oMir > 0 ? 1.2 + oMir * Math.max(0.3, Q.lfOppW || 0) : 0.1;
   return mirrorWorth(side, opp, Q, ev.ord && ev.ord.el, lvs.fw) + lvs.fe * Q.wFE + lvs.ew * wEw + ruinWorth(opp, lvs.rm) + Math.min(lvs.gh * (rules.lifeflowHeal || 1), hurt) * Q.wEW + (lvs.gh > 0 && hurt === 0 ? 0.1 : 0);
 }
+// Wert einer Ultimate der Stufe lvl nach der Farbe der ersten Karte (seit 0.7): Feuer Todes-Fluch beim Gegner, Erde Heilfluss und Wasser Regenbogenschild bei mir selbst. Liegt schon ein Marker gleicher oder höherer Stufe, bringt sie kaum etwas.
+function ultiWorth(side, opp, Q, el, lvl) {
+  if (!(lvl > 0)) return 0;
+  if (el === 'E') return lvl * Q.wEW * 0.8 * ((side.stats.heal || 0) >= lvl ? 0.1 : 1) * (side.stats.maxHp > side.stats.hp ? 1 : 0.6);
+  if (el === 'W') return lvl * Q.wFW * 2 * ((side.stats.rainbow || 0) >= lvl ? 0.1 : 1);
+  return lvl * Q.wDeath * (opp.stats.death >= lvl ? 0.1 : 1) * (Q.smart ? Math.max(0.4, Math.min(1.4, opp.stats.hp / 4)) : 1);
+}
 function bestAttack(side, opp, hand, Q, state0, reserve) {
   const stats = side.stats, lim = Math.max(1, stats.limit);
   hand = hand.filter(h => !h.curse);   // Fluchkarten lassen sich nicht ausspielen
@@ -48,11 +55,11 @@ function bestAttack(side, opp, hand, Q, state0, reserve) {
     for (const ord of orders) {
       const ev = M.evalAttack(stats, ord);
       if (!ev.valid || !ev.affordable) continue;
-      const hurt = stats.maxHp - stats.hp, oMir = opp.stats.mirror || 0;
+      const hurt = stats.maxHp - stats.hp, oMir = (opp.stats.mirror || 0) + (opp.stats.rainbow || 0);
       const w = { fe: Q.wFE, ew: oMir > 0 ? 1.2 + oMir * Math.max(0.3, Q.lfOppW || 0) : 0.1 };   // Läuterung lohnt, wenn der Gegner Spiegelmarker trägt
       const lvs = M.levelsFor(ev);
       let combo = 0;
-      if (ev.levels.ulti > 0) combo = ev.levels.ulti * Q.wDeath * (opp.stats.death >= ev.levels.ulti ? 0.1 : 1) * (Q.smart ? Math.max(0.4, Math.min(1.4, opp.stats.hp / 4)) : 1);
+      if (ev.levels.ulti > 0) combo = ultiWorth(side, opp, Q, ev.ultiEl || ev.prim, ev.levels.ulti);
       else combo = mirrorWorth(side, opp, Q, ev.ord && ev.ord.el, lvs.fw) + lvs.fe * w.fe + lvs.ew * w.ew + ruinWorth(opp, lvs.rm) + Math.min(lvs.gh * 1, hurt) * Q.wEW + (lvs.gh > 0 && hurt === 0 ? 0.1 : 0);
       const dmg = ev.prim ? ev.damage : 0;
       let value = dmg * Q.aDmg + combo - ev.cost * Q.aCost + ev.curses * Q.aCurse;
@@ -60,7 +67,7 @@ function bestAttack(side, opp, hand, Q, state0, reserve) {
       const resHit = reserve && stats.mana - ev.cost <= 0 && (() => { const left = opp.stats.hp - Math.max(0, dmg - reserve.blk); return left > 0 && left <= reserve.hp; })();
       if (dmg >= opp.stats.hp && dmg > 0 && !resHit) value += 100;
       if (resHit) value -= reserve.v;
-      if (dmg > 0 && ev.prim && M.mirrorOf(opp.stats, ev.prim) > 0) value -= Math.min(M.mirrorOf(opp.stats, ev.prim), dmg) * Q.mirAvoid;   // Spiegel des Gegners: gleicht bis zu seiner Stufe von meinem Schaden aus (zurückgeworfen wird nur Überverteidigung)
+      if (dmg > 0 && ev.prim && M.shieldOf(opp.stats, ev.prim) > 0) value -= Math.min(M.shieldOf(opp.stats, ev.prim), dmg) * Q.mirAvoid;   // Spiegel des Gegners: gleicht bis zu seiner Stufe von meinem Schaden aus (zurückgeworfen wird nur Überverteidigung)
       if (ord.length > 1 && dmg === 0 && combo === 0 && ev.curses === 0) value -= 5;
       if (!best || value > best.value) best = { value, ord, ev, dmg };
     }
@@ -161,6 +168,8 @@ function combatPlan(state, pid) {
           const th = mirrorScores(opp, side, false);
           for (const e of M.ELEMENTS.slice().sort((x, y) => th[y] - th[x])) for (let i = 0; pick.length < lvl && i < M.mirrorOf(opp.stats, e); i++) pick.push('om:' + e);
         } else for (let i = 0; pick.length < lvl && i < (opp.stats.mirror || 0); i++) pick.push('om');
+        for (let i = 0; pick.length < lvl && i < (opp.stats.rainbow || 0); i++) pick.push('or');
+        for (let i = 0; pick.length < lvl && i < (opp.stats.heal || 0); i++) pick.push('oh');
         for (let i = 0; pick.length < lvl && i < (opp.stats.freeDraws || 0); i++) pick.push('ot');
         acts.push(A({ type: 'lfp', pick }));
       }
@@ -185,9 +194,9 @@ function combatPlan(state, pid) {
     return [A({ type: 'recover' })];
   }
   // Verteidigung
-  const color = c.color, pend = c.pending, lethal = pend - Math.min(M.mirrorOf(s, c.color), pend) >= s.hp;
+  const color = c.color, pend = c.pending, lethal = pend - Math.min(M.shieldOf(s, c.color), pend) >= s.hp;
   const cand = hand.filter(h => !h.curse);
-  const abs0 = Math.min(M.mirrorOf(s, color), pend);   // ohne Verteidigung gleicht ein Spiegel bis zu seiner Stufe aus
+  const abs0 = Math.min(M.shieldOf(s, color), pend);   // ohne Verteidigung gleicht ein Spiegel bis zu seiner Stufe aus
   let best = { score: (pend - abs0) * (lethal ? Q.dLeth : Q.dPend) + abs0 * Q.mirKeep, ord: [] };   // Verzicht auf Verteidigung bringt Mana
   const variants = [];
   for (const sub0 of subsets(cand, Math.max(1, s.limit))) {
@@ -205,7 +214,7 @@ function combatPlan(state, pid) {
       score -= rel * Q.mirW + (rel >= opp.stats.hp ? 60 : 0) - (rel + absorbed) * Q.mirKeep;
     }
     if (ev.ord) { const o = c.sides[c.turn === 'a' ? 'b' : 'a']; score -= ordComboWorth(side, o, Q, state.rules, M.levelsFor(ev), ev); }
-    if (Q.dU > 0 && ev.levels && ev.levels.ulti > 0) { const o = c.sides[c.turn === 'a' ? 'b' : 'a']; score -= Q.dU * ev.levels.ulti * Q.wDeath * (o.stats.death >= ev.levels.ulti ? 0.1 : 1) * Math.max(0.4, Math.min(1.4, o.stats.hp / 4)); }   // Ultimate in der Verteidigung: Todes-Fluch für den Angreifer
+    if (Q.dU > 0 && ev.levels && ev.levels.ulti > 0) { const o = c.sides[c.turn === 'a' ? 'b' : 'a']; score -= Q.dU * (ev.ultiEl === 'F' ? ev.levels.ulti * Q.wDeath * (o.stats.death >= ev.levels.ulti ? 0.1 : 1) * Math.max(0.4, Math.min(1.4, o.stats.hp / 4)) : ultiWorth(side, o, Q, ev.ultiEl, ev.levels.ulti)); }   // Ultimate in der Verteidigung: Feuer Todes-Fluch für den Angreifer, Erde Heilfluss, Wasser Regenbogenschild
     if (score < best.score) best = { score, ord: sub };
   }
   if (!best.ord.length) return [A({ type: 'pass' })];

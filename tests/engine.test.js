@@ -46,12 +46,12 @@ test('Läuterung entfernt auch eigene Spiegelmarker und gibt dafür ein Nachzieh
   assert.equal(me.stats.freeDraws, 1);
 });
 
-test('Ultimate in der Verteidigung: alle drei Farben erlaubt, Todes-Fluch für den Angreifer', () => {
+test('Ultimate in der Verteidigung: alle drei Farben erlaubt, mit Feuer als erster Karte Todes-Fluch für den Angreifer', () => {
   const { s, me, op } = combatSetup(11, ['F1']);
   op.stats.limit = 3; op.stats.mana = 9;
   op.deck.hand.forEach((x, i) => { if (x) op.deck.hand[i] = Object.assign({}, x, { id: ['F3', 'W2', 'E2'][i] || x.id }); });
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
-  [1, 0, 2].forEach(i => assert.ok(M.apply(s, { pid: op.ctrl, type: 'mark', slot: i }).ok));
+  [0, 1, 2].forEach(i => assert.ok(M.apply(s, { pid: op.ctrl, type: 'mark', slot: i }).ok));   // erste Karte F3: Feuer-Ultimate
   assert.ok(M.apply(s, { pid: op.ctrl, type: 'defend' }).ok);
   assert.ok(me.stats.death >= 1, 'Angreifer trägt einen Todesmarker');
   assert.equal(me.stats.deathPhase, undefined, 'Der frisch gesprochene Fluch hat in dieser Phase nicht getickt (Marker verbraucht)');
@@ -254,9 +254,8 @@ test('Kartenvorrat: Startdecks aus gemischten Stufe-1-Karten, getauschte Karten 
   d.marks = []; me.stats.mag.F = 1;
   d.hand[0] = Object.assign({}, d.hand[0], { id: 'F1' }); d.hand[1] = Object.assign({}, d.hand[1], { id: 'F1' });
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
-  assert.equal(M.apply(s, { pid: 0, type: 'vendor', result: 'F2', cost: ['F1', 'F1'] }).ok, false, 'F2 braucht die Magie Feuer auf Stufe 2');
-  assert.equal(M.vendorPlans(s, 0).some(o => o.result === 'F2'), false, 'die KI sieht gesperrte Karten nicht');
-  me.stats.mag.F = 2; d.marks = [];
+  assert.equal(M.vendorPlans(s, 0).some(o => o.result === 'F2'), true, 'seit 0.7 gibt es keine Freischaltung: F2 ist auch mit Magie Feuer 1 kaufbar');
+  d.marks = [];
   d.hand[0] = Object.assign({}, d.hand[0], { id: 'F1' }); d.hand[1] = Object.assign({}, d.hand[1], { id: 'F1' });
   const f1 = s.supply.F1, f2 = s.supply.F2;
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
@@ -589,7 +588,7 @@ test('Todes-Fluch aus der Verteidigung wirkt nicht sofort, sondern erst in der n
   op.deck.hand.forEach((x, i) => { if (x) op.deck.hand[i] = Object.assign({}, x, { id: ['F3', 'W2', 'E2'][i] || x.id }); });
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
   const hp0 = me.stats.hp;
-  [1, 0, 2].forEach(i => assert.ok(M.apply(s, { pid: op.ctrl, type: 'mark', slot: i }).ok));
+  [0, 1, 2].forEach(i => assert.ok(M.apply(s, { pid: op.ctrl, type: 'mark', slot: i }).ok));   // erste Karte F3: Feuer-Ultimate
   assert.ok(M.apply(s, { pid: op.ctrl, type: 'defend' }).ok);
   assert.ok(me.stats.death >= 1);
   assert.ok(me.stats.hp >= hp0 - 5 && !s.log.slice(-6).some(e => /Todes-Fluch: /.test(e.txt)), 'kein Fluchschaden am Ende dieser Phase');
@@ -751,4 +750,81 @@ test('Jede Entwicklung der Spieler ist auf Stufe 3 begrenzt (zwei Ausbauten), Ko
   assert.equal(st.maxMana, 6);
   assert.deepEqual(run('drawlimit'), [1, 2, null], 'Nachziehlimit 1 → 3');
   assert.equal(st.drawLimit, 3);
+});
+
+test('Karten lassen sich unabhängig von der entwickelten Magie kaufen (0.7): F3 mit Magie 1', () => {
+  const s = M.newGame({ seed: 9, ai: [false, false], first: 0 }), me = s.players[0], d = me.deck;
+  me.stats.limit = 2; me.stats.mag = { F: 1, E: 1, W: 1 }; s.supply.F3 = 4;
+  d.hand[0] = Object.assign({}, d.hand[0], { id: 'F2' }); d.hand[1] = Object.assign({}, d.hand[1], { id: 'F2' }); d.marks = [];
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
+  assert.ok(M.vendorOffers(s, 0).some(o => o.result === 'F3' && o.available), 'F3 wird angeboten');
+  assert.ok(M.apply(s, { pid: 0, type: 'vendor', result: 'F3', cost: ['F2', 'F2'] }).ok);
+});
+
+test('Gold opfern ohne Obergrenze (0.7): auch 9 Gold auf einmal', () => {
+  const s = M.newGame({ seed: 9, ai: [false, false], first: 0 }), me = s.players[0];
+  me.stats.gold = 9;
+  assert.ok(M.apply(s, { pid: 0, type: 'temple', amount: 9 }).ok);
+  assert.equal(me.stats.gold, 0); assert.ok(me.temple.level >= 4, 'Tempelstufe wächst mit der großen Spende');
+});
+
+test('Ultimate im Angriff nach Farbe der ersten Karte: Erde legt Heilmarker, der am Ende der eigenen Angriffsphase heilt', () => {
+  const { s, me, op } = combatSetup(11, ['E2', 'F2', 'W2']);
+  me.stats.maxHp = 9; me.stats.hp = 2;
+  [0, 1, 2].forEach(i => assert.ok(M.apply(s, { pid: 0, type: 'mark', slot: i }).ok));
+  assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+  assert.equal(me.stats.heal, 2, 'Heilmarker Stufe 2 bei mir'); assert.equal(op.stats.death || 0, 0, 'kein Todes-Fluch für den Gegner');
+  assert.ok(M.apply(s, { pid: op.ctrl, type: 'pass' }).ok);
+  assert.equal(me.stats.hp, 4, 'Heilfluss: +2 HP am Ende meiner Angriffsphase');
+});
+
+test('Ultimate im Angriff: Wasser legt einen Regenbogenschild der Stufe S bei mir', () => {
+  const { s, me, op } = combatSetup(11, ['W2', 'F2', 'E2']);
+  [0, 1, 2].forEach(i => assert.ok(M.apply(s, { pid: 0, type: 'mark', slot: i }).ok));
+  assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+  assert.equal(me.stats.rainbow, 2); assert.equal(op.stats.death || 0, 0);
+});
+
+test('Ultimate in der Verteidigung: Erde legt Heilmarker, Wasser einen Regenbogenschild (jeweils beim Verteidiger)', () => {
+  for (const [att, def, key] of [['E1', ['E3', 'W2', 'F2'], 'heal'], ['F1', ['W2', 'F3', 'E2'], 'rainbow']]) {
+    const { s, me, op } = combatSetup(11, [att]);
+    op.stats.limit = 3; op.stats.mana = 9;
+    op.deck.hand.forEach((x, i) => { if (x) op.deck.hand[i] = Object.assign({}, x, { id: def[i] || x.id }); });
+    M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+    [0, 1, 2].forEach(i => assert.ok(M.apply(s, { pid: op.ctrl, type: 'mark', slot: i }).ok));
+    assert.ok(M.apply(s, { pid: op.ctrl, type: 'defend' }).ok);
+    assert.ok(op.stats[key] >= 1, key + ' beim Verteidiger'); assert.equal(me.stats.death || 0, 0, 'kein Todes-Fluch');
+  }
+});
+
+test('Regenbogenschild wirkt gegen jede Farbe und verbraucht sich nicht', () => {
+  for (const att of ['F2', 'E2', 'W2']) {
+    const { s, op } = combatSetup(11, [att]);
+    op.stats.rainbow = 2; op.stats.hp = op.stats.maxHp = 9;
+    M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+    assert.ok(M.apply(s, { pid: op.ctrl, type: 'pass' }).ok);
+    assert.equal(op.stats.hp, 9, att + ': der Schild gleicht den Schaden aus'); assert.equal(op.stats.rainbow, 2, att + ': er bleibt bestehen');
+  }
+});
+
+test('Läuterung entfernt Heilmarker und Regenbogenschilde des Gegners', () => {
+  const { s, me, op } = combatSetup(11, ['E3', 'F3']);
+  op.stats.heal = 2; op.stats.rainbow = 1; me.stats.freeDraws = 0;
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
+  assert.ok(M.apply(s, { pid: 0, type: 'lfp', pick: ['oh', 'oh', 'or'] }).ok);
+  assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+  assert.equal(op.stats.heal || 0, 0); assert.equal(op.stats.rainbow || 0, 0); assert.equal(me.stats.freeDraws, 3);
+});
+
+test('Strafe des Nachziehmarkers wächst mit der Spielstufe (0.7): Grundwert mal Abschnitt, für Gold und Mana', () => {
+  const s = M.newGame({ seed: 9, ai: [false, false], first: 0 });
+  s.players[0].drawRed = true;
+  for (const st of [1, 2, 3]) {
+    s.stage = st;
+    assert.equal(M.drawGoldPenalty(s, 0), st * (s.rules.drawPenaltyGold || 0), 'Gold in Abschnitt ' + st);
+    assert.equal(M.drawPenaltyAmount(s, 'Mana'), st * (s.rules.drawPenaltyMana ?? 1), 'Mana in Abschnitt ' + st);
+  }
+  s.stage = 3; const q = s.players[1].stats, g0 = q.gold; s.turn = 0;
+  assert.ok(M.apply(s, { pid: 0, type: 'draw' }).ok);
+  assert.equal(q.gold - g0, 3 * (s.rules.drawPenaltyGold || 0), 'der Gegner erhält die Strafe von Abschnitt 3');
 });
