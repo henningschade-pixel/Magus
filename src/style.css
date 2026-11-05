@@ -153,7 +153,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 /* Opfern: goldener Münzknopf (Klasse up gc sacbtn) links neben dem Gold, die Pfeile ◀ ▶ stehen links und rechts neben dem Münzknopf; die Spalte der Knöpfe ist dann breiter, die übrigen Knöpfe stehen rechtsbündig unter der Münze */
 .sbody.hasup.hassac .lead{width:56px}
 .lead .up.sacbtn{margin:0}
-.lead .up.sacbtn.sac0{opacity:0;pointer-events:none}   /* 0 Münzen: Knopf bleibt als Platzhalter, ist aber durchsichtig (seit 0.5.6.6) */
+.lead .up.sacbtn.sac0{opacity:.38}   /* 0 Münzen (Standard): Knopf steht teiltransparent da, solange Gold zum Opfern da ist (seit 0.5.7.2) */
 .lead .arr{flex:none;align-self:center}
 .lead .arr:disabled{opacity:0;pointer-events:none}   /* Pfeil ohne Wirkung: durchsichtig, Platz bleibt erhalten (seit 0.5.6.7) */
 .arr{background:none;border:0;color:var(--gold);font-size:12px;padding:0 1px;cursor:var(--cp)}.arr:disabled{opacity:.3;cursor:var(--cd)}.arr:hover:not(:disabled){color:#fff}
