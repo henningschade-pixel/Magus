@@ -151,7 +151,7 @@ Ein goldener Rand zeigt, wer am Zug ist (unten du, oben Gegner). Am Zugende teil
 
 **Statistik (Stand 17.10.):** Die Kurven „HP“ und „Mana“ zeigen die aktuellen Werte zum Messzeitpunkt (nicht mehr die Höchstwerte). Ein Kampf (★ Showdown, ● Monsterkampf) lässt sich anklicken: Die Kampfansicht zeigt HP und Mana beider Seiten nach jedem Schritt, die Angriffe (▲ Schaden) und Verteidigungen (◆ Block) sowie eine Zusammenfassung (geblockt, durchgegangen, Endwerte). „Zurück zur Statistik“ führt zum Gesamtverlauf.
 
-## Stillstandsregel (seit 0.6.1.1 aktiv, Schalter `idleLimit`, Standard 30; 0 = aus)
+## Stillstandsregel (Vorschlag, Schalter `idleLimit`, Standard 0 = aus; am Tisch kaum umsetzbar, deshalb verworfen)
 
 Gegen Patt-Schleifen (beide warten mit „Nachziehen“, einer greift an und flieht, wieder warten; die längste Partie in 1000 hatte 12940 Aktionen, davon 11000 Nachziehzüge). Am Tisch: ein **Stillstandsmarker**. Er rückt nach jedem Zug einer Weltphase um 1 vor und geht nur zurück, wenn ein Kampf einen Sieger hat (Monster besiegt oder Niederlage gegen das Monster, Showdown). Flucht und Erschöpfung setzen ihn nicht zurück. Erreicht er `idleLimit` Züge (30 = 15 Runden), beginnt sofort der Showdown des Abschnitts, auch wenn Monster übrig sind.
 Messung (KI gegen KI, 1000 Partien): ohne Regel P90 1615, Maximum 12940 Aktionen; mit Limit 20/30/40 P90 454/459/459, Maximum 850; Unentschieden 7,8 % statt 9,2/10,1/11,1 %. Zwischen zwei entschiedenen Kämpfen vergehen normalerweise 7 Züge (75 % höchstens 10), die Regel löst aber in rund 70 % der KI-Partien aus, weil die KI lange wartet. Die KI ist darauf nicht trainiert.
@@ -344,3 +344,7 @@ Darstellung: Erreichte Magiestufen (Edelsteine im Ouroboros) haben einen hellen 
 ## Änderung 0.6.1.1 (05.11.)
 
 Gegen Patt-Schleifen zwischen zwei KI-Spielern (Auswertung eines Zuschauer-Logs, Seed 1396742866: 4984 Aktionen, 169 Fluchten in Abschnitt 1, nur 3 entschiedene Monsterkämpfe; die Monster heilen sich in den zwei Weltzügen nach jeder Flucht wieder): `idleLimit` steht jetzt auf 30 (nach 15 Runden ohne entschiedenen Kampf beginnt der Showdown), die KI-Patt-Sicherung `fleeIdle` sinkt von 120 auf 30 (die KI flieht dann nicht mehr), und `fleeA` steigt von 1 auf 2 (der Angreifer flieht erst, wenn das Monster in der Prognose zwei Züge vorn liegt). Golden-Datei und Balance-Messung sind nachzuziehen (`npm run golden`, `npm run balance`).
+
+## Änderung 0.6.1.2 (05.11.)
+
+Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tisch kaum umsetzen. Die Patt-Schleifen der KI werden nur noch über die KI-Parameter vermieden: `fleeIdle` 30 (nach 30 Weltzügen ohne entschiedenen Kampf flieht die KI nicht mehr) und `fleeA` 2 (Flucht erst bei zwei Zügen Rückstand in der Prognose). Der Absatz zu 0.6.1.1 gilt insoweit nicht mehr für `idleLimit`.
