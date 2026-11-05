@@ -14,7 +14,7 @@ const LAYOUT0 = {
   oppInfo:   { left: 920, top: 182, w: 336, h: 310 },
   combatLog: { left: 372, top: 510, w: 536 },               // zwei letzte Protokollzeilen im Kampf
   combatSub: { left: 372, top: 490, w: 536 },               // Abschnitts-/Siegpunktzeile im Kampf
-  boardMe: 132, boardOpp: 116,                              // Kantenlänge der Magie-Boards
+  boardMe: 120, boardOpp: 108,                              // Kantenlänge der Magie-Boards
   // Handkarten: y = Oberkante, cx = Mitte, gap = Abstand, span = Breite des Fächers, s = Maßstab, ps = Maßstab der Stapel
   hand: {
     me:  { y: 598, cx: 459, gap: 140, span: 680, s: 1,   draw: { x: 16,  y: 598 }, disc: { x: 812, y: 598 }, ps: 0.74, raise: -40 },

@@ -332,3 +332,7 @@ Keine Regeländerung, nur die Darstellung: Das Magie-Board ist die Grafik „Dre
 ## Änderung 0.6.0.1 (05.11.)
 
 Der Stern über den Siegpunkten in der Ringmitte entfällt; die Zahl steht allein und etwas größer.
+
+## Änderung 0.6.0.2 (05.11.)
+
+Darstellung: Magie-Boards 120 px (Spieler) und 108 px (Gegner), ohne Abstand nach oben, damit das Board nicht über den Panelrand ragt. Die Kaufknöpfe der Magie liegen mit ihrer Mitte auf dem äußeren Rand des Boards (Radius 0,5 der Bildgröße), die HP- und Mana-Bögen des Spielers wieder 23 px außerhalb.

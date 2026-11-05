@@ -81,13 +81,13 @@ function statsBlock(name, s, p, size, up, full) {
     let btn = '';
     for (const e of M.ELEMENTS) {
       const MF = M.magicField(G), lv = s.mag[e], mc = M.magicCost(G, lv, s), ok = s[MF] >= mc; if (lv >= M.MAX_MAGIC || s[MF] <= 0) continue;   // wie die Upgrade-Knöpfe: sichtbar, sobald die Währung (Gold, mit swapCosts Upgrade-Punkte) da ist; zu teure Stufen durchscheinend und gesperrt
-      const ang = dir[e] * Math.PI / 180, r = bsz * 0.405;   // seit 0.6: Mitte der Scheibe auf dem Drachenkörper in Richtung der Magie, knapp außerhalb des äußeren Kupferrings (Radius 0,32 der Bildgröße)
+      const ang = dir[e] * Math.PI / 180, r = bsz * 0.5;   // seit 0.6.0.2: Mitte der Scheibe auf dem äußeren Rand des Bretts in Richtung der Magie (vorher 0,405: zu weit innen)
       const x = bsz / 2 + Math.cos(ang) * r, y = bsz / 2 + Math.sin(ang) * r;
       btn += '<button class="up mg ' + (MF === 'gold' ? 'gd' : 'pt') + (mc > 1 ? ' costly' : '') + (ok ? '' : ' off') + '"' + (mc > 1 ? ' data-c="' + mc + '"' : '') + (ok ? '' : ' disabled') + ' style="' + discBox(MF === 'gold', x, y, diam) + '" data-act="magic" data-e="' + e + '" title="' + NAMES[e] + ' Stufe ' + (lv + 1) + ' kaufen (' + M.payTxt(G, MF, mc) + (ok ? '' : ', du hast ' + s[MF]) + ')"></button>';
     }
     bd = bd.replace(/<\/div>$/, btn + '</div>');
   }
-  const aR = bsz / 2 + 11, aPad = Math.ceil(aR - bsz / 2 + 4);   // Bögen: beim Spieler außerhalb der Magie-Knöpfe, beim Gegner dicht am Brett
+  const aR = compact ? bsz / 2 + 11 : bsz / 2 + 23, aPad = Math.ceil(aR - bsz / 2 + 4);   // Bögen: beim Spieler außerhalb der Magie-Knöpfe, beim Gegner dicht am Brett
   h += '</div><div class="bcol"><div class="bwrap" style="width:' + (bsz + 2 * aPad) + 'px;height:' + bsz + 'px">' + arcsHTML(s, bsz, aPad, aR) + bd.replace('<div class="bd" style="', '<div class="bd" style="left:' + aPad + 'px;') + '</div></div></div>';
   return h;
 }
