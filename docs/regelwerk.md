@@ -368,3 +368,7 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 
 - **Kombo-Übersicht:** Alle Kombos stehen nach der Farbe der ersten Karte geordnet (Feuer, Wasser, Erde), die Ultimate jeweils darunter, und passen ohne Scrollbalken in das Fenster. Ausführliche Wirkungen stehen im Tooltip.
 - **Umbenennung:** Der Todes-Fluch (Feuer-Ultimate) heißt **Todesfluss**.
+
+## Änderung 0.7.0.2 (06.11.)
+
+- Kombo-Übersicht: Farbüberschriften und der Zusatz „(Ultimate)“ entfallen; die Kombos bleiben nach Farbe geordnet.

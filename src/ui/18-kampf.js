@@ -117,10 +117,9 @@ function comboRef(cx) {
     const row = (name, els, lvl, text, on) => '<div class="cref' + (on ? ' on' : '') + '" style="padding:1px 7px;margin-bottom:2px;font-size:13px"><b>' + name + '</b> ' + els.map(el).join(' + ') + (lvl ? ' <span class="note">· Stufe ' + lvl + '</span>' : '') + (text ? '<small>' + text + '</small>' : '') + '</div>';
     // Die Ultimate (alle drei Farben) steht seit 0.7 unter der Farbe ihrer ersten Karte: Feuer Todesfluss, Wasser Regenbogenschild, Erde Heilfluss.
     const ULTI_NAME = { F: 'Todesfluss', W: 'Regenbogenschild', E: 'Heilfluss' }, ROLE = { F: 'Feuer', W: 'Wasser', E: 'Erde' };
-    const ultiRow = (p, lvl, text, on) => row(ULTI_NAME[p] + ' (Ultimate)', [p, ...M.ELEMENTS.filter(x => x !== p)], lvl, text, on);
+    const ultiRow = (p, lvl, text, on) => row(ULTI_NAME[p], [p, ...M.ELEMENTS.filter(x => x !== p)], lvl, text, on);
     if (cols.length === 0) {   // noch nichts markiert: alle Kombos nach Farbe der ersten Karte, Wirkung als Tooltip
       ['F', 'W', 'E'].forEach(p => {
-        h += '<div class="crefh ' + p + '">' + ROLE[p] + '</div>';
         ORD_ROWS.filter(r => r[2] === p).forEach(r => { h += row(r[1], [r[2], r[3]], 0, '', false).replace('<div class="cref"', '<div class="cref" title="' + esc(ordText(r[0], 'S', true)) + '"'); });
         h += ultiRow(p, 0, '', false).replace('<div class="cref"', '<div class="cref" title="' + esc(ultiText(p, 'S')) + '"');
       });
