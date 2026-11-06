@@ -14,7 +14,7 @@ function resetPlayers(state, mode) {
 }
 // Gemeinsamer Anfangszustand eines Kampfs (Monsterkampf und Showdown unterscheiden sich nur in den übergebenen Feldern).
 function newCombat(state, fields) {
-  return Object.assign({ logFrom: state.logN, turn: 'a', action: 'attack', color: null, pending: 0, turns: 0 }, fields);
+  return Object.assign({ logFrom: state.logN, turn: 'a', action: 'attack', color: null, pending: 0, turns: 0, atkTurns: 0 }, fields);
 }
 function startCombat(state, attPid, slot) {   // slot: Platz des Monsters (F, E, W); sein Element steht in monster.el
   const A = state.players[attPid];
@@ -57,6 +57,8 @@ function evaluateEnd(state) {
     return { reason: 'hp', winner, monsterDefeated: bh <= 0 };
   }
   // Kein automatisches Unentschieden mehr bei 0 Mana beider Seiten: Der Kampf geht weiter (Erholen bringt Mana, der Todesfluss zehrt am Ende der Angriffsphasen). Beenden lässt er sich durch Fliehen (siehe canFlee); als Sicherung gegen Endlosschleifen gilt MAX_COMBAT_TURNS.
+  // Kampfrunden (seit 0.7.6.5): Eine Runde ist ein Angriffszug jeder Seite (die Verteidigung gehört zum Angriffszug des Gegners). Nach maxRounds Runden (Standard 10) endet der Kampf unentschieden, sobald der letzte Angriffszug samt Verteidigung abgeschlossen ist; der Kampf auf 0 HP geht vor.
+  if (state.rules.maxRounds > 0 && c.action === 'attack' && (c.atkTurns || 0) >= 2 * state.rules.maxRounds) return { reason: 'rounds', winner: null, monsterDefeated: false };
   if (c.turns >= MAX_COMBAT_TURNS) return { reason: 'exhaustion', winner: null, monsterDefeated: false, forced: true };
   return null;
 }
@@ -93,11 +95,11 @@ function endCombat(state, end) {
       }
       if (msp) { const lost = Math.min(msp, A.sp); A.sp -= lost; res.sp = { winner: 0, loser: -lost }; if (lost) log(state, A.name + ' verliert ' + lost + ' Siegpunkt' + (lost > 1 ? 'e' : '') + '; das Monster bringt seinem Führer keine.', c.att); }   // Niederlage kostet den Angreifer, bringt dem Monsterführer aber nichts (sonst lässt sich ein unbesiegtes Monster endlos farmen)
     }
-    else log(state, end.reason === 'flee' ? 'Die Flucht ist geglückt. Kein Sieger; das Monster behält seine Verletzungen.' : end.reason === 'exhaustion' ? 'Beide Seiten sind erschöpft. Kein Sieger.' : 'Beide Seiten fallen. Kein Sieger.');
+    else log(state, end.reason === 'flee' ? 'Die Flucht ist geglückt. Kein Sieger; das Monster behält seine Verletzungen.' : end.reason === 'exhaustion' ? 'Beide Seiten sind erschöpft. Kein Sieger.' : end.reason === 'rounds' ? 'Nach ' + state.rules.maxRounds + ' Kampfrunden endet der Kampf unentschieden. Kein Sieger; das Monster behält seine Verletzungen.' : 'Beide Seiten fallen. Kein Sieger.');
   } else {
     if (end.winner) { const w = end.winner === 'a' ? A : B, wl = w === A ? B : A, ssp = state.rules.showdownSp || 0, lost = Math.min(ssp, wl.sp); w.sp += ssp; wl.sp -= lost; res.sp = { winner: ssp, loser: -lost }; log(state, w.name + ' gewinnt den Showdown (+' + ssp + ' Siegpunkt' + (ssp > 1 ? 'e' : '') + (lost ? ', ' + wl.name + ' verliert ' + lost : '') + ').', end.winner === 'a' ? c.att : c.def);
       const L = w === A ? B : A; const lu = state.showdown === 1 && state.rules.loserUp2 !== undefined ? state.rules.loserUp2 : state.rules.loserUp; if (lu > 0 && state.showdown < 2) { L.stats.pending += lu; L.stats.upGot += lu; log(state, L.name + ' erhält als Trostpreis ' + lu + ' Upgrade-Punkt' + (lu > 1 ? 'e' : '') + '.', w === A ? c.def : c.att); } }
-    else log(state, end.reason === 'flee' ? 'Die Flucht ist geglückt. Der Showdown endet ohne Sieger, ohne Siegpunkte.' : 'Showdown ohne Sieger: keine Siegpunkte.');   // Flucht und Unentschieden zählen nie als Sieg oder Niederlage
+    else log(state, end.reason === 'flee' ? 'Die Flucht ist geglückt. Der Showdown endet ohne Sieger, ohne Siegpunkte.' : end.reason === 'rounds' ? 'Nach ' + state.rules.maxRounds + ' Kampfrunden endet der Showdown unentschieden: keine Siegpunkte.' : 'Showdown ohne Sieger: keine Siegpunkte.');   // Flucht und Unentschieden zählen nie als Sieg oder Niederlage
   }
   state.combat = null; state.phase = 'world'; state.lastCombat = res;
   resetPlayers(state, c.mode);
@@ -113,7 +115,7 @@ function endCombat(state, end) {
     }
   } else {
     state.showdown++;
-    const goal = state.rules.winSp > 0 && state.showdown >= (state.rules.winSpFromShowdown || 1) && Math.max(state.players[0].sp, state.players[1].sp) >= state.rules.winSp;   // Siegbedingung: wer nach einem Showdown (ab winSpFromShowdown) winSp Siegpunkte hat, gewinnt sofort; die Partie endet dann vor dem nächsten Abschnitt
+    const goal = state.rules.winSp > 0 && state.showdown >= (state.rules.winSpFromShowdown || 1) && Math.max(state.players[0].sp, state.players[1].sp) >= state.rules.winSp && state.players[0].sp !== state.players[1].sp;   // seit 0.7.6.6: nur wer führt (bei Gleichstand geht es weiter)   // Siegbedingung: wer nach einem Showdown (ab winSpFromShowdown) winSp Siegpunkte hat, gewinnt sofort; die Partie endet dann vor dem nächsten Abschnitt
     if (state.showdown >= 3 || goal) {
       state.over = true; state.phase = 'over';
       const s0 = state.players[0].sp, s1 = state.players[1].sp;
@@ -209,6 +211,7 @@ function passAttackTurn(state) {
   const c = state.combat;
   deathTick(state, c.sides[c.turn]);
   c.turn = c.turn === 'a' ? 'b' : 'a'; c.action = 'attack'; c.color = null; c.pending = 0; c.lfp = null;
+  c.atkTurns = (c.atkTurns || 0) + 1;   // ein Angriffszug ist vorbei (Angriff ohne Schaden, Passen, Erholen, Nachziehen)
 }
 
 // HP nach einer Heilung um lvl: höchstens bis zu den maximalen HP, nie weniger als vorher
@@ -264,7 +267,7 @@ function execAttack(state) {
   const dmg = ev.prim ? ev.damage : 0;
   if (dmg > 0) fxs.push({ kind: 'attack', who: side.ctrl, to: opp.ctrl, elem: ev.prim, n: dmg });
   log(state, side.name + ' greift an' + (ev.prim ? ' (' + NAMES[ev.prim] + ', Schaden ' + dmg + ')' : ' (nur Flüche)') + (texts.length ? ' – ' + texts.join(', ') : '') + '.', side.ctrl, fxs.length ? fxs : undefined);
-  if (dmg > 0) { c.color = ev.prim; c.pending = dmg; c.turn = c.turn === 'a' ? 'b' : 'a'; c.action = 'defense'; }
+  if (dmg > 0) { c.color = ev.prim; c.pending = dmg; c.turn = c.turn === 'a' ? 'b' : 'a'; c.action = 'defense'; c.atkTurns = (c.atkTurns || 0) + 1; }
   else passAttackTurn(state);
   const res = finishStep(state, { k: 'A', who: side.key === 'a' ? 0 : 1, v: dmg });
   return { ok: true, combatEnd: res };

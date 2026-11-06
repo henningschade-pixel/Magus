@@ -70,7 +70,7 @@ let manaPv = 0;   // Manakosten der markierten Karten, als rote Vorschau am Mana
 function combatCenter(cx) {
   manaPv = 0;
   const c = cx.c, my = myTurn(), atk = c.action === 'attack';
-  let h = '<div class="combatcenter"><div class="sc" style="font-size:22px;color:var(--gold)">' + (c.mode === 'showdown' ? 'Showdown' : 'Kampf gegen ' + esc(c.sides.b.name)) + '</div>';
+  let h = '<div class="combatcenter"><div class="sc" style="font-size:22px;color:var(--gold)">' + (c.mode === 'showdown' ? 'Showdown' : 'Kampf gegen ' + esc(c.sides.b.name)) + '</div>' + (G.rules.maxRounds > 0 ? '<div class="note" style="margin-top:-2px" title="Eine Kampfrunde ist ein Angriffszug jeder Seite. Nach ' + G.rules.maxRounds + ' Runden endet der Kampf unentschieden, wenn bis dahin keiner auf 0 HP gefallen ist.">Runde <b>' + Math.min(G.rules.maxRounds, Math.floor((c.atkTurns || 0) / 2) + 1) + '</b> von ' + G.rules.maxRounds + '</div>' : '');
   if (c.forced) {   // Zerrüttung: Abwurf wählen (ich) bzw. warten (Gegner)
     const vs = c.sides.a.ctrl === c.forced.pid ? c.sides.a : c.sides.b, need = Math.min(c.forced.n, vs.deck.hand.filter(Boolean).length);
     h += c.forced.pid === ME

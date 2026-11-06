@@ -168,7 +168,7 @@ test('Siegpunkte: Monsterkampf +1 / -1 (nie unter 0), keine Beute, kein Trostpre
       if (r.monsterDefeated) { const g = s.players.map((p, i) => p.stats.goldGot - before[i].gold); assert.deepEqual(g, [0, 0], 'keine Beute für beide Spieler'); }
     }
     assert.ok(!s.log.some(l => /Trostpreis/.test(l.txt)), 'kein Trostpreis');
-    if (s.over && s.showdown < 3) { assert.equal(s.showdown, 2, 'vorzeitiges Ende nur nach Showdown 2'); assert.ok(Math.max(s.players[0].sp, s.players[1].sp) >= 4, 'vorzeitiges Ende nur ab 4 Siegpunkten'); }
+    if (s.over && s.showdown < 3) { assert.ok(s.showdown >= 1, 'vorzeitiges Ende frühestens nach Showdown 1'); assert.ok(Math.max(s.players[0].sp, s.players[1].sp) >= 4 && s.players[0].sp !== s.players[1].sp, 'vorzeitiges Ende nur mit Führung ab 4 Siegpunkten'); }
   }
   assert.ok(decided > 0 && floored > 0, 'Monsterkämpfe mit Sieger und Untergrenze 0 kamen vor');
 });
@@ -898,4 +898,62 @@ test('Opfern im Tempel ist kein Zug: der Spieler bleibt am Zug, der Nachziehmark
   assert.ok(M.apply(s, { pid: 0, type: 'temple', amount: 1 }).ok, 'mehrfaches Opfern im selben Zug');
   assert.equal(s.turn, 0);
   assert.ok(M.apply(s, { pid: 0, type: 'draw' }).ok); assert.equal(s.turn, 1, 'eine andere Aktion beendet den Zug');
+});
+
+test('Kampfrunden: nach 10 Runden (je ein Angriffszug jeder Seite) endet der Kampf unentschieden (0.7.6.5)', () => {
+  const { s, c } = combatSetup(11, ['F1']);
+  const ctrl = k => c.sides[k].ctrl;
+  for (let i = 1; i <= 19; i++) {
+    const r = M.apply(s, { pid: ctrl(c.turn), type: 'pass' });
+    assert.ok(r.ok, 'Passen ' + i); assert.ok(s.combat, 'Kampf läuft nach Angriffszug ' + i);
+  }
+  assert.equal(c.atkTurns, 19);
+  const hp = [c.sides.a.stats.hp, c.sides.b.stats.hp];
+  assert.ok(M.apply(s, { pid: ctrl(c.turn), type: 'pass' }).ok);
+  assert.equal(s.combat, null, 'nach dem 20. Angriffszug (10 Runden) ist der Kampf beendet');
+  assert.equal(s.lastCombat.reason, 'rounds'); assert.equal(s.lastCombat.winner, null);
+  assert.ok(s.log.some(l => /Nach 10 Kampfrunden endet der Kampf unentschieden/.test(l.txt)));
+  assert.ok(hp[0] > 0 && hp[1] > 0);
+});
+
+test('Kampfrunden: ein Angriff im letzten Angriffszug wird erst verteidigt, dann endet der Kampf; fällt jemand auf 0 HP, entscheidet das (0.7.6.5)', () => {
+  const { s, c, me, op } = combatSetup(11, ['F1', 'F1']);
+  c.atkTurns = 19; c.turn = 'a'; c.action = 'attack';
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 });
+  assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+  assert.ok(s.combat, 'Verteidigung steht noch aus'); assert.equal(c.action, 'defense');
+  assert.ok(M.apply(s, { pid: c.sides[c.turn].ctrl, type: 'pass' }).ok);
+  assert.equal(s.combat, null); assert.equal(s.lastCombat.reason, 'rounds');
+  // Variante: der letzte Angriff tötet
+  const t = combatSetup(11, ['F3', 'F3']);
+  t.c.atkTurns = 19; t.op.stats.hp = 1; M.apply(t.s, { pid: 0, type: 'mark', slot: 0 });
+  assert.ok(M.apply(t.s, { pid: 0, type: 'attack' }).ok); assert.ok(M.apply(t.s, { pid: t.c.sides[t.c.turn].ctrl, type: 'pass' }).ok);
+  assert.equal(t.s.lastCombat.reason, 'hp'); assert.equal(t.s.lastCombat.winner, 'a');
+});
+
+test('Kampfrunden: maxRounds 0 schaltet die Begrenzung ab (0.7.6.5)', () => {
+  const s = M.newGame({ seed: 11, ai: [false, false], first: 0, rules: { maxRounds: 0 } });
+  M.apply(s, { pid: 0, type: 'combat', elem: 'F' }); const c = s.combat;
+  for (let i = 0; i < 30; i++) assert.ok(M.apply(s, { pid: c.sides[c.turn].ctrl, type: 'pass' }).ok);
+  assert.ok(s.combat, 'Kampf läuft weiter');
+});
+
+test('Vorzeitiges Ende: wer nach einem Showdown mit mindestens 4 Siegpunkten führt, gewinnt sofort (0.7.6.6)', () => {
+  assert.equal(M.DEFAULT_RULES ? M.DEFAULT_RULES.winSp : 4, 4);
+  let early = 0, cont = 0;
+  for (let seed = 8000; seed < 8030; seed++) {
+    const s = M.newGame({ seed, ai: [true, true], first: seed & 1 });
+    let steps = 0, shown = 0;
+    while (!s.over && steps++ < 20000) {
+      if (!AI.runTurn(s, M.actor(s)).ok) break;
+      if (s.showdown > shown) {   // ein Showdown wurde gerade beendet
+        shown = s.showdown;
+        const [a, b] = s.players.map(p => p.sp);
+        if (Math.max(a, b) >= 4 && a !== b) { assert.ok(s.over, 'Führung ab 4 Siegpunkten beendet das Spiel sofort (Showdown ' + shown + ', ' + a + ':' + b + ')'); early++; assert.equal(s.winner, a > b ? 0 : 1); }
+        else if (shown < 3) { assert.ok(!s.over, 'ohne Führung ab 4 geht es weiter'); cont++; }
+      }
+    }
+    assert.ok(s.over);
+  }
+  assert.ok(early > 0 && cont > 0, 'beide Fälle kamen vor: ' + early + '/' + cont);
 });

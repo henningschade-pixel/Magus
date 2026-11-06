@@ -37,10 +37,10 @@ function endTexts(res, sn, lines) {
     const gold = res.loot > 0 ? res.loot + ' Gold für beide' : '', join = (...t) => t.filter(Boolean).join(' · ');
     if (res.winner === 'a') return mine ? { cls: 'win', title: 'Sieg', sub: m.name + ' besiegt', loot: join(gold, res.sp ? '+' + res.sp.winner + ' Siegpunkt' : ''), rest } : { cls: 'draw', title: m.name + ' besiegt', sub: join(gold, res.sp ? G.players[sn.att].name + ' +' + res.sp.winner + ' Siegpunkt' : ''), rest };
     if (res.winner === 'b') return mine ? { cls: 'lose', title: 'Niederlage', sub: m.name + ' gewinnt den Kampf und zieht sich zurück', loot: join(res.sp && res.sp.loser ? res.sp.loser + ' Siegpunkt' : '', helpTxt(res)), rest } : { cls: 'draw', title: m.name + ' siegt', sub: join('Das Monster zieht sich zurück', res.sp && res.sp.loser ? G.players[sn.att].name + ' ' + res.sp.loser + ' Siegpunkt' : '', helpTxt(res)), rest };
-    return { cls: 'draw', title: 'Unentschieden', sub: 'Kein Sieger', rest };
+    return { cls: 'draw', title: 'Unentschieden', sub: res.reason === 'rounds' ? 'Nach ' + G.rules.maxRounds + ' Kampfrunden: kein Sieger' : 'Kein Sieger', rest };
   }
   const wc = res.winner ? sn.sides[res.winner].ctrl : null, sp = me.sp + ' : ' + opp.sp + ' Siegpunkte';
-  if (wc === null) return { cls: 'draw', title: 'Showdown unentschieden', sub: res.reason === 'flee' ? 'Flucht: kein Sieger, keine Siegpunkte' : 'Kein Sieger: keine Siegpunkte', loot: sp, rest };
+  if (wc === null) return { cls: 'draw', title: 'Showdown unentschieden', sub: res.reason === 'flee' ? 'Flucht: kein Sieger, keine Siegpunkte' : res.reason === 'rounds' ? 'Nach ' + G.rules.maxRounds + ' Kampfrunden: kein Sieger, keine Siegpunkte' : 'Kein Sieger: keine Siegpunkte', loot: sp, rest };
   return wc === ME ? { cls: 'win', title: 'Showdown gewonnen', sub: '+1 Siegpunkt' + (res.sp && res.sp.loser ? ', ' + G.players[OPP].name + ' −1' : ''), loot: sp, rest } : { cls: 'lose', title: 'Showdown verloren', sub: G.players[wc].name + ' erhält 1 Siegpunkt' + (res.sp && res.sp.loser ? ', du verlierst 1' : ''), loot: sp, rest };
 }
 // Ablauf nach dem letzten Zug: Animation zu Ende -> Werte anpassen -> abdunkeln und Ergebnis zeigen -> Klick -> Weltphase
