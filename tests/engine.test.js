@@ -778,14 +778,14 @@ test('Ultimate im Angriff nach Farbe der ersten Karte: Erde legt Heilmarker, der
   assert.equal(me.stats.hp, 4, 'Heilfluss: +2 HP am Ende meiner Angriffsphase');
 });
 
-test('Ultimate im Angriff: Wasser legt einen Regenbogenschild der Stufe S bei mir', () => {
+test('Ultimate im Angriff: Wasser legt ein Prisma der Stufe S bei mir', () => {
   const { s, me, op } = combatSetup(11, ['W2', 'F2', 'E2']);
   [0, 1, 2].forEach(i => assert.ok(M.apply(s, { pid: 0, type: 'mark', slot: i }).ok));
   assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
   assert.equal(me.stats.rainbow, 2); assert.equal(op.stats.death || 0, 0);
 });
 
-test('Ultimate in der Verteidigung: Erde legt Heilmarker, Wasser einen Regenbogenschild (jeweils beim Verteidiger)', () => {
+test('Ultimate in der Verteidigung: Erde legt Heilmarker, Wasser ein Prisma (jeweils beim Verteidiger)', () => {
   for (const [att, def, key] of [['E1', ['E3', 'W2', 'F2'], 'heal'], ['F1', ['W2', 'F3', 'E2'], 'rainbow']]) {
     const { s, me, op } = combatSetup(11, [att]);
     op.stats.limit = 3; op.stats.mana = 9;
@@ -797,7 +797,7 @@ test('Ultimate in der Verteidigung: Erde legt Heilmarker, Wasser einen Regenboge
   }
 });
 
-test('Regenbogenschild wirkt gegen jede Farbe und verbraucht sich nicht', () => {
+test('Prisma wirkt gegen jede Farbe und verbraucht sich nicht', () => {
   for (const att of ['F2', 'E2', 'W2']) {
     const { s, op } = combatSetup(11, [att]);
     op.stats.rainbow = 2; op.stats.hp = op.stats.maxHp = 9;
@@ -807,7 +807,7 @@ test('Regenbogenschild wirkt gegen jede Farbe und verbraucht sich nicht', () => 
   }
 });
 
-test('Läuterung entfernt Heilmarker und Regenbogenschilde des Gegners', () => {
+test('Läuterung entfernt Heilmarker und Prismen des Gegners', () => {
   const { s, me, op } = combatSetup(11, ['E3', 'F3']);
   op.stats.heal = 2; op.stats.rainbow = 1; me.stats.freeDraws = 0;
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
