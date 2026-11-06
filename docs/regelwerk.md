@@ -406,3 +406,7 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 ## Änderung 0.7.2.5 (06.11.)
 
 - **Rituale bei jedem Wirken:** Die Rituale von Heilfluss und Multischild starten jetzt über den Effekt der Ultimate im Kampflog (`showFx`), nicht mehr nur, wenn die Summe der Marker steigt. Bisher blieb das Multischild-Ritual aus, wenn die Stufe schon gleich hoch oder höher lag (die Ultimate setzt nur das Maximum). Keine Regeländerung.
+
+## Änderung 0.7.2.6 (06.11.)
+
+- **Marker vor dem Stapel:** Todes- und Heilmarker liegen als einzelne Tokens zentral vor dem Nachziehstapel ihres Spielers (eigene oberhalb, die des Gegners unterhalb), mit festem, mäßigem Zufallsversatz und Drehung. Todesmarker bilden die vordere Reihe, Heilmarker eine zweite Reihe dahinter. Der Heilmarker ist kleiner (46 statt 50 px) und gedämpfter. Spiegel und Multischild bleiben neben dem Handbrett. Keine Regeländerung.

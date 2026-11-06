@@ -39,18 +39,20 @@ function mirrorStack(s, x, y, who) {
   }
   return '<div class="mirstack" data-who="' + (who || '') + '" style="left:' + x + 'px;top:' + y + 'px">' + t + '</div>';
 }
-// Todesmarker: jeder Marker liegt als eigener, größerer Token auf dem Tisch (wie die Nachziehtokens), leicht verdreht und versetzt; im Läuterungs-Angriff anklickbar.
-// Eigene Marker liegen rechts neben den Nachziehtokens über dem Nachziehstapel, die des Gegners rechts neben dessen Nachziehstapel (frei von den Panels).
-function deathPos(who, i) {
-  const L = who === 's' ? L_MY : L_OP, rot = [-7, 5, -3, 8][i % 4], dy = [0, -3, 2, -2][i % 4];
-  return { x: L.draw.x + (who === 's' ? 58 : 100) + i * 52, y: (who === 's' ? L.draw.y - 62 : L.draw.y + CH * L.ps - 4) + dy, rot };
+// Marker (Todes- und Heilmarker): Sie liegen als einzelne Tokens in einem kleinen Haufen zentral vor dem Nachziehstapel ihres Spielers (eigene oberhalb, die des Gegners unterhalb des Stapels), jeder leicht verdreht und versetzt (seit 0.7.2.6). Todesmarker zuerst, dann die Heilmarker; max. 4 je Art, 4 Marker pro Reihe.
+const TOK = 50, TOK_ROT = [-11, 7, -4, 12, -8, 5, 10, -6], TOK_DX = [-4, 5, -2, 6, 3, -5, 4, -3], TOK_DY = [0, -5, 3, -3, 4, -2, 2, -4];
+function deathPos(who, i, count, row, kOff) {   // i: Nummer in der Reihe, count: Anzahl in der Reihe, row: 0 = Todesmarker bzw. erste vorhandene Art, 1 = zweite Art
+  const L = who === 's' ? L_MY : L_OP, sx = 44, sy = 40, dir = who === 's' ? -1 : 1, k = (i + (kOff || 0)) % 8;
+  const cx = L.draw.x + CW * L.ps / 2, cy = who === 's' ? L.draw.y - 34 : L.draw.y + CH * L.ps + 14;
+  const x = Math.max(4, cx - ((Math.max(1, count || 1) - 1) * sx) / 2 - TOK / 2) + i * sx + TOK_DX[k];   // jede Reihe wird um die Stapelmitte zentriert
+  return { x, y: cy - TOK / 2 + dir * (row || 0) * sy + TOK_DY[k], rot: TOK_ROT[k] };
 }
-// Heilmarker (Erd-Ultimate): grüne Tokens mit Plus; +1 HP je Marker am Ende der eigenen Angriffsphase. Sie liegen hinter den Todesmarkern derselben Seite.
+// Heilmarker (Erd-Ultimate): grüne Tokens mit Plus; +1 HP je Marker am Ende der eigenen Angriffsphase. Sie liegen in einer eigenen Reihe hinter den Todesmarkern derselben Seite.
 function healTokens(s, who) {
   const n = Math.min(s.heal || 0, 4), L = lfCtx(), sel = L ? L.picks.filter(p => p === who + 'h').length : 0, off = Math.min(s.death || 0, 4); let t = '';
-  const img = '<svg viewBox="0 0 56 56"><circle cx="28" cy="28" r="25" fill="#2f7a2f" stroke="#b9f08a" stroke-width="3"/><circle cx="28" cy="28" r="20" fill="#49a23d" stroke="#1e5a1e" stroke-width="1.5"/><path d="M28 14v28M14 28h28" stroke="#fff" stroke-width="7" stroke-linecap="round"/></svg>';
+  const img = '<svg viewBox="0 0 56 56"><circle cx="28" cy="28" r="25" fill="#24472a" stroke="#6e9a58" stroke-width="2.5"/><circle cx="28" cy="28" r="20" fill="#2f6030" stroke="#173a1b" stroke-width="1.5"/><path d="M28 19v18M19 28h18" stroke="#cfe3bd" stroke-width="4" stroke-linecap="round"/></svg>';
   for (let i = 0; i < n; i++) {
-    const q = deathPos(who, i + off), pos = 'left:' + q.x + 'px;top:' + q.y + 'px;--r:' + q.rot + 'deg', tip = 'Heilmarker: ' + (s.heal || 0) + ' HP Heilung am Ende jeder eigenen Angriffsphase bis Kampfende. Nur Läuterung kann Marker entfernen.';
+    const q = deathPos(who, i, n, off > 0 ? 1 : 0, 4), pos = 'left:' + q.x + 'px;top:' + q.y + 'px;--r:' + q.rot + 'deg', tip = 'Heilmarker: ' + (s.heal || 0) + ' HP Heilung am Ende jeder eigenen Angriffsphase bis Kampfende. Nur Läuterung kann Marker entfernen.';
     t += L ? '<button class="healtok lf' + (i < sel ? ' sel' : '') + '" data-who="' + who + '" data-act="lfm" data-k="' + who + 'h" data-i="' + i + '" title="Läuterung: diesen Marker wählen oder abwählen" style="' + pos + '">' + img + '</button>'
       : '<div class="healtok" data-who="' + who + '" title="' + tip + '" style="' + pos + '">' + img + '</div>';
   }
@@ -59,7 +61,7 @@ function healTokens(s, who) {
 function deathTokens(s, who) {
   const n = Math.min(s.death || 0, 4), L = lfCtx(), sel = L ? L.picks.filter(p => p === who + 'd').length : 0; let t = '';
   for (let i = 0; i < n; i++) {
-    const q = deathPos(who, i), pos = 'left:' + q.x + 'px;top:' + q.y + 'px;--r:' + q.rot + 'deg', tip = 'Todesmarker: ' + (s.death || 0) + ' HP Verlust am Ende jeder eigenen Angriffsphase bis Kampfende. Nur Läuterung kann Marker entfernen.';
+    const q = deathPos(who, i, n, 0, 0), pos = 'left:' + q.x + 'px;top:' + q.y + 'px;--r:' + q.rot + 'deg', tip = 'Todesmarker: ' + (s.death || 0) + ' HP Verlust am Ende jeder eigenen Angriffsphase bis Kampfende. Nur Läuterung kann Marker entfernen.';
     t += L ? '<button class="deathtok lf' + (i < sel ? ' sel' : '') + '" data-who="' + who + '" data-act="lfm" data-k="' + who + 'd" data-i="' + i + '" title="Läuterung: diesen Marker wählen oder abwählen" style="' + pos + '"><img src="' + IMG.curse + '"></button>'
       : '<div class="deathtok" data-who="' + who + '" title="' + tip + '" style="' + pos + '"><img src="' + IMG.curse + '"></div>';
   }

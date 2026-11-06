@@ -222,12 +222,12 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .bar.tp{position:relative}.bar.tp>i{position:absolute;left:0;top:0;bottom:0}.bar.tp>i.pre{background:repeating-linear-gradient(45deg,#6fbf73,#6fbf73 4px,#9bdca0 4px,#9bdca0 8px);opacity:.9}
 .temple .bar.sb{height:12px}
 
-.deathtok{position:absolute;z-index:61;display:block;width:56px;height:56px;padding:0;border:0;background:none;transform:rotate(var(--r,0deg));cursor:help;filter:drop-shadow(0 3px 4px rgba(0,0,0,.75))}
+.deathtok{position:absolute;z-index:61;display:block;width:50px;height:50px;padding:0;border:0;background:none;transform:rotate(var(--r,0deg));cursor:help;filter:drop-shadow(0 3px 4px rgba(0,0,0,.75))}
 .deathtok img{width:100%;height:100%;object-fit:contain;display:block}
 .deathtok.lf{cursor:var(--cp);transition:transform .12s}.deathtok.lf:hover{transform:rotate(var(--r,0deg)) scale(1.08)}
 .deathtok.lf::after{content:"";position:absolute;inset:-3px;border:1.5px dashed rgba(210,173,79,.65);border-radius:50%;pointer-events:none}
 .deathtok.lf.sel{filter:drop-shadow(0 0 7px #f2d27a) drop-shadow(0 0 3px #f2d27a)}.deathtok.lf.sel::after{border:2px solid #f2d27a}
-.healtok{position:absolute;z-index:61;display:block;width:56px;height:56px;padding:0;border:0;background:none;transform:rotate(var(--r,0deg));cursor:help;filter:drop-shadow(0 3px 4px rgba(0,0,0,.75))}
+.healtok{position:absolute;z-index:61;display:block;width:46px;height:46px;padding:0;border:0;background:none;transform:rotate(var(--r,0deg));cursor:help;filter:drop-shadow(0 3px 4px rgba(0,0,0,.75))}
 .healtok svg{width:100%;height:100%;display:block}
 .healtok.lf{cursor:var(--cp);transition:transform .12s}.healtok.lf:hover{transform:rotate(var(--r,0deg)) scale(1.08)}
 .healtok.lf::after{content:"";position:absolute;inset:-3px;border:1.5px dashed rgba(210,173,79,.65);border-radius:50%;pointer-events:none}
