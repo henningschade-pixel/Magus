@@ -456,3 +456,7 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 ## Änderung 0.7.2.20 (06.11.)
 
 - **Innenschatten kleiner und härter:** Der Schattenwurf vom Rand des Multispiegel-Schildes nach innen hat einen kleineren Radius (Kantenbreite 5 statt 11) und ist härter (Unschärfe 0,7 statt 2,6). Nur Darstellung.
+
+## Änderung 0.7.2.21 (06.11.)
+
+- **Innenschatten weicher:** Unschärfe des Randschattens im Multispiegel-Schild 1,3 statt 0,7 (Kantenbreite unverändert 5). Nur Darstellung.
