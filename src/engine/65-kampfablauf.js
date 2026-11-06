@@ -77,7 +77,7 @@ function endCombat(state, end) {
       const loot = state.rules.monsterLoot !== undefined ? state.rules.monsterLoot : Math.max(0, m.stats.gold); m.stats.gold = 0; A.stats.gold += loot; A.stats.goldGot += loot;
       log(state, A.name + ' besiegt ' + m.name + (loot > 0 ? ' und erhält ' + loot + ' Gold.' : '.'), c.att);
       if (state.rules.lootBoth && loot > 0) { B.stats.gold += loot; B.stats.goldGot += loot; log(state, B.name + ' erhält ebenfalls ' + loot + ' Gold.', c.def); }
-      res.monsterDefeated = true; res.loot = loot;
+      res.monsterDefeated = true; res.loot = loot; A.stats.kills = (A.stats.kills || 0) + 1;   // kills: besiegte Monster des Spielers (die KI-Eröffnung wartet damit auf den ersten Sieg; Beute gibt es nicht mehr)
       gain(A, c.att);
     } else if (end.winner === 'b') {   // Niederlage gegen das Monster: kein Gold, das Monster zieht sich zurück
       log(state, m.name + ' gewinnt den Kampf.', c.def);

@@ -894,7 +894,7 @@ function endCombat(state, end) {
       const loot = state.rules.monsterLoot !== undefined ? state.rules.monsterLoot : Math.max(0, m.stats.gold); m.stats.gold = 0; A.stats.gold += loot; A.stats.goldGot += loot;
       log(state, A.name + ' besiegt ' + m.name + (loot > 0 ? ' und erhält ' + loot + ' Gold.' : '.'), c.att);
       if (state.rules.lootBoth && loot > 0) { B.stats.gold += loot; B.stats.goldGot += loot; log(state, B.name + ' erhält ebenfalls ' + loot + ' Gold.', c.def); }
-      res.monsterDefeated = true; res.loot = loot;
+      res.monsterDefeated = true; res.loot = loot; A.stats.kills = (A.stats.kills || 0) + 1;   // kills: besiegte Monster des Spielers (die KI-Eröffnung wartet damit auf den ersten Sieg; Beute gibt es nicht mehr)
       gain(A, c.att);
     } else if (end.winner === 'b') {   // Niederlage gegen das Monster: kein Gold, das Monster zieht sich zurück
       log(state, m.name + ' gewinnt den Kampf.', c.def);
@@ -1540,7 +1540,8 @@ const DEFAULTS = {
   // stattdessen gratis in der Bibliothek zu tauschen, rBroke Bonus für einen Monsterangriff, wenn sonst nur das
   // Strafnachziehen bleibt; im Kampf cRed 1: erholen statt nachziehen (auch bei vollem Mana), cRedA:
   // Angriffsschwelle sinkt um so viel
-  dRed: 10, dTmp: 10, dVen: 5, rBroke: 400, cRed: 1, cRedA: 0,
+  // dRedS (seit 0.7.4): Zuschlag je Abschnitt über 1 auf dRed, dTmp und dVen, weil die Strafe des roten Markers mit dem Abschnitt wächst (1/2/3)
+  dRed: 10, dTmp: 10, dVen: 5, rBroke: 400, cRed: 1, cRedA: 0, dRedS: 0,
   // swapCosts (0.3): Magie kostet Upgrade-Punkte, die es nur aus dem Tempel gibt. sacG 1: Gold opfern, wenn die
   // Punkte für die nächste Magiestufe nicht reichen; mgGoal: nur solange der Magiefortschritt (Summe der Stufen
   // über 1, höchstens 6) darunter liegt; sacRes: Gold, das dabei übrig bleiben muss (Vorrang der Verbesserungen)
@@ -1559,6 +1560,10 @@ const DEFAULTS = {
   // Angriffsbewertung; stallDec (seit 0.11 positiv): die Angriffsschwelle sinkt je zwei Kampfzüge nach stallFrom
   // um so viel, damit festgefahrene Kämpfe enden (vorher −0,05 hob sie an: Patt-Schleifen bis 3000 Aktionen);
   // pasDec: die Angriffsschwelle sinkt um so viel je Passen-Zug des Gegners in Folge
+  // Ultimates nach Farbe (seit 0.7): uHeal Gewicht des Heilfluss (Erde, × wEW), uMulti Gewicht des Multispiegel (Wasser, × wFW), der Todesfluss (Feuer) zählt wDeath
+  uHeal: 0.8, uMulti: 2,
+  // Läuterung (seit 0.7.4): lfDeath Wert je entferntem eigenen Todesmarker, lfHeal Gewicht der gegnerischen Heilmarker unter den entfernbaren Markern
+  lfDeath: 0, lfHeal: 0,
   smart: 1, wMark: 0.5, keepB: 3, keepOn: 0, wDeath: 6, wDraw: 1.6, wFW: 1.3, wFE: 0.9, wEW: 2.8, aDmg: 1.5, aCost: 1.5, aCurse: 1.6, aThr: 0.5, oHits: 4, oFree: 4, stallDec: 0.15, stallFrom: 24, pasDec: 1,
   // Erholen als Manaquelle: Angriffsschwelle steigt bei wenig Mana, Verzicht auf Verteidigung bringt Mana
   rW: 0, rRef: 3, dRec: 0, dU: 2,
@@ -1650,7 +1655,7 @@ function planElement(state, pid) {
 }
 // ---- Eröffnungsstrategien (aus Spielerbeobachtung): 1 Limit zuerst, 2 Fokus auf eine Farbe, 3 zwei Richtungen ----
 const stageBonusGold = (state) => { let g = 0; for (let i = 1; i <= state.stage; i++) g += state.rules.stageGold[i] || 0; return g; };
-const looted = (state, s) => s.goldGot > stageBonusGold(state);   // schon Beute aus einem eigenen Sieg erhalten
+const looted = (state, s) => (s.kills || 0) > 0;   // schon ein Monster besiegt (seit 0.7.4 über den Zähler kills: Beute gibt es nicht mehr, und Gold aus Ausgleich oder Strafen des Gegners zählt nicht als Sieg)
 // Farbe, in die ein Spieler zuerst investiert: viele Karten der Farbe auf der Hand, oder die dem geschwächtesten Monster überlegene Farbe
 function focusScore(state, pid, e) {
   const p = state.players[pid], Q = P(pid), hand = p.deck.hand.filter(Boolean);
@@ -1795,16 +1800,17 @@ function worldPlan(state, pid) {
   }
   const hand = handList(d), normals = hand.filter(h => !h.curse), curses = hand.filter(h => h.curse);
   const R = () => state.rng.random() * 0.6;
+  const penF = 1 + Q.dRedS * (M.drawPenaltyAmount(state, 'Gold') - 1);   // die Strafe des roten Marker wächst mit dem Abschnitt (1/2/3 Gold): Abschläge und Ausweichen zählen entsprechend mehr
   const cands = [];
   const emptySlots = d.hand.filter(c => !c).length;
   const allIds = [...d.draw, ...d.discard, ...d.hand.filter(Boolean)].map(c => c.id);
   const countEl = e => allIds.filter(id => id[0] === e).length;
 
-  if (canDraw(d)) cands.push({ score: Q.dBase + Q.dCurse * curses.length + (normals.length === 0 ? Q.dEmpty : 0) + emptySlots * Q.dSlot - (normals.length >= 3 ? Q.dNorm : 0) - (p.drawRed ? Q.dRed : 0) + (!p.drawRed ? Q.dFree : 0) + R(), acts: [A({ type: 'draw' })] });
-  if (p.drawRed && Q.dTmp && s.gold >= 1) cands.push({ score: Q.dTmp + R(), acts: [A({ type: 'temple', amount: 1 })] });   // roter Marker: 1 Gold im Tempel stellt ihn auf grün, statt dem Gegner beim Nachziehen Gold zu schenken
+  if (canDraw(d)) cands.push({ score: Q.dBase + Q.dCurse * curses.length + (normals.length === 0 ? Q.dEmpty : 0) + emptySlots * Q.dSlot - (normals.length >= 3 ? Q.dNorm : 0) - (p.drawRed ? Q.dRed * penF : 0) + (!p.drawRed ? Q.dFree : 0) + R(), acts: [A({ type: 'draw' })] });
+  if (p.drawRed && Q.dTmp && s.gold >= 1) cands.push({ score: Q.dTmp * penF + R(), acts: [A({ type: 'temple', amount: 1 })] });   // roter Marker: 1 Gold im Tempel stellt ihn auf grün, statt dem Gegner beim Nachziehen Gold zu schenken
   if (p.drawRed && Q.dVen && s.gold < 1) {   // roter Marker ohne Gold: ein Gratis-Tausch in der Bibliothek stellt ihn ebenfalls auf grün (sonst schenkt das Warten dem Gegner jede zweite Runde 1 Gold)
     const best = M.ELEMENTS.slice().sort((a, b) => s.mag[b] - s.mag[a]), free = M.vendorPlans(state, pid).filter(o => o.free).sort((a, b) => best.indexOf(a.result[0]) - best.indexOf(b.result[0]))[0];
-    if (free) cands.push({ score: Q.dVen + R(), acts: [A({ type: 'vendor', result: free.result, cost: [] })] });
+    if (free) cands.push({ score: Q.dVen * penF + R(), acts: [A({ type: 'vendor', result: free.result, cost: [] })] });
   }
   {
     const plans = M.vendorPlans(state, pid), mk = o => o.slots.map(sl => A({ type: 'mark', slot: sl }));
@@ -1881,16 +1887,18 @@ function ruinWorth(opp, n) {
   return Math.max(0, Math.min(n, hand.length) - curses) * 0.9;
 }
 // Wert eines geordneten Kombos (ohne Ultimate) für die KI; gleiche Gewichte wie im Angriff
+// Läuterung gegen den eigenen Todesfluss (seit 0.7.4): Jeder entfernte eigene Todesmarker erspart einen HP-Verlust je Angriffsphase bis Kampfende; lfDeath ist der Wert je Marker.
+function purgeDeath(side, Q, lvl) { return Q.lfDeath > 0 && lvl > 0 ? Math.min(lvl, side.stats.death || 0) * Q.lfDeath : 0; }
 function ordComboWorth(side, opp, Q, rules, lvs, ev) {
-  const st = side.stats, hurt = st.maxHp - st.hp, oMir = opp.stats.mirror || 0;
+  const st = side.stats, hurt = st.maxHp - st.hp, oMir = (opp.stats.mirror || 0) + (opp.stats.rainbow || 0) + Q.lfHeal * (opp.stats.heal || 0);
   const wEw = oMir > 0 ? 1.2 + oMir * Math.max(0.3, Q.lfOppW || 0) : 0.1;
-  return mirrorWorth(side, opp, Q, ev.ord && ev.ord.el, lvs.fw) + lvs.fe * Q.wFE + lvs.ew * wEw + ruinWorth(opp, lvs.rm) + Math.min(lvs.gh * (rules.lifeflowHeal || 1), hurt) * Q.wEW + (lvs.gh > 0 && hurt === 0 ? 0.1 : 0);
+  return mirrorWorth(side, opp, Q, ev.ord && ev.ord.el, lvs.fw) + lvs.fe * Q.wFE + lvs.ew * wEw + purgeDeath(side, Q, lvs.ew) + ruinWorth(opp, lvs.rm) + Math.min(lvs.gh * (rules.lifeflowHeal || 1), hurt) * Q.wEW + (lvs.gh > 0 && hurt === 0 ? 0.1 : 0);
 }
 // Wert einer Ultimate der Stufe lvl nach der Farbe der ersten Karte (seit 0.7): Feuer Todesfluss beim Gegner, Erde Heilfluss und Wasser Multispiegel bei mir selbst. Liegt schon ein Marker gleicher oder höherer Stufe, bringt sie kaum etwas.
 function ultiWorth(side, opp, Q, el, lvl) {
   if (!(lvl > 0)) return 0;
-  if (el === 'E') return lvl * Q.wEW * 0.8 * ((side.stats.heal || 0) >= lvl ? 0.1 : 1) * (side.stats.maxHp > side.stats.hp ? 1 : 0.6);
-  if (el === 'W') return lvl * Q.wFW * 2 * ((side.stats.rainbow || 0) >= lvl ? 0.1 : 1);
+  if (el === 'E') return lvl * Q.wEW * Q.uHeal * ((side.stats.heal || 0) >= lvl ? 0.1 : 1) * (side.stats.maxHp > side.stats.hp ? 1 : 0.6);
+  if (el === 'W') return lvl * Q.wFW * Q.uMulti * ((side.stats.rainbow || 0) >= lvl ? 0.1 : 1);
   return lvl * Q.wDeath * (opp.stats.death >= lvl ? 0.1 : 1) * (Q.smart ? Math.max(0.4, Math.min(1.4, opp.stats.hp / 4)) : 1);
 }
 function bestAttack(side, opp, hand, Q, state0, reserve) {
@@ -1903,12 +1911,12 @@ function bestAttack(side, opp, hand, Q, state0, reserve) {
     for (const ord of orders) {
       const ev = M.evalAttack(stats, ord);
       if (!ev.valid || !ev.affordable) continue;
-      const hurt = stats.maxHp - stats.hp, oMir = (opp.stats.mirror || 0) + (opp.stats.rainbow || 0);
+      const hurt = stats.maxHp - stats.hp, oMir = (opp.stats.mirror || 0) + (opp.stats.rainbow || 0) + Q.lfHeal * (opp.stats.heal || 0);
       const w = { fe: Q.wFE, ew: oMir > 0 ? 1.2 + oMir * Math.max(0.3, Q.lfOppW || 0) : 0.1 };   // Läuterung lohnt, wenn der Gegner Spiegelmarker trägt
       const lvs = M.levelsFor(ev);
       let combo = 0;
       if (ev.levels.ulti > 0) combo = ultiWorth(side, opp, Q, ev.ultiEl || ev.prim, ev.levels.ulti);
-      else combo = mirrorWorth(side, opp, Q, ev.ord && ev.ord.el, lvs.fw) + lvs.fe * w.fe + lvs.ew * w.ew + ruinWorth(opp, lvs.rm) + Math.min(lvs.gh * 1, hurt) * Q.wEW + (lvs.gh > 0 && hurt === 0 ? 0.1 : 0);
+      else combo = mirrorWorth(side, opp, Q, ev.ord && ev.ord.el, lvs.fw) + lvs.fe * w.fe + lvs.ew * w.ew + purgeDeath(side, Q, lvs.ew) + ruinWorth(opp, lvs.rm) + Math.min(lvs.gh * 1, hurt) * Q.wEW + (lvs.gh > 0 && hurt === 0 ? 0.1 : 0);
       const dmg = ev.prim ? ev.damage : 0;
       let value = dmg * Q.aDmg + combo - ev.cost * Q.aCost + ev.curses * Q.aCurse;
       // Mana-Reserve: ohne Mana darf der unterlegene Gegner fliehen. Übersteht er den Angriff nach dem erwarteten Block, zählt der Angriff nicht als sicher tödlich.

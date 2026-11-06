@@ -10,7 +10,8 @@ const DEFAULTS = {
   // stattdessen gratis in der Bibliothek zu tauschen, rBroke Bonus für einen Monsterangriff, wenn sonst nur das
   // Strafnachziehen bleibt; im Kampf cRed 1: erholen statt nachziehen (auch bei vollem Mana), cRedA:
   // Angriffsschwelle sinkt um so viel
-  dRed: 10, dTmp: 10, dVen: 5, rBroke: 400, cRed: 1, cRedA: 0,
+  // dRedS (seit 0.7.4): Zuschlag je Abschnitt über 1 auf dRed, dTmp und dVen, weil die Strafe des roten Markers mit dem Abschnitt wächst (1/2/3)
+  dRed: 10, dTmp: 10, dVen: 5, rBroke: 400, cRed: 1, cRedA: 0, dRedS: 0,
   // swapCosts (0.3): Magie kostet Upgrade-Punkte, die es nur aus dem Tempel gibt. sacG 1: Gold opfern, wenn die
   // Punkte für die nächste Magiestufe nicht reichen; mgGoal: nur solange der Magiefortschritt (Summe der Stufen
   // über 1, höchstens 6) darunter liegt; sacRes: Gold, das dabei übrig bleiben muss (Vorrang der Verbesserungen)
@@ -29,6 +30,10 @@ const DEFAULTS = {
   // Angriffsbewertung; stallDec (seit 0.11 positiv): die Angriffsschwelle sinkt je zwei Kampfzüge nach stallFrom
   // um so viel, damit festgefahrene Kämpfe enden (vorher −0,05 hob sie an: Patt-Schleifen bis 3000 Aktionen);
   // pasDec: die Angriffsschwelle sinkt um so viel je Passen-Zug des Gegners in Folge
+  // Ultimates nach Farbe (seit 0.7): uHeal Gewicht des Heilfluss (Erde, × wEW), uMulti Gewicht des Multispiegel (Wasser, × wFW), der Todesfluss (Feuer) zählt wDeath
+  uHeal: 0.8, uMulti: 2,
+  // Läuterung (seit 0.7.4): lfDeath Wert je entferntem eigenen Todesmarker, lfHeal Gewicht der gegnerischen Heilmarker unter den entfernbaren Markern
+  lfDeath: 0, lfHeal: 0,
   smart: 1, wMark: 0.5, keepB: 3, keepOn: 0, wDeath: 6, wDraw: 1.6, wFW: 1.3, wFE: 0.9, wEW: 2.8, aDmg: 1.5, aCost: 1.5, aCurse: 1.6, aThr: 0.5, oHits: 4, oFree: 4, stallDec: 0.15, stallFrom: 24, pasDec: 1,
   // Erholen als Manaquelle: Angriffsschwelle steigt bei wenig Mana, Verzicht auf Verteidigung bringt Mana
   rW: 0, rRef: 3, dRec: 0, dU: 2,

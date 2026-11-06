@@ -10,7 +10,7 @@ function planElement(state, pid) {
 }
 // ---- Eröffnungsstrategien (aus Spielerbeobachtung): 1 Limit zuerst, 2 Fokus auf eine Farbe, 3 zwei Richtungen ----
 const stageBonusGold = (state) => { let g = 0; for (let i = 1; i <= state.stage; i++) g += state.rules.stageGold[i] || 0; return g; };
-const looted = (state, s) => s.goldGot > stageBonusGold(state);   // schon Beute aus einem eigenen Sieg erhalten
+const looted = (state, s) => (s.kills || 0) > 0;   // schon ein Monster besiegt (seit 0.7.4 über den Zähler kills: Beute gibt es nicht mehr, und Gold aus Ausgleich oder Strafen des Gegners zählt nicht als Sieg)
 // Farbe, in die ein Spieler zuerst investiert: viele Karten der Farbe auf der Hand, oder die dem geschwächtesten Monster überlegene Farbe
 function focusScore(state, pid, e) {
   const p = state.players[pid], Q = P(pid), hand = p.deck.hand.filter(Boolean);
@@ -155,16 +155,17 @@ function worldPlan(state, pid) {
   }
   const hand = handList(d), normals = hand.filter(h => !h.curse), curses = hand.filter(h => h.curse);
   const R = () => state.rng.random() * 0.6;
+  const penF = 1 + Q.dRedS * (M.drawPenaltyAmount(state, 'Gold') - 1);   // die Strafe des roten Marker wächst mit dem Abschnitt (1/2/3 Gold): Abschläge und Ausweichen zählen entsprechend mehr
   const cands = [];
   const emptySlots = d.hand.filter(c => !c).length;
   const allIds = [...d.draw, ...d.discard, ...d.hand.filter(Boolean)].map(c => c.id);
   const countEl = e => allIds.filter(id => id[0] === e).length;
 
-  if (canDraw(d)) cands.push({ score: Q.dBase + Q.dCurse * curses.length + (normals.length === 0 ? Q.dEmpty : 0) + emptySlots * Q.dSlot - (normals.length >= 3 ? Q.dNorm : 0) - (p.drawRed ? Q.dRed : 0) + (!p.drawRed ? Q.dFree : 0) + R(), acts: [A({ type: 'draw' })] });
-  if (p.drawRed && Q.dTmp && s.gold >= 1) cands.push({ score: Q.dTmp + R(), acts: [A({ type: 'temple', amount: 1 })] });   // roter Marker: 1 Gold im Tempel stellt ihn auf grün, statt dem Gegner beim Nachziehen Gold zu schenken
+  if (canDraw(d)) cands.push({ score: Q.dBase + Q.dCurse * curses.length + (normals.length === 0 ? Q.dEmpty : 0) + emptySlots * Q.dSlot - (normals.length >= 3 ? Q.dNorm : 0) - (p.drawRed ? Q.dRed * penF : 0) + (!p.drawRed ? Q.dFree : 0) + R(), acts: [A({ type: 'draw' })] });
+  if (p.drawRed && Q.dTmp && s.gold >= 1) cands.push({ score: Q.dTmp * penF + R(), acts: [A({ type: 'temple', amount: 1 })] });   // roter Marker: 1 Gold im Tempel stellt ihn auf grün, statt dem Gegner beim Nachziehen Gold zu schenken
   if (p.drawRed && Q.dVen && s.gold < 1) {   // roter Marker ohne Gold: ein Gratis-Tausch in der Bibliothek stellt ihn ebenfalls auf grün (sonst schenkt das Warten dem Gegner jede zweite Runde 1 Gold)
     const best = M.ELEMENTS.slice().sort((a, b) => s.mag[b] - s.mag[a]), free = M.vendorPlans(state, pid).filter(o => o.free).sort((a, b) => best.indexOf(a.result[0]) - best.indexOf(b.result[0]))[0];
-    if (free) cands.push({ score: Q.dVen + R(), acts: [A({ type: 'vendor', result: free.result, cost: [] })] });
+    if (free) cands.push({ score: Q.dVen * penF + R(), acts: [A({ type: 'vendor', result: free.result, cost: [] })] });
   }
   {
     const plans = M.vendorPlans(state, pid), mk = o => o.slots.map(sl => A({ type: 'mark', slot: sl }));
