@@ -114,16 +114,19 @@ function comboRef(cx) {
   {
     const normals = sel.filter(c => !c.curse), cols = [...new Set(normals.map(c => c.el))], prim = normals.length ? normals[0].el : null;
     const o = ev && ev.valid && ev.ord && !(ev.levels.ulti > 0) ? ev.ord : null, uS0 = Math.min(3, mag.F, mag.E, mag.W);
-    const row = (name, els, lvl, text, on) => '<div class="cref' + (on ? ' on' : '') + '" style="padding:1px 7px;margin-bottom:2px;font-size:13px"><b>' + name + '</b> ' + els.map(el).join(' + ') + (lvl ? ' <span class="note">· Stufe ' + lvl + '</span>' : '') + (text ? '<small>' + text + '</small>' : '') + '</div>';
+    let fill = true;   // Listen (alle Kombos / Kombos einer Farbe) verteilen sich auf die volle Höhe des Fensters
+    const row = (name, els, lvl, text, on) => '<div class="cref' + (on ? ' on' : '') + '" style="padding:1px 8px;margin-bottom:' + (fill ? 0 : 2) + 'px;font-size:' + (fill ? 15 : 13) + 'px' + (fill ? ';flex:1 1 0;display:flex;flex-direction:column;justify-content:center;gap:0' : '') + '"><div><b>' + name + '</b> ' + els.map(el).join(' + ') + (lvl ? ' <span class="note">· Stufe ' + lvl + '</span>' : '') + (text ? '<small>' + text + '</small>' : '') + '</div></div>';
     // Die Ultimate (alle drei Farben) steht seit 0.7 unter der Farbe ihrer ersten Karte: Feuer Todesfluss, Wasser Regenbogenschild, Erde Heilfluss.
     const ULTI_NAME = { F: 'Todesfluss', W: 'Regenbogenschild', E: 'Heilfluss' }, ROLE = { F: 'Feuer', W: 'Wasser', E: 'Erde' };
     const ultiRow = (p, lvl, text, on) => row(ULTI_NAME[p], [p, ...M.ELEMENTS.filter(x => x !== p)], lvl, text, on);
     if (cols.length === 0) {   // noch nichts markiert: alle Kombos nach Farbe der ersten Karte, Wirkung als Tooltip
+      fill = true;
       ['F', 'W', 'E'].forEach(p => {
         ORD_ROWS.filter(r => r[2] === p).forEach(r => { h += row(r[1], [r[2], r[3]], 0, '', false).replace('<div class="cref"', '<div class="cref" title="' + esc(ordText(r[0], 'S', true)) + '"'); });
         h += ultiRow(p, 0, '', false).replace('<div class="cref"', '<div class="cref" title="' + esc(ultiText(p, 'S')) + '"');
       });
     } else if (cols.length === 1) {   // eine Farbe: die Kombos dieser Farbe samt Ultimate, genauer erklärt
+      fill = true;
       h += '<div class="note" style="margin-bottom:3px;font-size:12px">Erste Karte: ' + el(prim) + '. Markiere eine zweite Farbe:</div>';
       ORD_ROWS.filter(r => r[2] === prim).forEach(r => { h += row(r[1], [r[2], r[3]], 0, ORD_SHORT[r[0]], false).replace('<div class="cref"', '<div class="cref" title="' + esc(ordText(r[0], 'S')) + '"'); });
       h += ultiRow(prim, 0, ULTI_SHORT[prim], false).replace('<div class="cref"', '<div class="cref" title="' + esc('Mit allen drei Farben, ersetzt die Kombo. ' + ultiText(prim, 'S')) + '"');
@@ -134,6 +137,6 @@ function comboRef(cx) {
     } else {   // alle drei Farben: Ultimate
       h += ultiRow(prim, lv.ulti, ultiText(prim, lv.ulti || 'S') + ' Die Kombos entfallen.', lv.ulti > 0);
     }
-    return '<div class="panel" style="' + box(LAYOUT.oppInfo, 'overflow:hidden;padding:8px 12px') + '">' + h + '</div>';
+    return '<div class="panel" style="' + box(LAYOUT.oppInfo, 'overflow:hidden;padding:8px 12px;display:flex;flex-direction:column') + '">' + h + '</div>';
   }
 }

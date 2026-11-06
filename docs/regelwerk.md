@@ -372,3 +372,7 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 ## Änderung 0.7.0.2 (06.11.)
 
 - Kombo-Übersicht: Farbüberschriften und der Zusatz „(Ultimate)“ entfallen; die Kombos bleiben nach Farbe geordnet.
+
+## Änderung 0.7.0.3 (06.11.)
+
+- Kombo-Übersicht: Die Zeilen verteilen sich auf die volle Höhe des Fensters.
