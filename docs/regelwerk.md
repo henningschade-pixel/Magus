@@ -384,3 +384,7 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 ## Änderung 0.7.1.2 (06.11.)
 
 - Umbenennung: Regenbogenschild heißt **Prisma**; die Kombo Wasser + Feuer heißt **Feuerspiegel**, Wasser + Erde **Erdspiegel**.
+
+## Änderung 0.7.2.1 (06.11.)
+
+- **Keine Spieländerung:** Neue Werkstatt `werkstatt/ultimate-werkstatt.html` (Ultimate-Werkstatt) für die Kombos aus allen drei Elementen: Todesfluss (Feuer, das Pentagramm aus `CurseFx`), Heilfluss (Erde: Kreis mit Ranken, Pluszeichen und Lichtsäule) und Prisma (Wasser: Lichtstrahl, der sich im Kristall in Feuer, Erde und Wasser aufspaltet, dann die Schildkuppel). Nach dem Ritual fliegen die Marker auf ihre Plätze und die Wirkung läuft (Gegner verliert HP, Heilung, Abwehr dreier Farben). Heilfluss und Prisma sind Entwürfe; im Spiel haben sie bisher nur den Ton.
