@@ -268,6 +268,11 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 
 
 .cref{padding:2px 7px;border:1px solid #44444c;border-radius:8px;margin-bottom:3px;font-size:14px;background:rgba(255,255,255,.02)}.cref.on{border-color:var(--good);background:rgba(127,208,138,.12)}.cref small{display:block;color:var(--mute);font-size:12.5px;line-height:1.15;margin-top:0}.cref .note{font-size:13px}
+/* Kategorien der Kombo-Übersicht: Tönung und Rand nach Farbe der ersten Karte, Abstand zwischen den Farbgruppen (seit 0.7.1.1) */
+.cref.pF:not(.on){background:rgba(255,122,61,.10);border-color:rgba(255,122,61,.42)}
+.cref.pW:not(.on){background:rgba(82,166,245,.10);border-color:rgba(82,166,245,.42)}
+.cref.pE:not(.on){background:rgba(147,194,79,.10);border-color:rgba(147,194,79,.42)}
+.cref.pF + .cref.pW,.cref.pW + .cref.pE,.cref.pE + .cref.pF,.cref.pF + .cref.pE,.cref.pW + .cref.pF,.cref.pE + .cref.pW{margin-top:7px}
 /* Hinweise, Start-/Endbildschirm, Ton */
 #toast{position:absolute;left:50%;top:96px;transform:translateX(-50%);background:rgba(10,8,14,.92);border:1px solid var(--bad);border-radius:10px;padding:8px 18px;font-size:19px;z-index:320;opacity:0;pointer-events:none;transition:opacity .25s}
 #toast.show{opacity:1}

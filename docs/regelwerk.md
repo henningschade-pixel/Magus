@@ -376,3 +376,7 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 ## Änderung 0.7.0.3 (06.11.)
 
 - Kombo-Übersicht: Die Zeilen verteilen sich auf die volle Höhe des Fensters.
+
+## Änderung 0.7.1.1 (06.11.)
+
+- Kombo-Übersicht: größerer Schriftgrad (füllt die Fensterhöhe); die Zeilen sind nach Farbe der ersten Karte getönt und die Farbgruppen durch Abstand getrennt.

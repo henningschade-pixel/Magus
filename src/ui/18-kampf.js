@@ -114,22 +114,22 @@ function comboRef(cx) {
   {
     const normals = sel.filter(c => !c.curse), cols = [...new Set(normals.map(c => c.el))], prim = normals.length ? normals[0].el : null;
     const o = ev && ev.valid && ev.ord && !(ev.levels.ulti > 0) ? ev.ord : null, uS0 = Math.min(3, mag.F, mag.E, mag.W);
-    let fill = true;   // Listen (alle Kombos / Kombos einer Farbe) verteilen sich auf die volle Höhe des Fensters
-    const row = (name, els, lvl, text, on) => '<div class="cref' + (on ? ' on' : '') + '" style="padding:1px 8px;margin-bottom:' + (fill ? 0 : 2) + 'px;font-size:' + (fill ? 15 : 13) + 'px' + (fill ? ';flex:1 1 0;display:flex;flex-direction:column;justify-content:center;gap:0' : '') + '"><div><b>' + name + '</b> ' + els.map(el).join(' + ') + (lvl ? ' <span class="note">· Stufe ' + lvl + '</span>' : '') + (text ? '<small>' + text + '</small>' : '') + '</div></div>';
+    let fs = 20;   // Schriftgrad der Zeilen: füllt die Höhe des Fensters (seit 0.7.1.1); Texte und Hinweise skalieren mit
+    const row = (name, els, lvl, text, on, tip) => '<div' + (tip ? ' title="' + esc(tip) + '"' : '') + ' class="cref p' + els[0] + (on ? ' on' : '') + '" style="padding:1px 8px;margin-bottom:0;font-size:' + fs + 'px;flex:1 1 0;display:flex;flex-direction:column;justify-content:center;gap:0"><div style="line-height:1.15"><b>' + name + '</b> ' + els.map(el).join(' + ') + (lvl ? ' <span class="note" style="font-size:.8em">· Stufe ' + lvl + '</span>' : '') + (text ? '<small style="font-size:' + Math.round(fs * 0.72) + 'px">' + text + '</small>' : '') + '</div></div>';
     // Die Ultimate (alle drei Farben) steht seit 0.7 unter der Farbe ihrer ersten Karte: Feuer Todesfluss, Wasser Regenbogenschild, Erde Heilfluss.
     const ULTI_NAME = { F: 'Todesfluss', W: 'Regenbogenschild', E: 'Heilfluss' }, ROLE = { F: 'Feuer', W: 'Wasser', E: 'Erde' };
-    const ultiRow = (p, lvl, text, on) => row(ULTI_NAME[p], [p, ...M.ELEMENTS.filter(x => x !== p)], lvl, text, on);
+    const ultiRow = (p, lvl, text, on, tip) => row(ULTI_NAME[p], [p, ...M.ELEMENTS.filter(x => x !== p)], lvl, text, on, tip);
     if (cols.length === 0) {   // noch nichts markiert: alle Kombos nach Farbe der ersten Karte, Wirkung als Tooltip
-      fill = true;
+      fs = 18;
       ['F', 'W', 'E'].forEach(p => {
-        ORD_ROWS.filter(r => r[2] === p).forEach(r => { h += row(r[1], [r[2], r[3]], 0, '', false).replace('<div class="cref"', '<div class="cref" title="' + esc(ordText(r[0], 'S', true)) + '"'); });
-        h += ultiRow(p, 0, '', false).replace('<div class="cref"', '<div class="cref" title="' + esc(ultiText(p, 'S')) + '"');
+        ORD_ROWS.filter(r => r[2] === p).forEach(r => { h += row(r[1], [r[2], r[3]], 0, '', false, ordText(r[0], 'S', true)); });
+        h += ultiRow(p, 0, '', false, ultiText(p, 'S'));
       });
     } else if (cols.length === 1) {   // eine Farbe: die Kombos dieser Farbe samt Ultimate, genauer erklärt
-      fill = true;
-      h += '<div class="note" style="margin-bottom:3px;font-size:12px">Erste Karte: ' + el(prim) + '. Markiere eine zweite Farbe:</div>';
-      ORD_ROWS.filter(r => r[2] === prim).forEach(r => { h += row(r[1], [r[2], r[3]], 0, ORD_SHORT[r[0]], false).replace('<div class="cref"', '<div class="cref" title="' + esc(ordText(r[0], 'S')) + '"'); });
-      h += ultiRow(prim, 0, ULTI_SHORT[prim], false).replace('<div class="cref"', '<div class="cref" title="' + esc('Mit allen drei Farben, ersetzt die Kombo. ' + ultiText(prim, 'S')) + '"');
+      fs = 20;
+      h += '<div class="note" style="margin-bottom:3px;font-size:14px">Erste Karte: ' + el(prim) + '. Markiere eine zweite Farbe:</div>';
+      ORD_ROWS.filter(r => r[2] === prim).forEach(r => { h += row(r[1], [r[2], r[3]], 0, ORD_SHORT[r[0]], false, ordText(r[0], 'S')); });
+      h += ultiRow(prim, 0, ULTI_SHORT[prim], false, 'Mit allen drei Farben, ersetzt die Kombo. ' + ultiText(prim, 'S'));
     } else if (cols.length === 2 && o) {   // zwei Farben: genau eine Kombo, mit erreichter Stufe
       const r = ORD_ROWS.find(x => x[0] === o.key);
       h += row(r[1], [r[2], r[3]], o.lvl, ordText(r[0], o.lvl), true);
