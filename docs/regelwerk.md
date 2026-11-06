@@ -460,3 +460,7 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 ## Änderung 0.7.2.21 (06.11.)
 
 - **Innenschatten weicher:** Unschärfe des Randschattens im Multispiegel-Schild 1,3 statt 0,7 (Kantenbreite unverändert 5). Nur Darstellung.
+
+## Änderung 0.7.2.22 (06.11.)
+
+- **Versionsliste gekürzt:** Der Hinweistext im Menü nennt nur noch die Updates der aktuellen Hauptversion 0.7 (erste Nachkommastelle); Einträge ab 0.6.x entfallen aus der Anzeige. Die Änderungsabschnitte in dieser Datei bleiben vollständig.
