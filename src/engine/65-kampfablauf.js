@@ -166,10 +166,10 @@ function mirrorAdd(stats, el, n) {
 }
 function mirrorTake(stats, el, n) { if (stats.mirrorEl) { stats.mirrorEl[el] = Math.max(0, stats.mirrorEl[el] - n); mirrorSync(stats); } }
 function mirrorTakeAny(stats, n) { for (const el of ELEMENTS) { while (n > 0 && mirrorOf(stats, el) > 0) { mirrorTake(stats, el, 1); n--; } } }
-// Ultimates (seit 0.7 nach der Farbe der ersten Karte): Feuer = Todesfluss (stats.death, Marker beim Gegner), Erde = Heilfluss (stats.heal, grüner Marker mit Plus bei sich selbst: +1 HP je Marker am Ende der eigenen Angriffsphase), Wasser = Prisma (stats.rainbow, bei sich selbst: wie ein Spiegel, aber gegen jede Farbe; seit 0.7.2.2 verliert auch er Stufen, aber erst nachdem die Stufen des Farbspiegels aufgebraucht sind). Alle drei Marker entfernt nur die Läuterung.
-// Wirksamer Schild gegen einen Angriff der Farbe el: der höhere von Farbspiegel und Prisma.
+// Ultimates (seit 0.7 nach der Farbe der ersten Karte): Feuer = Todesfluss (stats.death, Marker beim Gegner), Erde = Heilfluss (stats.heal, grüner Marker mit Plus bei sich selbst: +1 HP je Marker am Ende der eigenen Angriffsphase), Wasser = Multischild (stats.rainbow, bei sich selbst: wie ein Spiegel, aber gegen jede Farbe; seit 0.7.2.2 verliert auch er Stufen, aber erst nachdem die Stufen des Farbspiegels aufgebraucht sind). Alle drei Marker entfernt nur die Läuterung.
+// Wirksamer Schild gegen einen Angriff der Farbe el: der höhere von Farbspiegel und Multischild.
 function shieldOf(stats, el) { return Math.max(mirrorOf(stats, el), stats.rainbow || 0); }
-// Läuterung: gewählte Marker (sm/om/sd/od/sh/oh/sr/or/st/ot), höchstens S; ohne Wahl automatisch eigene Todesmarker, dann Spiegel, Prisma und Heilmarker des Gegners.
+// Läuterung: gewählte Marker (sm/om/sd/od/sh/oh/sr/or/st/ot), höchstens S; ohne Wahl automatisch eigene Todesmarker, dann Spiegel, Multischild und Heilmarker des Gegners.
 function lifeflowPicks(state, side, opp, lvl) {
   if (Array.isArray(state.combat.lfp)) return state.combat.lfp.slice(0, lvl);
   const out = []; let om = opp.stats.mirror || 0, sd = side.stats.death || 0, orb = opp.stats.rainbow || 0, oh = opp.stats.heal || 0;
@@ -201,7 +201,7 @@ function deathTick(state, side) {
 function castUltimate(side, opp, el, lvl) {
   lvl = Math.max(1, Math.min(MAX_MIRROR, lvl));
   if (el === 'E') { side.stats.heal = Math.max(side.stats.heal || 0, lvl); return { text: 'Ultimate ' + lvl + ' (Erde): Heilfluss, ' + side.stats.heal + ' HP am Ende jeder eigenen Angriffsphase bis Kampfende', fx: { kind: 'ultimate', who: side.ctrl, to: side.ctrl, el: 'E', n: lvl } }; }
-  if (el === 'W') { side.stats.rainbow = Math.max(side.stats.rainbow || 0, lvl); return { text: 'Ultimate ' + lvl + ' (Wasser): Prisma Stufe ' + side.stats.rainbow + ' (gegen jede Farbe, verliert Stufen wie ein Spiegel)', fx: { kind: 'ultimate', who: side.ctrl, to: side.ctrl, el: 'W', n: lvl } }; }
+  if (el === 'W') { side.stats.rainbow = Math.max(side.stats.rainbow || 0, lvl); return { text: 'Ultimate ' + lvl + ' (Wasser): Multischild Stufe ' + side.stats.rainbow + ' (gegen jede Farbe, verliert Stufen wie ein Spiegel)', fx: { kind: 'ultimate', who: side.ctrl, to: side.ctrl, el: 'W', n: lvl } }; }
   opp.stats.death = Math.max(opp.stats.death || 0, lvl);
   return { text: 'Ultimate ' + lvl + ' (Feuer): Todesfluss für ' + opp.name + ' (' + opp.stats.death + ' HP am Ende jeder seiner Angriffsphasen bis Kampfende)', fx: { kind: 'ultimate', who: side.ctrl, to: opp.ctrl, el: 'F', n: lvl } };
 }
@@ -276,8 +276,8 @@ function canFlee(state, pid) {
   return me.ctrl === pid && opp.stats.mana <= 0 && !(me.stats.death > 0);
 }
 function recoverGain(state) { const r = state.rules.recoverByStage; return r ? (r[Math.min(r.length, Math.max(1, state.stage)) - 1] || 1) : 1; }
-// Ergebnis einer Verteidigung (Spiegel, Rückwurf, Restschaden): gemeinsam für die Ausführung (execDefense) und die Vorschau der Oberfläche (previewDefense). mir: wirksame Schildstufe gegen die Angriffsfarbe nach dem Kombo (seit 0.4 wirkt der Kombo vor der Verteidigung); std und rb: Stufe des Farbspiegels dieser Farbe und des Prisma nach dem Kombo. Ohne Angaben zählen die Stufen, die jetzt liegen.
-// Seit 0.7 zählt auch der Prisma (stats.rainbow, gegen jede Farbe): Es wirkt der höhere von Farbspiegel und Prisma (mLvl). Seit 0.7.2.2 verliert auch der Prisma Stufen wie ein Farbspiegel, aber der Farbspiegel wird immer zuerst verbraucht: used (ausgeglichener plus zurückgeworfener Schaden) geht zuerst von der Stufe des Farbspiegels ab (lostStd), der Rest vom Prisma (lostRb); lost ist die Summe.
+// Ergebnis einer Verteidigung (Spiegel, Rückwurf, Restschaden): gemeinsam für die Ausführung (execDefense) und die Vorschau der Oberfläche (previewDefense). mir: wirksame Schildstufe gegen die Angriffsfarbe nach dem Kombo (seit 0.4 wirkt der Kombo vor der Verteidigung); std und rb: Stufe des Farbspiegels dieser Farbe und des Multischild nach dem Kombo. Ohne Angaben zählen die Stufen, die jetzt liegen.
+// Seit 0.7 zählt auch der Multischild (stats.rainbow, gegen jede Farbe): Es wirkt der höhere von Farbspiegel und Multischild (mLvl). Seit 0.7.2.2 verliert auch der Multischild Stufen wie ein Farbspiegel, aber der Farbspiegel wird immer zuerst verbraucht: used (ausgeglichener plus zurückgeworfener Schaden) geht zuerst von der Stufe des Farbspiegels ab (lostStd), der Rest vom Multischild (lostRb); lost ist die Summe.
 function defenseOutcome(stats, color, pending, block, mir, std, rb) {
   const m0 = std === undefined ? mirrorOf(stats, color) : std, r0 = rb === undefined ? (stats.rainbow || 0) : rb;
   const mLvl = mir === undefined ? Math.max(m0, r0) : mir, missing = Math.max(0, pending - block), excess = Math.max(0, block - pending);
@@ -289,7 +289,7 @@ function defenseOutcome(stats, color, pending, block, mir, std, rb) {
 function defenseComboPre(stats, ev, color) {
   const lvs = ev && ev.ord && !(ev.levels && ev.levels.ulti > 0) ? levelsFor(ev) : null;
   let std = mirrorOf(stats, color), rb = stats.rainbow || 0;
-  if (!lvs) { if (ev && ev.ultiEl === 'W' && ev.levels.ulti > 0) rb = Math.max(rb, Math.min(ev.levels.ulti, MAX_MIRROR)); }   // Ultimate Wasser in der Verteidigung: der Prisma wirkt schon gegen diesen Angriff
+  if (!lvs) { if (ev && ev.ultiEl === 'W' && ev.levels.ulti > 0) rb = Math.max(rb, Math.min(ev.levels.ulti, MAX_MIRROR)); }   // Ultimate Wasser in der Verteidigung: der Multischild wirkt schon gegen diesen Angriff
   else if (lvs.fw > 0 && ev.ord.el === color) std = Math.max(std, Math.min(lvs.fw, MAX_MIRROR));
   return { heal: lvs ? lvs.gh || 0 : 0, hp: stats.hp, mir: Math.max(std, rb), std, rb };
 }
@@ -322,7 +322,7 @@ function execDefense(state, passOnly) {
   if (sel.length) consumeSelection(d, sel); else d.marks = [];
   const attacker = c.sides[c.turn === 'a' ? 'b' : 'a'];
   // Seit 0.4 wirkt der Kombo zuerst, danach die Verteidigung: Ein Spiegel dieser Farbe wirkt schon gegen den Angriff, auf den verteidigt wird. Seit 0.5.4 gilt das nicht mehr für die Heilung: Sie wirkt wieder nach Angriff und Verteidigung (Zerrüttung und die übrigen Kombos bleiben davor).
-  if (defEv && defEv.levels && defEv.levels.ulti > 0) {   // Ultimate in der Verteidigung: je nach Farbe der ersten Karte Todesfluss für den Angreifer (Feuer), Heilfluss (Erde) oder Prisma (Wasser) für den Verteidiger
+  if (defEv && defEv.levels && defEv.levels.ulti > 0) {   // Ultimate in der Verteidigung: je nach Farbe der ersten Karte Todesfluss für den Angreifer (Feuer), Heilfluss (Erde) oder Multischild (Wasser) für den Verteidiger
     const uel = defEv.ultiEl || defEv.el;
     if (uel !== 'E' && uel !== 'W' && attacker.stats.deathPhase === undefined) attacker.stats.deathPhase = attacker.stats.death || 0;
     const u = castUltimate(side, attacker, uel, defEv.levels.ulti);
@@ -351,8 +351,8 @@ function execDefense(state, passOnly) {
     if (lostStd > 0) mirrorTake(side.stats, c.color, lostStd);
     if (lostRb > 0) side.stats.rainbow = Math.max(0, (side.stats.rainbow || 0) - lostRb);
     const stufen = lost + ' Stufe' + (lost === 1 ? '' : 'n');
-    log(state, (lostRb > 0 ? (lostStd > 0 ? 'Spiegel und Prisma: ' : 'Prisma: ') : 'Spiegel: ') + side.name + (refl > 0 ? ' wirft ' + refl + ' Schaden auf ' + attacker.name + ' zurück' : ' gleicht ' + absorb + ' Schaden aus') + ' und verliert ' + stufen + (lostRb > 0 && lostStd > 0 ? ' (' + lostStd + ' vom Spiegel, ' + lostRb + ' vom Prisma)' : '') + '.', side.ctrl, undefined);
-    // Schild-Effekt (Oberfläche): bricht ein Farbspiegel, gilt er ihm, sonst dem Prisma (elem 'R'); er läuft in der Verteidigungsanimation, vor dem Schaden auf den HP
+    log(state, (lostRb > 0 ? (lostStd > 0 ? 'Spiegel und Multischild: ' : 'Multischild: ') : 'Spiegel: ') + side.name + (refl > 0 ? ' wirft ' + refl + ' Schaden auf ' + attacker.name + ' zurück' : ' gleicht ' + absorb + ' Schaden aus') + ' und verliert ' + stufen + (lostRb > 0 && lostStd > 0 ? ' (' + lostStd + ' vom Spiegel, ' + lostRb + ' vom Multischild)' : '') + '.', side.ctrl, undefined);
+    // Schild-Effekt (Oberfläche): bricht ein Farbspiegel, gilt er ihm, sonst dem Multischild (elem 'R'); er läuft in der Verteidigungsanimation, vor dem Schaden auf den HP
     defFx.mirror = lostStd > 0 ? { hpPre, elem: c.color, markers: std, broken: lostStd, who: side.ctrl, att: attacker.ctrl, r: refl, abs: absorb, d: c.pending, blk: block }
       : { hpPre, elem: 'R', markers: rb, broken: lostRb, who: side.ctrl, att: attacker.ctrl, r: refl, abs: absorb, d: c.pending, blk: block };
   }

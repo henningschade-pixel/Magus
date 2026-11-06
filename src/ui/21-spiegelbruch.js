@@ -5,7 +5,7 @@ const MirrorFx = (() => {
   function rng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
   const rgba = (hex, a) => { const n = parseInt(hex.slice(1), 16); return 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + clamp(a) + ')'; };
   const lighten = (hex, k) => { const n = parseInt(hex.slice(1), 16), f = c => Math.round(c + (255 - c) * k); return 'rgb(' + f(n >> 16 & 255) + ',' + f(n >> 8 & 255) + ',' + f(n & 255) + ')'; };
-  const EL = { F: '#ff7a3d', E: '#93c24f', W: '#52a6f5', R: '#8fb4ff' };   // R: Prisma (Wasser-Ultimate), verliert seit 0.7.2.2 Stufen wie ein Farbspiegel
+  const EL = { F: '#ff7a3d', E: '#93c24f', W: '#52a6f5', R: '#8fb4ff' };   // R: Multischild (Wasser-Ultimate), verliert seit 0.7.2.2 Stufen wie ein Farbspiegel
   // Werte der Schild-Werkstatt (Export des Spielers)
   const P = { size: 240, fly: .55, back: .55, hold: .5, dim: .45, glow: 60, flash: 1.5, shake: .5, cracks: 8, scatter: 1, gravity: 1, tempo: 1, spark: 1 };
   const IMGS = {};

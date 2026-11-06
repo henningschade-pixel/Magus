@@ -71,7 +71,7 @@ textarea{width:100%;min-height:150px;background:var(--ink);color:var(--bone);bor
 <div class="wrap">
   <header>
     <h1>Ultimate-Werkstatt</h1>
-    <p>Effektwerkstatt für die Kombos aus allen drei Elementen. Die Farbe der ersten Karte entscheidet: Feuer gibt den <b>Todesfluss</b>, Erde den <b>Heilfluss</b>, Wasser das <b>Prisma</b>. Gezeigt wird das Ritual selbst, danach die Marker auf dem Tisch und ihre Wirkung (HP-Verlust des Gegners, Heilung, Abwehr gegen jede Farbe). Im Spiel hat bisher nur der Todesfluss ein eigenes Ritual (Pentagramm, <code>CurseFx</code> in <code>src/ui/20-todesfluch.js</code>); Heilfluss und Prisma sind hier neue Entwürfe, im Spiel gibt es dazu bisher nur den Ton.</p>
+    <p>Effektwerkstatt für die Kombos aus allen drei Elementen. Die Farbe der ersten Karte entscheidet: Feuer gibt den <b>Todesfluss</b>, Erde den <b>Heilfluss</b>, Wasser das <b>Multischild</b>. Gezeigt wird das Ritual selbst, danach die Marker auf dem Tisch und ihre Wirkung (HP-Verlust des Gegners, Heilung, Abwehr gegen jede Farbe). Im Spiel hat bisher nur der Todesfluss ein eigenes Ritual (Pentagramm, <code>CurseFx</code> in <code>src/ui/20-todesfluch.js</code>); Heilfluss und Multischild sind hier neue Entwürfe, im Spiel gibt es dazu bisher nur den Ton.</p>
   </header>
   <div class="grid">
     <section class="stagebox" aria-label="Vorschau">
@@ -108,7 +108,7 @@ function rgba(hex,a){if(hex[0]==='r')return hex.replace('rgb(','rgba(').replace(
 function lighten(hex,k){const n=parseInt(hex.slice(1),16),f=c=>Math.round(c+(255-c)*k);return 'rgb('+f(n>>16&255)+','+f(n>>8&255)+','+f(n&255)+')'}
 function mix(a,b,k){const n=parseInt(a.slice(1),16),m=parseInt(b.slice(1),16),f=(x,y)=>Math.round(x+(y-x)*k);return '#'+((1<<24)+(f(n>>16&255,m>>16&255)<<16)+(f(n>>8&255,m>>8&255)<<8)+f(n&255,m&255)).toString(16).slice(1)}
 const EL={F:'#ff7a3d',E:'#93c24f',W:'#52a6f5'};
-const NAME={F:'Todesfluss',E:'Heilfluss',W:'Prisma'};
+const NAME={F:'Todesfluss',E:'Heilfluss',W:'Multischild'};
 const ORDER=['F','W','E'];   // wie in der Kombo-Übersicht des Spiels: Feuer, Wasser, Erde
 const C={x:360,y:268};      // Mitte des Rituals
 
@@ -116,15 +116,15 @@ const C={x:360,y:268};      // Mitte des Rituals
 const DEF={view:'alle',fx:'F',level:2,dur:4,size:1.2,dark:.55,flash:1,shake:.5,particles:50,after:2,seed:3,
   tColor:'#a67bff',tTilt:.42,tRings:2,tRunes:14,tLine:2.5,tGlow:14,tFlicker:.4,tPillar:.6,
   hColor:'#93c24f',hRings:2,hVines:6,hVineH:1,hPlus:1,hLight:.7,hPulse:3,hGlow:14,
-  pColor:'#52a6f5',pRainbow:.6,pPrism:1,pBeam:1,pDome:1,pFacets:6,pShimmer:1,pGlints:16,pGlow:12};
+  pColor:'#52a6f5',pRainbow:.6,pDome:1,pFacets:6,pShimmer:1,pGlints:16,pGlow:12};
 const PRE={
  'Standard':{},
  'Wie im Spiel (Todesfluss)':{view:'einzeln',fx:'F',dur:4,size:1.2,dark:.55,shake:.5,particles:50,tColor:'#a67bff',tTilt:.42,tRings:2,tRunes:14,tLine:2.5,tGlow:14,tFlicker:.4,tPillar:.6},
  'Heilfluss einzeln':{view:'einzeln',fx:'E'},
- 'Prisma einzeln':{view:'einzeln',fx:'W'},
+ 'Multischild einzeln':{view:'einzeln',fx:'W'},
  'Dezent':{size:.9,dur:3,dark:.3,flash:.5,shake:.2,particles:25,after:1.4,tRunes:10,tPillar:.3,hVines:4,hPulse:2,hLight:.4,pFacets:4,pGlints:8,pShimmer:.6},
- 'Wucht':{size:1.5,dur:5.2,dark:.7,flash:1.3,shake:1,particles:90,after:2.6,tRunes:20,tPillar:1,hVines:9,hVineH:1.5,hPulse:5,hLight:1.2,pBeam:1.5,pFacets:10,pGlints:30,pShimmer:1.4},
- 'Nur Prisma, kühl':{view:'einzeln',fx:'W',pRainbow:0,pColor:'#7fd0ff'},
+ 'Wucht':{size:1.5,dur:5.2,dark:.7,flash:1.3,shake:1,particles:90,after:2.6,tRunes:20,tPillar:1,hVines:9,hVineH:1.5,hPulse:5,hLight:1.2,pFacets:10,pGlints:30,pShimmer:1.4},
+ 'Nur Multischild, kühl':{view:'einzeln',fx:'W',pRainbow:0,pColor:'#7fd0ff'},
  'Stufe 3':{level:3}
 };
 
@@ -134,7 +134,7 @@ function phases(p){
   const T=tl(p),D=p.dur;
   const L={F:[[0,'Kreis'],[.3*D,'Pentagramm'],[.62*D,'Aufladen'],[.9*D,'Entladung']],
            E:[[0,'Kreis'],[.18*D,'Ranken'],[.45*D,'Pluszeichen'],[.8*D,'Lichtstoß']],
-           W:[[0,'Prisma'],[.2*D,'Lichtstrahl'],[.45*D,'Aufspaltung'],[.72*D,'Schildkuppel']]};
+           W:[[0,'Kreis'],[.42*D,'Kuppel'],[.74*D,'Schimmer']]};
   const tail=[[T.tM,'Marker']];if(p.after>0)tail.push([T.tA,{F:'Zehren',E:'Heilen',W:'Abwehr'}[p.fx]]);
   if(p.view==='alle')return[[0,'Ritual'],[.8*D,'Entladung']].concat(tail);
   return L[p.fx].concat(tail);
@@ -241,72 +241,59 @@ function fxHeal(ctx,p,t,D,u){
   if(fl>0){ctx.fillStyle=rgba(lighten(col,.8),fl*.42);ctx.fillRect(-BIG,-BIG,2*BIG,2*BIG)}
 }
 
-/* ---------- Prisma (Wasser): Lichtstrahl spaltet sich im Kristall in drei Farben, daraus wächst die Schildkuppel ---------- */
+/* ---------- Multischild (Wasser): erst bildet sich ein Kreis am Boden, aus ihm wächst die Schildkuppel (seit 0.7.2.4; vorher Prisma mit Kristall und Lichtstrahl) ---------- */
 const prismCols=p=>[mix(p.pColor,EL.F,p.pRainbow),mix(p.pColor,EL.E,p.pRainbow),mix(p.pColor,EL.W,p.pRainbow)];
 function domeGeom(p){const rx=165*p.size*p.pDome*.95;return{c:{x:C.x,y:C.y+78},rx,ry:rx*.85}}
 function fxPrism(ctx,p,t,D,u){
-  const S=p.size,s=62*S*p.pPrism,Pc={x:C.x,y:C.y-14},gl=p.pGlow,cols=prismCols(p),dg=domeGeom(p),pc=p.pColor;
-  const dp=eio(seg(u,.55,.78)),out=1-eio(seg(u,.9,.99)),fin=1-seg(u,.93,1);
-  vignette(ctx,p.dark*eo(seg(u,0,.12))*(1-seg(u,.95,1)),Pc.x,Pc.y);
-  const pr=eo(seg(u,.03,.2)),sc=(.3+.7*pr)*(1-.8*eio(seg(u,.9,.99)));
-  const V=[[0,-s*1.05],[-s*.95,s*.58],[s*.95,s*.58]].map(v=>({x:Pc.x+v[0]*sc,y:Pc.y+v[1]*sc}));
-  const E=lerpP(V[0],V[1],.55),X=lerpP(V[0],V[2],.55);
-  // Kuppel (hinter dem Prisma)
-  if(dp>0&&out>0){
-    const {c,rx,ry}=dg;ctx.save();ctx.globalAlpha=out;
-    const fillg=ctx.createRadialGradient(c.x,c.y-ry*.45,rx*.1,c.x,c.y-ry*.3,rx*1.05);fillg.addColorStop(0,rgba(lighten(pc,.6),.04*dp));fillg.addColorStop(1,rgba(pc,.26*dp));
-    ctx.fillStyle=fillg;ctx.beginPath();ctx.ellipse(c.x,c.y,rx,ry,0,Math.PI,Math.PI*2);ctx.ellipse(c.x,c.y,rx,rx*.28,0,0,Math.PI);ctx.closePath();ctx.fill();   // Fläche
-    const lg=ctx.createLinearGradient(c.x-rx,0,c.x+rx,0);lg.addColorStop(0,cols[0]);lg.addColorStop(.5,cols[1]);lg.addColorStop(1,cols[2]);
-    ctx.save();ctx.lineCap='round';ctx.shadowColor=cols[1];ctx.shadowBlur=gl;ctx.strokeStyle=lg;ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(c.x,c.y,rx,ry,0,Math.PI,Math.PI+Math.PI*dp);ctx.stroke();ctx.restore();   // Rand
-    ctx.strokeStyle=rgba(lighten(pc,.5),.5*dp);ctx.lineWidth=1.6;ctx.beginPath();ctx.ellipse(c.x,c.y,rx,rx*.28,0,0,Math.PI);ctx.stroke();ctx.strokeStyle=rgba(pc,.25*dp);ctx.beginPath();ctx.ellipse(c.x,c.y,rx,rx*.28,0,Math.PI,Math.PI*2);ctx.stroke();   // Standring
-    const nF=Math.round(p.pFacets),fa=seg(u,.62,.8);   // Facetten
-    if(nF>1&&fa>0){
-      ctx.strokeStyle=rgba(lighten(pc,.65),.3*fa);ctx.lineWidth=1.2;
-      for(let i=1;i<nF;i++){const th=Math.PI+i/nF*Math.PI,bx=c.x+rx*Math.cos(th);ctx.beginPath();ctx.moveTo(bx,c.y+Math.sin(th)*0);ctx.quadraticCurveTo(c.x+(bx-c.x)*.92,c.y-ry*.7,c.x,c.y-ry);ctx.stroke()}
-      [.35,.7].forEach(h=>{const rxh=rx*Math.sqrt(1-h*h);ctx.beginPath();ctx.ellipse(c.x,c.y-ry*h,rxh,rxh*.28,0,0,Math.PI);ctx.stroke()});
-    }
-    const sh=seg(u,.76,.94);   // Schimmer läuft über die Kuppel
-    if(sh>0&&sh<1&&p.pShimmer>0){
-      ctx.save();ctx.beginPath();ctx.ellipse(c.x,c.y,rx,ry,0,Math.PI,Math.PI*2);ctx.ellipse(c.x,c.y,rx,rx*.28,0,0,Math.PI);ctx.closePath();ctx.clip();
-      const bx=lerp(c.x-rx*1.3,c.x+rx*1.3,eio(sh)),sg=ctx.createLinearGradient(bx-60,0,bx+60,0);sg.addColorStop(0,'rgba(255,255,255,0)');sg.addColorStop(.5,'rgba(255,255,255,'+(.5*Math.sin(Math.PI*sh)*Math.min(1,p.pShimmer))+')');sg.addColorStop(1,'rgba(255,255,255,0)');
-      ctx.fillStyle=sg;ctx.fillRect(c.x-rx,c.y-ry,2*rx,ry+rx*.3);ctx.restore();
-    }
-    const nG=Math.round(p.pGlints),gr=rng(p.seed+21);   // Glitzern
-    for(let i=0;i<nG;i++){const an=Math.PI+gr()*Math.PI,rd=Math.sqrt(gr())*.95,ph=gr()*6,sp=2+gr()*3,x=c.x+Math.cos(an)*rx*rd,y=c.y+Math.sin(an)*ry*rd*.9,tw=Math.max(0,Math.sin(t*sp+ph));
-      if(tw>0)star4(ctx,x,y,3+5*tw,i%3===0?'#ffffff':cols[i%3],tw*dp*.9)}
-    ctx.restore();
-  }
-  // Prisma (Kristall)
-  if(pr>0&&out>0){
+  const gl=p.pGlow,cols=prismCols(p),dg=domeGeom(p),pc=p.pColor,{c,rx}=dg,rz=rx*.28;
+  const cf=eio(seg(u,.04,.38)),dp=eio(seg(u,.42,.74)),out=1-eio(seg(u,.9,.99));
+  vignette(ctx,p.dark*eo(seg(u,0,.12))*(1-seg(u,.95,1)),c.x,c.y-40);
+  const ry=dg.ry*dp;
+  if(out>0){
     ctx.save();ctx.globalAlpha=out;
-    const gg=ctx.createLinearGradient(0,V[0].y,0,V[1].y);gg.addColorStop(0,'rgba(215,238,255,.34)');gg.addColorStop(1,rgba(pc,.16));
-    ctx.fillStyle=gg;ctx.beginPath();V.forEach((v,i)=>i?ctx.lineTo(v.x,v.y):ctx.moveTo(v.x,v.y));ctx.closePath();ctx.fill();
-    glowLine(ctx,lighten(pc,.35),2.4,gl*1.2,.95*pr,()=>{V.forEach((v,i)=>i?ctx.lineTo(v.x,v.y):ctx.moveTo(v.x,v.y));ctx.closePath()});
-    ctx.strokeStyle=rgba('#ffffff',.22*pr);ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(V[0].x,V[0].y);ctx.lineTo((V[1].x+V[2].x)/2,V[1].y);ctx.moveTo(Pc.x,Pc.y+s*.05*sc);ctx.lineTo(V[1].x,V[1].y);ctx.moveTo(Pc.x,Pc.y+s*.05*sc);ctx.lineTo(V[2].x,V[2].y);ctx.stroke();
-    ctx.restore();
-  }
-  // einfallender Strahl, Brechung, drei Strahlen
-  const bm=eo(seg(u,.2,.38)),B0={x:-30,y:E.y+80},ex=seg(u,.42,.6);
-  if(bm>0&&out>0&&fin>0){
-    ctx.save();ctx.globalCompositeOperation='lighter';ctx.globalAlpha=out;
-    const Bm=lerpP(B0,E,bm);ctx.lineCap='round';
-    ctx.strokeStyle=rgba('#ffffff',.3);ctx.lineWidth=11;ctx.beginPath();ctx.moveTo(B0.x,B0.y);ctx.lineTo(Bm.x,Bm.y);ctx.stroke();
-    ctx.shadowColor='#ffffff';ctx.shadowBlur=gl;ctx.strokeStyle=rgba('#ffffff',.95);ctx.lineWidth=3.4;ctx.beginPath();ctx.moveTo(B0.x,B0.y);ctx.lineTo(Bm.x,Bm.y);ctx.stroke();
-    const ins=seg(u,.34,.44);if(ins>0){ctx.strokeStyle=rgba('#ffffff',.7*ins*(1-ex*.6));ctx.lineWidth=2.4;ctx.beginPath();ctx.moveTo(E.x,E.y);ctx.lineTo(lerp(E.x,X.x,ins),lerp(E.y,X.y,ins));ctx.stroke()}
-    for(let k=0;k<3;k++){
-      const q=eo(seg(u,.42+k*.03,.6+k*.03));if(q<=0)continue;
-      const ang=.1+(k-1)*.24*p.pBeam,Ln=230*S*q,tx=X.x+Math.cos(ang)*Ln,ty=X.y+Math.sin(ang)*Ln,al=(1-.75*dp)*q;
-      const g2=ctx.createLinearGradient(X.x,X.y,tx,ty);g2.addColorStop(0,rgba(lighten(cols[k],.5),al));g2.addColorStop(1,rgba(cols[k],al*.2));
-      ctx.shadowBlur=gl;ctx.shadowColor=cols[k];ctx.strokeStyle=g2;ctx.lineWidth=7*(1-.4*q);ctx.beginPath();ctx.moveTo(X.x,X.y);ctx.lineTo(tx,ty);ctx.stroke();
-      ctx.shadowBlur=0;ctx.strokeStyle=rgba('#ffffff',al*.7);ctx.lineWidth=1.8;ctx.beginPath();ctx.moveTo(X.x,X.y);ctx.lineTo(lerp(X.x,tx,.8),lerp(X.y,ty,.8));ctx.stroke();
-      if(q>.9)star4(ctx,tx,ty,10,cols[k],al);
+    // Kreis: Ring zeichnet sich um die Mitte, innerer Gegenring, Rastmarken in den drei Farben, Drehung
+    if(cf>0){
+      const lg=ctx.createLinearGradient(c.x-rx,0,c.x+rx,0);lg.addColorStop(0,cols[0]);lg.addColorStop(.5,cols[1]);lg.addColorStop(1,cols[2]);
+      const a0=-Math.PI/2+t*.5,sw=Math.PI*2*cf;
+      ctx.save();ctx.lineCap='round';ctx.shadowColor=cols[1];ctx.shadowBlur=gl;ctx.strokeStyle=lg;ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(c.x,c.y,rx,rz,0,a0,a0+sw);ctx.stroke();
+      ctx.shadowBlur=gl*.5;ctx.strokeStyle=rgba(lighten(pc,.5),.7);ctx.lineWidth=1.8;ctx.beginPath();ctx.ellipse(c.x,c.y,rx*.84,rz*.84,0,a0+Math.PI,a0+Math.PI-sw*.9,true);ctx.stroke();ctx.restore();
+      const nT=12;
+      for(let i=0;i<nT;i++){const th=a0+i/nT*Math.PI*2-t*1.0,vis=cf>(i/nT)?1:0;if(!vis)continue;
+        const x1=c.x+Math.cos(th)*rx*.84,y1=c.y+Math.sin(th)*rz*.84,x2=c.x+Math.cos(th)*rx,y2=c.y+Math.sin(th)*rz;
+        ctx.strokeStyle=rgba(lighten(cols[i%3],.4),.8);ctx.lineWidth=2.2;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+        star4(ctx,c.x+Math.cos(th)*rx*.92,c.y+Math.sin(th)*rz*.92,4+2*Math.sin(t*3+i),cols[i%3],.85)}
+      const gf=ctx.createRadialGradient(c.x,c.y,rx*.1,c.x,c.y,rx);gf.addColorStop(0,rgba(pc,0));gf.addColorStop(1,rgba(pc,.2*cf));
+      ctx.fillStyle=gf;ctx.beginPath();ctx.ellipse(c.x,c.y,rx,rz,0,0,7);ctx.fill();
+    }
+    // Kuppel: wächst aus dem Kreis nach oben (Höhe = dp)
+    if(dp>0){
+      const fillg=ctx.createRadialGradient(c.x,c.y-ry*.45,rx*.1,c.x,c.y-ry*.3,rx*1.05);fillg.addColorStop(0,rgba(lighten(pc,.6),.04*dp));fillg.addColorStop(1,rgba(pc,.26*dp));
+      ctx.fillStyle=fillg;ctx.beginPath();ctx.ellipse(c.x,c.y,rx,ry,0,Math.PI,Math.PI*2);ctx.ellipse(c.x,c.y,rx,rz,0,0,Math.PI);ctx.closePath();ctx.fill();
+      const lg2=ctx.createLinearGradient(c.x-rx,0,c.x+rx,0);lg2.addColorStop(0,cols[0]);lg2.addColorStop(.5,cols[1]);lg2.addColorStop(1,cols[2]);
+      ctx.save();ctx.lineCap='round';ctx.shadowColor=cols[1];ctx.shadowBlur=gl;ctx.strokeStyle=lg2;ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(c.x,c.y,rx,ry,0,Math.PI,Math.PI*2);ctx.stroke();ctx.restore();
+      const nF=Math.round(p.pFacets),fa=seg(u,.6,.78);
+      if(nF>1&&fa>0){
+        ctx.strokeStyle=rgba(lighten(pc,.65),.3*fa);ctx.lineWidth=1.2;
+        for(let i=1;i<nF;i++){const th=Math.PI+i/nF*Math.PI,bx=c.x+rx*Math.cos(th);ctx.beginPath();ctx.moveTo(bx,c.y);ctx.quadraticCurveTo(c.x+(bx-c.x)*.92,c.y-ry*.7,c.x,c.y-ry);ctx.stroke()}
+        [.35,.7].forEach(h=>{const rxh=rx*Math.sqrt(1-h*h);ctx.beginPath();ctx.ellipse(c.x,c.y-ry*h,rxh,rxh*.28,0,0,Math.PI);ctx.stroke()});
+      }
+      const sh=seg(u,.74,.92);
+      if(sh>0&&sh<1&&p.pShimmer>0){
+        ctx.save();ctx.beginPath();ctx.ellipse(c.x,c.y,rx,ry,0,Math.PI,Math.PI*2);ctx.ellipse(c.x,c.y,rx,rz,0,0,Math.PI);ctx.closePath();ctx.clip();
+        const bx=lerp(c.x-rx*1.3,c.x+rx*1.3,eio(sh)),sg=ctx.createLinearGradient(bx-60,0,bx+60,0);sg.addColorStop(0,'rgba(255,255,255,0)');sg.addColorStop(.5,'rgba(255,255,255,'+(.5*Math.sin(Math.PI*sh)*Math.min(1,p.pShimmer))+')');sg.addColorStop(1,'rgba(255,255,255,0)');
+        ctx.fillStyle=sg;ctx.fillRect(c.x-rx,c.y-ry,2*rx,ry+rz);ctx.restore();
+      }
+      const nG=Math.round(p.pGlints),gr=rng(p.seed+21);
+      for(let i=0;i<nG;i++){const an=Math.PI+gr()*Math.PI,rd=Math.sqrt(gr())*.95,ph=gr()*6,sp=2+gr()*3,x=c.x+Math.cos(an)*rx*rd,y=c.y+Math.sin(an)*ry*rd*.9,tw=Math.max(0,Math.sin(t*sp+ph));
+        if(tw>0)star4(ctx,x,y,3+5*tw,i%3===0?'#ffffff':cols[i%3],tw*dp*.9)}
     }
     ctx.restore();
   }
-  const nP=Math.round(p.particles*.6),pa=seg(u,.4,.6)*(1-seg(u,.9,1));
+  // Funken steigen aus dem Kreis auf, solange die Kuppel wächst
+  const nP=Math.round(p.particles*.6),pa=seg(u,.3,.5)*(1-seg(u,.8,.95));
   if(nP>0&&pa>0){const pr2=rng(p.seed+23);ctx.save();ctx.globalCompositeOperation='lighter';
-    for(let i=0;i<nP;i++){const r1=pr2(),r2=pr2(),r3=pr2(),ph=(r1+t*(.15+.3*r2)/(D/3))%1,x=X.x+ph*200*S*(.6+r3*.5),y=X.y+(r2-.35)*ph*150*S;ctx.fillStyle=rgba(lighten(cols[i%3],.5),Math.sin(Math.PI*ph)*pa*.8);ctx.beginPath();ctx.arc(x,y,1+r3*1.8,0,7);ctx.fill()}ctx.restore()}
-  const fl=p.flash*(seg(u,.55,.6)*(1-seg(u,.6,.7))*.35+seg(u,.9,.93)*(1-seg(u,.93,.99))*.55);
+    for(let i=0;i<nP;i++){const r1=pr2(),r2=pr2(),r3=pr2(),ph=(r1+t*(.15+.3*r2)/(D/3))%1,an=r2*Math.PI*2,x=c.x+Math.cos(an)*rx*(.4+.55*r3),y=c.y+Math.sin(an)*rz*(.4+.55*r3)-ph*dg.ry*(.6+.6*r3);ctx.fillStyle=rgba(lighten(cols[i%3],.5),Math.sin(Math.PI*ph)*pa*.8);ctx.beginPath();ctx.arc(x,y,1+r3*1.8,0,7);ctx.fill()}ctx.restore()}
+  const fl=p.flash*(seg(u,.4,.44)*(1-seg(u,.44,.54))*.3+seg(u,.9,.93)*(1-seg(u,.93,.99))*.5);
   if(fl>0){ctx.fillStyle=rgba(lighten(pc,.85),fl*.45);ctx.fillRect(-BIG,-BIG,2*BIG,2*BIG)}
 }
 function lerpP(a,b,q){return{x:lerp(a.x,b.x,q),y:lerp(a.y,b.y,q)}}
@@ -442,9 +429,9 @@ function draw(ctx,t,p){
 const FX={name:'ultimate',def:DEF,presets:PRE,
  ctrls:[
   {t:'h',l:'Szenario'},
-  {k:'view',t:'seg',l:'Ansicht',o:[['alle','Alle drei'],['einzeln','Einzeln']],hint:'„Alle drei“ zeigt Todesfluss, Prisma und Heilfluss nebeneinander (Reihenfolge wie in der Kombo-Übersicht), „Einzeln“ eines groß.'},
-  {k:'fx',t:'seg',l:'Ultimate (bei „Einzeln“)',o:[['F','Todesfluss'],['W','Prisma'],['E','Heilfluss']],hint:'Feuer = Todesfluss, Wasser = Prisma, Erde = Heilfluss: Die Farbe der ersten Karte entscheidet.'},
-  {k:'level',t:'rng',l:'Stufe S',min:1,max:3,step:1,hint:'Todesfluss und Heilfluss legen S Marker; beim Prisma steht S auf dem Schild.'},
+  {k:'view',t:'seg',l:'Ansicht',o:[['alle','Alle drei'],['einzeln','Einzeln']],hint:'„Alle drei“ zeigt Todesfluss, Multischild und Heilfluss nebeneinander (Reihenfolge wie in der Kombo-Übersicht), „Einzeln“ eines groß.'},
+  {k:'fx',t:'seg',l:'Ultimate (bei „Einzeln“)',o:[['F','Todesfluss'],['W','Multischild'],['E','Heilfluss']],hint:'Feuer = Todesfluss, Wasser = Multischild, Erde = Heilfluss: Die Farbe der ersten Karte entscheidet.'},
+  {k:'level',t:'rng',l:'Stufe S',min:1,max:3,step:1,hint:'Todesfluss und Heilfluss legen S Marker; beim Multischild steht S auf dem Schild.'},
   {t:'h',l:'Allgemein'},
   {k:'dur',t:'rng',l:'Dauer des Rituals',min:2,max:7,step:.1,u:' s'},
   {k:'size',t:'rng',l:'Größe',min:.6,max:1.8,step:.05,u:'×'},
@@ -452,7 +439,7 @@ const FX={name:'ultimate',def:DEF,presets:PRE,
   {k:'flash',t:'rng',l:'Blitz',min:0,max:1.5,step:.05,u:'×'},
   {k:'shake',t:'rng',l:'Wackeln',min:0,max:1.5,step:.05},
   {k:'particles',t:'rng',l:'Funken und Lichtpunkte',min:0,max:120,step:5},
-  {k:'after',t:'rng',l:'Wirkung danach',min:0,max:4,step:.1,u:' s',hint:'Nach dem Ritual und den Markern: Todesfluss zehrt am Gegner, Heilfluss heilt, Prisma wehrt drei Angriffe verschiedener Farbe ab. 0 blendet es aus.'},
+  {k:'after',t:'rng',l:'Wirkung danach',min:0,max:4,step:.1,u:' s',hint:'Nach dem Ritual und den Markern: Todesfluss zehrt am Gegner, Heilfluss heilt, Multischild wehrt drei Angriffe verschiedener Farbe ab. 0 blendet es aus.'},
   {t:'h',l:'Todesfluss (Feuer)',c:'ft'},
   {k:'tColor',t:'col',l:'Farbe'},
   {k:'tTilt',t:'rng',l:'Neigung der Scheibe',min:.2,max:.8,step:.02},
@@ -471,11 +458,9 @@ const FX={name:'ultimate',def:DEF,presets:PRE,
   {k:'hLight',t:'rng',l:'Lichtsäule',min:0,max:1.5,step:.05,u:'×'},
   {k:'hPulse',t:'rng',l:'Heilwellen',min:0,max:5,step:1,hint:'Ringe, die vom Kreis nach außen laufen.'},
   {k:'hGlow',t:'rng',l:'Leuchten',min:0,max:30,step:1},
-  {t:'h',l:'Prisma (Wasser)',c:'fp'},
+  {t:'h',l:'Multischild (Wasser)',c:'fp'},
   {k:'pColor',t:'col',l:'Grundfarbe'},
-  {k:'pRainbow',t:'rng',l:'Farbenspiel',min:0,max:1,step:.05,hint:'0 = alles in der Grundfarbe, 1 = die Strahlen und der Rand zeigen Feuer, Erde und Wasser (das Prisma wirkt gegen jede Farbe).'},
-  {k:'pPrism',t:'rng',l:'Größe des Kristalls',min:.5,max:1.8,step:.05,u:'×'},
-  {k:'pBeam',t:'rng',l:'Auffächerung',min:.4,max:2,step:.05,u:'×'},
+  {k:'pRainbow',t:'rng',l:'Farbenspiel',min:0,max:1,step:.05,hint:'0 = alles in der Grundfarbe, 1 = der Kreis und der Rand zeigen Feuer, Erde und Wasser (das Multischild wirkt gegen jede Farbe).'},
   {k:'pDome',t:'rng',l:'Größe der Kuppel',min:.6,max:1.6,step:.05,u:'×'},
   {k:'pFacets',t:'rng',l:'Facetten',min:3,max:12,step:1},
   {k:'pShimmer',t:'rng',l:'Schimmer',min:0,max:1.5,step:.05,u:'×'},

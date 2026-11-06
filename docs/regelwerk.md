@@ -89,7 +89,7 @@ Die Farbe der ersten markierten Karte bestimmt die Rolle (Feuer aggressiv, Wasse
 | Spiegel (grün) | Wasser + Erde | grüner Spiegel auf Stufe S |
 | Heilung | Erde + Wasser | S HP heilen |
 | Läuterung | Erde + Feuer | S beliebige Marker vom Brett entfernen, je entferntem Marker ein Nachziehtoken |
-| Ultimate | alle drei | je nach Farbe der ersten Karte: **Feuer** Todesfluss, **Erde** Heilfluss, **Wasser** Prisma (Stufe S) |
+| Ultimate | alle drei | je nach Farbe der ersten Karte: **Feuer** Todesfluss, **Erde** Heilfluss, **Wasser** Multischild (Stufe S) |
 
 **Fluchkarten:** Sie kommen erst in den Zugstapel, wenn der Ablagestapel gemischt wird. Auf der Hand belegen sie einen Platz und wirken nicht. Beim Nachziehen werden sie dauerhaft verworfen, am Kampfende verschwinden alle.
 
@@ -102,7 +102,7 @@ Die Farbe der ersten markierten Karte bestimmt die Rolle (Feuer aggressiv, Wasse
 **Ultimate nach Farbe (seit 0.7):** Die Farbe der ersten Karte entscheidet. Die Stufe S gilt wie bisher (Minimum der drei Kartensummen, höchstens 3); mehrere Marker einer Art werden nicht addiert, es gilt der höchste. Alle drei Marker entfernt nur die Läuterung (sie sind wählbar wie die Todesmarker).
 - **Feuer: Todesfluss** wie bisher (S Todesmarker beim Gegner, S HP Verlust am Ende jeder seiner Angriffsphasen).
 - **Erde: Heilfluss.** S grüne Marker mit Plus bei dir selbst: Am Ende jeder deiner Angriffsphasen heilst du S HP (höchstens bis zu den max. HP) bis Kampfende.
-- **Wasser: Prisma.** Ein Schild der Stufe S bei dir selbst, der gegen **jede** Farbe wirkt und nach der Mechanik der Spiegel arbeitet (gleicht fehlende Verteidigung bis S aus, wirft Überschuss bis S zurück), und verliert dabei Stufen wie ein Farbspiegel (seit 0.7.2.2, vorher verlor er keine). Gegenüber einem Farbspiegel zählt der höhere Wert; verbraucht werden aber **zuerst die Stufen des Farbspiegels**, erst der Rest geht vom Prisma ab. In der Verteidigung wirkt er schon gegen den laufenden Angriff.
+- **Wasser: Multischild.** Ein Schild der Stufe S bei dir selbst, der gegen **jede** Farbe wirkt und nach der Mechanik der Spiegel arbeitet (gleicht fehlende Verteidigung bis S aus, wirft Überschuss bis S zurück), und verliert dabei Stufen wie ein Farbspiegel (seit 0.7.2.2, vorher verlor er keine). Gegenüber einem Farbspiegel zählt der höhere Wert; verbraucht werden aber **zuerst die Stufen des Farbspiegels**, erst der Rest geht vom Multischild ab. In der Verteidigung wirkt er schon gegen den laufenden Angriff.
 
 
 ## Monster
@@ -397,3 +397,8 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 ## Änderung 0.7.2.3 (06.11.)
 
 - **Effekt der Heilmarker:** Heilt der Heilfluss am Ende der eigenen Angriffsphase, steigt aus jedem Heilmarker (bis zu 4 dargestellt) eine grüne Wolke mit Lichtpunkten und Pluszeichen zur Lebensanzeige (`FlowFx.heal` in `src/ui/22-lifeflow-aggro.js`), analog zur Wolke des Todesfluss. Die Lebensanzeige zeigt bis zum Eintreffen den alten Stand (`holdHp` in `src/ui/26a-darstellung.js`, gemeinsam mit dem Todesfluss). Keine Regeländerung.
+
+## Änderung 0.7.2.4 (06.11.)
+
+- **Umbenennung:** Das Prisma (Wasser-Ultimate) heißt **Multischild**. Die Regeln bleiben unverändert (Spielfeld, Log, Tooltips, Werkstatt und die aktuellen Regelzeilen oben nutzen den neuen Namen; ältere Änderungsabschnitte nennen noch „Prisma“). Interne Namen (`stats.rainbow`, Schildeffekt „R“) bleiben.
+- **Neuer Ablauf des Rituals:** Erst bildet sich ein Kreis am Boden (Ring, Gegenring, Rastmarken in Feuer-, Erd- und Wasserfarbe), danach wächst daraus die Schildkuppel. Kristall und Lichtstrahl entfallen; die Werkstatt-Regler „Größe des Kristalls“ und „Auffächerung“ entfallen ebenfalls.

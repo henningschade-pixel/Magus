@@ -1,4 +1,4 @@
-/* ---------- Ultimate-Rituale für Heilfluss (Erde) und Prisma (Wasser), aus der Ultimate-Werkstatt (seit 0.7.2.2): mittig auf dem Bildschirm, wie das Pentagramm des Todesfluss (20-todesfluch.js). Die Marker und ihre Wirkung zeigt das Spiel selbst. ---------- */
+/* ---------- Ultimate-Rituale für Heilfluss (Erde) und Multischild (Wasser), aus der Ultimate-Werkstatt (seit 0.7.2.2): mittig auf dem Bildschirm, wie das Pentagramm des Todesfluss (20-todesfluch.js). Die Marker und ihre Wirkung zeigt das Spiel selbst. ---------- */
 const UltFx = (() => {
   const BIG = 3000, clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x)), lerp = (a, b, t) => a + (b - a) * t, seg = (u, a, b) => clamp((u - a) / (b - a));
   const eo = x => 1 - Math.pow(1 - x, 3), eio = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
@@ -10,7 +10,7 @@ const UltFx = (() => {
   // Werte der Ultimate-Werkstatt (Standard)
   const P = { dur: 4, size: 1.2, dark: .55, flash: 1, shake: .5, particles: 50, seed: 3,
     hColor: '#93c24f', hRings: 2, hVines: 6, hVineH: 1, hPlus: 1, hLight: .7, hPulse: 3, hGlow: 14,
-    pColor: '#52a6f5', pRainbow: .6, pPrism: 1, pBeam: 1, pDome: 1, pFacets: 6, pShimmer: 1, pGlints: 16, pGlow: 12 };
+    pColor: '#52a6f5', pRainbow: .6, pDome: 1, pFacets: 6, pShimmer: 1, pGlints: 16, pGlow: 12 };
   function glowLine(ctx,col,w,glow,alpha,draw){
     ctx.save();ctx.lineCap='round';ctx.lineJoin='round';
     ctx.shadowColor=col;ctx.shadowBlur=glow;ctx.strokeStyle=rgba(col,alpha*.8);ctx.lineWidth=w*1.8;ctx.beginPath();draw();ctx.stroke();
@@ -60,77 +60,64 @@ const UltFx = (() => {
     if(fl>0){ctx.fillStyle=rgba(lighten(col,.8),fl*.42);ctx.fillRect(-BIG,-BIG,2*BIG,2*BIG)}
   }
   
-  /* ---------- Prisma (Wasser): Lichtstrahl spaltet sich im Kristall in drei Farben, daraus wächst die Schildkuppel ---------- */
+  /* ---------- Multischild (Wasser): erst bildet sich ein Kreis am Boden, aus ihm wächst die Schildkuppel (seit 0.7.2.4; vorher Prisma mit Kristall und Lichtstrahl) ---------- */
   const prismCols=p=>[mix(p.pColor,EL.F,p.pRainbow),mix(p.pColor,EL.E,p.pRainbow),mix(p.pColor,EL.W,p.pRainbow)];
   function domeGeom(p){const rx=165*p.size*p.pDome*.95;return{c:{x:C.x,y:C.y+78},rx,ry:rx*.85}}
   function fxPrism(ctx,p,t,D,u){
-    const S=p.size,s=62*S*p.pPrism,Pc={x:C.x,y:C.y-14},gl=p.pGlow,cols=prismCols(p),dg=domeGeom(p),pc=p.pColor;
-    const dp=eio(seg(u,.55,.78)),out=1-eio(seg(u,.9,.99)),fin=1-seg(u,.93,1);
-    vignette(ctx,p.dark*eo(seg(u,0,.12))*(1-seg(u,.95,1)),Pc.x,Pc.y);
-    const pr=eo(seg(u,.03,.2)),sc=(.3+.7*pr)*(1-.8*eio(seg(u,.9,.99)));
-    const V=[[0,-s*1.05],[-s*.95,s*.58],[s*.95,s*.58]].map(v=>({x:Pc.x+v[0]*sc,y:Pc.y+v[1]*sc}));
-    const E=lerpP(V[0],V[1],.55),X=lerpP(V[0],V[2],.55);
-    // Kuppel (hinter dem Prisma)
-    if(dp>0&&out>0){
-      const {c,rx,ry}=dg;ctx.save();ctx.globalAlpha=out;
-      const fillg=ctx.createRadialGradient(c.x,c.y-ry*.45,rx*.1,c.x,c.y-ry*.3,rx*1.05);fillg.addColorStop(0,rgba(lighten(pc,.6),.04*dp));fillg.addColorStop(1,rgba(pc,.26*dp));
-      ctx.fillStyle=fillg;ctx.beginPath();ctx.ellipse(c.x,c.y,rx,ry,0,Math.PI,Math.PI*2);ctx.ellipse(c.x,c.y,rx,rx*.28,0,0,Math.PI);ctx.closePath();ctx.fill();   // Fläche
-      const lg=ctx.createLinearGradient(c.x-rx,0,c.x+rx,0);lg.addColorStop(0,cols[0]);lg.addColorStop(.5,cols[1]);lg.addColorStop(1,cols[2]);
-      ctx.save();ctx.lineCap='round';ctx.shadowColor=cols[1];ctx.shadowBlur=gl;ctx.strokeStyle=lg;ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(c.x,c.y,rx,ry,0,Math.PI,Math.PI+Math.PI*dp);ctx.stroke();ctx.restore();   // Rand
-      ctx.strokeStyle=rgba(lighten(pc,.5),.5*dp);ctx.lineWidth=1.6;ctx.beginPath();ctx.ellipse(c.x,c.y,rx,rx*.28,0,0,Math.PI);ctx.stroke();ctx.strokeStyle=rgba(pc,.25*dp);ctx.beginPath();ctx.ellipse(c.x,c.y,rx,rx*.28,0,Math.PI,Math.PI*2);ctx.stroke();   // Standring
-      const nF=Math.round(p.pFacets),fa=seg(u,.62,.8);   // Facetten
-      if(nF>1&&fa>0){
-        ctx.strokeStyle=rgba(lighten(pc,.65),.3*fa);ctx.lineWidth=1.2;
-        for(let i=1;i<nF;i++){const th=Math.PI+i/nF*Math.PI,bx=c.x+rx*Math.cos(th);ctx.beginPath();ctx.moveTo(bx,c.y+Math.sin(th)*0);ctx.quadraticCurveTo(c.x+(bx-c.x)*.92,c.y-ry*.7,c.x,c.y-ry);ctx.stroke()}
-        [.35,.7].forEach(h=>{const rxh=rx*Math.sqrt(1-h*h);ctx.beginPath();ctx.ellipse(c.x,c.y-ry*h,rxh,rxh*.28,0,0,Math.PI);ctx.stroke()});
-      }
-      const sh=seg(u,.76,.94);   // Schimmer läuft über die Kuppel
-      if(sh>0&&sh<1&&p.pShimmer>0){
-        ctx.save();ctx.beginPath();ctx.ellipse(c.x,c.y,rx,ry,0,Math.PI,Math.PI*2);ctx.ellipse(c.x,c.y,rx,rx*.28,0,0,Math.PI);ctx.closePath();ctx.clip();
-        const bx=lerp(c.x-rx*1.3,c.x+rx*1.3,eio(sh)),sg=ctx.createLinearGradient(bx-60,0,bx+60,0);sg.addColorStop(0,'rgba(255,255,255,0)');sg.addColorStop(.5,'rgba(255,255,255,'+(.5*Math.sin(Math.PI*sh)*Math.min(1,p.pShimmer))+')');sg.addColorStop(1,'rgba(255,255,255,0)');
-        ctx.fillStyle=sg;ctx.fillRect(c.x-rx,c.y-ry,2*rx,ry+rx*.3);ctx.restore();
-      }
-      const nG=Math.round(p.pGlints),gr=rng(p.seed+21);   // Glitzern
-      for(let i=0;i<nG;i++){const an=Math.PI+gr()*Math.PI,rd=Math.sqrt(gr())*.95,ph=gr()*6,sp=2+gr()*3,x=c.x+Math.cos(an)*rx*rd,y=c.y+Math.sin(an)*ry*rd*.9,tw=Math.max(0,Math.sin(t*sp+ph));
-        if(tw>0)star4(ctx,x,y,3+5*tw,i%3===0?'#ffffff':cols[i%3],tw*dp*.9)}
-      ctx.restore();
-    }
-    // Prisma (Kristall)
-    if(pr>0&&out>0){
+    const gl=p.pGlow,cols=prismCols(p),dg=domeGeom(p),pc=p.pColor,{c,rx}=dg,rz=rx*.28;
+    const cf=eio(seg(u,.04,.38)),dp=eio(seg(u,.42,.74)),out=1-eio(seg(u,.9,.99));
+    vignette(ctx,p.dark*eo(seg(u,0,.12))*(1-seg(u,.95,1)),c.x,c.y-40);
+    const ry=dg.ry*dp;
+    if(out>0){
       ctx.save();ctx.globalAlpha=out;
-      const gg=ctx.createLinearGradient(0,V[0].y,0,V[1].y);gg.addColorStop(0,'rgba(215,238,255,.34)');gg.addColorStop(1,rgba(pc,.16));
-      ctx.fillStyle=gg;ctx.beginPath();V.forEach((v,i)=>i?ctx.lineTo(v.x,v.y):ctx.moveTo(v.x,v.y));ctx.closePath();ctx.fill();
-      glowLine(ctx,lighten(pc,.35),2.4,gl*1.2,.95*pr,()=>{V.forEach((v,i)=>i?ctx.lineTo(v.x,v.y):ctx.moveTo(v.x,v.y));ctx.closePath()});
-      ctx.strokeStyle=rgba('#ffffff',.22*pr);ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(V[0].x,V[0].y);ctx.lineTo((V[1].x+V[2].x)/2,V[1].y);ctx.moveTo(Pc.x,Pc.y+s*.05*sc);ctx.lineTo(V[1].x,V[1].y);ctx.moveTo(Pc.x,Pc.y+s*.05*sc);ctx.lineTo(V[2].x,V[2].y);ctx.stroke();
-      ctx.restore();
-    }
-    // einfallender Strahl, Brechung, drei Strahlen
-    const bm=eo(seg(u,.2,.38)),B0={x:-30,y:E.y+80},ex=seg(u,.42,.6);
-    if(bm>0&&out>0&&fin>0){
-      ctx.save();ctx.globalCompositeOperation='lighter';ctx.globalAlpha=out;
-      const Bm=lerpP(B0,E,bm);ctx.lineCap='round';
-      ctx.strokeStyle=rgba('#ffffff',.3);ctx.lineWidth=11;ctx.beginPath();ctx.moveTo(B0.x,B0.y);ctx.lineTo(Bm.x,Bm.y);ctx.stroke();
-      ctx.shadowColor='#ffffff';ctx.shadowBlur=gl;ctx.strokeStyle=rgba('#ffffff',.95);ctx.lineWidth=3.4;ctx.beginPath();ctx.moveTo(B0.x,B0.y);ctx.lineTo(Bm.x,Bm.y);ctx.stroke();
-      const ins=seg(u,.34,.44);if(ins>0){ctx.strokeStyle=rgba('#ffffff',.7*ins*(1-ex*.6));ctx.lineWidth=2.4;ctx.beginPath();ctx.moveTo(E.x,E.y);ctx.lineTo(lerp(E.x,X.x,ins),lerp(E.y,X.y,ins));ctx.stroke()}
-      for(let k=0;k<3;k++){
-        const q=eo(seg(u,.42+k*.03,.6+k*.03));if(q<=0)continue;
-        const ang=.1+(k-1)*.24*p.pBeam,Ln=230*S*q,tx=X.x+Math.cos(ang)*Ln,ty=X.y+Math.sin(ang)*Ln,al=(1-.75*dp)*q;
-        const g2=ctx.createLinearGradient(X.x,X.y,tx,ty);g2.addColorStop(0,rgba(lighten(cols[k],.5),al));g2.addColorStop(1,rgba(cols[k],al*.2));
-        ctx.shadowBlur=gl;ctx.shadowColor=cols[k];ctx.strokeStyle=g2;ctx.lineWidth=7*(1-.4*q);ctx.beginPath();ctx.moveTo(X.x,X.y);ctx.lineTo(tx,ty);ctx.stroke();
-        ctx.shadowBlur=0;ctx.strokeStyle=rgba('#ffffff',al*.7);ctx.lineWidth=1.8;ctx.beginPath();ctx.moveTo(X.x,X.y);ctx.lineTo(lerp(X.x,tx,.8),lerp(X.y,ty,.8));ctx.stroke();
-        if(q>.9)star4(ctx,tx,ty,10,cols[k],al);
+      // Kreis: Ring zeichnet sich um die Mitte, innerer Gegenring, Rastmarken in den drei Farben, Drehung
+      if(cf>0){
+        const lg=ctx.createLinearGradient(c.x-rx,0,c.x+rx,0);lg.addColorStop(0,cols[0]);lg.addColorStop(.5,cols[1]);lg.addColorStop(1,cols[2]);
+        const a0=-Math.PI/2+t*.5,sw=Math.PI*2*cf;
+        ctx.save();ctx.lineCap='round';ctx.shadowColor=cols[1];ctx.shadowBlur=gl;ctx.strokeStyle=lg;ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(c.x,c.y,rx,rz,0,a0,a0+sw);ctx.stroke();
+        ctx.shadowBlur=gl*.5;ctx.strokeStyle=rgba(lighten(pc,.5),.7);ctx.lineWidth=1.8;ctx.beginPath();ctx.ellipse(c.x,c.y,rx*.84,rz*.84,0,a0+Math.PI,a0+Math.PI-sw*.9,true);ctx.stroke();ctx.restore();
+        const nT=12;
+        for(let i=0;i<nT;i++){const th=a0+i/nT*Math.PI*2-t*1.0,vis=cf>(i/nT)?1:0;if(!vis)continue;
+          const x1=c.x+Math.cos(th)*rx*.84,y1=c.y+Math.sin(th)*rz*.84,x2=c.x+Math.cos(th)*rx,y2=c.y+Math.sin(th)*rz;
+          ctx.strokeStyle=rgba(lighten(cols[i%3],.4),.8);ctx.lineWidth=2.2;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
+          star4(ctx,c.x+Math.cos(th)*rx*.92,c.y+Math.sin(th)*rz*.92,4+2*Math.sin(t*3+i),cols[i%3],.85)}
+        const gf=ctx.createRadialGradient(c.x,c.y,rx*.1,c.x,c.y,rx);gf.addColorStop(0,rgba(pc,0));gf.addColorStop(1,rgba(pc,.2*cf));
+        ctx.fillStyle=gf;ctx.beginPath();ctx.ellipse(c.x,c.y,rx,rz,0,0,7);ctx.fill();
+      }
+      // Kuppel: wächst aus dem Kreis nach oben (Höhe = dp)
+      if(dp>0){
+        const fillg=ctx.createRadialGradient(c.x,c.y-ry*.45,rx*.1,c.x,c.y-ry*.3,rx*1.05);fillg.addColorStop(0,rgba(lighten(pc,.6),.04*dp));fillg.addColorStop(1,rgba(pc,.26*dp));
+        ctx.fillStyle=fillg;ctx.beginPath();ctx.ellipse(c.x,c.y,rx,ry,0,Math.PI,Math.PI*2);ctx.ellipse(c.x,c.y,rx,rz,0,0,Math.PI);ctx.closePath();ctx.fill();
+        const lg2=ctx.createLinearGradient(c.x-rx,0,c.x+rx,0);lg2.addColorStop(0,cols[0]);lg2.addColorStop(.5,cols[1]);lg2.addColorStop(1,cols[2]);
+        ctx.save();ctx.lineCap='round';ctx.shadowColor=cols[1];ctx.shadowBlur=gl;ctx.strokeStyle=lg2;ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(c.x,c.y,rx,ry,0,Math.PI,Math.PI*2);ctx.stroke();ctx.restore();
+        const nF=Math.round(p.pFacets),fa=seg(u,.6,.78);
+        if(nF>1&&fa>0){
+          ctx.strokeStyle=rgba(lighten(pc,.65),.3*fa);ctx.lineWidth=1.2;
+          for(let i=1;i<nF;i++){const th=Math.PI+i/nF*Math.PI,bx=c.x+rx*Math.cos(th);ctx.beginPath();ctx.moveTo(bx,c.y);ctx.quadraticCurveTo(c.x+(bx-c.x)*.92,c.y-ry*.7,c.x,c.y-ry);ctx.stroke()}
+          [.35,.7].forEach(h=>{const rxh=rx*Math.sqrt(1-h*h);ctx.beginPath();ctx.ellipse(c.x,c.y-ry*h,rxh,rxh*.28,0,0,Math.PI);ctx.stroke()});
+        }
+        const sh=seg(u,.74,.92);
+        if(sh>0&&sh<1&&p.pShimmer>0){
+          ctx.save();ctx.beginPath();ctx.ellipse(c.x,c.y,rx,ry,0,Math.PI,Math.PI*2);ctx.ellipse(c.x,c.y,rx,rz,0,0,Math.PI);ctx.closePath();ctx.clip();
+          const bx=lerp(c.x-rx*1.3,c.x+rx*1.3,eio(sh)),sg=ctx.createLinearGradient(bx-60,0,bx+60,0);sg.addColorStop(0,'rgba(255,255,255,0)');sg.addColorStop(.5,'rgba(255,255,255,'+(.5*Math.sin(Math.PI*sh)*Math.min(1,p.pShimmer))+')');sg.addColorStop(1,'rgba(255,255,255,0)');
+          ctx.fillStyle=sg;ctx.fillRect(c.x-rx,c.y-ry,2*rx,ry+rz);ctx.restore();
+        }
+        const nG=Math.round(p.pGlints),gr=rng(p.seed+21);
+        for(let i=0;i<nG;i++){const an=Math.PI+gr()*Math.PI,rd=Math.sqrt(gr())*.95,ph=gr()*6,sp=2+gr()*3,x=c.x+Math.cos(an)*rx*rd,y=c.y+Math.sin(an)*ry*rd*.9,tw=Math.max(0,Math.sin(t*sp+ph));
+          if(tw>0)star4(ctx,x,y,3+5*tw,i%3===0?'#ffffff':cols[i%3],tw*dp*.9)}
       }
       ctx.restore();
     }
-    const nP=Math.round(p.particles*.6),pa=seg(u,.4,.6)*(1-seg(u,.9,1));
+    // Funken steigen aus dem Kreis auf, solange die Kuppel wächst
+    const nP=Math.round(p.particles*.6),pa=seg(u,.3,.5)*(1-seg(u,.8,.95));
     if(nP>0&&pa>0){const pr2=rng(p.seed+23);ctx.save();ctx.globalCompositeOperation='lighter';
-      for(let i=0;i<nP;i++){const r1=pr2(),r2=pr2(),r3=pr2(),ph=(r1+t*(.15+.3*r2)/(D/3))%1,x=X.x+ph*200*S*(.6+r3*.5),y=X.y+(r2-.35)*ph*150*S;ctx.fillStyle=rgba(lighten(cols[i%3],.5),Math.sin(Math.PI*ph)*pa*.8);ctx.beginPath();ctx.arc(x,y,1+r3*1.8,0,7);ctx.fill()}ctx.restore()}
-    const fl=p.flash*(seg(u,.55,.6)*(1-seg(u,.6,.7))*.35+seg(u,.9,.93)*(1-seg(u,.93,.99))*.55);
+      for(let i=0;i<nP;i++){const r1=pr2(),r2=pr2(),r3=pr2(),ph=(r1+t*(.15+.3*r2)/(D/3))%1,an=r2*Math.PI*2,x=c.x+Math.cos(an)*rx*(.4+.55*r3),y=c.y+Math.sin(an)*rz*(.4+.55*r3)-ph*dg.ry*(.6+.6*r3);ctx.fillStyle=rgba(lighten(cols[i%3],.5),Math.sin(Math.PI*ph)*pa*.8);ctx.beginPath();ctx.arc(x,y,1+r3*1.8,0,7);ctx.fill()}ctx.restore()}
+    const fl=p.flash*(seg(u,.4,.44)*(1-seg(u,.44,.54))*.3+seg(u,.9,.93)*(1-seg(u,.93,.99))*.5);
     if(fl>0){ctx.fillStyle=rgba(lighten(pc,.85),fl*.45);ctx.fillRect(-BIG,-BIG,2*BIG,2*BIG)}
   }
   function lerpP(a,b,q){return{x:lerp(a.x,b.x,q),y:lerp(a.y,b.y,q)}}
   const cvs = {}, raf = {};
-  function play(kind) {   // 'E' Heilfluss, 'W' Prisma
+  function play(kind) {   // 'E' Heilfluss, 'W' Multischild
     if (FAST || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
     let cv = cvs[kind];
     if (!cv) { cv = cvs[kind] = document.createElement('canvas'); cv.width = SW; cv.height = 800; cv.style.cssText = 'position:absolute;left:0;top:0;width:' + SW + 'px;height:800px;z-index:290;pointer-events:none'; stage.appendChild(cv); }
