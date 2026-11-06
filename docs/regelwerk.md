@@ -502,3 +502,11 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 ## Änderung 0.7.6.6 (07.11.)
 
 - **Vorzeitiges Spielende wieder aktiv:** Wer nach einem Showdown (ab dem ersten, `winSpFromShowdown` 1) mit mindestens 4 Siegpunkten (`winSp` 4) **führt**, gewinnt das Spiel sofort. Bei Gleichstand (auch bei 4 : 4) geht es mit dem nächsten Abschnitt weiter; nach dem dritten Showdown endet das Spiel wie bisher (Siegpunkte, dann Gold, dann Tempelstufe). Da jeder Spieler mit 3 Siegpunkten beginnt, entscheidet damit oft schon der erste Showdown das Spiel. Das ändert die KI-Referenzpartien (`tests/golden.json` neu erzeugt).
+
+## Änderung 0.7.6.7 (07.11.)
+
+- **Zwei Schilde nebeneinander:** Verbraucht eine Verteidigung Stufen vom Farbspiegel **und** vom Multispiegel (der Farbspiegel zuerst, den Rest trägt der Multispiegel), zeigt die Oberfläche beide Schild-Effekte gleichzeitig nebeneinander statt nur den des Farbspiegels. Die Engine liefert dafür `fx.mirror` (Farbspiegel) und `fx.mirror2` (Multispiegel) mit aufgeteilten Werten (`abs`, `r`, `broken`). Keine Regeländerung.
+
+## Änderung 0.7.6.8 (07.11.)
+
+- **Multischild kräftiger:** Die Verlaufsfarben des Multischilds (Marker und Schild-Effekt) sind weniger entsättigt. Keine Regeländerung.

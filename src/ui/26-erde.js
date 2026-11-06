@@ -189,18 +189,19 @@ function earthFormRaw(ctx, x, by, seed, i, t, tCrack, tRise, endAt, ending) {
     const tDe = bb ? tD + (bb - 1) * p.gap + p.flight : tD, tC = tDe + .12, tK = tC + (pairs ? .3 : 0);
     p.def = fx.defElem || fx.attElem;
     const cl = pairs ? clashDur(p, clashStyle(p, p.atk, p.def)) : .6;   // Lava und Schlamm lösen sich langsamer auf als Dampf
-    const sh = fx.mirror && !off() ? fx.mirror : null, shD = sh ? MirrorFx.delay(sh) : 0, hf = .8;
-    const abs = sh ? Math.min(sh.abs || 0, e.n - pairs) : 0, left = e.n - pairs - abs;   // vom Schild ausgeglichene Geschosse erreichen die HP nicht
+    const shs = off() ? [] : [fx.mirror, fx.mirror2].filter(Boolean).map((m, i, a) => a.length > 1 ? Object.assign({}, m, { off: i ? 105 : -105, noDim: i > 0 }) : m);   // lösen zwei Schilde aus (Farbspiegel und Multispiegel), stehen sie nebeneinander
+    const sh = shs.length ? shs[0] : null, shD = shs.length ? Math.max(...shs.map(m => MirrorFx.delay(m))) : 0, shR = shs.filter(m => m.r > 0), hf = .8;
+    const abs = shs.length ? Math.min(shs.reduce((n, m) => n + (m.abs || 0), 0), e.n - pairs) : 0, left = e.n - pairs - abs;   // vom Schild ausgeglichene Geschosse erreichen die HP nicht
     const tS = tK + (pairs ? .55 : 0);   // erst läuft die normale Grafik (Angriff gegen Verteidigung), danach, nur wenn das Schild wirklich eingreift, der Schild-Effekt
     const tH = sh ? tS + shD : tK + (pairs ? .45 : 0);   // der Schaden auf den HP kommt nach dem Schild-Effekt
     e.def = { H: handOf(fx.who), hp: hpOf(fx.who), ha: hpOf(fx.to), b: bb, T: { tA: 0, tD, tC, tK, tS, tH, hf, cl, pairs, left, abs, end: Math.max(left ? tH + hf + .7 : tK + .6, sh ? tS + shD : 0, pairs ? tK + cl : 0) + .3 + (p.atk === 'E' || p.def === 'E' ? .35 : 0) } };
     fxUntil = Math.max(fxUntil, Date.now() + (e.def.T.end - now) * 1000);
     if (fx.hpPre) {   // HP-Balken zeigen den Schaden genau im Moment des Einschlags (ohne Verzögerung)
-      const at = tt => Math.max(0, Math.round((tt - now) * 1000)), msD = at(left > 0 ? tH + hf : tH), msA = sh && sh.r > 0 ? at(tS + MirrorFx.landing(sh)) : 0;   // Verteidiger: Einschlag der Geschosse; Angreifer: Rückwurf
+      const at = tt => Math.max(0, Math.round((tt - now) * 1000)), msD = at(left > 0 ? tH + hf : tH), msA = shR.length ? at(tS + Math.max(...shR.map(m => MirrorFx.landing(m)))) : 0;   // Verteidiger: Einschlag der Geschosse; Angreifer: Rückwurf
       hpHold = { until: Date.now() + Math.max(msD, msA), pre: fx.hpPre, un: { [fx.who]: Date.now() + msD, [fx.to]: Date.now() + msA } };
       [msD, msA].forEach(ms => setTimeout(() => { if (G) render(); }, ms + 15));
     }
-    if (sh) { lateN++; setTimeout(() => { lateN--; MirrorFx.play(sh); }, Math.max(0, Math.round((tS - now) * 1000))); }
+    if (shs.length) { lateN++; setTimeout(() => { lateN--; shs.forEach(m => MirrorFx.play(m)); }, Math.max(0, Math.round((tS - now) * 1000))); }
     if (pairs > 0) Snd.play('block', Math.max(0, tC - now));
     if (left > 0) Snd.play('hit', Math.max(0, tH + hf - now));   // Bruch-Sound beim Einschlag der Funken
   }

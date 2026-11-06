@@ -957,3 +957,15 @@ test('Vorzeitiges Ende: wer nach einem Showdown mit mindestens 4 Siegpunkten fü
   }
   assert.ok(early > 0 && cont > 0, 'beide Fälle kamen vor: ' + early + '/' + cont);
 });
+
+test('Zwei Schilde lösen aus: Farbspiegel und Multispiegel liefern beide einen Schild-Effekt (mirror, mirror2), Aufteilung stimmt (0.7.6.7)', () => {
+  const { s, c, me } = combatSetup(11, ['W1']);
+  me.stats.mirrorEl = { F: 1, E: 0, W: 0 }; me.stats.mirror = 1; me.stats.rainbow = 3;
+  c.turn = 'a'; c.action = 'defense'; c.color = 'F'; c.pending = 3;   // keine Verteidigung: 3 fehlen, der Schild der Stufe 3 gleicht aus: 1 vom Farbspiegel, 2 vom Multispiegel
+  assert.ok(M.apply(s, { pid: 0, type: 'pass' }).ok);
+  const fx = s.log.find(l => /verliert 0 HP|verliert \d+ HP/.test(l.txt) && l.fx && l.fx.mirror).fx;
+  assert.ok(fx.mirror && fx.mirror2, 'beide Effekte');
+  assert.equal(fx.mirror.elem, 'F'); assert.equal(fx.mirror.broken, 1); assert.equal(fx.mirror2.elem, 'R'); assert.equal(fx.mirror2.broken, 2);
+  assert.equal(fx.mirror.abs + fx.mirror2.abs, 3, 'ausgeglichene Geschosse verteilen sich auf beide');
+  assert.equal(me.stats.rainbow, 1, 'Multispiegel Stufe 3 − 2'); assert.equal(me.stats.mirror || 0, 0);
+});

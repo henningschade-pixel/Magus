@@ -362,8 +362,11 @@ function execDefense(state, passOnly) {
     const stufen = lost + ' Stufe' + (lost === 1 ? '' : 'n');
     log(state, (lostRb > 0 ? (lostStd > 0 ? 'Spiegel und Multispiegel: ' : 'Multispiegel: ') : 'Spiegel: ') + side.name + (refl > 0 ? ' wirft ' + refl + ' Schaden auf ' + attacker.name + ' zurück' : ' gleicht ' + absorb + ' Schaden aus') + ' und verliert ' + stufen + (lostRb > 0 && lostStd > 0 ? ' (' + lostStd + ' vom Spiegel, ' + lostRb + ' vom Multispiegel)' : '') + '.', side.ctrl, undefined);
     // Schild-Effekt (Oberfläche): bricht ein Farbspiegel, gilt er ihm, sonst dem Multispiegel (elem 'R'); er läuft in der Verteidigungsanimation, vor dem Schaden auf den HP
-    defFx.mirror = lostStd > 0 ? { hpPre, elem: c.color, markers: std, broken: lostStd, who: side.ctrl, att: attacker.ctrl, r: refl, abs: absorb, d: c.pending, blk: block }
-      : { hpPre, elem: 'R', markers: rb, broken: lostRb, who: side.ctrl, att: attacker.ctrl, r: refl, abs: absorb, d: c.pending, blk: block };
+    const mkFx = (elem, markers, broken, ab, r) => ({ hpPre, elem, markers, broken, who: side.ctrl, att: attacker.ctrl, r, abs: ab, d: c.pending, blk: block });
+    if (lostStd > 0 && lostRb > 0) {   // seit 0.7.6.7: lösen Farbspiegel und Multispiegel beide aus, zeigt die Oberfläche beide nebeneinander (der Farbspiegel verbraucht zuerst, den Rest trägt der Multispiegel)
+      const a1 = Math.min(absorb, lostStd);
+      defFx.mirror = mkFx(c.color, std, lostStd, a1, lostStd - a1); defFx.mirror2 = mkFx('R', rb, lostRb, absorb - a1, refl - (lostStd - a1));
+    } else defFx.mirror = lostStd > 0 ? mkFx(c.color, std, lostStd, absorb, refl) : mkFx('R', rb, lostRb, absorb, refl);
   }
   if (healLvl > 0 && side.stats.hp > 0) {   // Heilung nach Angriff und Verteidigung (seit 0.5.4): gleicht den Schaden nachträglich aus, höchstens bis zum Maximum; seit 0.7.6.2 nur, wenn der Verteidiger nach dem Schaden noch über 0 HP steht (sonst ist er besiegt und die Heilung verfällt)
     const hTexts = [], hFxs = [];

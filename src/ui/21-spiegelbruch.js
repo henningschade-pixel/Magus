@@ -9,7 +9,7 @@ const MirrorFx = (() => {
   // Werte der Schild-Werkstatt (Export des Spielers)
   const P = { size: 240, fly: .55, back: .55, hold: .5, dim: .45, glow: 60, flash: 1.5, shake: .5, cracks: 8, scatter: 1, gravity: 1, tempo: 1, spark: 1 };
   const IMGS = {};
-  const PRISMA_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="132" height="180" viewBox="0 0 40 52"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#a8352f"/><stop offset=".25" stop-color="#a98424"/><stop offset=".5" stop-color="#478a40"/><stop offset=".75" stop-color="#2a6aa8"/><stop offset="1" stop-color="#63449f"/></linearGradient><clipPath id="ic"><path d="M20 2 L37 9 V26 C37 38 29 46 20 50 C11 46 3 38 3 26 V9 Z"/></clipPath><filter id="ib" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="1.3"/></filter></defs><path d="M20 2 L37 9 V26 C37 38 29 46 20 50 C11 46 3 38 3 26 V9 Z" fill="url(#g)"/><g clip-path="url(#ic)"><path d="M20 2 L37 9 V26 C37 38 29 46 20 50 C11 46 3 38 3 26 V9 Z" fill="none" stroke="#000" stroke-width="5" stroke-opacity=".85" filter="url(#ib)"/></g><path d="M20 2 L37 9 V26 C37 38 29 46 20 50 C11 46 3 38 3 26 V9 Z" fill="none" stroke="#b9c0cc" stroke-width="2.2" stroke-opacity=".6"/><path d="M20 2 L37 9 V26 C37 38 29 46 20 50 Z" fill="#000" fill-opacity=".3"/></svg>';
+  const PRISMA_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="132" height="180" viewBox="0 0 40 52"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e8352c"/><stop offset=".25" stop-color="#f2b61a"/><stop offset=".5" stop-color="#2fb844"/><stop offset=".75" stop-color="#2b84ec"/><stop offset="1" stop-color="#8d4fe0"/></linearGradient><clipPath id="ic"><path d="M20 2 L37 9 V26 C37 38 29 46 20 50 C11 46 3 38 3 26 V9 Z"/></clipPath><filter id="ib" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="1.3"/></filter></defs><path d="M20 2 L37 9 V26 C37 38 29 46 20 50 C11 46 3 38 3 26 V9 Z" fill="url(#g)"/><g clip-path="url(#ic)"><path d="M20 2 L37 9 V26 C37 38 29 46 20 50 C11 46 3 38 3 26 V9 Z" fill="none" stroke="#000" stroke-width="5" stroke-opacity=".85" filter="url(#ib)"/></g><path d="M20 2 L37 9 V26 C37 38 29 46 20 50 C11 46 3 38 3 26 V9 Z" fill="none" stroke="#b9c0cc" stroke-width="2.2" stroke-opacity=".6"/><path d="M20 2 L37 9 V26 C37 38 29 46 20 50 Z" fill="#000" fill-opacity=".3"/></svg>';
   function img(e) { if (!IMGS[e]) { const src = e === 'R' ? 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(PRISMA_SVG) : IMG['shield_' + e]; if (src) { const i = new Image(); i.src = src; IMGS[e] = i; } } return IMGS[e]; }
   function orb(ctx, x, y, r, col) {
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
@@ -30,10 +30,10 @@ const MirrorFx = (() => {
     return ev;
   }
   function frame(ctx, t, fx, ev, home, hpAtt, from) {
-    const col = EL[fx.elem] || EL.F, n = ev.n, gone = ev.after === 0, Z = { x: SW / 2, y: 400 }, im = img(fx.elem);
+    const col = EL[fx.elem] || EL.F, n = ev.n, gone = ev.after === 0, Z = { x: SW / 2 + (fx.off || 0), y: 400 }, im = img(fx.elem);
     ctx.clearRect(0, 0, SW, 800);
     const rf = ev.mode === 'r', u = eo(seg(t, 0, P.fly)), v = eio(seg(t, ev.tOut, ev.tOut + P.back)), m = rf ? 0 : gone ? u : u * (1 - v), md = rf ? 0 : u * (1 - v);   // Rückwurf: das Schild bleibt an seinem Platz, die überschüssige Verteidigung fliegt aus der Mitte zu ihm
-    ctx.fillStyle = 'rgba(0,0,0,' + (P.dim * md) + ')'; ctx.fillRect(0, 0, SW, 800);
+    if (!fx.noDim) { ctx.fillStyle = 'rgba(0,0,0,' + (P.dim * md) + ')'; ctx.fillRect(0, 0, SW, 800); }   // bei zwei Schilden dunkelt nur das erste ab
     const hit = ev.sparks.find(s => t >= s.ta && t < s.ta + .15), brk = t > ev.tBreak;
     const amp = ((brk ? P.shake * 9 * Math.exp(-(t - ev.tBreak) * 6) : 0) + (hit ? P.shake * 2 : 0)) * (rf ? .5 : 1);
     const pos = { x: lerp(home.x, Z.x, m) + Math.sin(t * 90) * amp * (rf ? 1 : m), y: lerp(home.y, Z.y, m) + Math.cos(t * 70) * amp * .7 * (rf ? 1 : m) }, h = lerp(home.h, P.size, m) * (rf && hit ? 1.3 : 1), w = h * 132 / 180;
@@ -79,15 +79,17 @@ const MirrorFx = (() => {
     stage.querySelectorAll('.mirstack .msh').forEach(el => { const w = el.closest('.mirstack').dataset.who, e = ['F', 'E', 'W', 'R'].find(k => el.classList.contains(k)); if (w && e) { shown[w + e] = toStage(el); seen[w + e] = 1; } });
     if (!G || G.phase !== 'combat') for (const k in shown) if (!seen[k] && !stage.dataset.shieldfx) delete shown[k];   // außerhalb eines Kampfes ist nichts mehr zu merken
   }
+  const fxKeys = new Set();
   function play(fx) {
     const quiet = FAST || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
     if (quiet) return;
     const side = fx.who === ME ? 's' : 'o', homeEl = stage.querySelector('.mirstack[data-who="' + side + '"] .msh.' + fx.elem);
     const hp = FlowFx.hp(fx.att), home = homeEl ? toStage(homeEl) : shown[side + fx.elem] || { x: fx.who === ME ? 90 : 1190, y: fx.who === ME ? 690 : 110, h: 52 };   // das Schild bleibt, wo es angezeigt wurde
     stage.dataset.shieldhome = Math.round(home.x) + ',' + Math.round(home.y);
-    const ev = plan(fx), from = ev0(fx) === 'r' ? { x: SW / 2, y: 400 } : { x: SW / 2, y: fx.who === ME ? 70 : 730 };   // Rückwurf: der Überschuss liegt in der Mitte
+    const ev = plan(fx), from = ev0(fx) === 'r' ? { x: SW / 2 + (fx.off || 0), y: 400 } : { x: SW / 2 + (fx.off || 0), y: fx.who === ME ? 70 : 730 };   // Rückwurf: der Überschuss liegt in der Mitte
     fxUntil = Math.max(fxUntil, Date.now() + ev.tEnd * 1000);
-    stage.dataset.shieldfx = side + fx.elem;   // das eigentliche Schild neben der Hand ausblenden, solange es fliegt
+    const key = side + fx.elem, setKeys = () => { stage.dataset.shieldfx = [...fxKeys].join(' '); };
+    fxKeys.add(key); setKeys();   // das eigentliche Schild neben der Hand ausblenden, solange es fliegt (bei zwei Schilden beide)
     ev.sparks.forEach((s, i) => Snd.play('shield_hit', s.ta, i === 0 ? .9 : .5));   // Aufprall der Geschosse auf dem Schild
     Snd.play('break', ev.tBreak + .12, .8);   // Splitter, wenn Stufen zerbrechen
     if (fx.r > 0) Snd.play('mirror_reflect', ev.refl[0].tl);
@@ -95,7 +97,7 @@ const MirrorFx = (() => {
     const ctx = cv.getContext('2d'), t0 = performance.now();
     const step = ts => {
       const t = (ts - t0) / 1000;
-      if (t >= ev.tEnd) { cv.remove(); if (stage.dataset.shieldfx === side + fx.elem) delete stage.dataset.shieldfx; return; }
+      if (t >= ev.tEnd) { cv.remove(); fxKeys.delete(key); if (fxKeys.size) setKeys(); else delete stage.dataset.shieldfx; return; }
       frame(ctx, t, fx, ev, home, hp, from); requestAnimationFrame(step);
     };
     requestAnimationFrame(step);

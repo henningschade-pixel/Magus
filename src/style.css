@@ -323,14 +323,14 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .stats .stkey{margin-top:8px;font-size:15px}
 
 /* Schild-Effekt: Das Schild neben der Hand verschwindet, solange sein Bild in der Mitte arbeitet */
-[data-shieldfx="sF"] .mirstack[data-who="s"] .msh.F{visibility:hidden}
-[data-shieldfx="sE"] .mirstack[data-who="s"] .msh.E{visibility:hidden}
-[data-shieldfx="sW"] .mirstack[data-who="s"] .msh.W{visibility:hidden}
-[data-shieldfx="oF"] .mirstack[data-who="o"] .msh.F{visibility:hidden}
-[data-shieldfx="oE"] .mirstack[data-who="o"] .msh.E{visibility:hidden}
-[data-shieldfx="oW"] .mirstack[data-who="o"] .msh.W{visibility:hidden}
-[data-shieldfx="sR"] .mirstack[data-who="s"] .msh.R{visibility:hidden}
-[data-shieldfx="oR"] .mirstack[data-who="o"] .msh.R{visibility:hidden}
+[data-shieldfx~="sF"] .mirstack[data-who="s"] .msh.F{visibility:hidden}
+[data-shieldfx~="sE"] .mirstack[data-who="s"] .msh.E{visibility:hidden}
+[data-shieldfx~="sW"] .mirstack[data-who="s"] .msh.W{visibility:hidden}
+[data-shieldfx~="oF"] .mirstack[data-who="o"] .msh.F{visibility:hidden}
+[data-shieldfx~="oE"] .mirstack[data-who="o"] .msh.E{visibility:hidden}
+[data-shieldfx~="oW"] .mirstack[data-who="o"] .msh.W{visibility:hidden}
+[data-shieldfx~="sR"] .mirstack[data-who="s"] .msh.R{visibility:hidden}
+[data-shieldfx~="oR"] .mirstack[data-who="o"] .msh.R{visibility:hidden}
 
 /* Sanftes Abdunkeln des Spielfelds (wie im Schild-Effekt): Hauptmenü, Statistik, Deckübersicht */
 @keyframes dimin{from{opacity:0}to{opacity:1}}
