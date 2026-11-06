@@ -141,7 +141,7 @@ const FlowFx = (() => {
   function curse(fx) {
     if (off()) return;
     const who = fx.who, w = who === ME ? 's' : 'o', n = Math.max(1, Math.min(fx.n || 1, 4)), hp = hpOf(who), toks = [...stage.querySelectorAll('.deathtok[data-who="' + w + '"]')], C = '#a67bff', D = '#4a1f86';
-    const srcs = []; for (let i = 0; i < n; i++) { const q = deathPos(w, i); srcs.push(at(toks[i]) || { x: q.x + 24, y: q.y + 24 }); }
+    const srcs = []; for (let i = 0; i < n; i++) { const q = deathPos(w, i); srcs.push(at(toks[0]) || { x: q.x + 24, y: q.y + 24 }); }
     const life = .75, N = 36, dur = curseStart(n - 1) + CURSE_F + .65;
     const puff = (ctx, x, y, r, a, col) => { if (a <= 0.01) return; const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, rgba(lighten(col, .3), a)); g.addColorStop(.45, rgba(col, a * .65)); g.addColorStop(1, rgba(D, 0)); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); };
     run(dur, (ctx, t) => {
@@ -174,8 +174,8 @@ const FlowFx = (() => {
   const healMs = n => curseMs(n);   // gleicher Zeitplan wie beim Todesfluss
   function heal(fx) {
     if (off()) return;
-    const who = fx.who, w = who === ME ? 's' : 'o', toks = [...stage.querySelectorAll('.healtok[data-who="' + w + '"]')], n = Math.max(1, Math.min(toks.length || 1, 4)), hp = hpOf(who), C = '#93c24f', D = '#2f7a2f', Lt = '#e8ffb8';
-    const srcs = []; for (let i = 0; i < n; i++) { const q = deathPos(w, i); srcs.push(at(toks[i]) || { x: q.x + 24, y: q.y + 24 }); }
+    const who = fx.who, w = who === ME ? 's' : 'o', toks = [...stage.querySelectorAll('.healtok[data-who="' + w + '"]')], n = Math.max(1, Math.min(fx.marks || fx.n || 1, 4)), hp = hpOf(who), C = '#93c24f', D = '#2f7a2f', Lt = '#e8ffb8';
+    const srcs = []; for (let i = 0; i < n; i++) { const q = deathPos(w, i); srcs.push(at(toks[0]) || { x: q.x + 24, y: q.y + 24 }); }
     const life = .75, N = 36, dur = curseStart(n - 1) + CURSE_F + .65;
     const puff = (ctx, x, y, r, a, col) => { if (a <= 0.01) return; const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, rgba(lighten(col, .3), a)); g.addColorStop(.45, rgba(col, a * .65)); g.addColorStop(1, rgba(D, 0)); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); };
     const plus = (ctx, x, y, s, a) => { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = rgba(Lt, a); ctx.lineWidth = Math.max(1.5, s * .38); ctx.lineCap = 'round'; ctx.shadowColor = C; ctx.shadowBlur = 8; ctx.beginPath(); ctx.moveTo(x - s, y); ctx.lineTo(x + s, y); ctx.moveTo(x, y - s); ctx.lineTo(x, y + s); ctx.stroke(); ctx.restore(); };

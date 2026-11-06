@@ -144,8 +144,9 @@ test('Läuterung: Todesmarker beider Seiten sind im Kampfbildschirm anklickbar',
     });
     await p.waitForTimeout(300);
     const ks = await p.$$eval('button.deathtok.lf', e => e.map(x => x.dataset.k));
-    assert.equal(ks.filter(k => k === 'sd').length, 2, 'eigene Marker'); assert.equal(ks.filter(k => k === 'od').length, 3, 'gegnerische Marker');
-    await p.locator('button.deathtok.lf').nth(4).click();
+    assert.equal(ks.filter(k => k === 'sd').length, 1, 'eigene Marker als ein Token mit Zähler'); assert.equal(ks.filter(k => k === 'od').length, 1, 'gegnerische Marker als ein Token mit Zähler');
+    assert.equal(await p.textContent('button.deathtok.lf[data-k="od"] .mul'), '×3', 'Zähler');
+    await p.locator('button.deathtok.lf[data-k="od"]').click(); await p.locator('button.deathtok.lf[data-k="od"]').click();
     assert.deepEqual(await p.evaluate(() => window.__magus.state.combat.lfp), ['od', 'od']);
     assert.deepEqual(errs, []);
   } finally { await b.close(); }

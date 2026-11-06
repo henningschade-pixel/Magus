@@ -9,7 +9,7 @@ const MirrorFx = (() => {
   // Werte der Schild-Werkstatt (Export des Spielers)
   const P = { size: 240, fly: .55, back: .55, hold: .5, dim: .45, glow: 60, flash: 1.5, shake: .5, cracks: 8, scatter: 1, gravity: 1, tempo: 1, spark: 1 };
   const IMGS = {};
-  const PRISMA_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="132" height="180" viewBox="0 0 40 52"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff5a4d"/><stop offset=".25" stop-color="#ffc83d"/><stop offset=".5" stop-color="#7bd36b"/><stop offset=".75" stop-color="#4aa6f5"/><stop offset="1" stop-color="#a06bff"/></linearGradient></defs><path d="M20 2 L37 9 V26 C37 38 29 46 20 50 C11 46 3 38 3 26 V9 Z" fill="url(#g)" stroke="#fff" stroke-width="2.2" stroke-opacity=".85"/><path d="M20 8 L31 12.5 V26 C31 34 26 40 20 43 Z" fill="#fff" fill-opacity=".22"/></svg>';
+  const PRISMA_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="132" height="180" viewBox="0 0 40 52"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#a8352f"/><stop offset=".25" stop-color="#a98424"/><stop offset=".5" stop-color="#478a40"/><stop offset=".75" stop-color="#2a6aa8"/><stop offset="1" stop-color="#63449f"/></linearGradient></defs><path d="M20 2 L37 9 V26 C37 38 29 46 20 50 C11 46 3 38 3 26 V9 Z" fill="url(#g)" stroke="#b9c0cc" stroke-width="2.2" stroke-opacity=".6"/><path d="M20 8 L31 12.5 V26 C31 34 26 40 20 43 Z" fill="#fff" fill-opacity=".07"/></svg>';
   function img(e) { if (!IMGS[e]) { const src = e === 'R' ? 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(PRISMA_SVG) : IMG['shield_' + e]; if (src) { const i = new Image(); i.src = src; IMGS[e] = i; } } return IMGS[e]; }
   function orb(ctx, x, y, r, col) {
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
@@ -76,7 +76,7 @@ const MirrorFx = (() => {
   const shown = {};
   function track() {
     const seen = {};
-    stage.querySelectorAll('.mirstack .msh').forEach(el => { const w = el.parentElement.dataset.who, e = ['F', 'E', 'W', 'R'].find(k => el.classList.contains(k)); if (w && e) { shown[w + e] = toStage(el); seen[w + e] = 1; } });
+    stage.querySelectorAll('.mirstack .msh').forEach(el => { const w = el.closest('.mirstack').dataset.who, e = ['F', 'E', 'W', 'R'].find(k => el.classList.contains(k)); if (w && e) { shown[w + e] = toStage(el); seen[w + e] = 1; } });
     if (!G || G.phase !== 'combat') for (const k in shown) if (!seen[k] && !stage.dataset.shieldfx) delete shown[k];   // außerhalb eines Kampfes ist nichts mehr zu merken
   }
   function play(fx) {

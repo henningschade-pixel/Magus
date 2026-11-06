@@ -422,3 +422,17 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 ## Änderung 0.7.2.9 (06.11.)
 
 - **Pappmarker-Optik:** Todes- und Heilmarker haben eine dunkle Kante (Materialstärke, Licht von oben links), einen weichen Wurfschatten und einen schwachen Glanz oben links. Die Drehung liegt auf dem Bild, der Schatten bleibt für alle Marker gleich ausgerichtet. Nur Darstellung, keine Regeländerung.
+
+## Änderung 0.7.2.10 und 0.7.2.11 (06.11.)
+
+- **Schatten (0.7.2.10):** Der Wurfschatten der Marker liegt näher am Marker und ist härter (3 px Versatz, 1 px Unschärfe). Spiegel- und Multispiegel-Marker haben dieselbe Pappmarker-Optik und liegen bei den übrigen Markern.
+- **Lage (0.7.2.11):** Todes-, Heil- und Schildmarker (Farbspiegel, Multispiegel) liegen in **einer** lockeren Reihe mittig direkt vor den Handkarten ihres Spielers (eigene oberhalb, die des Gegners unterhalb der Hand), mit mäßigem Versatz und Drehung; Reihenfolge: Todesmarker, Heilmarker, Schildmarker. Sie liegen nicht mehr beim Nachziehstapel und verdecken weder Karten noch Anzeigen. Nur Darstellung, keine Regeländerung.
+
+## Änderung 0.7.2.12 (06.11.)
+
+- **Zähler statt Mehrfachabbildung:** Todes- und Heilmarker zeigen sich als **ein** Token mit Zähler (×N ab 2), wie Farbspiegel und Multispiegel. In der Läuterung wählt ein Klick einen Marker mehr, nach dem Maximum wieder alle ab (wie bei den Schildmarkern). Die Wolken von Todes- und Heilfluss starten weiterhin je eine pro Marker (höchstens 4), alle aus diesem Token. Nur Darstellung und Bedienung, keine Regeländerung.
+
+## Änderung 0.7.2.13 bis 0.7.2.15 (06.11.)
+
+- **Zähler sichtbar (0.7.2.13/14):** Die Markerreihe liegt so hoch (eigene) bzw. tief (Gegner), dass auch angehobene, markierte Handkarten und die Zähler der Marker nicht verdeckt werden; der Abstand der Marker ist so groß, dass kein Zähler vom Nachbarmarker überdeckt wird.
+- **Multispiegel dunkler (0.7.2.15):** Farben, Kontur und Glanz des Multispiegel-Schildes sind gedämpft, damit er im Verhältnis zu den Farbspiegeln nicht heller wirkt (gilt auch für die Bruch-Animation).
