@@ -436,3 +436,7 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 
 - **Zähler sichtbar (0.7.2.13/14):** Die Markerreihe liegt so hoch (eigene) bzw. tief (Gegner), dass auch angehobene, markierte Handkarten und die Zähler der Marker nicht verdeckt werden; der Abstand der Marker ist so groß, dass kein Zähler vom Nachbarmarker überdeckt wird.
 - **Multispiegel dunkler (0.7.2.15):** Farben, Kontur und Glanz des Multispiegel-Schildes sind gedämpft, damit er im Verhältnis zu den Farbspiegeln nicht heller wirkt (gilt auch für die Bruch-Animation).
+
+## Änderung 0.7.2.16 (06.11.)
+
+- **Schatten dichter:** Die Kante der Marker ist 2 statt 3 px stark, der Wurfschatten liegt bei 2/3 px Versatz (vorher 3/4 px). Nur Darstellung.

@@ -223,7 +223,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .temple .bar.sb{height:12px}
 
 /* Marker (Todes- und Heilmarker) wirken seit 0.7.2.9 wie ausgestanzte Pappmarker: eine dünne, dunkle Kante (gestapelte Schatten ohne Unschärfe, Licht von oben links) und ein weicher Wurfschatten. Die Drehung liegt auf dem Bild, der Filter auf dem Token, damit die Lichtrichtung für alle Marker gleich bleibt. */
-.deathtok,.healtok{position:absolute;z-index:61;display:block;padding:0;border:0;background:none;cursor:help;--edge:#2b2117;filter:drop-shadow(1px 1px 0 var(--edge)) drop-shadow(2px 2px 0 var(--edge)) drop-shadow(3px 3px 0 #1b140d) drop-shadow(3px 4px 1px rgba(0,0,0,.7))}
+.deathtok,.healtok{position:absolute;z-index:61;display:block;padding:0;border:0;background:none;cursor:help;--edge:#2b2117;filter:drop-shadow(1px 1px 0 var(--edge)) drop-shadow(2px 2px 0 #1b140d) drop-shadow(2px 3px 1px rgba(0,0,0,.65))}
 .deathtok{width:50px;height:50px}.healtok{width:46px;height:46px}
 .deathtok img,.healtok svg{width:100%;height:100%;display:block;transform:rotate(var(--r,0deg))}
 .deathtok img{object-fit:contain}
@@ -232,10 +232,10 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .deathtok .lfb,.healtok .lfb{z-index:3}
 .deathtok.lf,.healtok.lf{cursor:var(--cp);transition:transform .12s}.deathtok.lf:hover,.healtok.lf:hover{transform:scale(1.08)}
 .deathtok.lf::after,.healtok.lf::after{content:"";position:absolute;inset:-3px;border:1.5px dashed rgba(210,173,79,.65);border-radius:50%;pointer-events:none}
-.deathtok.lf.sel,.healtok.lf.sel{filter:drop-shadow(1px 1px 0 var(--edge)) drop-shadow(2px 2px 0 var(--edge)) drop-shadow(3px 3px 0 #1b140d) drop-shadow(0 0 7px #f2d27a) drop-shadow(0 0 3px #f2d27a)}.deathtok.lf.sel::after,.healtok.lf.sel::after{border:2px solid #f2d27a}
+.deathtok.lf.sel,.healtok.lf.sel{filter:drop-shadow(1px 1px 0 var(--edge)) drop-shadow(2px 2px 0 #1b140d) drop-shadow(0 0 7px #f2d27a) drop-shadow(0 0 3px #f2d27a)}.deathtok.lf.sel::after,.healtok.lf.sel::after{border:2px solid #f2d27a}
 .msh.R svg{width:100%;height:100%;display:block}
 .mirstack{position:absolute;left:0;top:0;width:0;height:0;z-index:62}
-.mpos{position:absolute;width:40px;height:52px;--edge:#2b2117;filter:drop-shadow(1px 1px 0 var(--edge)) drop-shadow(2px 2px 0 var(--edge)) drop-shadow(3px 3px 0 #1b140d) drop-shadow(3px 4px 1px rgba(0,0,0,.7))}
+.mpos{position:absolute;width:40px;height:52px;--edge:#2b2117;filter:drop-shadow(1px 1px 0 var(--edge)) drop-shadow(2px 2px 0 #1b140d) drop-shadow(2px 3px 1px rgba(0,0,0,.65))}
 .mpos .msh img,.mpos .msh svg{transform:rotate(var(--r,0deg))}
 .mtok{width:34px;height:34px;border-radius:50%;border:3px solid currentColor;display:flex;align-items:center;justify-content:center;font:700 20px Alegreya,serif;background:radial-gradient(circle at 35% 30%,#fff9 0,#ffffff22 35%,#0006 100%),#1d1d21;box-shadow:0 0 8px currentColor;cursor:help}
 .msh{position:relative;width:40px;height:52px;flex:none;cursor:help}.msh img{width:100%;height:100%;object-fit:contain;display:block}.msh .mul{position:absolute;right:-7px;bottom:-4px;font:700 20px Alegreya,serif;color:#f2d27a;text-shadow:0 0 2px #000,0 0 3px #000,0 0 6px #000}button.msh{background:none;border:0;padding:0}.msh.lf{cursor:var(--cp);transition:transform .12s}.msh.lf:hover{transform:scale(1.08)}.msh.lf.sel{filter:drop-shadow(0 0 7px #f2d27a) drop-shadow(0 0 3px #f2d27a)}.mtok.F{color:var(--fire)}.mtok.E{color:var(--earth)}.mtok.W{color:var(--water)}
