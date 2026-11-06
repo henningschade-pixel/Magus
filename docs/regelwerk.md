@@ -444,3 +444,7 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 ## Änderung 0.7.2.17 (06.11.)
 
 - **Innenschatten:** Das Multispiegel-Schild hat einen weichen dunklen Schatten, der vom Rand nach innen fällt (auch in der Bruch-Animation). Nur Darstellung.
+
+## Änderung 0.7.2.18 (06.11.)
+
+- **Geteiltes Schild:** Das Multispiegel-Schild ist mittig senkrecht geteilt, die rechte Hälfte ist abgedunkelt (wie die Facetten der Farbschilder); der frühere helle Glanz entfällt. Gilt auch für die Bruch-Animation. Nur Darstellung.
