@@ -488,3 +488,8 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 ## Änderung 0.7.6.3 (06.11.)
 
 - **Abwerfen nach Zerrüttung ist kein Zug (abgesichert):** Das Abwerfen der Karten nach einer Zerrüttung ist eine Pflichtabfrage, keine Zugaktion. Es zählt nicht für den Zugzähler des Kampfes (`turns`), nicht für den Passen-Zähler der KI und lässt den Nachziehmarker unverändert; die Seite am Zug und die laufende Aktion (Angriff, Verteidigung) bleiben, wie sie waren. Das war in der Engine schon so; ein Test hält es jetzt fest (`engine.test.js`).
+
+## Änderung 0.7.6.4 (07.11.)
+
+- **Opfern im Tempel ist kein Zug mehr:** Gold in Tempelpunkte umzutauschen beendet den Zug nicht mehr. Der Spieler bleibt am Zug, darf mehrmals opfern und danach in derselben Runde Magie kaufen, Upgrades kaufen oder eine andere Aktion wählen. Das Opfern ändert auch den Nachziehmarker nicht (früher stellte es ihn auf grün). Die KI opfert vor ihrer eigentlichen Aktion im selben Zug (`runTurn`, höchstens 12 Wirtschaftsschritte); ihr Zug „roter Marker: 1 Gold opfern“ (`dTmp`) entfällt, weil er den Marker nicht mehr zurückstellt. Das ändert die KI-Referenzpartien (`tests/golden.json` neu erzeugt).
+- **Anzeige:** Unter der Magiegrafik des eigenen Bretts (Weltphase) steht, was die nächste Magiestufe kostet („Nächste Magiestufe: N Upgrade-Punkte“, mit swapCosts in Punkten, sonst in Gold; „Magie auf Maximum“, wenn alle drei Farben auf Stufe 3 stehen). Reichen die Punkte nicht, ist die Zahl gedämpft rot.

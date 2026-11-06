@@ -100,7 +100,7 @@ function convertSurplus(state) {
   });
 }
 
-// Erfolgreiche Tempel-, Magie- und Upgrade-Aktionen zählen als Zugaktion: danach wechselt der Spieler.
+// Erfolgreiche Magie- und Upgrade-Aktionen zählen als Zugaktion: danach wechselt der Spieler (das Opfern im Tempel nicht, seit 0.7.6.4).
 function endOnOk(state, pid, kind, r) { if (r.ok) endTurn(state, pid, kind); return r; }
 
 function applyWorld(state, a) {
@@ -116,7 +116,7 @@ function applyWorld(state, a) {
       endTurn(state, pid, 'draw'); return { ok: true };
     }
     case 'vendor': return execVendor(state, pid, a);
-    case 'temple': return endOnOk(state, pid, 'temple', execTemple(state, pid, a.amount));
+    case 'temple': return execTemple(state, pid, a.amount);   // seit 0.7.6.4 kein Zug mehr: der Spieler bleibt am Zug
     case 'magic': return endOnOk(state, pid, 'magic', execMagic(state, pid, a.elem));
     case 'drawlimit': return endOnOk(state, pid, 'drawlimit', execDrawLimit(state, pid));
     case 'spend': return endOnOk(state, pid, 'spend', execSpend(state, pid, a.what));

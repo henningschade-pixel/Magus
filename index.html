@@ -111,6 +111,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .sbody .statrow{gap:6px;margin:3px 0}.sbody .statrow img{width:22px;height:22px}.sbody .statrow b{min-width:33px}
 .bar.sb{flex:1;min-width:24px;height:9px}
 .bd{position:relative;flex:none}.bd img{width:100%;height:100%;display:block}
+.magcost{margin-top:2px;font-size:14px;line-height:1.15;text-align:center;color:var(--dim,#cbb98f);white-space:nowrap}.magcost b{color:#f2d27a;font-weight:600}.magcost.short b{color:#d98b7a}
 .bwrap{position:relative;flex:none;margin-right:-9px}   /* die Bögen dürfen ins Polster des Panels ragen */.bwrap .bd{position:absolute;top:0}
 .arcs{position:absolute;left:0;top:0;overflow:visible;pointer-events:none}.arcs path{fill:none}
 .arcs .arcbg{stroke:#141416;pointer-events:stroke}.arcs .arcv{stroke-linecap:butt}.arcs .arcv.hp{stroke:#e0653f}.arcs .arcv.mana{stroke:#4a9be0}.arcs .arcsep{stroke:#17171b}
@@ -1368,7 +1369,7 @@ function convertSurplus(state) {
   });
 }
 
-// Erfolgreiche Tempel-, Magie- und Upgrade-Aktionen zählen als Zugaktion: danach wechselt der Spieler.
+// Erfolgreiche Magie- und Upgrade-Aktionen zählen als Zugaktion: danach wechselt der Spieler (das Opfern im Tempel nicht, seit 0.7.6.4).
 function endOnOk(state, pid, kind, r) { if (r.ok) endTurn(state, pid, kind); return r; }
 
 function applyWorld(state, a) {
@@ -1384,7 +1385,7 @@ function applyWorld(state, a) {
       endTurn(state, pid, 'draw'); return { ok: true };
     }
     case 'vendor': return execVendor(state, pid, a);
-    case 'temple': return endOnOk(state, pid, 'temple', execTemple(state, pid, a.amount));
+    case 'temple': return execTemple(state, pid, a.amount);   // seit 0.7.6.4 kein Zug mehr: der Spieler bleibt am Zug
     case 'magic': return endOnOk(state, pid, 'magic', execMagic(state, pid, a.elem));
     case 'drawlimit': return endOnOk(state, pid, 'drawlimit', execDrawLimit(state, pid));
     case 'spend': return endOnOk(state, pid, 'spend', execSpend(state, pid, a.what));
@@ -1472,9 +1473,9 @@ function dispatch(state, a) {
   if (state.phase === 'combat') return applyCombat(state, a);
   return fail('Keine Aktion möglich.');
 }
-// Nachziehmarker (je Spieler, grün/rot): Nachziehen dreht ihn auf rot, jede andere Zugaktion zurück auf grün; wer bei rotem Marker nachzieht, zahlt eine Strafe (Weltphase: der Gegner erhält drawPenaltyGold Gold; Kampf: der Nachziehende verliert drawPenaltyMana Mana, ohne Mana ist das Nachziehen nicht möglich). Markieren, Sperren, Läuterungswahl und das Gratis-Nachziehen (Token) zählen nicht als Aktion.
+// Nachziehmarker (je Spieler, grün/rot): Nachziehen dreht ihn auf rot, jede andere Zugaktion zurück auf grün; wer bei rotem Marker nachzieht, zahlt eine Strafe (Weltphase: der Gegner erhält drawPenaltyGold Gold; Kampf: der Nachziehende verliert drawPenaltyMana Mana, ohne Mana ist das Nachziehen nicht möglich). Markieren, Sperren, Läuterungswahl, das Gratis-Nachziehen (Token) und das Opfern im Tempel (seit 0.7.6.4) zählen nicht als Aktion.
 function markerKind(state, a) {
-  if (state.phase === 'world') return a.type === 'draw' ? 'draw' : ['vendor', 'temple', 'magic', 'spend', 'drawlimit', 'combat'].includes(a.type) ? 'other' : null;
+  if (state.phase === 'world') return a.type === 'draw' ? 'draw' : ['vendor', 'magic', 'spend', 'drawlimit', 'combat'].includes(a.type) ? 'other' : null;
   if (state.phase === 'combat') return a.type === 'draw' ? 'draw' : ['attack', 'defend', 'pass', 'recover', 'flee'].includes(a.type) ? 'other' : null;
   return null;
 }
@@ -1808,7 +1809,7 @@ function worldPlan(state, pid) {
   const countEl = e => allIds.filter(id => id[0] === e).length;
 
   if (canDraw(d)) cands.push({ score: Q.dBase + Q.dCurse * curses.length + (normals.length === 0 ? Q.dEmpty : 0) + emptySlots * Q.dSlot - (normals.length >= 3 ? Q.dNorm : 0) - (p.drawRed ? Q.dRed * penF : 0) + (!p.drawRed ? Q.dFree : 0) + R(), acts: [A({ type: 'draw' })] });
-  if (p.drawRed && Q.dTmp && s.gold >= 1) cands.push({ score: Q.dTmp * penF + R(), acts: [A({ type: 'temple', amount: 1 })] });   // roter Marker: 1 Gold im Tempel stellt ihn auf grün, statt dem Gegner beim Nachziehen Gold zu schenken
+  // (bis 0.7.5: roter Marker, 1 Gold im Tempel stellte ihn auf grün; seit 0.7.6.4 ist das Opfern kein Zug mehr und ändert den Marker nicht)
   if (p.drawRed && Q.dVen && s.gold < 1) {   // roter Marker ohne Gold: ein Gratis-Tausch in der Bibliothek stellt ihn ebenfalls auf grün (sonst schenkt das Warten dem Gegner jede zweite Runde 1 Gold)
     const best = M.ELEMENTS.slice().sort((a, b) => s.mag[b] - s.mag[a]), free = M.vendorPlans(state, pid).filter(o => o.free).sort((a, b) => best.indexOf(a.result[0]) - best.indexOf(b.result[0]))[0];
     if (free) cands.push({ score: Q.dVen * penF + R(), acts: [A({ type: 'vendor', result: free.result, cost: [] })] });
@@ -2095,18 +2096,26 @@ function fallback(state, pid) {
   return [A({ type: 'draw' })];
 }
 function runTurn(state, pid) {
-  if (state.phase === 'world') { const st = ecoStep(state, pid); if (st) { const r = M.apply(state, st); if (r.ok) return { ok: true, acts: [st] }; } }   // Wirtschaftsaktion beendet den Zug
+  const pre = [];   // Opfern im Tempel ist kein Zug (seit 0.7.6.4): danach geht derselbe Zug weiter
+  if (state.phase === 'world') {
+    for (let g = 0; g < 12; g++) {
+      const st = ecoStep(state, pid); if (!st) break;
+      const r = M.apply(state, st); if (!r.ok) break;
+      pre.push(st);
+      if (st.type !== 'temple') return { ok: true, acts: pre };   // Magie, Verbesserungen: Wirtschaftsaktion beendet den Zug
+    }
+  }
   const tries = [plan(state, pid), ...fallback(state, pid).map(a => [a])];
   for (const acts of tries) {
     const marks0 = state.phase === 'combat' ? state.combat.sides[state.combat.turn].deck.marks.slice() : null;
     let okAll = true, last = null;
     for (const a of acts) { last = M.apply(state, a); if (!last.ok) { okAll = false; break; } }
-    if (okAll) return { ok: true, acts };
+    if (okAll) return { ok: true, acts: pre.concat(acts) };
     // fehlgeschlagene Markierungen zurücksetzen
     if (state.phase === 'combat') state.combat.sides[state.combat.turn].deck.marks = marks0 || [];
     else state.players[pid].deck.marks = [];
   }
-  return { ok: false };
+  return pre.length ? { ok: true, acts: pre } : { ok: false };
 }
 
 return { plan, runTurn, fallback, ecoStep, setParams, DEFAULTS, _race: raceTurns };
@@ -2702,6 +2711,14 @@ function arcsHTML(s, bsz, pad, R) {
     arc(135, 225, 1, Math.max(0, s.hp), s.maxHp, 'hp', 'HP ' + Math.max(0, s.hp) + '/' + s.maxHp) +
     arc(45, -45, 0, s.mana, s.maxMana, 'mana', 'Mana ' + s.mana + '/' + s.maxMana) + '</svg>';
 }
+// Unter der Magiegrafik (eigenes Brett in der Weltphase): was die nächste Magiestufe kostet (seit 0.7.6.4)
+function magCostHTML(s, p, up) {
+  if (!p || !up) return '';
+  const MF = M.magicField(G), mc = M.magicCost(G, 0, s), maxed = M.ELEMENTS.every(e => s.mag[e] >= M.MAX_MAGIC);
+  const txt = maxed ? 'Magie auf Maximum' : 'Nächste Magiestufe: <b>' + M.payTxt(G, MF, mc) + '</b>';
+  const tip = maxed ? 'Alle drei Magien stehen auf der Höchststufe.' : 'Preis der nächsten Magiestufe (egal welche Farbe): ' + M.payTxt(G, MF, mc) + '. Du hast ' + s[MF] + (MF === 'gold' ? ' Gold' : ' Upgrade-Punkte') + '. Jeder weitere Kauf macht die folgende Stufe teurer.';
+  return '<div class="magcost' + (!maxed && s[MF] < mc ? ' short' : '') + '" data-pv="magcost" title="' + tip + '">' + txt + '</div>';
+}
 function statsBlock(name, s, p, size, up, full) {
   const img = k => '<img src="' + IMG[k] + '">', compact = !full;
   const mk = '', mr = '';
@@ -2757,7 +2774,7 @@ function statsBlock(name, s, p, size, up, full) {
     bd = bd.replace(/<\/div>$/, btn + '</div>');
   }
   const aR = compact ? bsz / 2 + 11 : bsz / 2 + 23, aPad = Math.ceil(aR - bsz / 2 + 4);   // Bögen: beim Spieler außerhalb der Magie-Knöpfe, beim Gegner dicht am Brett
-  h += '</div><div class="bcol"><div class="bwrap" style="width:' + (bsz + 2 * aPad) + 'px;height:' + bsz + 'px">' + arcsHTML(s, bsz, aPad, aR) + bd.replace('<div class="bd" style="', '<div class="bd" style="left:' + aPad + 'px;') + '</div></div></div>';
+  h += '</div><div class="bcol"><div class="bwrap" style="width:' + (bsz + 2 * aPad) + 'px;height:' + bsz + 'px">' + arcsHTML(s, bsz, aPad, aR) + bd.replace('<div class="bd" style="', '<div class="bd" style="left:' + aPad + 'px;') + '</div>' + magCostHTML(s, p, up) + '</div></div>';
   return h;
 }
 // Monstername mit Besonderheit; die Beschreibung erscheint beim Darüberfahren, für beide Spieler.
@@ -4318,7 +4335,7 @@ function showStart(pg) {
     h += '<img class="logo" alt="" src="assets/img/logo.webp"><div class="menulist">' +
       (run ? menuBtn('resume', 'Spiel fortsetzen', '', 'primary') : '') +
       menuTo('single', 'Einzelspieler', run ? '' : 'primary') + menuTo('multi', 'Mehrspieler') + menuTo('settings', 'Einstellungen') + menuBtn('quit', 'Beenden') + '</div>' +
-      '<div class="menufoot">' + menuTo('about', 'Neu in Version 0.7.6.3', 'link') + '</div>';
+      '<div class="menufoot">' + menuTo('about', 'Neu in Version 0.7.6.4', 'link') + '</div>';
   } else if (pg === 'single') {
     h += '<h2>Einzelspieler</h2><div class="menulist">' +
       menuBtn('newgame', run ? 'Neues Spiel gegen den Computer' : 'Gegen den Computer spielen', '', run ? '' : 'primary') +
@@ -4331,7 +4348,7 @@ function showStart(pg) {
   } else if (pg === 'settings') {
     h += '<h2>Einstellungen</h2><div class="menulist">' + settingsHTML() + back + '</div>';
   } else if (pg === 'about') {
-    h += '<p class="note intro" style="margin-top:-2px"><b>Danke, dass du Magus testest!</b> <b>Neu in Version 0.7.6.3:</b> Das <b>Abwerfen nach einer Zerrüttung</b> ist kein Zug: Es zählt nicht für den Zugzähler und lässt den Nachziehmarker unverändert. <b>Version 0.7.6.2:</b> Die <b>Heilung</b> wirkt nach dem Schaden nur noch, wenn der Verteidiger ihn überlebt: Fällt er durch den Schaden auf 0 HP, ist er besiegt und die Heilung verfällt. <b>Version 0.7.6.1:</b> Die <b>Läuterung</b> lässt sich jetzt auch in der Verteidigung wählen: Eigene Nachziehtokens und Schilde (und alle anderen Marker) sind anklickbar, und die Vorschau sagt, dass die Läuterung <i>vor</i> der Verteidigung wirkt. <b>Version 0.7.5.1:</b> Der <b>Computergegner</b> wurde an die neuen Regeln angepasst: Er opfert kein Gold mehr für Magie, bewertet Heilfluss und Multispiegel neu, entfernt mit der Läuterung gezielt eigene Todesmarker und gegnerische Heilmarker und wartet mit der Eröffnung auf den ersten besiegten Monsterkampf statt auf zufälliges Gold; Angriffs- und Schadensgewichte sind neu abgestimmt. Die Regeln bleiben gleich. <b>Version 0.7.3.3:</b> Der Siegpunktestand sitzt mittig im innersten Ring des Magie-Boards. <b>Version 0.7.3.2:</b> Versatz am Magie-Board korrigiert: Die Leucht- und Abdunkelmarken der Stufen sitzen jetzt genau auf den Edelsteinen der neuen Grafik. <b>Version 0.7.3.1:</b> Das Magie-Board (unten rechts) hat eine neue Grafik: der dreifache Ouroboros mit roten, grünen und blauen Edelsteinen. <b>Version 0.7.2.24:</b> Jeder Spieler beginnt mit 3 statt 2 Siegpunkten. <b>Version 0.7.2.23:</b> Schilde (Farbspiegel und Multispiegel), die in der Verteidigung gestellt werden, wirken erst nach ihr, wie die Heilung: nicht mehr gegen den laufenden Angriff, aber ab dem nächsten. <b>Version 0.7.2.22:</b> Die Versionsliste zeigt nur noch die Updates der aktuellen Hauptversion 0.7 (ältere Einträge entfallen). <b>Version 0.7.2.21:</b> Der Innenschatten des Multispiegels ist etwas weicher. <b>Version 0.7.2.20:</b> Der Innenschatten am Rand des Multispiegels ist kleiner und härter. <b>Version 0.7.2.19:</b> Die Teilung des Multispiegels hat keine Trennlinie, nur die schattierte rechte Hälfte. <b>Version 0.7.2.18:</b> Der Multispiegel ist mittig von oben nach unten geteilt, die rechte Hälfte ist schattiert (wie bei den anderen Schildern). <b>Version 0.7.2.17:</b> Der Multispiegel wirft vom Rand einen Schatten nach innen. <b>Version 0.7.2.16:</b> Der Schatten der Marker liegt noch dichter am Marker. <b>Version 0.7.2.15:</b> Der Multispiegel ist dunkler und passt zu den übrigen Schildern. <b>Version 0.7.2.14:</b> Die Markerreihe liegt so, dass weder markierte Handkarten noch Zähler verdeckt werden. <b>Version 0.7.2.12:</b> Todes- und Heilmarker erscheinen nur noch als ein Token mit Zähler (×N), statt mehrfach abgebildet zu werden; der Multispiegel hatte den Zähler schon. <b>Version 0.7.2.11:</b> Alle Marker (Todes-, Heil- und Schildmarker) liegen in einer lockeren Reihe mittig direkt vor den Handkarten ihres Spielers und verdecken keine Anzeigen. <b>Version 0.7.2.10:</b> Der Schatten der Marker ist näher und härter; Schildmarker sind jetzt ebenfalls Pappmarker. <b>Version 0.7.2.9:</b> Todes- und Heilmarker haben eine dezente Tiefe und wirken wie ausgestanzte Pappmarker. <b>Version 0.7.2.8:</b> Der <b>Heilfluss</b> wirkt wie der Todesfluss erst am Ende der <b>nächsten</b> eigenen Angriffsphase, nicht schon in der Phase, in der die Ultimate gelegt wurde. <b>Version 0.7.2.7:</b> Das <b>Multischild</b> heißt jetzt <b>Multispiegel</b>. <b>Version 0.7.2.6:</b> Todes- und Heilmarker liegen als Haufen mittig vor dem Stapel ihres Spielers, leicht verdreht und versetzt (Todesmarker vorn, Heilmarker in einer zweiten Reihe); der Heilmarker ist kleiner und dezenter. <b>Version 0.7.2.5:</b> Das Ritual von <b>Heilfluss</b> und <b>Multischild</b> erscheint jetzt bei jedem Wirken der Ultimate, auch wenn die Stufe nicht steigt (vorher nur bei steigender Stufe). <b>Version 0.7.2.4:</b> Das <b>Prisma</b> heißt jetzt <b>Multischild</b>. Sein Ritual beginnt mit einem Kreis, aus dem die Schildkuppel wächst; Kristall und Lichtstrahl entfallen. <b>Version 0.7.2.3:</b> Der <b>Heilfluss</b> hat jetzt auch am Ende der Angriffsphase einen Effekt: Aus jedem Heilmarker steigt eine grüne Wolke zur Lebensanzeige und heilt dort (wie die Wolke des Todesfluss). <b>Version 0.7.2.2:</b> Die Ultimates <b>Heilfluss</b> und <b>Prisma</b> haben jetzt ein eigenes Ritual auf dem Bildschirm (wie das Pentagramm des Todesfluss). Die <b>Stufen des Prisma verfallen</b> wie die eines Farbspiegels, verbraucht wird aber immer zuerst der Farbspiegel. <b>Version 0.7.2.1:</b> Keine Spieländerung: Die neue <b>Ultimate-Werkstatt</b> (Effektwerkstatt für die Kombos aus allen drei Elementen) zeigt Todesfluss, Prisma und Heilfluss als Ritual mit Markern und Wirkung; sie liegt im Projekt unter <b>werkstatt/</b>. <b>Version 0.7.1.2:</b> Umbenennung in den Kombos: Das Wasser-Ultimate heißt jetzt <b>Prisma</b> (vorher Regenbogenschild), die beiden Spiegel-Kombos heißen <b>Feuerspiegel</b> und <b>Erdspiegel</b>. <b>Version 0.7.1.1:</b> In der Kombo-Übersicht ist die Schrift größer und füllt das Fenster; die Farbgruppen (Feuer, Wasser, Erde) sind getönt und durch Abstand getrennt. <b>Version 0.7.0.3:</b> Die Kombo-Übersicht nutzt die volle Höhe ihres Fensters. <b>Version 0.7.0.2:</b> In der Kombo-Übersicht entfallen die Farbüberschriften und der Zusatz „(Ultimate)“; die Reihenfolge nach Farbe bleibt. <b>Version 0.7.0.1:</b> Die <b>Kombo-Übersicht</b> ordnet alle Kombos nach Farbe der ersten Karte; die Ultimate steht unter ihrer Farbe (Feuer <b>Todesfluss</b>, Wasser Regenbogenschild, Erde Heilfluss) und alles ist ohne Scrollen sichtbar. Der Todes-Fluch heißt jetzt Todesfluss. <b>Version 0.7:</b> <b>Ultimates nach Farbe der ersten Karte:</b> Feuer wirkt wie bisher als Todesfluss, Erde legt einen <b>Heilfluss</b> (grüne Marker mit Plus heilen dich am Ende jeder deiner Angriffsphasen), Wasser einen <b>Regenbogenschild</b> (wirkt gegen jede Farbe wie ein Spiegel, verbraucht sich aber nicht). Alle drei Marker entfernt nur die Läuterung. <b>Gold opfern</b> geht ohne Obergrenze. <b>Karten</b> lassen sich unabhängig von der entwickelten Magie kaufen. Die <b>Strafe des roten Nachziehmarkers</b> (Mana und Gold) wächst mit dem Abschnitt (1/2/3); vor dem Nachziehen warnt eine Abfrage. Der Hinweistext zur Schildwirkung entfällt.</p><div class="menulist">' + back + '</div>';
+    h += '<p class="note intro" style="margin-top:-2px"><b>Danke, dass du Magus testest!</b> <b>Neu in Version 0.7.6.4:</b> Das <b>Opfern von Gold im Tempel</b> ist kein Zug mehr: Du bleibst am Zug, kannst mehrmals opfern und danach in derselben Runde Magie kaufen; der Nachziehmarker bleibt dabei unverändert. Unter der Magiegrafik steht jetzt, was die <b>nächste Magiestufe</b> kostet. Die KI opfert und kauft entsprechend im selben Zug. <b>Version 0.7.6.3:</b> Das <b>Abwerfen nach einer Zerrüttung</b> ist kein Zug: Es zählt nicht für den Zugzähler und lässt den Nachziehmarker unverändert. <b>Version 0.7.6.2:</b> Die <b>Heilung</b> wirkt nach dem Schaden nur noch, wenn der Verteidiger ihn überlebt: Fällt er durch den Schaden auf 0 HP, ist er besiegt und die Heilung verfällt. <b>Version 0.7.6.1:</b> Die <b>Läuterung</b> lässt sich jetzt auch in der Verteidigung wählen: Eigene Nachziehtokens und Schilde (und alle anderen Marker) sind anklickbar, und die Vorschau sagt, dass die Läuterung <i>vor</i> der Verteidigung wirkt. <b>Version 0.7.5.1:</b> Der <b>Computergegner</b> wurde an die neuen Regeln angepasst: Er opfert kein Gold mehr für Magie, bewertet Heilfluss und Multispiegel neu, entfernt mit der Läuterung gezielt eigene Todesmarker und gegnerische Heilmarker und wartet mit der Eröffnung auf den ersten besiegten Monsterkampf statt auf zufälliges Gold; Angriffs- und Schadensgewichte sind neu abgestimmt. Die Regeln bleiben gleich. <b>Version 0.7.3.3:</b> Der Siegpunktestand sitzt mittig im innersten Ring des Magie-Boards. <b>Version 0.7.3.2:</b> Versatz am Magie-Board korrigiert: Die Leucht- und Abdunkelmarken der Stufen sitzen jetzt genau auf den Edelsteinen der neuen Grafik. <b>Version 0.7.3.1:</b> Das Magie-Board (unten rechts) hat eine neue Grafik: der dreifache Ouroboros mit roten, grünen und blauen Edelsteinen. <b>Version 0.7.2.24:</b> Jeder Spieler beginnt mit 3 statt 2 Siegpunkten. <b>Version 0.7.2.23:</b> Schilde (Farbspiegel und Multispiegel), die in der Verteidigung gestellt werden, wirken erst nach ihr, wie die Heilung: nicht mehr gegen den laufenden Angriff, aber ab dem nächsten. <b>Version 0.7.2.22:</b> Die Versionsliste zeigt nur noch die Updates der aktuellen Hauptversion 0.7 (ältere Einträge entfallen). <b>Version 0.7.2.21:</b> Der Innenschatten des Multispiegels ist etwas weicher. <b>Version 0.7.2.20:</b> Der Innenschatten am Rand des Multispiegels ist kleiner und härter. <b>Version 0.7.2.19:</b> Die Teilung des Multispiegels hat keine Trennlinie, nur die schattierte rechte Hälfte. <b>Version 0.7.2.18:</b> Der Multispiegel ist mittig von oben nach unten geteilt, die rechte Hälfte ist schattiert (wie bei den anderen Schildern). <b>Version 0.7.2.17:</b> Der Multispiegel wirft vom Rand einen Schatten nach innen. <b>Version 0.7.2.16:</b> Der Schatten der Marker liegt noch dichter am Marker. <b>Version 0.7.2.15:</b> Der Multispiegel ist dunkler und passt zu den übrigen Schildern. <b>Version 0.7.2.14:</b> Die Markerreihe liegt so, dass weder markierte Handkarten noch Zähler verdeckt werden. <b>Version 0.7.2.12:</b> Todes- und Heilmarker erscheinen nur noch als ein Token mit Zähler (×N), statt mehrfach abgebildet zu werden; der Multispiegel hatte den Zähler schon. <b>Version 0.7.2.11:</b> Alle Marker (Todes-, Heil- und Schildmarker) liegen in einer lockeren Reihe mittig direkt vor den Handkarten ihres Spielers und verdecken keine Anzeigen. <b>Version 0.7.2.10:</b> Der Schatten der Marker ist näher und härter; Schildmarker sind jetzt ebenfalls Pappmarker. <b>Version 0.7.2.9:</b> Todes- und Heilmarker haben eine dezente Tiefe und wirken wie ausgestanzte Pappmarker. <b>Version 0.7.2.8:</b> Der <b>Heilfluss</b> wirkt wie der Todesfluss erst am Ende der <b>nächsten</b> eigenen Angriffsphase, nicht schon in der Phase, in der die Ultimate gelegt wurde. <b>Version 0.7.2.7:</b> Das <b>Multischild</b> heißt jetzt <b>Multispiegel</b>. <b>Version 0.7.2.6:</b> Todes- und Heilmarker liegen als Haufen mittig vor dem Stapel ihres Spielers, leicht verdreht und versetzt (Todesmarker vorn, Heilmarker in einer zweiten Reihe); der Heilmarker ist kleiner und dezenter. <b>Version 0.7.2.5:</b> Das Ritual von <b>Heilfluss</b> und <b>Multischild</b> erscheint jetzt bei jedem Wirken der Ultimate, auch wenn die Stufe nicht steigt (vorher nur bei steigender Stufe). <b>Version 0.7.2.4:</b> Das <b>Prisma</b> heißt jetzt <b>Multischild</b>. Sein Ritual beginnt mit einem Kreis, aus dem die Schildkuppel wächst; Kristall und Lichtstrahl entfallen. <b>Version 0.7.2.3:</b> Der <b>Heilfluss</b> hat jetzt auch am Ende der Angriffsphase einen Effekt: Aus jedem Heilmarker steigt eine grüne Wolke zur Lebensanzeige und heilt dort (wie die Wolke des Todesfluss). <b>Version 0.7.2.2:</b> Die Ultimates <b>Heilfluss</b> und <b>Prisma</b> haben jetzt ein eigenes Ritual auf dem Bildschirm (wie das Pentagramm des Todesfluss). Die <b>Stufen des Prisma verfallen</b> wie die eines Farbspiegels, verbraucht wird aber immer zuerst der Farbspiegel. <b>Version 0.7.2.1:</b> Keine Spieländerung: Die neue <b>Ultimate-Werkstatt</b> (Effektwerkstatt für die Kombos aus allen drei Elementen) zeigt Todesfluss, Prisma und Heilfluss als Ritual mit Markern und Wirkung; sie liegt im Projekt unter <b>werkstatt/</b>. <b>Version 0.7.1.2:</b> Umbenennung in den Kombos: Das Wasser-Ultimate heißt jetzt <b>Prisma</b> (vorher Regenbogenschild), die beiden Spiegel-Kombos heißen <b>Feuerspiegel</b> und <b>Erdspiegel</b>. <b>Version 0.7.1.1:</b> In der Kombo-Übersicht ist die Schrift größer und füllt das Fenster; die Farbgruppen (Feuer, Wasser, Erde) sind getönt und durch Abstand getrennt. <b>Version 0.7.0.3:</b> Die Kombo-Übersicht nutzt die volle Höhe ihres Fensters. <b>Version 0.7.0.2:</b> In der Kombo-Übersicht entfallen die Farbüberschriften und der Zusatz „(Ultimate)“; die Reihenfolge nach Farbe bleibt. <b>Version 0.7.0.1:</b> Die <b>Kombo-Übersicht</b> ordnet alle Kombos nach Farbe der ersten Karte; die Ultimate steht unter ihrer Farbe (Feuer <b>Todesfluss</b>, Wasser Regenbogenschild, Erde Heilfluss) und alles ist ohne Scrollen sichtbar. Der Todes-Fluch heißt jetzt Todesfluss. <b>Version 0.7:</b> <b>Ultimates nach Farbe der ersten Karte:</b> Feuer wirkt wie bisher als Todesfluss, Erde legt einen <b>Heilfluss</b> (grüne Marker mit Plus heilen dich am Ende jeder deiner Angriffsphasen), Wasser einen <b>Regenbogenschild</b> (wirkt gegen jede Farbe wie ein Spiegel, verbraucht sich aber nicht). Alle drei Marker entfernt nur die Läuterung. <b>Gold opfern</b> geht ohne Obergrenze. <b>Karten</b> lassen sich unabhängig von der entwickelten Magie kaufen. Die <b>Strafe des roten Nachziehmarkers</b> (Mana und Gold) wächst mit dem Abschnitt (1/2/3); vor dem Nachziehen warnt eine Abfrage. Der Hinweistext zur Schildwirkung entfällt.</p><div class="menulist">' + back + '</div>';
   } else if (pg === 'quit') {
     h += '<p class="note" style="text-align:center;font-size:19px">Danke fürs Spielen!<br>Ein Browser-Tab lässt sich vom Spiel aus nicht immer schließen. Schließe diesen Tab oder dieses Fenster einfach selbst.</p><div class="menulist">' + back + '</div>';
   }

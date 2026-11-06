@@ -342,15 +342,15 @@ test('Nachziehmarker Weltphase: Nachziehen bei rotem Marker gibt dem Gegner 1 Go
   assert.ok(M.apply(s, { pid: 1, type: 'draw' }).ok);
   assert.ok(M.apply(s, { pid: 0, type: 'draw' }).ok);          // rot: Strafe
   assert.equal(g1(), base + 1);
-  assert.ok(M.apply(s, { pid: 1, type: 'temple', amount: 1 }).ok);   // andere Aktion: Marker von Spieler 1 wieder grün
+  s.players[1].stats.gold += 5; assert.ok(M.apply(s, { pid: 1, type: 'spend', what: 'hp' }).ok);   // andere Aktion: Marker von Spieler 1 wieder grün (das Opfern im Tempel ist seit 0.7.6.4 keine Aktion mehr)
   assert.equal(s.players[1].drawRed, false);
-  const g0 = s.players[0].stats.gold;
-  assert.ok(M.apply(s, { pid: 0, type: 'temple', amount: 1 }).ok);
+  const g0 = s.players[0].stats.gold; s.players[0].stats.gold += 5;
+  assert.ok(M.apply(s, { pid: 0, type: 'spend', what: 'hp' }).ok);
   assert.equal(s.players[0].drawRed, false);
   assert.ok(M.apply(s, { pid: 1, type: 'draw' }).ok);
   assert.ok(M.apply(s, { pid: 0, type: 'draw' }).ok);          // wieder grün -> rot ohne Strafe
   assert.equal(s.players[1].drawRed, true);
-  assert.equal(s.players[0].stats.gold <= g0, true);
+  assert.equal(s.players[0].stats.gold <= g0 + 5, true);
 });
 
 test('Nachziehmarker Kampf: Nachziehen bei rotem Marker kostet 1 Mana, der Gegner bekommt kein Token', () => {
@@ -423,7 +423,7 @@ test('Nachziehlimit: Kauf kostet Gold (1, dann 2, keine Upgrade-Punkte), beendet
   assert.ok(M.apply(s, { pid: 1, type: 'draw' }).ok);
   assert.ok(M.apply(s, { pid: 0, type: 'drawlimit' }).ok);
   assert.equal(me.drawLimit, 3); assert.equal(me.gold, 2, 'zweiter Kauf 2 Gold (Preis steigt um den Grundpreis)');
-  s.players[1].stats.gold = 5; assert.ok(M.apply(s, { pid: 1, type: 'temple', amount: 1 }).ok);   // (zweimal hintereinander nachziehen würde dem Spieler 0 Gold schenken)
+  s.players[1].stats.gold = 5; assert.ok(M.apply(s, { pid: 1, type: 'spend', what: 'hp' }).ok);   // (zweimal hintereinander nachziehen würde dem Spieler 0 Gold schenken)
   assert.equal(M.apply(s, { pid: 0, type: 'drawlimit' }).ok, false, 'Maximum 3'); assert.equal(me.gold, 2);
 });
 
@@ -439,7 +439,7 @@ test('Nachziehlimit Weltphase: so viele Nachziehvorgänge hintereinander sind fr
   assert.ok(M.apply(s, { pid: 0, type: 'draw' }).ok);   // viertes Mal: Strafe
   assert.equal(g1(), base + 1); assert.equal(p0.drawN, 3);
   other();
-  assert.ok(M.apply(s, { pid: 0, type: 'temple', amount: 1 }).ok);   // andere Aktion: zurück auf Grün, Zähler 0
+  p0.stats.gold += 5; assert.ok(M.apply(s, { pid: 0, type: 'spend', what: 'hp' }).ok);   // andere Aktion: zurück auf Grün, Zähler 0
   assert.equal(p0.drawRed, false); assert.equal(p0.drawN, 0);
 });
 
@@ -886,4 +886,16 @@ test('Abwerfen nach Zerrüttung ist kein Zug: Zugzähler, Passen-Zähler, Nachzi
   assert.ok(M.apply(s, { pid, type: 'fd', slots }).ok);
   assert.equal(c.forced, null);
   assert.equal(snap(), before, 'das Abwerfen ändert nichts am Zugablauf');
+});
+
+test('Opfern im Tempel ist kein Zug: der Spieler bleibt am Zug, der Nachziehmarker ändert sich nicht (0.7.6.4)', () => {
+  const s = M.newGame({ seed: 5, ai: [false, false], first: 0 }), p = s.players[0];
+  p.stats.gold = 6; assert.ok(M.apply(s, { pid: 0, type: 'draw' }).ok);   // Spieler 0 zieht nach (Marker rot), dann Spieler 1
+  assert.ok(M.apply(s, { pid: 1, type: 'draw' }).ok);
+  assert.equal(s.turn, 0); assert.equal(p.drawRed, true);
+  assert.ok(M.apply(s, { pid: 0, type: 'temple', amount: 2 }).ok);
+  assert.equal(s.turn, 0, 'weiter am Zug'); assert.equal(p.drawRed, true, 'Marker unverändert'); assert.equal(p.stats.gold, 4);
+  assert.ok(M.apply(s, { pid: 0, type: 'temple', amount: 1 }).ok, 'mehrfaches Opfern im selben Zug');
+  assert.equal(s.turn, 0);
+  assert.ok(M.apply(s, { pid: 0, type: 'draw' }).ok); assert.equal(s.turn, 1, 'eine andere Aktion beendet den Zug');
 });

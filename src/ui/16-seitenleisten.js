@@ -33,6 +33,14 @@ function arcsHTML(s, bsz, pad, R) {
     arc(135, 225, 1, Math.max(0, s.hp), s.maxHp, 'hp', 'HP ' + Math.max(0, s.hp) + '/' + s.maxHp) +
     arc(45, -45, 0, s.mana, s.maxMana, 'mana', 'Mana ' + s.mana + '/' + s.maxMana) + '</svg>';
 }
+// Unter der Magiegrafik (eigenes Brett in der Weltphase): was die nächste Magiestufe kostet (seit 0.7.6.4)
+function magCostHTML(s, p, up) {
+  if (!p || !up) return '';
+  const MF = M.magicField(G), mc = M.magicCost(G, 0, s), maxed = M.ELEMENTS.every(e => s.mag[e] >= M.MAX_MAGIC);
+  const txt = maxed ? 'Magie auf Maximum' : 'Nächste Magiestufe: <b>' + M.payTxt(G, MF, mc) + '</b>';
+  const tip = maxed ? 'Alle drei Magien stehen auf der Höchststufe.' : 'Preis der nächsten Magiestufe (egal welche Farbe): ' + M.payTxt(G, MF, mc) + '. Du hast ' + s[MF] + (MF === 'gold' ? ' Gold' : ' Upgrade-Punkte') + '. Jeder weitere Kauf macht die folgende Stufe teurer.';
+  return '<div class="magcost' + (!maxed && s[MF] < mc ? ' short' : '') + '" data-pv="magcost" title="' + tip + '">' + txt + '</div>';
+}
 function statsBlock(name, s, p, size, up, full) {
   const img = k => '<img src="' + IMG[k] + '">', compact = !full;
   const mk = '', mr = '';
@@ -88,7 +96,7 @@ function statsBlock(name, s, p, size, up, full) {
     bd = bd.replace(/<\/div>$/, btn + '</div>');
   }
   const aR = compact ? bsz / 2 + 11 : bsz / 2 + 23, aPad = Math.ceil(aR - bsz / 2 + 4);   // Bögen: beim Spieler außerhalb der Magie-Knöpfe, beim Gegner dicht am Brett
-  h += '</div><div class="bcol"><div class="bwrap" style="width:' + (bsz + 2 * aPad) + 'px;height:' + bsz + 'px">' + arcsHTML(s, bsz, aPad, aR) + bd.replace('<div class="bd" style="', '<div class="bd" style="left:' + aPad + 'px;') + '</div></div></div>';
+  h += '</div><div class="bcol"><div class="bwrap" style="width:' + (bsz + 2 * aPad) + 'px;height:' + bsz + 'px">' + arcsHTML(s, bsz, aPad, aR) + bd.replace('<div class="bd" style="', '<div class="bd" style="left:' + aPad + 'px;') + '</div>' + magCostHTML(s, p, up) + '</div></div>';
   return h;
 }
 // Monstername mit Besonderheit; die Beschreibung erscheint beim Darüberfahren, für beide Spieler.

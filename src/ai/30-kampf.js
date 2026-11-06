@@ -240,18 +240,26 @@ function fallback(state, pid) {
   return [A({ type: 'draw' })];
 }
 function runTurn(state, pid) {
-  if (state.phase === 'world') { const st = ecoStep(state, pid); if (st) { const r = M.apply(state, st); if (r.ok) return { ok: true, acts: [st] }; } }   // Wirtschaftsaktion beendet den Zug
+  const pre = [];   // Opfern im Tempel ist kein Zug (seit 0.7.6.4): danach geht derselbe Zug weiter
+  if (state.phase === 'world') {
+    for (let g = 0; g < 12; g++) {
+      const st = ecoStep(state, pid); if (!st) break;
+      const r = M.apply(state, st); if (!r.ok) break;
+      pre.push(st);
+      if (st.type !== 'temple') return { ok: true, acts: pre };   // Magie, Verbesserungen: Wirtschaftsaktion beendet den Zug
+    }
+  }
   const tries = [plan(state, pid), ...fallback(state, pid).map(a => [a])];
   for (const acts of tries) {
     const marks0 = state.phase === 'combat' ? state.combat.sides[state.combat.turn].deck.marks.slice() : null;
     let okAll = true, last = null;
     for (const a of acts) { last = M.apply(state, a); if (!last.ok) { okAll = false; break; } }
-    if (okAll) return { ok: true, acts };
+    if (okAll) return { ok: true, acts: pre.concat(acts) };
     // fehlgeschlagene Markierungen zurücksetzen
     if (state.phase === 'combat') state.combat.sides[state.combat.turn].deck.marks = marks0 || [];
     else state.players[pid].deck.marks = [];
   }
-  return { ok: false };
+  return pre.length ? { ok: true, acts: pre } : { ok: false };
 }
 
 return { plan, runTurn, fallback, ecoStep, setParams, DEFAULTS, _race: raceTurns };

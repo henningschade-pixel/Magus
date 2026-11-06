@@ -384,3 +384,20 @@ test('Vorschau auf den Bögen: Plus-Knopf (HP) und Angriff (Mana) lassen den bet
     assert.deepEqual(errs, []);
   } finally { await b.close(); }
 });
+
+test('Unter der Magiegrafik steht der Preis der nächsten Magiestufe; Opfern im Tempel lässt den Spieler am Zug (0.7.6.4)', { skip: !chromium && 'Playwright nicht installiert', timeout: 60000 }, async () => {
+  const b = await chromium.launch({ executablePath: exe });
+  try {
+    const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
+    p.on('pageerror', e => errs.push(e.message));
+    await p.goto(url); await p.waitForTimeout(500);
+    await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
+    const t0 = await p.evaluate(() => { const G = window.__magus.state; return { turn: G.turn, txt: (document.querySelector('.magcost') || {}).textContent || '', cost: window.Magus.magicCost(G, 0, G.players[0].stats) }; });
+    assert.match(t0.txt, /Nächste Magiestufe/); assert.ok(t0.txt.includes(String(t0.cost)));
+    if (t0.turn === 0) {
+      const after = await p.evaluate(() => { const G = window.__magus.state; G.players[0].stats.gold = 3; window.__magus.act({ type: 'temple', amount: 1 }); return { turn: G.turn, gold: G.players[0].stats.gold }; });
+      assert.equal(after.turn, 0); assert.equal(after.gold, 2);
+    }
+    assert.deepEqual(errs, []);
+  } finally { await b.close(); }
+});
