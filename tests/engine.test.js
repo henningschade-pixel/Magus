@@ -503,10 +503,10 @@ test('Kosten getauscht (swapCosts): Magie kostet Upgrade-Punkte, alle anderen Ve
   nxt(g); assert.ok(go(g, { type: 'spend', what: 'hp' }).ok); assert.deepEqual([g.st.gold, g.st.pending], [3, 3], 'HP kostet einen Upgrade-Punkt');
 });
 
-test('Startsiegpunkte: jeder Spieler beginnt mit 2 Siegpunkten (startSp), eine frühe Niederlage kostet einen', () => {
-  assert.equal(M.DEFAULT_RULES.startSp, 2);
+test('Startsiegpunkte: jeder Spieler beginnt mit 3 Siegpunkten (startSp, seit 0.7.2.24; vorher 2), eine frühe Niederlage kostet einen', () => {
+  assert.equal(M.DEFAULT_RULES.startSp, 3);
   const s = M.newGame({ seed: 5, ai: [false, false], first: 0 });
-  assert.deepEqual(s.players.map(p => p.sp), [2, 2]);
+  assert.deepEqual(s.players.map(p => p.sp), [3, 3]);
   assert.deepEqual(M.newGame({ seed: 5, rules: { startSp: 0 } }).players.map(p => p.sp), [0, 0]);
 });
 
@@ -514,11 +514,11 @@ test('Überschusspunkte: Sind alle Magien auf Stufe 3, werden Upgrade-Punkte (ni
   const s = M.newGame({ seed: 5, ai: [false, false], first: 0 }), p = s.players[0], me = p.stats;
   me.mag = { F: 3, E: 3, W: 2 }; me.pending = 4; me.gold = 5;
   assert.ok(M.apply(s, { pid: 0, type: 'magic', elem: 'W' }).ok);   // erster Magie-Kauf kostet 1 Punkt, 3 bleiben übrig, nun ist alles auf Stufe 3
-  assert.deepEqual([me.pending, p.sp, me.gold], [0, 5, 5], '1 Überschusspunkt = 1 Siegpunkt (2 Start), Gold bleibt');
+  assert.deepEqual([me.pending, p.sp, me.gold], [0, 6, 5], '3 Überschusspunkte = 3 Siegpunkte (3 Start), Gold bleibt');
   s.turn = 1; s.players[1].stats.gold = 3; assert.ok(M.apply(s, { pid: 1, type: 'temple', amount: 2 }).ok);   // Gegner ohne volle Magie behält seine Punkte
-  assert.equal(s.players[1].stats.pending, 2, 'kein Bonuspunkt (seit 0.4 nur Gold) + 2 aus dem Tempel'); assert.equal(s.players[1].sp, 2);
+  assert.equal(s.players[1].stats.pending, 2, 'kein Bonuspunkt (seit 0.4 nur Gold) + 2 aus dem Tempel'); assert.equal(s.players[1].sp, 3);
   const t = M.newGame({ seed: 5, ai: [false, false], first: 0, rules: { surplusSp: 0 } }); t.players[0].stats.mag = { F: 3, E: 3, W: 3 }; t.players[0].stats.pending = 2; t.players[0].stats.gold = 0;
-  assert.ok(M.apply(t, { pid: 0, type: 'draw' }).ok); assert.deepEqual([t.players[0].stats.pending, t.players[0].sp], [2, 2], 'ohne Regel bleibt es');
+  assert.ok(M.apply(t, { pid: 0, type: 'draw' }).ok); assert.deepEqual([t.players[0].stats.pending, t.players[0].sp], [2, 3], 'ohne Regel bleibt es');
 });
 
 test('Ausspiellimit startet bei 1 (startLimit, seit 0.5.1), mit startLimit 2 wie in 0.3 bis 0.4.1', () => {

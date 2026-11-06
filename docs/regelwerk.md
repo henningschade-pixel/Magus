@@ -15,7 +15,7 @@ Eine Partie hat drei Abschnitte (1, 2, 3). Je Abschnitt gibt es drei Monster (St
 | Wert | Start | Anmerkung |
 |---|---|---|
 | Gold | 0 | Abschnittsbonus siehe unten |
-| Siegpunkte | 2 | seit 0.3 (`startSp`): schon die ersten Kämpfe kosten bei einer Niederlage etwas; nie unter 0 |
+| Siegpunkte | 3 | seit 0.3 (`startSp`, 0.3 bis 0.7.2.23: 2; seit 0.7.2.24: 3): schon die ersten Kämpfe kosten bei einer Niederlage etwas; nie unter 0 |
 | HP | 4 | seit 0.3.1 (`startHp`, vorher 3); jeder Upgrade-Punkt +2 Maximum (seit 0.3 mit Gold bezahlt) |
 | Mana | 4 | jeder Upgrade-Punkt +1 Maximum |
 | Magie Feuer / Erde / Wasser | je 1 | höchstens 3 |
@@ -468,3 +468,7 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 ## Änderung 0.7.2.23 (06.11.)
 
 - **Schilde erst nach der Verteidigung:** Ein Farbspiegel-Kombo (Wasser + Feuer/Erde) und die Wasser-Ultimate (Multispiegel), die in der Verteidigung gewirkt werden, stellen den Schild erst **nach** dem Schaden. Er gleicht den laufenden Angriff nicht mehr aus, gilt aber ab dem nächsten Angriff (analog zur Heilung seit 0.5.4). Bereits stehende Schilde wirken wie bisher. Im Angriffszug gewirkte Schilde sind davon nicht betroffen. Zerrüttung, Lähmung, Läuterung und Todesfluss wirken weiter vor der Verteidigung. Das ändert die KI-Referenzpartien (`tests/golden.json` neu erzeugt) und die Vorschau der Verteidigung.
+
+## Änderung 0.7.2.24 (06.11.)
+
+- **Start-Siegpunkte 3:** Jeder Spieler beginnt mit 3 statt 2 Siegpunkten (`startSp`). Das verändert die KI-Referenzpartien (`tests/golden.json` neu erzeugt).
