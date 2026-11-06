@@ -2,6 +2,10 @@
 
 Gedanken zu Regeln und Balance, über die noch nicht entschieden ist. Neue Einträge oben.
 
+## Idee: Dreierkombo erst ab Stufe 2 (06.11.)
+
+Eine Dreierkombo (Ultimate aus allen drei Farben) setzt Stufe 2 der primären Magie voraus. Als „primär“ ist hier das Primärelement gemeint, also die Farbe der zuerst markierten Karte (siehe `docs/regelwerk.md`, Abschnitt Angriff). Offen zur Umsetzung: Zählt dafür die Magiestufe im Primärelement (Magie-Board) oder die Kartenstufe der ersten Karte? Gilt die Voraussetzung auch in der Verteidigung (dort ist die Primärfarbe die Verteidigungsfarbe)? Zu prüfen mit der KI: Wie oft wird die Ultimate dadurch seltener, und ändert sich die Balance (`npm run balance`)?
+
 ## Weitere Ideen (04.11.)
 
 - **Umbenennung:** Das Spiel sollte auf „Trimagus“ umbenannt werden (umgesetzt in 0.5.1, zurückgenommen in 0.5.7.3: es heißt wieder Magus).
