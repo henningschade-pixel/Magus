@@ -472,3 +472,7 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 ## Änderung 0.7.2.24 (06.11.)
 
 - **Start-Siegpunkte 3:** Jeder Spieler beginnt mit 3 statt 2 Siegpunkten (`startSp`). Das verändert die KI-Referenzpartien (`tests/golden.json` neu erzeugt).
+
+## Änderung 0.7.5.1 (06.11.)
+
+- **Keine Regeländerung, KI neu abgestimmt** (Messung in `tools/balance/README.md`): kein Opfern von Gold für Magie mehr (`sacG` 0), Heilfluss höher und Multispiegel niedriger bewertet (`uHeal`, `uMulti`), Läuterung entfernt gezielt eigene Todesmarker und gegnerische Heilmarker (`lfDeath`, `lfHeal`), neue Angriffsgewichte, Fliehen nur noch in den ersten vier Weltzügen ohne entschiedenen Kampf (`fleeIdle` 4). Die Eröffnung (Handplätze erst nach dem ersten Sieg) wartet auf den ersten besiegten Monsterkampf: Die Engine zählt dafür `stats.kills`. Die Referenzpartien (`tests/golden.json`) sind neu erzeugt. 86,6 % gegen die KI von 0.7.3.3.
