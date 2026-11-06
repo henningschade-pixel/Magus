@@ -7,8 +7,8 @@ function discBox(gold, cx, cy, diam) {
   return 'left:' + (cx - bz * 32.5 / 64).toFixed(1) + 'px;top:' + (cy - bz * 31 / 64).toFixed(1) + 'px;width:' + bz.toFixed(1) + 'px;height:' + bh.toFixed(1) + 'px';
 }
 // Magie-Board (seit 0.6: dreifacher Ouroboros). Die Grafik ist 1254 × 1254 mit der Ringmitte in der Bildmitte; die Edelsteine (Stufe 1 innen, Stufe 3 außen) liegen bei diesen Bildpunkten, Radius 31. Erreichte Stufen leuchten, die übrigen sind abgedunkelt; die Siegpunkte stehen in der freien Mitte.
-const BOARD_GEMS = { F: [[628, 397], [628, 311], [628, 222]], E: [[828.6, 750.5], [909.5, 789.3], [987.3, 834.6]], W: [[422, 750], [342, 786.4], [267.8, 832]] };
-const BOARD_PX = 1254, BOARD_GEM_R = 33;
+const BOARD_GEMS = { F: [[627.6, 349.1], [628.7, 269.9], [627.3, 185.3]], E: [[853.7, 720.7], [925.3, 764.2], [997.3, 807.7]], W: [[401, 717.2], [331.2, 760.7], [259.5, 802.9]] };   // Mittelpunkte der Edelsteine der Grafik seit 0.7.3.1 (neue Ouroboros-Grafik)
+const BOARD_PX = 1254, BOARD_GEM_R = 36;
 function boardHTML(mag, size, sp) {
   const k = size / BOARD_PX, dr = BOARD_GEM_R * k;
   let h = '<div class="bd" style="width:' + size + 'px;height:' + size + 'px" title="Magie: Feuer oben, Erde rechts unten, Wasser links unten"><img src="' + IMG.board + '">';
