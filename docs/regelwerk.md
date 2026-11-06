@@ -77,7 +77,7 @@ Der aktive Spieler wählt ein lebendes Monster und greift an, der Mitspieler fü
 
 ## Kombos und Ultimate
 
-Die Farbe der ersten markierten Karte bestimmt die Rolle (Feuer aggressiv, Wasser defensiv, Erde heilend), die zweite Farbe die Wirkung. Kombos gelten im Angriff und in der Verteidigung (dort wirken Zerrüttung, Lähmung, Läuterung und Spiegel vor der Verteidigung, die Heilung danach). Kombokarten kosten seit v7 wie alle Karten 1 Mana.
+Die Farbe der ersten markierten Karte bestimmt die Rolle (Feuer aggressiv, Wasser defensiv, Erde heilend), die zweite Farbe die Wirkung. Kombos gelten im Angriff und in der Verteidigung (dort wirken Zerrüttung, Lähmung und Läuterung vor der Verteidigung, Heilung und Schilde (Spiegel, Multispiegel) danach). Kombokarten kosten seit v7 wie alle Karten 1 Mana.
 
 **Kombostufe S:** je Farbe die Summe der markierten Kartenwerte (jede Karte höchstens so hoch wie die Magiestufe), davon die kleinere der beiden Summen, höchstens 3.
 
@@ -464,3 +464,7 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 ## Änderung 0.7.2.22 (06.11.)
 
 - **Versionsliste gekürzt:** Der Hinweistext im Menü nennt nur noch die Updates der aktuellen Hauptversion 0.7 (erste Nachkommastelle); Einträge ab 0.6.x entfallen aus der Anzeige. Die Änderungsabschnitte in dieser Datei bleiben vollständig.
+
+## Änderung 0.7.2.23 (06.11.)
+
+- **Schilde erst nach der Verteidigung:** Ein Farbspiegel-Kombo (Wasser + Feuer/Erde) und die Wasser-Ultimate (Multispiegel), die in der Verteidigung gewirkt werden, stellen den Schild erst **nach** dem Schaden. Er gleicht den laufenden Angriff nicht mehr aus, gilt aber ab dem nächsten Angriff (analog zur Heilung seit 0.5.4). Bereits stehende Schilde wirken wie bisher. Im Angriffszug gewirkte Schilde sind davon nicht betroffen. Zerrüttung, Lähmung, Läuterung und Todesfluss wirken weiter vor der Verteidigung. Das ändert die KI-Referenzpartien (`tests/golden.json` neu erzeugt) und die Vorschau der Verteidigung.

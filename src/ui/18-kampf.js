@@ -3,7 +3,7 @@ const ORD_ROWS = [['ra', 'Lähmung', 'F', 'E'], ['rm', 'Zerrüttung', 'F', 'W'],
 // Wirkung der Ultimate nach der Farbe der ersten Karte (seit 0.7)
 function ultiText(el, lv) {
   if (el === 'E') return 'Heilfluss (Erde): Du bekommst ' + lv + ' Heilmarker und heilst ' + lv + ' HP am Ende jeder deiner Angriffsphasen bis Kampfende (höchstens bis zu den max. HP).';
-  if (el === 'W') return 'Multispiegel (Wasser): Du bekommst einen Schild der Stufe ' + lv + ' gegen jede Farbe. Er gleicht fehlende Verteidigung aus oder wirft Überschuss zurück und verliert dabei Stufen wie ein Spiegel, aber erst nach dem Farbspiegel.';
+  if (el === 'W') return 'Multispiegel (Wasser): Du bekommst einen Schild der Stufe ' + lv + ' gegen jede Farbe. Er gleicht fehlende Verteidigung aus oder wirft Überschuss zurück und verliert dabei Stufen wie ein Spiegel, aber erst nach dem Farbspiegel. In der Verteidigung gestellt, gilt er erst nach ihr.';
   return 'Todesfluss (Feuer): Der Gegner bekommt ' + lv + ' Todesmarker und verliert ' + lv + ' HP am Ende jeder seiner Angriffsphasen bis Kampfende.';
 }
 // Kurzfassungen für die Kombo-Übersicht (die ausführliche Wirkung steht im Tooltip)

@@ -701,15 +701,15 @@ test('Heilung nach dem Schaden: gleicht einen sonst tödlichen Schaden nachträg
   assert.equal(me.stats.hp, 3, '1 − 1 Restschaden + 3 Heilung');
 });
 
-test('Kombo zuerst: Ein Spiegel-Kombo der Verteidigung wirkt schon gegen den Angriff, auf den verteidigt wird', () => {
+test('Schilde der Verteidigung wirken erst nach ihr (wie die Heilung, seit 0.7.2.23)', () => {
   const { s, c, me } = combatSetup(11, ['W3', 'F3']);   // Wasser verteidigt gegen Feuer, Feuer als Kombokarte: roter Spiegel 3
   me.stats.hp = 9; c.turn = 'a'; c.action = 'defense'; c.color = 'F'; c.pending = 5;
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
   const pv = M.previewDefense(s, false);
   assert.ok(M.apply(s, { pid: 0, type: 'defend' }).ok);
-  assert.equal(me.stats.hp, 9, 'Block 3, der Spiegel gleicht die fehlenden 2 aus');
-  assert.equal(M.mirrorOf(me.stats, 'F'), 1, 'der Spiegel hat dafür 2 von 3 Stufen verloren');
-  assert.equal(pv.hpAfter, 9, 'Vorschau stimmt');
+  assert.equal(me.stats.hp, 7, 'Block 3, der neue Spiegel gleicht die fehlenden 2 noch nicht aus');
+  assert.equal(M.mirrorOf(me.stats, 'F'), 3, 'der Spiegel steht danach mit voller Stufe');
+  assert.equal(pv.hpAfter, 7, 'Vorschau stimmt');
 });
 
 test('Ausgleich nach einer Monsterniederlage: nur der Verlierer, nur Gold (1/2/3 je Abschnitt)', () => {

@@ -286,12 +286,11 @@ function defenseOutcome(stats, color, pending, block, mir, std, rb) {
   const lostStd = Math.min(used, m0), lostRb = Math.min(used - lostStd, r0);
   return { mLvl, absorb, refl, used, lostStd, lostRb, lost: lostStd + lostRb, std: m0, rb: r0, leftover: missing - absorb };
 }
-// Was ein Kombo der Verteidigung für den laufenden Angriff ändert: der Spiegel der Angriffsfarbe wirkt seit 0.4 schon gegen diesen Angriff. Die Heilung wirkt seit 0.5.4 wieder nach dem Schaden (heal: Stufe, hp: HP vor dem Schaden).
+// Was ein Kombo der Verteidigung für den laufenden Angriff ändert: Schilde (Spiegel, Multispiegel) wirken seit 0.7.2.23 erst nach der Verteidigung (früher seit 0.4 schon gegen diesen Angriff). Die Heilung wirkt seit 0.5.4 wieder nach dem Schaden (heal: Stufe, hp: HP vor dem Schaden).
 function defenseComboPre(stats, ev, color) {
   const lvs = ev && ev.ord && !(ev.levels && ev.levels.ulti > 0) ? levelsFor(ev) : null;
   let std = mirrorOf(stats, color), rb = stats.rainbow || 0;
-  if (!lvs) { if (ev && ev.ultiEl === 'W' && ev.levels.ulti > 0) rb = Math.max(rb, Math.min(ev.levels.ulti, MAX_MIRROR)); }   // Ultimate Wasser in der Verteidigung: der Multispiegel wirkt schon gegen diesen Angriff
-  else if (lvs.fw > 0 && ev.ord.el === color) std = Math.max(std, Math.min(lvs.fw, MAX_MIRROR));
+  // seit 0.7.2.23 wirken in der Verteidigung gestellte Schilde (Farbspiegel, Multispiegel) erst nach ihr: std und rb bleiben beim bisherigen Stand
   return { heal: lvs ? lvs.gh || 0 : 0, hp: stats.hp, mir: Math.max(std, rb), std, rb };
 }
 // Vorschau für die Knöpfe „Verteidigen“ und „Passen“, ohne etwas zu ändern: Mana-Kosten, Block, Restschaden und die HP danach (beim Verteidiger und, durch den Spiegelrückwurf, beim Angreifer). null, wenn gerade keine Verteidigung ansteht oder die Auswahl nicht geht.
@@ -322,17 +321,22 @@ function execDefense(state, passOnly) {
   // Passen in der Verteidigung bringt kein Mana (nur im Angriffszug gibt es Erholen)
   if (sel.length) consumeSelection(d, sel); else d.marks = [];
   const attacker = c.sides[c.turn === 'a' ? 'b' : 'a'];
-  // Seit 0.4 wirkt der Kombo zuerst, danach die Verteidigung: Ein Spiegel dieser Farbe wirkt schon gegen den Angriff, auf den verteidigt wird. Seit 0.5.4 gilt das nicht mehr für die Heilung: Sie wirkt wieder nach Angriff und Verteidigung (Zerrüttung und die übrigen Kombos bleiben davor).
+  // Seit 0.4 wirkt der Kombo zuerst, danach die Verteidigung: Ein Spiegel dieser Farbe wirkte früher schon gegen den Angriff, auf den verteidigt wird; seit 0.7.2.23 stellt ihn die Verteidigung erst nach dem Schaden. Seit 0.5.4 gilt das nicht mehr für die Heilung: Sie wirkt wieder nach Angriff und Verteidigung (Zerrüttung und die übrigen Kombos bleiben davor).
+  let lateMulti = 0, lateMirror = 0;   // Schilde, die in dieser Verteidigung gestellt werden, wirken erst nach ihr (seit 0.7.2.23)
   if (defEv && defEv.levels && defEv.levels.ulti > 0) {   // Ultimate in der Verteidigung: je nach Farbe der ersten Karte Todesfluss für den Angreifer (Feuer), Heilfluss (Erde) oder Multispiegel (Wasser) für den Verteidiger
     const uel = defEv.ultiEl || defEv.el;
     if (uel !== 'E' && uel !== 'W' && attacker.stats.deathPhase === undefined) attacker.stats.deathPhase = attacker.stats.death || 0;
+    if (uel === 'W') lateMulti = defEv.levels.ulti;   // seit 0.7.2.23 wirkt der Multispiegel erst nach der Verteidigung (wie die Heilung), nicht schon gegen diesen Angriff
+    else {
     const u = castUltimate(side, attacker, uel, defEv.levels.ulti);
     log(state, side.name + ' wirkt eine Ultimate: ' + u.text + '.', side.ctrl, uel === 'E' || uel === 'W' ? Object.assign(u.fx, { first: true }) : { kind: 'aggro', who: side.ctrl, to: attacker.ctrl, n: defEv.levels.ulti, first: true, ult: true });
+    }
   }
   let healLvl = 0;
   if (defEv && defEv.ord) {
     const lvs = levelsFor(defEv), plan = [], texts = [], fxs = [];
-    for (const k of ['fw', 'fe', 'ew', 'rm']) if (lvs[k] > 0) plan.push([k, lvs[k]]);   // Heilung (gh) wirkt seit 0.5.4 wieder erst nach dem Schaden, Zerrüttung und die übrigen Kombos davor
+    for (const k of ['fe', 'ew', 'rm']) if (lvs[k] > 0) plan.push([k, lvs[k]]);
+    lateMirror = lvs.fw || 0;   // Heilung (gh) wirkt seit 0.5.4 wieder erst nach dem Schaden, Zerrüttung und die übrigen Kombos davor
     healLvl = lvs.gh || 0;
     applyComboPlan(state, side, attacker, plan, defEv, texts, fxs);
     fxs.forEach(f => { f.first = true; });   // Oberfläche: Kombo-Animation läuft vor der Verteidigungsanimation
@@ -362,6 +366,16 @@ function execDefense(state, passOnly) {
     applyComboPlan(state, side, attacker, [['gh', healLvl]], defEv, hTexts, hFxs);
     hFxs.forEach(f => { f.late = true; });   // Oberfläche: Heilungsanimation nach der Verteidigungsanimation
     log(state, side.name + ' heilt nach der Verteidigung: ' + hTexts.join(', ') + '.', side.ctrl, hFxs);
+  }
+  if (lateMirror > 0) {   // Farbspiegel (Wasser + Feuer/Erde) nach Angriff und Verteidigung: gilt erst für den nächsten Angriff
+    const mTexts = [], mFxs = [];
+    applyComboPlan(state, side, attacker, [['fw', lateMirror]], defEv, mTexts, mFxs);
+    mFxs.forEach(f => { f.late = true; });
+    log(state, side.name + ' stellt nach der Verteidigung: ' + mTexts.join(', ') + '.', side.ctrl, mFxs);
+  }
+  if (lateMulti > 0) {   // Ultimate Wasser: Multispiegel nach der Verteidigung
+    const u = castUltimate(side, attacker, 'W', lateMulti);
+    log(state, side.name + ' wirkt eine Ultimate nach der Verteidigung: ' + u.text + '.', side.ctrl, Object.assign(u.fx, { late: true }));
   }
   side.stats.hp = Math.max(0, side.stats.hp);
   const attSide = attacker;   // wer gerade angegriffen hat: seine Angriffsphase endet mit dieser Verteidigung
