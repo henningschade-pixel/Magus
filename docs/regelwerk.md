@@ -448,3 +448,7 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 ## Änderung 0.7.2.18 (06.11.)
 
 - **Geteiltes Schild:** Das Multispiegel-Schild ist mittig senkrecht geteilt, die rechte Hälfte ist abgedunkelt (wie die Facetten der Farbschilder); der frühere helle Glanz entfällt. Gilt auch für die Bruch-Animation. Nur Darstellung.
+
+## Änderung 0.7.2.19 (06.11.)
+
+- **Ohne Trennlinie:** Beim geteilten Multispiegel-Schild (0.7.2.18) entfällt die Mittellinie; die Teilung ergibt sich nur aus der abgedunkelten rechten Hälfte. Nur Darstellung.
