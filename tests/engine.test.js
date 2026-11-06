@@ -778,14 +778,14 @@ test('Ultimate im Angriff nach Farbe der ersten Karte: Erde legt Heilmarker, der
   assert.equal(me.stats.hp, 4, 'Heilfluss: +2 HP am Ende meiner Angriffsphase');
 });
 
-test('Ultimate im Angriff: Wasser legt ein Multischild der Stufe S bei mir', () => {
+test('Ultimate im Angriff: Wasser legt ein Multispiegel der Stufe S bei mir', () => {
   const { s, me, op } = combatSetup(11, ['W2', 'F2', 'E2']);
   [0, 1, 2].forEach(i => assert.ok(M.apply(s, { pid: 0, type: 'mark', slot: i }).ok));
   assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
   assert.equal(me.stats.rainbow, 2); assert.equal(op.stats.death || 0, 0);
 });
 
-test('Ultimate in der Verteidigung: Erde legt Heilmarker, Wasser ein Multischild (jeweils beim Verteidiger)', () => {
+test('Ultimate in der Verteidigung: Erde legt Heilmarker, Wasser ein Multispiegel (jeweils beim Verteidiger)', () => {
   for (const [att, def, key] of [['E1', ['E3', 'W2', 'F2'], 'heal'], ['F1', ['W2', 'F3', 'E2'], 'rainbow']]) {
     const { s, me, op } = combatSetup(11, [att]);
     op.stats.limit = 3; op.stats.mana = 9;
@@ -797,7 +797,7 @@ test('Ultimate in der Verteidigung: Erde legt Heilmarker, Wasser ein Multischild
   }
 });
 
-test('Multischild wirkt gegen jede Farbe und verliert dabei Stufen wie ein Spiegel (seit 0.7.2.2)', () => {
+test('Multispiegel wirkt gegen jede Farbe und verliert dabei Stufen wie ein Spiegel (seit 0.7.2.2)', () => {
   for (const att of ['F2', 'E2', 'W2']) {
     const { s, op } = combatSetup(11, [att]);
     op.stats.rainbow = 2; op.stats.hp = op.stats.maxHp = 9;
@@ -807,22 +807,22 @@ test('Multischild wirkt gegen jede Farbe und verliert dabei Stufen wie ein Spieg
   }
 });
 
-test('Standardschilde werden vor dem Multischild verbraucht (0.7.2.2)', () => {
-  // Feuerangriff F2 ohne Verteidigung: Der Schild gleicht bis zu seiner Stufe (hier 2, der höhere von Feuerspiegel 1 und Multischild 2) aus; der Feuerspiegel gibt seine eine Stufe zuerst her, der Rest kommt vom Multischild
+test('Standardschilde werden vor dem Multispiegel verbraucht (0.7.2.2)', () => {
+  // Feuerangriff F2 ohne Verteidigung: Der Schild gleicht bis zu seiner Stufe (hier 2, der höhere von Feuerspiegel 1 und Multispiegel 2) aus; der Feuerspiegel gibt seine eine Stufe zuerst her, der Rest kommt vom Multispiegel
   const { s, op } = combatSetup(11, ['F2']);
   op.stats.mirrorEl = { F: 1, E: 0, W: 0 }; op.stats.mirror = 1; op.stats.rainbow = 2; op.stats.hp = op.stats.maxHp = 9;
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
   const pv = M.previewDefense(s, true);
-  assert.equal(pv.lostStd, 1, 'Vorschau: erst der Farbspiegel'); assert.equal(pv.lostRb, pv.used - 1, 'Vorschau: der Rest vom Multischild');
+  assert.equal(pv.lostStd, 1, 'Vorschau: erst der Farbspiegel'); assert.equal(pv.lostRb, pv.used - 1, 'Vorschau: der Rest vom Multispiegel');
   assert.ok(M.apply(s, { pid: op.ctrl, type: 'pass' }).ok);
-  assert.equal(op.stats.mirror || 0, 0, 'Farbspiegel aufgebraucht'); assert.equal(op.stats.rainbow, 2 - pv.lostRb, 'Multischild verliert nur den Rest');
+  assert.equal(op.stats.mirror || 0, 0, 'Farbspiegel aufgebraucht'); assert.equal(op.stats.rainbow, 2 - pv.lostRb, 'Multispiegel verliert nur den Rest');
   assert.equal(op.stats.hp, 9 - pv.leftover);
-  // ein höherer Farbspiegel deckt alles allein: das Multischild bleibt unberührt
+  // ein höherer Farbspiegel deckt alles allein: das Multispiegel bleibt unberührt
   const t = combatSetup(11, ['F2']);
   t.op.stats.mirrorEl = { F: 3, E: 0, W: 0 }; t.op.stats.mirror = 3; t.op.stats.rainbow = 1; t.op.stats.hp = t.op.stats.maxHp = 9;
   M.apply(t.s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(t.s, { pid: 0, type: 'attack' }).ok);
   assert.ok(M.apply(t.s, { pid: t.op.ctrl, type: 'pass' }).ok);
-  assert.equal(t.op.stats.rainbow, 1, 'Multischild unberührt'); assert.ok((t.op.stats.mirror || 0) < 3, 'der Farbspiegel hat Stufen verloren');
+  assert.equal(t.op.stats.rainbow, 1, 'Multispiegel unberührt'); assert.ok((t.op.stats.mirror || 0) < 3, 'der Farbspiegel hat Stufen verloren');
 });
 
 test('Läuterung entfernt Heilmarker und Prismen des Gegners', () => {

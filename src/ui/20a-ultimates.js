@@ -1,4 +1,4 @@
-/* ---------- Ultimate-Rituale für Heilfluss (Erde) und Multischild (Wasser), aus der Ultimate-Werkstatt (seit 0.7.2.2): mittig auf dem Bildschirm, wie das Pentagramm des Todesfluss (20-todesfluch.js). Die Marker und ihre Wirkung zeigt das Spiel selbst. ---------- */
+/* ---------- Ultimate-Rituale für Heilfluss (Erde) und Multispiegel (Wasser), aus der Ultimate-Werkstatt (seit 0.7.2.2): mittig auf dem Bildschirm, wie das Pentagramm des Todesfluss (20-todesfluch.js). Die Marker und ihre Wirkung zeigt das Spiel selbst. ---------- */
 const UltFx = (() => {
   const BIG = 3000, clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x)), lerp = (a, b, t) => a + (b - a) * t, seg = (u, a, b) => clamp((u - a) / (b - a));
   const eo = x => 1 - Math.pow(1 - x, 3), eio = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
@@ -60,7 +60,7 @@ const UltFx = (() => {
     if(fl>0){ctx.fillStyle=rgba(lighten(col,.8),fl*.42);ctx.fillRect(-BIG,-BIG,2*BIG,2*BIG)}
   }
   
-  /* ---------- Multischild (Wasser): erst bildet sich ein Kreis am Boden, aus ihm wächst die Schildkuppel (seit 0.7.2.4; vorher Prisma mit Kristall und Lichtstrahl) ---------- */
+  /* ---------- Multispiegel (Wasser): erst bildet sich ein Kreis am Boden, aus ihm wächst die Schildkuppel (seit 0.7.2.4; vorher Prisma mit Kristall und Lichtstrahl) ---------- */
   const prismCols=p=>[mix(p.pColor,EL.F,p.pRainbow),mix(p.pColor,EL.E,p.pRainbow),mix(p.pColor,EL.W,p.pRainbow)];
   function domeGeom(p){const rx=165*p.size*p.pDome*.95;return{c:{x:C.x,y:C.y+78},rx,ry:rx*.85}}
   function fxPrism(ctx,p,t,D,u){
@@ -117,7 +117,7 @@ const UltFx = (() => {
   }
   function lerpP(a,b,q){return{x:lerp(a.x,b.x,q),y:lerp(a.y,b.y,q)}}
   const cvs = {}, raf = {};
-  function play(kind) {   // 'E' Heilfluss, 'W' Multischild
+  function play(kind) {   // 'E' Heilfluss, 'W' Multispiegel
     if (FAST || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
     let cv = cvs[kind];
     if (!cv) { cv = cvs[kind] = document.createElement('canvas'); cv.width = SW; cv.height = 800; cv.style.cssText = 'position:absolute;left:0;top:0;width:' + SW + 'px;height:800px;z-index:290;pointer-events:none'; stage.appendChild(cv); }

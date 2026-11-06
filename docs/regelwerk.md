@@ -89,7 +89,7 @@ Die Farbe der ersten markierten Karte bestimmt die Rolle (Feuer aggressiv, Wasse
 | Spiegel (grün) | Wasser + Erde | grüner Spiegel auf Stufe S |
 | Heilung | Erde + Wasser | S HP heilen |
 | Läuterung | Erde + Feuer | S beliebige Marker vom Brett entfernen, je entferntem Marker ein Nachziehtoken |
-| Ultimate | alle drei | je nach Farbe der ersten Karte: **Feuer** Todesfluss, **Erde** Heilfluss, **Wasser** Multischild (Stufe S) |
+| Ultimate | alle drei | je nach Farbe der ersten Karte: **Feuer** Todesfluss, **Erde** Heilfluss, **Wasser** Multispiegel (Stufe S) |
 
 **Fluchkarten:** Sie kommen erst in den Zugstapel, wenn der Ablagestapel gemischt wird. Auf der Hand belegen sie einen Platz und wirken nicht. Beim Nachziehen werden sie dauerhaft verworfen, am Kampfende verschwinden alle.
 
@@ -102,7 +102,7 @@ Die Farbe der ersten markierten Karte bestimmt die Rolle (Feuer aggressiv, Wasse
 **Ultimate nach Farbe (seit 0.7):** Die Farbe der ersten Karte entscheidet. Die Stufe S gilt wie bisher (Minimum der drei Kartensummen, höchstens 3); mehrere Marker einer Art werden nicht addiert, es gilt der höchste. Alle drei Marker entfernt nur die Läuterung (sie sind wählbar wie die Todesmarker).
 - **Feuer: Todesfluss** wie bisher (S Todesmarker beim Gegner, S HP Verlust am Ende jeder seiner Angriffsphasen).
 - **Erde: Heilfluss.** S grüne Marker mit Plus bei dir selbst: Am Ende jeder deiner Angriffsphasen heilst du S HP (höchstens bis zu den max. HP) bis Kampfende.
-- **Wasser: Multischild.** Ein Schild der Stufe S bei dir selbst, der gegen **jede** Farbe wirkt und nach der Mechanik der Spiegel arbeitet (gleicht fehlende Verteidigung bis S aus, wirft Überschuss bis S zurück), und verliert dabei Stufen wie ein Farbspiegel (seit 0.7.2.2, vorher verlor er keine). Gegenüber einem Farbspiegel zählt der höhere Wert; verbraucht werden aber **zuerst die Stufen des Farbspiegels**, erst der Rest geht vom Multischild ab. In der Verteidigung wirkt er schon gegen den laufenden Angriff.
+- **Wasser: Multispiegel.** Ein Schild der Stufe S bei dir selbst, der gegen **jede** Farbe wirkt und nach der Mechanik der Spiegel arbeitet (gleicht fehlende Verteidigung bis S aus, wirft Überschuss bis S zurück), und verliert dabei Stufen wie ein Farbspiegel (seit 0.7.2.2, vorher verlor er keine). Gegenüber einem Farbspiegel zählt der höhere Wert; verbraucht werden aber **zuerst die Stufen des Farbspiegels**, erst der Rest geht vom Multispiegel ab. In der Verteidigung wirkt er schon gegen den laufenden Angriff.
 
 
 ## Monster
@@ -410,3 +410,7 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 ## Änderung 0.7.2.6 (06.11.)
 
 - **Marker vor dem Stapel:** Todes- und Heilmarker liegen als einzelne Tokens zentral vor dem Nachziehstapel ihres Spielers (eigene oberhalb, die des Gegners unterhalb), mit festem, mäßigem Zufallsversatz und Drehung. Todesmarker bilden die vordere Reihe, Heilmarker eine zweite Reihe dahinter. Der Heilmarker ist kleiner (46 statt 50 px) und gedämpfter. Spiegel und Multischild bleiben neben dem Handbrett. Keine Regeländerung.
+
+## Änderung 0.7.2.7 (06.11.)
+
+- **Umbenennung:** Das Multischild (Wasser-Ultimate, zuvor Prisma) heißt **Multispiegel**: Oberfläche, Log, Tooltips, Werkstatt, Tests und die aktuellen Regelzeilen. Ältere Änderungsabschnitte nennen noch die damaligen Namen. Keine Regeländerung.

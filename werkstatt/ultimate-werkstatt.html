@@ -71,7 +71,7 @@ textarea{width:100%;min-height:150px;background:var(--ink);color:var(--bone);bor
 <div class="wrap">
   <header>
     <h1>Ultimate-Werkstatt</h1>
-    <p>Effektwerkstatt für die Kombos aus allen drei Elementen. Die Farbe der ersten Karte entscheidet: Feuer gibt den <b>Todesfluss</b>, Erde den <b>Heilfluss</b>, Wasser das <b>Multischild</b>. Gezeigt wird das Ritual selbst, danach die Marker auf dem Tisch und ihre Wirkung (HP-Verlust des Gegners, Heilung, Abwehr gegen jede Farbe). Im Spiel hat bisher nur der Todesfluss ein eigenes Ritual (Pentagramm, <code>CurseFx</code> in <code>src/ui/20-todesfluch.js</code>); Heilfluss und Multischild sind hier neue Entwürfe, im Spiel gibt es dazu bisher nur den Ton.</p>
+    <p>Effektwerkstatt für die Kombos aus allen drei Elementen. Die Farbe der ersten Karte entscheidet: Feuer gibt den <b>Todesfluss</b>, Erde den <b>Heilfluss</b>, Wasser das <b>Multispiegel</b>. Gezeigt wird das Ritual selbst, danach die Marker auf dem Tisch und ihre Wirkung (HP-Verlust des Gegners, Heilung, Abwehr gegen jede Farbe). Im Spiel hat bisher nur der Todesfluss ein eigenes Ritual (Pentagramm, <code>CurseFx</code> in <code>src/ui/20-todesfluch.js</code>); Heilfluss und Multispiegel sind hier neue Entwürfe, im Spiel gibt es dazu bisher nur den Ton.</p>
   </header>
   <div class="grid">
     <section class="stagebox" aria-label="Vorschau">
@@ -108,7 +108,7 @@ function rgba(hex,a){if(hex[0]==='r')return hex.replace('rgb(','rgba(').replace(
 function lighten(hex,k){const n=parseInt(hex.slice(1),16),f=c=>Math.round(c+(255-c)*k);return 'rgb('+f(n>>16&255)+','+f(n>>8&255)+','+f(n&255)+')'}
 function mix(a,b,k){const n=parseInt(a.slice(1),16),m=parseInt(b.slice(1),16),f=(x,y)=>Math.round(x+(y-x)*k);return '#'+((1<<24)+(f(n>>16&255,m>>16&255)<<16)+(f(n>>8&255,m>>8&255)<<8)+f(n&255,m&255)).toString(16).slice(1)}
 const EL={F:'#ff7a3d',E:'#93c24f',W:'#52a6f5'};
-const NAME={F:'Todesfluss',E:'Heilfluss',W:'Multischild'};
+const NAME={F:'Todesfluss',E:'Heilfluss',W:'Multispiegel'};
 const ORDER=['F','W','E'];   // wie in der Kombo-Übersicht des Spiels: Feuer, Wasser, Erde
 const C={x:360,y:268};      // Mitte des Rituals
 
@@ -121,10 +121,10 @@ const PRE={
  'Standard':{},
  'Wie im Spiel (Todesfluss)':{view:'einzeln',fx:'F',dur:4,size:1.2,dark:.55,shake:.5,particles:50,tColor:'#a67bff',tTilt:.42,tRings:2,tRunes:14,tLine:2.5,tGlow:14,tFlicker:.4,tPillar:.6},
  'Heilfluss einzeln':{view:'einzeln',fx:'E'},
- 'Multischild einzeln':{view:'einzeln',fx:'W'},
+ 'Multispiegel einzeln':{view:'einzeln',fx:'W'},
  'Dezent':{size:.9,dur:3,dark:.3,flash:.5,shake:.2,particles:25,after:1.4,tRunes:10,tPillar:.3,hVines:4,hPulse:2,hLight:.4,pFacets:4,pGlints:8,pShimmer:.6},
  'Wucht':{size:1.5,dur:5.2,dark:.7,flash:1.3,shake:1,particles:90,after:2.6,tRunes:20,tPillar:1,hVines:9,hVineH:1.5,hPulse:5,hLight:1.2,pFacets:10,pGlints:30,pShimmer:1.4},
- 'Nur Multischild, kühl':{view:'einzeln',fx:'W',pRainbow:0,pColor:'#7fd0ff'},
+ 'Nur Multispiegel, kühl':{view:'einzeln',fx:'W',pRainbow:0,pColor:'#7fd0ff'},
  'Stufe 3':{level:3}
 };
 
@@ -241,7 +241,7 @@ function fxHeal(ctx,p,t,D,u){
   if(fl>0){ctx.fillStyle=rgba(lighten(col,.8),fl*.42);ctx.fillRect(-BIG,-BIG,2*BIG,2*BIG)}
 }
 
-/* ---------- Multischild (Wasser): erst bildet sich ein Kreis am Boden, aus ihm wächst die Schildkuppel (seit 0.7.2.4; vorher Prisma mit Kristall und Lichtstrahl) ---------- */
+/* ---------- Multispiegel (Wasser): erst bildet sich ein Kreis am Boden, aus ihm wächst die Schildkuppel (seit 0.7.2.4; vorher Prisma mit Kristall und Lichtstrahl) ---------- */
 const prismCols=p=>[mix(p.pColor,EL.F,p.pRainbow),mix(p.pColor,EL.E,p.pRainbow),mix(p.pColor,EL.W,p.pRainbow)];
 function domeGeom(p){const rx=165*p.size*p.pDome*.95;return{c:{x:C.x,y:C.y+78},rx,ry:rx*.85}}
 function fxPrism(ctx,p,t,D,u){
@@ -429,9 +429,9 @@ function draw(ctx,t,p){
 const FX={name:'ultimate',def:DEF,presets:PRE,
  ctrls:[
   {t:'h',l:'Szenario'},
-  {k:'view',t:'seg',l:'Ansicht',o:[['alle','Alle drei'],['einzeln','Einzeln']],hint:'„Alle drei“ zeigt Todesfluss, Multischild und Heilfluss nebeneinander (Reihenfolge wie in der Kombo-Übersicht), „Einzeln“ eines groß.'},
-  {k:'fx',t:'seg',l:'Ultimate (bei „Einzeln“)',o:[['F','Todesfluss'],['W','Multischild'],['E','Heilfluss']],hint:'Feuer = Todesfluss, Wasser = Multischild, Erde = Heilfluss: Die Farbe der ersten Karte entscheidet.'},
-  {k:'level',t:'rng',l:'Stufe S',min:1,max:3,step:1,hint:'Todesfluss und Heilfluss legen S Marker; beim Multischild steht S auf dem Schild.'},
+  {k:'view',t:'seg',l:'Ansicht',o:[['alle','Alle drei'],['einzeln','Einzeln']],hint:'„Alle drei“ zeigt Todesfluss, Multispiegel und Heilfluss nebeneinander (Reihenfolge wie in der Kombo-Übersicht), „Einzeln“ eines groß.'},
+  {k:'fx',t:'seg',l:'Ultimate (bei „Einzeln“)',o:[['F','Todesfluss'],['W','Multispiegel'],['E','Heilfluss']],hint:'Feuer = Todesfluss, Wasser = Multispiegel, Erde = Heilfluss: Die Farbe der ersten Karte entscheidet.'},
+  {k:'level',t:'rng',l:'Stufe S',min:1,max:3,step:1,hint:'Todesfluss und Heilfluss legen S Marker; beim Multispiegel steht S auf dem Schild.'},
   {t:'h',l:'Allgemein'},
   {k:'dur',t:'rng',l:'Dauer des Rituals',min:2,max:7,step:.1,u:' s'},
   {k:'size',t:'rng',l:'Größe',min:.6,max:1.8,step:.05,u:'×'},
@@ -439,7 +439,7 @@ const FX={name:'ultimate',def:DEF,presets:PRE,
   {k:'flash',t:'rng',l:'Blitz',min:0,max:1.5,step:.05,u:'×'},
   {k:'shake',t:'rng',l:'Wackeln',min:0,max:1.5,step:.05},
   {k:'particles',t:'rng',l:'Funken und Lichtpunkte',min:0,max:120,step:5},
-  {k:'after',t:'rng',l:'Wirkung danach',min:0,max:4,step:.1,u:' s',hint:'Nach dem Ritual und den Markern: Todesfluss zehrt am Gegner, Heilfluss heilt, Multischild wehrt drei Angriffe verschiedener Farbe ab. 0 blendet es aus.'},
+  {k:'after',t:'rng',l:'Wirkung danach',min:0,max:4,step:.1,u:' s',hint:'Nach dem Ritual und den Markern: Todesfluss zehrt am Gegner, Heilfluss heilt, Multispiegel wehrt drei Angriffe verschiedener Farbe ab. 0 blendet es aus.'},
   {t:'h',l:'Todesfluss (Feuer)',c:'ft'},
   {k:'tColor',t:'col',l:'Farbe'},
   {k:'tTilt',t:'rng',l:'Neigung der Scheibe',min:.2,max:.8,step:.02},
@@ -458,9 +458,9 @@ const FX={name:'ultimate',def:DEF,presets:PRE,
   {k:'hLight',t:'rng',l:'Lichtsäule',min:0,max:1.5,step:.05,u:'×'},
   {k:'hPulse',t:'rng',l:'Heilwellen',min:0,max:5,step:1,hint:'Ringe, die vom Kreis nach außen laufen.'},
   {k:'hGlow',t:'rng',l:'Leuchten',min:0,max:30,step:1},
-  {t:'h',l:'Multischild (Wasser)',c:'fp'},
+  {t:'h',l:'Multispiegel (Wasser)',c:'fp'},
   {k:'pColor',t:'col',l:'Grundfarbe'},
-  {k:'pRainbow',t:'rng',l:'Farbenspiel',min:0,max:1,step:.05,hint:'0 = alles in der Grundfarbe, 1 = der Kreis und der Rand zeigen Feuer, Erde und Wasser (das Multischild wirkt gegen jede Farbe).'},
+  {k:'pRainbow',t:'rng',l:'Farbenspiel',min:0,max:1,step:.05,hint:'0 = alles in der Grundfarbe, 1 = der Kreis und der Rand zeigen Feuer, Erde und Wasser (das Multispiegel wirkt gegen jede Farbe).'},
   {k:'pDome',t:'rng',l:'Größe der Kuppel',min:.6,max:1.6,step:.05,u:'×'},
   {k:'pFacets',t:'rng',l:'Facetten',min:3,max:12,step:1},
   {k:'pShimmer',t:'rng',l:'Schimmer',min:0,max:1.5,step:.05,u:'×'},
