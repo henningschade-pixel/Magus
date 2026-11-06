@@ -418,3 +418,7 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 ## Änderung 0.7.2.8 (06.11.)
 
 - **Heilfluss wie Todesfluss:** Ein Heilmarker, der in der eigenen Angriffsphase gelegt wird (Ultimate im Angriff), heilt erst am Ende der **nächsten** eigenen Angriffsphase. Bisher heilte er schon am Ende der Phase, in der er gelegt wurde. Technisch merkt `stats.healPhase` die Stufe zu Beginn der Phase (wie `deathPhase`); eine Erhöhung in derselben Phase zählt erst ab der nächsten. Wird die Ultimate in der Verteidigung gelegt, heilt der Marker wie bisher am Ende der nächsten eigenen Angriffsphase.
+
+## Änderung 0.7.2.9 (06.11.)
+
+- **Pappmarker-Optik:** Todes- und Heilmarker haben eine dunkle Kante (Materialstärke, Licht von oben links), einen weichen Wurfschatten und einen schwachen Glanz oben links. Die Drehung liegt auf dem Bild, der Schatten bleibt für alle Marker gleich ausgerichtet. Nur Darstellung, keine Regeländerung.
