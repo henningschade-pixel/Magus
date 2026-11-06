@@ -402,3 +402,7 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 
 - **Umbenennung:** Das Prisma (Wasser-Ultimate) heißt **Multischild**. Die Regeln bleiben unverändert (Spielfeld, Log, Tooltips, Werkstatt und die aktuellen Regelzeilen oben nutzen den neuen Namen; ältere Änderungsabschnitte nennen noch „Prisma“). Interne Namen (`stats.rainbow`, Schildeffekt „R“) bleiben.
 - **Neuer Ablauf des Rituals:** Erst bildet sich ein Kreis am Boden (Ring, Gegenring, Rastmarken in Feuer-, Erd- und Wasserfarbe), danach wächst daraus die Schildkuppel. Kristall und Lichtstrahl entfallen; die Werkstatt-Regler „Größe des Kristalls“ und „Auffächerung“ entfallen ebenfalls.
+
+## Änderung 0.7.2.5 (06.11.)
+
+- **Rituale bei jedem Wirken:** Die Rituale von Heilfluss und Multischild starten jetzt über den Effekt der Ultimate im Kampflog (`showFx`), nicht mehr nur, wenn die Summe der Marker steigt. Bisher blieb das Multischild-Ritual aus, wenn die Stufe schon gleich hoch oder höher lag (die Ultimate setzt nur das Maximum). Keine Regeländerung.
