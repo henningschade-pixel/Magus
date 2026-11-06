@@ -65,7 +65,7 @@ function endCombat(state, end) {
   if (state.keepSnap) res.snap = JSON.parse(JSON.stringify(c));   // Oberfläche: Endstand des Kampfes (vor Zurücksetzen und Rückkehr in die Weltphase)
   state.players.forEach(p => { p.stats.freeDraws = 0; p.deck.marks = []; delete p.stats.mirror; delete p.stats.mirrorEl; delete p.stats.mirrorFree; delete p.stats.death; delete p.stats.deathPhase; delete p.stats.heal; delete p.stats.rainbow; });
   state.players.forEach(p => stripCurseCards(state, p.deck));
-  delete c.sides.b.stats.death; delete c.sides.b.stats.deathPhase; delete c.sides.b.stats.heal; delete c.sides.b.stats.rainbow;
+  delete c.sides.b.stats.healPhase; delete c.sides.b.stats.death; delete c.sides.b.stats.deathPhase; delete c.sides.b.stats.heal; delete c.sides.b.stats.rainbow;
   if (c.sides.b.monster) { delete c.sides.b.monster.stats.mirror; delete c.sides.b.monster.stats.mirrorEl; delete c.sides.b.monster.stats.mirrorFree; }
   const A = state.players[c.att], B = state.players[c.def];
   if (c.mode === 'monster') {
@@ -190,8 +190,8 @@ function deathTick(state, side) {
     side.stats.hp = Math.max(0, side.stats.hp - dmg);
     log(state, 'Todesfluss: ' + side.name + ' verliert ' + dmg + ' HP am Ende der Angriffsphase.', side.ctrl);
   }
-  // Heilfluss (Erd-Ultimate): am Ende der eigenen Angriffsphase +1 HP je Heilmarker, höchstens bis zu den maximalen HP; nur wer noch steht
-  const hl = side.stats.heal || 0;
+  // Heilfluss (Erd-Ultimate): am Ende der eigenen Angriffsphase +1 HP je Heilmarker (nur Marker, die schon zu Beginn der Phase lagen: healPhase wie deathPhase), höchstens bis zu den maximalen HP; nur wer noch steht
+  const hl = Math.min(side.stats.heal || 0, side.stats.healPhase === undefined ? Infinity : side.stats.healPhase); delete side.stats.healPhase;
   if (hl > 0 && side.stats.hp > 0) {
     const before = side.stats.hp; side.stats.hp = Math.min(side.stats.maxHp, side.stats.hp + hl);
     if (side.stats.hp > before) log(state, 'Heilfluss: ' + side.name + ' heilt ' + (side.stats.hp - before) + ' HP am Ende der Angriffsphase.', side.ctrl, { kind: 'healtick', who: side.ctrl, n: side.stats.hp - before, marks: hl });
@@ -258,6 +258,7 @@ function execAttack(state) {
   consumeSelection(d, sel);
   const texts = [], fxs = [];
   applyComboPlan(state, side, opp, plan, ev, texts, fxs);
+  if (death && (ev.ultiEl || ev.prim) === 'E' && side.stats.healPhase === undefined) side.stats.healPhase = side.stats.heal || 0;   // wie beim Todesfluss: ein in dieser Angriffsphase gelegter Heilmarker heilt erst am Ende der nächsten eigenen Angriffsphase
   if (death) { const u = castUltimate(side, opp, ev.ultiEl || ev.prim, ev.levels.ulti); fxs.push(u.fx); texts.push(u.text); }
   c.lfp = null;
   const dmg = ev.prim ? ev.damage : 0;

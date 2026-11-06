@@ -775,7 +775,13 @@ test('Ultimate im Angriff nach Farbe der ersten Karte: Erde legt Heilmarker, der
   assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
   assert.equal(me.stats.heal, 2, 'Heilmarker Stufe 2 bei mir'); assert.equal(op.stats.death || 0, 0, 'kein Todesfluss für den Gegner');
   assert.ok(M.apply(s, { pid: op.ctrl, type: 'pass' }).ok);
-  assert.equal(me.stats.hp, 4, 'Heilfluss: +2 HP am Ende meiner Angriffsphase');
+  assert.equal(me.stats.hp, 2, 'Heilfluss wirkt wie der Todesfluss nicht in der Phase, in der er gelegt wurde (seit 0.7.2.8)');
+  assert.equal(me.stats.healPhase, undefined, 'Phasenmerker gelöscht');
+  const hp0 = me.stats.hp; s.combat.sides[s.combat.turn === 'a' ? 'a' : 'b'];
+  // nächste eigene Angriffsphase: Gegner ist am Zug, danach wieder ich; am Ende meiner Phase heilt der Marker
+  assert.equal(s.combat.sides[s.combat.turn].ctrl, op.ctrl, 'Gegner am Zug'); assert.ok(M.apply(s, { pid: op.ctrl, type: 'pass' }).ok);
+  assert.equal(s.combat.sides[s.combat.turn].ctrl, me.ctrl, 'ich am Zug'); assert.ok(M.apply(s, { pid: 0, type: 'pass' }).ok);
+  assert.equal(me.stats.hp, hp0 + 2, 'Heilfluss: +2 HP am Ende der nächsten eigenen Angriffsphase');
 });
 
 test('Ultimate im Angriff: Wasser legt ein Multispiegel der Stufe S bei mir', () => {

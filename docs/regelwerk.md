@@ -414,3 +414,7 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 ## Änderung 0.7.2.7 (06.11.)
 
 - **Umbenennung:** Das Multischild (Wasser-Ultimate, zuvor Prisma) heißt **Multispiegel**: Oberfläche, Log, Tooltips, Werkstatt, Tests und die aktuellen Regelzeilen. Ältere Änderungsabschnitte nennen noch die damaligen Namen. Keine Regeländerung.
+
+## Änderung 0.7.2.8 (06.11.)
+
+- **Heilfluss wie Todesfluss:** Ein Heilmarker, der in der eigenen Angriffsphase gelegt wird (Ultimate im Angriff), heilt erst am Ende der **nächsten** eigenen Angriffsphase. Bisher heilte er schon am Ende der Phase, in der er gelegt wurde. Technisch merkt `stats.healPhase` die Stufe zu Beginn der Phase (wie `deathPhase`); eine Erhöhung in derselben Phase zählt erst ab der nächsten. Wird die Ultimate in der Verteidigung gelegt, heilt der Marker wie bisher am Ende der nächsten eigenen Angriffsphase.
