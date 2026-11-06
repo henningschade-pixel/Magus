@@ -452,3 +452,7 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 ## Änderung 0.7.2.19 (06.11.)
 
 - **Ohne Trennlinie:** Beim geteilten Multispiegel-Schild (0.7.2.18) entfällt die Mittellinie; die Teilung ergibt sich nur aus der abgedunkelten rechten Hälfte. Nur Darstellung.
+
+## Änderung 0.7.2.20 (06.11.)
+
+- **Innenschatten kleiner und härter:** Der Schattenwurf vom Rand des Multispiegel-Schildes nach innen hat einen kleineren Radius (Kantenbreite 5 statt 11) und ist härter (Unschärfe 0,7 statt 2,6). Nur Darstellung.
