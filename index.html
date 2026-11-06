@@ -1025,7 +1025,7 @@ function castUltimate(side, opp, el, lvl) {
 function passAttackTurn(state) {
   const c = state.combat;
   deathTick(state, c.sides[c.turn]);
-  c.turn = c.turn === 'a' ? 'b' : 'a'; c.action = 'attack'; c.color = null; c.pending = 0;
+  c.turn = c.turn === 'a' ? 'b' : 'a'; c.action = 'attack'; c.color = null; c.pending = 0; c.lfp = null;
 }
 
 // HP nach einer Heilung um lvl: höchstens bis zu den maximalen HP, nie weniger als vorher
@@ -1121,7 +1121,7 @@ function previewDefense(state, passOnly) {
     if (sel.length) { const ev = evalDefense(side.stats, sel, c.color); if (!ev.valid || ev.affordable === false) return null; block = ev.block || 0; cost = ev.cost || 0; pre = defenseComboPre(side.stats, ev, c.color); }
   }
   const o = defenseOutcome(side.stats, c.color, c.pending, block, pre.mir, pre.std, pre.rb);
-  return Object.assign({ who: side.ctrl, att: att.ctrl, cost, block, heal: pre.heal, hpAfter: Math.max(0, healedHp(side.stats, pre.hp - o.leftover, pre.heal)), attHpAfter: Math.max(0, att.stats.hp - o.refl) }, o);
+  return Object.assign({ who: side.ctrl, att: att.ctrl, cost, block, heal: pre.heal, hpAfter: pre.hp - o.leftover > 0 ? healedHp(side.stats, pre.hp - o.leftover, pre.heal) : 0, attHpAfter: Math.max(0, att.stats.hp - o.refl) }, o);
 }
 function execDefense(state, passOnly) {
   const c = state.combat, side = c.sides[c.turn], c0pending = c.pending;
@@ -1156,6 +1156,7 @@ function execDefense(state, passOnly) {
     lateMirror = lvs.fw || 0;   // Heilung (gh) wirkt seit 0.5.4 wieder erst nach dem Schaden, Zerrüttung und die übrigen Kombos davor
     healLvl = lvs.gh || 0;
     applyComboPlan(state, side, attacker, plan, defEv, texts, fxs);
+    c.lfp = null;
     fxs.forEach(f => { f.first = true; });   // Oberfläche: Kombo-Animation läuft vor der Verteidigungsanimation
     if (texts.length) log(state, side.name + ' wirkt einen Kombo: ' + texts.join(', ') + '.', side.ctrl, fxs.length ? fxs : undefined);
   }
@@ -1178,7 +1179,7 @@ function execDefense(state, passOnly) {
     defFx.mirror = lostStd > 0 ? { hpPre, elem: c.color, markers: std, broken: lostStd, who: side.ctrl, att: attacker.ctrl, r: refl, abs: absorb, d: c.pending, blk: block }
       : { hpPre, elem: 'R', markers: rb, broken: lostRb, who: side.ctrl, att: attacker.ctrl, r: refl, abs: absorb, d: c.pending, blk: block };
   }
-  if (healLvl > 0) {   // Heilung nach Angriff und Verteidigung (seit 0.5.4): gleicht den Schaden nachträglich aus, höchstens bis zum Maximum
+  if (healLvl > 0 && side.stats.hp > 0) {   // Heilung nach Angriff und Verteidigung (seit 0.5.4): gleicht den Schaden nachträglich aus, höchstens bis zum Maximum; seit 0.7.6.2 nur, wenn der Verteidiger nach dem Schaden noch über 0 HP steht (sonst ist er besiegt und die Heilung verfällt)
     const hTexts = [], hFxs = [];
     applyComboPlan(state, side, attacker, [['gh', healLvl]], defEv, hTexts, hFxs);
     hFxs.forEach(f => { f.late = true; });   // Oberfläche: Heilungsanimation nach der Verteidigungsanimation
@@ -1196,7 +1197,7 @@ function execDefense(state, passOnly) {
   }
   side.stats.hp = Math.max(0, side.stats.hp);
   const attSide = attacker;   // wer gerade angegriffen hat: seine Angriffsphase endet mit dieser Verteidigung
-  c.action = 'attack'; c.color = null; c.pending = 0;
+  c.action = 'attack'; c.color = null; c.pending = 0; c.lfp = null;
   deathTick(state, attSide);
   const res = finishStep(state, { k: 'V', who: side.key === 'a' ? 0 : 1, v: block, b: c0pending, left: leftover });
   return { ok: true, combatEnd: res };
@@ -1222,7 +1223,7 @@ function applyCombat(state, a) {
   if (side.ctrl !== pid) return fail('Die Gegenseite ist am Zug.');
   switch (a.type) {
     case 'mark': { const e = toggleMark(side.deck, a.slot, side.stats.limit); return e ? fail(e) : { ok: true }; }
-    case 'lfp': { if (c.action !== 'attack') return fail('Nur im Angriffszug.'); const ok = ['sm', 'om', 'sd', 'od', 'sh', 'oh', 'sr', 'or', 'st', 'ot']; c.lfp = a.pick === null ? null : (Array.isArray(a.pick) ? a.pick : []).filter(x => typeof x === 'string' && ok.includes(x.split(':')[0]) && (x.indexOf(':') < 0 || ELEMENTS.includes(x.split(':')[1]))).slice(0, 3); return { ok: true }; }
+    case 'lfp': { if (c.action !== 'attack' && c.action !== 'defense') return fail('Nur im Angriffs- oder Verteidigungszug.'); const ok = ['sm', 'om', 'sd', 'od', 'sh', 'oh', 'sr', 'or', 'st', 'ot']; c.lfp = a.pick === null ? null : (Array.isArray(a.pick) ? a.pick : []).filter(x => typeof x === 'string' && ok.includes(x.split(':')[0]) && (x.indexOf(':') < 0 || ELEMENTS.includes(x.split(':')[1]))).slice(0, 3); return { ok: true }; }
     case 'attack': if (c.action !== 'attack') return fail('Jetzt wird verteidigt.'); return execAttack(state);
     case 'defend': if (c.action !== 'defense') return fail('Jetzt wird angegriffen.'); return execDefense(state, false);
     case 'pass':
@@ -2069,7 +2070,7 @@ function combatPlan(state, pid) {
       const opp = c.sides[c.turn === 'a' ? 'b' : 'a'], rel = Math.min(lvM, pend, Math.max(0, (ev.block || 0) - pend));
       score -= rel * Q.mirW + (rel >= opp.stats.hp ? 60 : 0) - (rel + absorbed) * Q.mirKeep;
     }
-    if (ev.ord) { const o = c.sides[c.turn === 'a' ? 'b' : 'a']; score -= ordComboWorth(side, o, Q, state.rules, M.levelsFor(ev), ev); }
+    if (ev.ord) { const o = c.sides[c.turn === 'a' ? 'b' : 'a'], lvD = Object.assign({}, M.levelsFor(ev)); if (left >= s.hp) lvD.gh = 0; score -= ordComboWorth(side, o, Q, state.rules, lvD, ev); }   // tödlicher Restschaden: die Heilung nach dem Schaden verfällt
     if (Q.dU > 0 && ev.levels && ev.levels.ulti > 0) { const o = c.sides[c.turn === 'a' ? 'b' : 'a']; score -= Q.dU * (ev.ultiEl === 'F' ? ev.levels.ulti * Q.wDeath * (o.stats.death >= ev.levels.ulti ? 0.1 : 1) * Math.max(0.4, Math.min(1.4, o.stats.hp / 4)) : ultiWorth(side, o, Q, ev.ultiEl, ev.levels.ulti)); }   // Ultimate in der Verteidigung: Feuer Todesfluss für den Angreifer, Erde Heilfluss, Wasser Multispiegel
     if (score < best.score) best = { score, ord: sub };
   }
@@ -2882,10 +2883,18 @@ function lfPicks(cx, lvl) {
 // Lifeflow: Marker direkt auf dem Brett anklicken. lfCtx liefert die Wahl, solange ich einen Lifeflow-Angriff vorbereite.
 function lfCtx() {
   if (!G || G.phase !== 'combat' || !myTurn()) return null;
-  const cx = ctx(), c = cx.c; if (c.action !== 'attack') return null;
-  const ev = M.evalAttack(cx.myStats, M.selection(cx.mine.deck));
-  const lw = ev.valid ? M.levelsFor(ev).ew : 0;
-  if (!ev.valid || !(lw > 0) || ev.levels.ulti > 0) return null;
+  const cx = ctx(), c = cx.c;
+  let lw = 0;
+  if (c.action === 'attack') {
+    const ev = M.evalAttack(cx.myStats, M.selection(cx.mine.deck));
+    lw = ev.valid ? M.levelsFor(ev).ew : 0;
+    if (!ev.valid || ev.levels.ulti > 0) return null;
+  } else if (c.action === 'defense') {   // seit 0.7.6.1 auch in der Verteidigung (die Läuterung wirkt dort vor der Verteidigung)
+    const sel = M.selection(cx.mine.deck); if (!sel.length) return null;
+    const ev = M.evalDefense(cx.myStats, sel, c.color);
+    lw = ev.valid && ev.ord && !(ev.levels && ev.levels.ulti > 0) ? M.levelsFor(ev).ew : 0;
+  } else return null;
+  if (!(lw > 0)) return null;
   return { cx, c, lvl: lw, picks: lfExpand(lfPicks(cx, lw), cx) };
 }
 // Spiegelmarker einer Wahl auf konkrete Farben abbilden (in der Reihenfolge, in der die Engine sie wegnimmt)
@@ -2940,7 +2949,7 @@ function combatCenter(cx) {
       const ev = M.evalDefense(cx.myStats, sel, c.color);
       if (!sel.length) prev = '';
       else if (!ev.valid) prev = '<span class="bad">' + esc(ev.reason) + '</span>';
-      else { if (ev.cost > 0) manaPv = ev.cost; prev = ''; canExec = ev.affordable; val = ev.block || 0; if (ev.ord) { const r = ORD_ROWS.find(x => x[0] === ev.ord.key); prev += '<div class="note"><b>' + r[1] + '</b> Stufe ' + ev.ord.lvl + ' nach der Verteidigung: ' + ordText(r[0], ev.ord.lvl) + '</div>'; } if (!ev.affordable) prev += '<div class="bad">Zu wenig Mana.</div>'; }
+      else { if (ev.cost > 0) manaPv = ev.cost; prev = ''; canExec = ev.affordable; val = ev.block || 0; if (ev.ord) { const r = ORD_ROWS.find(x => x[0] === ev.ord.key), late = ev.ord.key === 'gh' || ev.ord.key === 'bm' || ev.ord.key === 'bg'; prev += '<div class="note"><b>' + r[1] + '</b> Stufe ' + ev.ord.lvl + (late ? ' nach' : ' vor') + ' der Verteidigung: ' + ordText(r[0], ev.ord.lvl) + '</div>'; if (ev.ord.key === 'gr') prev += lfSummary(cx, ev.ord.lvl); } if (!ev.affordable) prev += '<div class="bad">Zu wenig Mana.</div>'; }
     }
   }
   h += '<div class="preview">' + prev + '</div><div class="btnrow">';
@@ -4309,7 +4318,7 @@ function showStart(pg) {
     h += '<img class="logo" alt="" src="assets/img/logo.webp"><div class="menulist">' +
       (run ? menuBtn('resume', 'Spiel fortsetzen', '', 'primary') : '') +
       menuTo('single', 'Einzelspieler', run ? '' : 'primary') + menuTo('multi', 'Mehrspieler') + menuTo('settings', 'Einstellungen') + menuBtn('quit', 'Beenden') + '</div>' +
-      '<div class="menufoot">' + menuTo('about', 'Neu in Version 0.7.5.1', 'link') + '</div>';
+      '<div class="menufoot">' + menuTo('about', 'Neu in Version 0.7.6.3', 'link') + '</div>';
   } else if (pg === 'single') {
     h += '<h2>Einzelspieler</h2><div class="menulist">' +
       menuBtn('newgame', run ? 'Neues Spiel gegen den Computer' : 'Gegen den Computer spielen', '', run ? '' : 'primary') +
@@ -4322,7 +4331,7 @@ function showStart(pg) {
   } else if (pg === 'settings') {
     h += '<h2>Einstellungen</h2><div class="menulist">' + settingsHTML() + back + '</div>';
   } else if (pg === 'about') {
-    h += '<p class="note intro" style="margin-top:-2px"><b>Danke, dass du Magus testest!</b> <b>Neu in Version 0.7.5.1:</b> Der <b>Computergegner</b> wurde an die neuen Regeln angepasst: Er opfert kein Gold mehr für Magie, bewertet Heilfluss und Multispiegel neu, entfernt mit der Läuterung gezielt eigene Todesmarker und gegnerische Heilmarker und wartet mit der Eröffnung auf den ersten besiegten Monsterkampf statt auf zufälliges Gold; Angriffs- und Schadensgewichte sind neu abgestimmt. Die Regeln bleiben gleich. <b>Version 0.7.3.3:</b> Der Siegpunktestand sitzt mittig im innersten Ring des Magie-Boards. <b>Version 0.7.3.2:</b> Versatz am Magie-Board korrigiert: Die Leucht- und Abdunkelmarken der Stufen sitzen jetzt genau auf den Edelsteinen der neuen Grafik. <b>Version 0.7.3.1:</b> Das Magie-Board (unten rechts) hat eine neue Grafik: der dreifache Ouroboros mit roten, grünen und blauen Edelsteinen. <b>Version 0.7.2.24:</b> Jeder Spieler beginnt mit 3 statt 2 Siegpunkten. <b>Version 0.7.2.23:</b> Schilde (Farbspiegel und Multispiegel), die in der Verteidigung gestellt werden, wirken erst nach ihr, wie die Heilung: nicht mehr gegen den laufenden Angriff, aber ab dem nächsten. <b>Version 0.7.2.22:</b> Die Versionsliste zeigt nur noch die Updates der aktuellen Hauptversion 0.7 (ältere Einträge entfallen). <b>Version 0.7.2.21:</b> Der Innenschatten des Multispiegels ist etwas weicher. <b>Version 0.7.2.20:</b> Der Innenschatten am Rand des Multispiegels ist kleiner und härter. <b>Version 0.7.2.19:</b> Die Teilung des Multispiegels hat keine Trennlinie, nur die schattierte rechte Hälfte. <b>Version 0.7.2.18:</b> Der Multispiegel ist mittig von oben nach unten geteilt, die rechte Hälfte ist schattiert (wie bei den anderen Schildern). <b>Version 0.7.2.17:</b> Der Multispiegel wirft vom Rand einen Schatten nach innen. <b>Version 0.7.2.16:</b> Der Schatten der Marker liegt noch dichter am Marker. <b>Version 0.7.2.15:</b> Der Multispiegel ist dunkler und passt zu den übrigen Schildern. <b>Version 0.7.2.14:</b> Die Markerreihe liegt so, dass weder markierte Handkarten noch Zähler verdeckt werden. <b>Version 0.7.2.12:</b> Todes- und Heilmarker erscheinen nur noch als ein Token mit Zähler (×N), statt mehrfach abgebildet zu werden; der Multispiegel hatte den Zähler schon. <b>Version 0.7.2.11:</b> Alle Marker (Todes-, Heil- und Schildmarker) liegen in einer lockeren Reihe mittig direkt vor den Handkarten ihres Spielers und verdecken keine Anzeigen. <b>Version 0.7.2.10:</b> Der Schatten der Marker ist näher und härter; Schildmarker sind jetzt ebenfalls Pappmarker. <b>Version 0.7.2.9:</b> Todes- und Heilmarker haben eine dezente Tiefe und wirken wie ausgestanzte Pappmarker. <b>Version 0.7.2.8:</b> Der <b>Heilfluss</b> wirkt wie der Todesfluss erst am Ende der <b>nächsten</b> eigenen Angriffsphase, nicht schon in der Phase, in der die Ultimate gelegt wurde. <b>Version 0.7.2.7:</b> Das <b>Multischild</b> heißt jetzt <b>Multispiegel</b>. <b>Version 0.7.2.6:</b> Todes- und Heilmarker liegen als Haufen mittig vor dem Stapel ihres Spielers, leicht verdreht und versetzt (Todesmarker vorn, Heilmarker in einer zweiten Reihe); der Heilmarker ist kleiner und dezenter. <b>Version 0.7.2.5:</b> Das Ritual von <b>Heilfluss</b> und <b>Multischild</b> erscheint jetzt bei jedem Wirken der Ultimate, auch wenn die Stufe nicht steigt (vorher nur bei steigender Stufe). <b>Version 0.7.2.4:</b> Das <b>Prisma</b> heißt jetzt <b>Multischild</b>. Sein Ritual beginnt mit einem Kreis, aus dem die Schildkuppel wächst; Kristall und Lichtstrahl entfallen. <b>Version 0.7.2.3:</b> Der <b>Heilfluss</b> hat jetzt auch am Ende der Angriffsphase einen Effekt: Aus jedem Heilmarker steigt eine grüne Wolke zur Lebensanzeige und heilt dort (wie die Wolke des Todesfluss). <b>Version 0.7.2.2:</b> Die Ultimates <b>Heilfluss</b> und <b>Prisma</b> haben jetzt ein eigenes Ritual auf dem Bildschirm (wie das Pentagramm des Todesfluss). Die <b>Stufen des Prisma verfallen</b> wie die eines Farbspiegels, verbraucht wird aber immer zuerst der Farbspiegel. <b>Version 0.7.2.1:</b> Keine Spieländerung: Die neue <b>Ultimate-Werkstatt</b> (Effektwerkstatt für die Kombos aus allen drei Elementen) zeigt Todesfluss, Prisma und Heilfluss als Ritual mit Markern und Wirkung; sie liegt im Projekt unter <b>werkstatt/</b>. <b>Version 0.7.1.2:</b> Umbenennung in den Kombos: Das Wasser-Ultimate heißt jetzt <b>Prisma</b> (vorher Regenbogenschild), die beiden Spiegel-Kombos heißen <b>Feuerspiegel</b> und <b>Erdspiegel</b>. <b>Version 0.7.1.1:</b> In der Kombo-Übersicht ist die Schrift größer und füllt das Fenster; die Farbgruppen (Feuer, Wasser, Erde) sind getönt und durch Abstand getrennt. <b>Version 0.7.0.3:</b> Die Kombo-Übersicht nutzt die volle Höhe ihres Fensters. <b>Version 0.7.0.2:</b> In der Kombo-Übersicht entfallen die Farbüberschriften und der Zusatz „(Ultimate)“; die Reihenfolge nach Farbe bleibt. <b>Version 0.7.0.1:</b> Die <b>Kombo-Übersicht</b> ordnet alle Kombos nach Farbe der ersten Karte; die Ultimate steht unter ihrer Farbe (Feuer <b>Todesfluss</b>, Wasser Regenbogenschild, Erde Heilfluss) und alles ist ohne Scrollen sichtbar. Der Todes-Fluch heißt jetzt Todesfluss. <b>Version 0.7:</b> <b>Ultimates nach Farbe der ersten Karte:</b> Feuer wirkt wie bisher als Todesfluss, Erde legt einen <b>Heilfluss</b> (grüne Marker mit Plus heilen dich am Ende jeder deiner Angriffsphasen), Wasser einen <b>Regenbogenschild</b> (wirkt gegen jede Farbe wie ein Spiegel, verbraucht sich aber nicht). Alle drei Marker entfernt nur die Läuterung. <b>Gold opfern</b> geht ohne Obergrenze. <b>Karten</b> lassen sich unabhängig von der entwickelten Magie kaufen. Die <b>Strafe des roten Nachziehmarkers</b> (Mana und Gold) wächst mit dem Abschnitt (1/2/3); vor dem Nachziehen warnt eine Abfrage. Der Hinweistext zur Schildwirkung entfällt.</p><div class="menulist">' + back + '</div>';
+    h += '<p class="note intro" style="margin-top:-2px"><b>Danke, dass du Magus testest!</b> <b>Neu in Version 0.7.6.3:</b> Das <b>Abwerfen nach einer Zerrüttung</b> ist kein Zug: Es zählt nicht für den Zugzähler und lässt den Nachziehmarker unverändert. <b>Version 0.7.6.2:</b> Die <b>Heilung</b> wirkt nach dem Schaden nur noch, wenn der Verteidiger ihn überlebt: Fällt er durch den Schaden auf 0 HP, ist er besiegt und die Heilung verfällt. <b>Version 0.7.6.1:</b> Die <b>Läuterung</b> lässt sich jetzt auch in der Verteidigung wählen: Eigene Nachziehtokens und Schilde (und alle anderen Marker) sind anklickbar, und die Vorschau sagt, dass die Läuterung <i>vor</i> der Verteidigung wirkt. <b>Version 0.7.5.1:</b> Der <b>Computergegner</b> wurde an die neuen Regeln angepasst: Er opfert kein Gold mehr für Magie, bewertet Heilfluss und Multispiegel neu, entfernt mit der Läuterung gezielt eigene Todesmarker und gegnerische Heilmarker und wartet mit der Eröffnung auf den ersten besiegten Monsterkampf statt auf zufälliges Gold; Angriffs- und Schadensgewichte sind neu abgestimmt. Die Regeln bleiben gleich. <b>Version 0.7.3.3:</b> Der Siegpunktestand sitzt mittig im innersten Ring des Magie-Boards. <b>Version 0.7.3.2:</b> Versatz am Magie-Board korrigiert: Die Leucht- und Abdunkelmarken der Stufen sitzen jetzt genau auf den Edelsteinen der neuen Grafik. <b>Version 0.7.3.1:</b> Das Magie-Board (unten rechts) hat eine neue Grafik: der dreifache Ouroboros mit roten, grünen und blauen Edelsteinen. <b>Version 0.7.2.24:</b> Jeder Spieler beginnt mit 3 statt 2 Siegpunkten. <b>Version 0.7.2.23:</b> Schilde (Farbspiegel und Multispiegel), die in der Verteidigung gestellt werden, wirken erst nach ihr, wie die Heilung: nicht mehr gegen den laufenden Angriff, aber ab dem nächsten. <b>Version 0.7.2.22:</b> Die Versionsliste zeigt nur noch die Updates der aktuellen Hauptversion 0.7 (ältere Einträge entfallen). <b>Version 0.7.2.21:</b> Der Innenschatten des Multispiegels ist etwas weicher. <b>Version 0.7.2.20:</b> Der Innenschatten am Rand des Multispiegels ist kleiner und härter. <b>Version 0.7.2.19:</b> Die Teilung des Multispiegels hat keine Trennlinie, nur die schattierte rechte Hälfte. <b>Version 0.7.2.18:</b> Der Multispiegel ist mittig von oben nach unten geteilt, die rechte Hälfte ist schattiert (wie bei den anderen Schildern). <b>Version 0.7.2.17:</b> Der Multispiegel wirft vom Rand einen Schatten nach innen. <b>Version 0.7.2.16:</b> Der Schatten der Marker liegt noch dichter am Marker. <b>Version 0.7.2.15:</b> Der Multispiegel ist dunkler und passt zu den übrigen Schildern. <b>Version 0.7.2.14:</b> Die Markerreihe liegt so, dass weder markierte Handkarten noch Zähler verdeckt werden. <b>Version 0.7.2.12:</b> Todes- und Heilmarker erscheinen nur noch als ein Token mit Zähler (×N), statt mehrfach abgebildet zu werden; der Multispiegel hatte den Zähler schon. <b>Version 0.7.2.11:</b> Alle Marker (Todes-, Heil- und Schildmarker) liegen in einer lockeren Reihe mittig direkt vor den Handkarten ihres Spielers und verdecken keine Anzeigen. <b>Version 0.7.2.10:</b> Der Schatten der Marker ist näher und härter; Schildmarker sind jetzt ebenfalls Pappmarker. <b>Version 0.7.2.9:</b> Todes- und Heilmarker haben eine dezente Tiefe und wirken wie ausgestanzte Pappmarker. <b>Version 0.7.2.8:</b> Der <b>Heilfluss</b> wirkt wie der Todesfluss erst am Ende der <b>nächsten</b> eigenen Angriffsphase, nicht schon in der Phase, in der die Ultimate gelegt wurde. <b>Version 0.7.2.7:</b> Das <b>Multischild</b> heißt jetzt <b>Multispiegel</b>. <b>Version 0.7.2.6:</b> Todes- und Heilmarker liegen als Haufen mittig vor dem Stapel ihres Spielers, leicht verdreht und versetzt (Todesmarker vorn, Heilmarker in einer zweiten Reihe); der Heilmarker ist kleiner und dezenter. <b>Version 0.7.2.5:</b> Das Ritual von <b>Heilfluss</b> und <b>Multischild</b> erscheint jetzt bei jedem Wirken der Ultimate, auch wenn die Stufe nicht steigt (vorher nur bei steigender Stufe). <b>Version 0.7.2.4:</b> Das <b>Prisma</b> heißt jetzt <b>Multischild</b>. Sein Ritual beginnt mit einem Kreis, aus dem die Schildkuppel wächst; Kristall und Lichtstrahl entfallen. <b>Version 0.7.2.3:</b> Der <b>Heilfluss</b> hat jetzt auch am Ende der Angriffsphase einen Effekt: Aus jedem Heilmarker steigt eine grüne Wolke zur Lebensanzeige und heilt dort (wie die Wolke des Todesfluss). <b>Version 0.7.2.2:</b> Die Ultimates <b>Heilfluss</b> und <b>Prisma</b> haben jetzt ein eigenes Ritual auf dem Bildschirm (wie das Pentagramm des Todesfluss). Die <b>Stufen des Prisma verfallen</b> wie die eines Farbspiegels, verbraucht wird aber immer zuerst der Farbspiegel. <b>Version 0.7.2.1:</b> Keine Spieländerung: Die neue <b>Ultimate-Werkstatt</b> (Effektwerkstatt für die Kombos aus allen drei Elementen) zeigt Todesfluss, Prisma und Heilfluss als Ritual mit Markern und Wirkung; sie liegt im Projekt unter <b>werkstatt/</b>. <b>Version 0.7.1.2:</b> Umbenennung in den Kombos: Das Wasser-Ultimate heißt jetzt <b>Prisma</b> (vorher Regenbogenschild), die beiden Spiegel-Kombos heißen <b>Feuerspiegel</b> und <b>Erdspiegel</b>. <b>Version 0.7.1.1:</b> In der Kombo-Übersicht ist die Schrift größer und füllt das Fenster; die Farbgruppen (Feuer, Wasser, Erde) sind getönt und durch Abstand getrennt. <b>Version 0.7.0.3:</b> Die Kombo-Übersicht nutzt die volle Höhe ihres Fensters. <b>Version 0.7.0.2:</b> In der Kombo-Übersicht entfallen die Farbüberschriften und der Zusatz „(Ultimate)“; die Reihenfolge nach Farbe bleibt. <b>Version 0.7.0.1:</b> Die <b>Kombo-Übersicht</b> ordnet alle Kombos nach Farbe der ersten Karte; die Ultimate steht unter ihrer Farbe (Feuer <b>Todesfluss</b>, Wasser Regenbogenschild, Erde Heilfluss) und alles ist ohne Scrollen sichtbar. Der Todes-Fluch heißt jetzt Todesfluss. <b>Version 0.7:</b> <b>Ultimates nach Farbe der ersten Karte:</b> Feuer wirkt wie bisher als Todesfluss, Erde legt einen <b>Heilfluss</b> (grüne Marker mit Plus heilen dich am Ende jeder deiner Angriffsphasen), Wasser einen <b>Regenbogenschild</b> (wirkt gegen jede Farbe wie ein Spiegel, verbraucht sich aber nicht). Alle drei Marker entfernt nur die Läuterung. <b>Gold opfern</b> geht ohne Obergrenze. <b>Karten</b> lassen sich unabhängig von der entwickelten Magie kaufen. Die <b>Strafe des roten Nachziehmarkers</b> (Mana und Gold) wächst mit dem Abschnitt (1/2/3); vor dem Nachziehen warnt eine Abfrage. Der Hinweistext zur Schildwirkung entfällt.</p><div class="menulist">' + back + '</div>';
   } else if (pg === 'quit') {
     h += '<p class="note" style="text-align:center;font-size:19px">Danke fürs Spielen!<br>Ein Browser-Tab lässt sich vom Spiel aus nicht immer schließen. Schließe diesen Tab oder dieses Fenster einfach selbst.</p><div class="menulist">' + back + '</div>';
   }

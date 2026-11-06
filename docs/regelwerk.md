@@ -476,3 +476,15 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 ## Änderung 0.7.5.1 (06.11.)
 
 - **Keine Regeländerung, KI neu abgestimmt** (Messung in `tools/balance/README.md`): kein Opfern von Gold für Magie mehr (`sacG` 0), Heilfluss höher und Multispiegel niedriger bewertet (`uHeal`, `uMulti`), Läuterung entfernt gezielt eigene Todesmarker und gegnerische Heilmarker (`lfDeath`, `lfHeal`), neue Angriffsgewichte, Fliehen nur noch in den ersten vier Weltzügen ohne entschiedenen Kampf (`fleeIdle` 4). Die Eröffnung (Handplätze erst nach dem ersten Sieg) wartet auf den ersten besiegten Monsterkampf: Die Engine zählt dafür `stats.kills`. Die Referenzpartien (`tests/golden.json`) sind neu erzeugt. 86,6 % gegen die KI von 0.7.3.3.
+
+## Änderung 0.7.6.1 (06.11.)
+
+- **Läuterung in der Verteidigung wählbar:** Die Markerwahl der Läuterung (Marker auf dem Brett anklicken, auch eigene Spiegel, Heilmarker, Todesmarker und Nachziehtokens) gilt jetzt auch für eine Läuterung, die in der Verteidigung gewirkt wird (`lfp` ist im Angriffs- und im Verteidigungszug erlaubt). Ohne Wahl bleibt die automatische Auswahl. Die Wahl gilt nur für den jeweiligen Zug und wird danach gelöscht (auch beim Passen). Zeitpunkt unverändert: Die Läuterung wirkt vor der Verteidigung; die Vorschau nennt das jetzt richtig („vor“ statt „nach der Verteidigung“ bei Lähmung, Zerrüttung und Läuterung).
+
+## Änderung 0.7.6.2 (06.11.)
+
+- **Heilung verfällt bei Tod:** Die Heilung der Verteidigung (Erde + Wasser) wirkt weiter nach dem Schaden, aber nur, wenn der Verteidiger danach noch über 0 HP steht. Fällt er durch den Schaden auf 0 HP, ist er besiegt und die Heilung verfällt (früher konnte sie einen sonst tödlichen Schaden nachträglich ausgleichen). Die KI wertet die Heilung bei tödlichem Restschaden nicht mehr. Das ändert die Vorschau der Verteidigung und die KI-Referenzpartien (`tests/golden.json` neu erzeugt).
+
+## Änderung 0.7.6.3 (06.11.)
+
+- **Abwerfen nach Zerrüttung ist kein Zug (abgesichert):** Das Abwerfen der Karten nach einer Zerrüttung ist eine Pflichtabfrage, keine Zugaktion. Es zählt nicht für den Zugzähler des Kampfes (`turns`), nicht für den Passen-Zähler der KI und lässt den Nachziehmarker unverändert; die Seite am Zug und die laufende Aktion (Angriff, Verteidigung) bleiben, wie sie waren. Das war in der Engine schon so; ein Test hält es jetzt fest (`engine.test.js`).

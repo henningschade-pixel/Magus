@@ -215,7 +215,7 @@ function combatPlan(state, pid) {
       const opp = c.sides[c.turn === 'a' ? 'b' : 'a'], rel = Math.min(lvM, pend, Math.max(0, (ev.block || 0) - pend));
       score -= rel * Q.mirW + (rel >= opp.stats.hp ? 60 : 0) - (rel + absorbed) * Q.mirKeep;
     }
-    if (ev.ord) { const o = c.sides[c.turn === 'a' ? 'b' : 'a']; score -= ordComboWorth(side, o, Q, state.rules, M.levelsFor(ev), ev); }
+    if (ev.ord) { const o = c.sides[c.turn === 'a' ? 'b' : 'a'], lvD = Object.assign({}, M.levelsFor(ev)); if (left >= s.hp) lvD.gh = 0; score -= ordComboWorth(side, o, Q, state.rules, lvD, ev); }   // tödlicher Restschaden: die Heilung nach dem Schaden verfällt
     if (Q.dU > 0 && ev.levels && ev.levels.ulti > 0) { const o = c.sides[c.turn === 'a' ? 'b' : 'a']; score -= Q.dU * (ev.ultiEl === 'F' ? ev.levels.ulti * Q.wDeath * (o.stats.death >= ev.levels.ulti ? 0.1 : 1) * Math.max(0.4, Math.min(1.4, o.stats.hp / 4)) : ultiWorth(side, o, Q, ev.ultiEl, ev.levels.ulti)); }   // Ultimate in der Verteidigung: Feuer Todesfluss für den Angreifer, Erde Heilfluss, Wasser Multispiegel
     if (score < best.score) best = { score, ord: sub };
   }

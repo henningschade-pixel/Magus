@@ -208,7 +208,7 @@ function castUltimate(side, opp, el, lvl) {
 function passAttackTurn(state) {
   const c = state.combat;
   deathTick(state, c.sides[c.turn]);
-  c.turn = c.turn === 'a' ? 'b' : 'a'; c.action = 'attack'; c.color = null; c.pending = 0;
+  c.turn = c.turn === 'a' ? 'b' : 'a'; c.action = 'attack'; c.color = null; c.pending = 0; c.lfp = null;
 }
 
 // HP nach einer Heilung um lvl: höchstens bis zu den maximalen HP, nie weniger als vorher
@@ -304,7 +304,7 @@ function previewDefense(state, passOnly) {
     if (sel.length) { const ev = evalDefense(side.stats, sel, c.color); if (!ev.valid || ev.affordable === false) return null; block = ev.block || 0; cost = ev.cost || 0; pre = defenseComboPre(side.stats, ev, c.color); }
   }
   const o = defenseOutcome(side.stats, c.color, c.pending, block, pre.mir, pre.std, pre.rb);
-  return Object.assign({ who: side.ctrl, att: att.ctrl, cost, block, heal: pre.heal, hpAfter: Math.max(0, healedHp(side.stats, pre.hp - o.leftover, pre.heal)), attHpAfter: Math.max(0, att.stats.hp - o.refl) }, o);
+  return Object.assign({ who: side.ctrl, att: att.ctrl, cost, block, heal: pre.heal, hpAfter: pre.hp - o.leftover > 0 ? healedHp(side.stats, pre.hp - o.leftover, pre.heal) : 0, attHpAfter: Math.max(0, att.stats.hp - o.refl) }, o);
 }
 function execDefense(state, passOnly) {
   const c = state.combat, side = c.sides[c.turn], c0pending = c.pending;
@@ -339,6 +339,7 @@ function execDefense(state, passOnly) {
     lateMirror = lvs.fw || 0;   // Heilung (gh) wirkt seit 0.5.4 wieder erst nach dem Schaden, Zerrüttung und die übrigen Kombos davor
     healLvl = lvs.gh || 0;
     applyComboPlan(state, side, attacker, plan, defEv, texts, fxs);
+    c.lfp = null;
     fxs.forEach(f => { f.first = true; });   // Oberfläche: Kombo-Animation läuft vor der Verteidigungsanimation
     if (texts.length) log(state, side.name + ' wirkt einen Kombo: ' + texts.join(', ') + '.', side.ctrl, fxs.length ? fxs : undefined);
   }
@@ -361,7 +362,7 @@ function execDefense(state, passOnly) {
     defFx.mirror = lostStd > 0 ? { hpPre, elem: c.color, markers: std, broken: lostStd, who: side.ctrl, att: attacker.ctrl, r: refl, abs: absorb, d: c.pending, blk: block }
       : { hpPre, elem: 'R', markers: rb, broken: lostRb, who: side.ctrl, att: attacker.ctrl, r: refl, abs: absorb, d: c.pending, blk: block };
   }
-  if (healLvl > 0) {   // Heilung nach Angriff und Verteidigung (seit 0.5.4): gleicht den Schaden nachträglich aus, höchstens bis zum Maximum
+  if (healLvl > 0 && side.stats.hp > 0) {   // Heilung nach Angriff und Verteidigung (seit 0.5.4): gleicht den Schaden nachträglich aus, höchstens bis zum Maximum; seit 0.7.6.2 nur, wenn der Verteidiger nach dem Schaden noch über 0 HP steht (sonst ist er besiegt und die Heilung verfällt)
     const hTexts = [], hFxs = [];
     applyComboPlan(state, side, attacker, [['gh', healLvl]], defEv, hTexts, hFxs);
     hFxs.forEach(f => { f.late = true; });   // Oberfläche: Heilungsanimation nach der Verteidigungsanimation
@@ -379,7 +380,7 @@ function execDefense(state, passOnly) {
   }
   side.stats.hp = Math.max(0, side.stats.hp);
   const attSide = attacker;   // wer gerade angegriffen hat: seine Angriffsphase endet mit dieser Verteidigung
-  c.action = 'attack'; c.color = null; c.pending = 0;
+  c.action = 'attack'; c.color = null; c.pending = 0; c.lfp = null;
   deathTick(state, attSide);
   const res = finishStep(state, { k: 'V', who: side.key === 'a' ? 0 : 1, v: block, b: c0pending, left: leftover });
   return { ok: true, combatEnd: res };
@@ -405,7 +406,7 @@ function applyCombat(state, a) {
   if (side.ctrl !== pid) return fail('Die Gegenseite ist am Zug.');
   switch (a.type) {
     case 'mark': { const e = toggleMark(side.deck, a.slot, side.stats.limit); return e ? fail(e) : { ok: true }; }
-    case 'lfp': { if (c.action !== 'attack') return fail('Nur im Angriffszug.'); const ok = ['sm', 'om', 'sd', 'od', 'sh', 'oh', 'sr', 'or', 'st', 'ot']; c.lfp = a.pick === null ? null : (Array.isArray(a.pick) ? a.pick : []).filter(x => typeof x === 'string' && ok.includes(x.split(':')[0]) && (x.indexOf(':') < 0 || ELEMENTS.includes(x.split(':')[1]))).slice(0, 3); return { ok: true }; }
+    case 'lfp': { if (c.action !== 'attack' && c.action !== 'defense') return fail('Nur im Angriffs- oder Verteidigungszug.'); const ok = ['sm', 'om', 'sd', 'od', 'sh', 'oh', 'sr', 'or', 'st', 'ot']; c.lfp = a.pick === null ? null : (Array.isArray(a.pick) ? a.pick : []).filter(x => typeof x === 'string' && ok.includes(x.split(':')[0]) && (x.indexOf(':') < 0 || ELEMENTS.includes(x.split(':')[1]))).slice(0, 3); return { ok: true }; }
     case 'attack': if (c.action !== 'attack') return fail('Jetzt wird verteidigt.'); return execAttack(state);
     case 'defend': if (c.action !== 'defense') return fail('Jetzt wird angegriffen.'); return execDefense(state, false);
     case 'pass':

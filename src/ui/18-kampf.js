@@ -31,10 +31,18 @@ function lfPicks(cx, lvl) {
 // Lifeflow: Marker direkt auf dem Brett anklicken. lfCtx liefert die Wahl, solange ich einen Lifeflow-Angriff vorbereite.
 function lfCtx() {
   if (!G || G.phase !== 'combat' || !myTurn()) return null;
-  const cx = ctx(), c = cx.c; if (c.action !== 'attack') return null;
-  const ev = M.evalAttack(cx.myStats, M.selection(cx.mine.deck));
-  const lw = ev.valid ? M.levelsFor(ev).ew : 0;
-  if (!ev.valid || !(lw > 0) || ev.levels.ulti > 0) return null;
+  const cx = ctx(), c = cx.c;
+  let lw = 0;
+  if (c.action === 'attack') {
+    const ev = M.evalAttack(cx.myStats, M.selection(cx.mine.deck));
+    lw = ev.valid ? M.levelsFor(ev).ew : 0;
+    if (!ev.valid || ev.levels.ulti > 0) return null;
+  } else if (c.action === 'defense') {   // seit 0.7.6.1 auch in der Verteidigung (die Läuterung wirkt dort vor der Verteidigung)
+    const sel = M.selection(cx.mine.deck); if (!sel.length) return null;
+    const ev = M.evalDefense(cx.myStats, sel, c.color);
+    lw = ev.valid && ev.ord && !(ev.levels && ev.levels.ulti > 0) ? M.levelsFor(ev).ew : 0;
+  } else return null;
+  if (!(lw > 0)) return null;
   return { cx, c, lvl: lw, picks: lfExpand(lfPicks(cx, lw), cx) };
 }
 // Spiegelmarker einer Wahl auf konkrete Farben abbilden (in der Reihenfolge, in der die Engine sie wegnimmt)
@@ -89,7 +97,7 @@ function combatCenter(cx) {
       const ev = M.evalDefense(cx.myStats, sel, c.color);
       if (!sel.length) prev = '';
       else if (!ev.valid) prev = '<span class="bad">' + esc(ev.reason) + '</span>';
-      else { if (ev.cost > 0) manaPv = ev.cost; prev = ''; canExec = ev.affordable; val = ev.block || 0; if (ev.ord) { const r = ORD_ROWS.find(x => x[0] === ev.ord.key); prev += '<div class="note"><b>' + r[1] + '</b> Stufe ' + ev.ord.lvl + ' nach der Verteidigung: ' + ordText(r[0], ev.ord.lvl) + '</div>'; } if (!ev.affordable) prev += '<div class="bad">Zu wenig Mana.</div>'; }
+      else { if (ev.cost > 0) manaPv = ev.cost; prev = ''; canExec = ev.affordable; val = ev.block || 0; if (ev.ord) { const r = ORD_ROWS.find(x => x[0] === ev.ord.key), late = ev.ord.key === 'gh' || ev.ord.key === 'bm' || ev.ord.key === 'bg'; prev += '<div class="note"><b>' + r[1] + '</b> Stufe ' + ev.ord.lvl + (late ? ' nach' : ' vor') + ' der Verteidigung: ' + ordText(r[0], ev.ord.lvl) + '</div>'; if (ev.ord.key === 'gr') prev += lfSummary(cx, ev.ord.lvl); } if (!ev.affordable) prev += '<div class="bad">Zu wenig Mana.</div>'; }
     }
   }
   h += '<div class="preview">' + prev + '</div><div class="btnrow">';

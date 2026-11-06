@@ -692,13 +692,35 @@ test('Heilung der Verteidigung wirkt nach dem Schaden (seit 0.5.4, nur bis zum M
   assert.ok(s.log[iH].fx.every(f => f.late && f.kind === 'lifeflow'), 'Heilungseffekt läuft nach der Verteidigung');
 });
 
-test('Heilung nach dem Schaden: gleicht einen sonst tödlichen Schaden nachträglich aus', () => {
+test('Heilung nach dem Schaden verfällt, wenn der Verteidiger durch den Schaden auf 0 HP fällt (seit 0.7.6.2)', () => {
   const { s, c, me } = combatSetup(11, ['E3', 'W3']);
   me.stats.hp = 1; me.stats.maxHp = 9; c.turn = 'a'; c.action = 'defense'; c.color = 'W'; c.pending = 4;
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
+  assert.equal(M.previewDefense(s, false).hpAfter, 0, 'Vorschau: tot, keine Heilung');
+  assert.ok(M.apply(s, { pid: 0, type: 'defend' }).ok);
+  assert.equal(me.stats.hp, 0, '1 − 1 Restschaden = 0 HP: besiegt, die Heilung verfällt');
+  assert.ok(!s.log.some(l => /heilt nach der Verteidigung/.test(l.txt)), 'keine Heilung im Protokoll');
+});
+
+test('Heilung nach dem Schaden greift, wenn der Verteidiger den Schaden überlebt (seit 0.7.6.2)', () => {
+  const { s, c, me } = combatSetup(11, ['E3', 'W3']);
+  me.stats.hp = 2; me.stats.maxHp = 9; c.turn = 'a'; c.action = 'defense'; c.color = 'W'; c.pending = 4;
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
   assert.ok(M.apply(s, { pid: 0, type: 'defend' }).ok);
   assert.ok(s.combat, 'der Kampf geht weiter');
-  assert.equal(me.stats.hp, 3, '1 − 1 Restschaden + 3 Heilung');
+  assert.equal(me.stats.hp, 4, '2 − 1 Restschaden + 3 Heilung');
+});
+
+test('Läuterung in der Verteidigung: Wahl per lfp (eigener Spiegelmarker, eigenes Nachziehtoken), danach wieder frei', () => {
+  const { s, c, me, op } = combatSetup(11, ['E1', 'F1']);   // gegen Erde verteidigt Erde, Feuer als Kombokarte: Läuterung 1
+  c.turn = 'a'; c.action = 'defense'; c.color = 'E'; c.pending = 1;
+  me.stats.mirrorEl = { F: 1, E: 0, W: 0 }; me.stats.mirror = 1; me.stats.freeDraws = 1; op.stats.mirrorEl = { F: 0, E: 1, W: 0 }; op.stats.mirror = 1;
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
+  assert.ok(M.apply(s, { pid: 0, type: 'lfp', pick: ['st'] }).ok, 'Wahl ist in der Verteidigung erlaubt');
+  assert.ok(M.apply(s, { pid: 0, type: 'defend' }).ok);
+  assert.equal(me.stats.freeDraws, 0, 'eigenes Nachziehtoken zerstört, nicht gutgeschrieben');
+  assert.equal(op.stats.mirror, 1, 'gegnerischer Spiegel bleibt');
+  assert.equal(s.combat.lfp, null, 'die Wahl gilt nur für diese Verteidigung');
 });
 
 test('Schilde der Verteidigung wirken erst nach ihr (wie die Heilung, seit 0.7.2.23)', () => {
@@ -851,4 +873,17 @@ test('Strafe des Nachziehmarkers wächst mit der Spielstufe (0.7): Grundwert mal
   s.stage = 3; const q = s.players[1].stats, g0 = q.gold; s.turn = 0;
   assert.ok(M.apply(s, { pid: 0, type: 'draw' }).ok);
   assert.equal(q.gold - g0, 3 * (s.rules.drawPenaltyGold || 0), 'der Gegner erhält die Strafe von Abschnitt 3');
+});
+
+test('Abwerfen nach Zerrüttung ist kein Zug: Zugzähler, Passen-Zähler, Nachziehmarker und Seite am Zug bleiben unverändert (0.7.6.3)', () => {
+  const { s, c, me, op } = combatSetup(11, ['F1', 'W1']);
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
+  assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+  assert.ok(c.forced, 'Zerrüttung: der Gegner muss abwerfen');
+  const snap = () => JSON.stringify({ turn: c.turn, action: c.action, turns: c.turns, tot: s.combatTurnsTotal, passed: [me.passed, op.passed], marker: s.players.map(p => [p.drawN, p.drawRed]), mons: [c.sides.b.monster && c.sides.b.monster.drawN, c.sides.b.monster && c.sides.b.monster.drawRed] });
+  const before = snap(), pid = c.forced.pid, side = c.sides.a.ctrl === pid ? c.sides.a : c.sides.b;
+  const slots = side.deck.hand.map((x, i) => x ? i : -1).filter(i => i >= 0).slice(0, c.forced.n);
+  assert.ok(M.apply(s, { pid, type: 'fd', slots }).ok);
+  assert.equal(c.forced, null);
+  assert.equal(snap(), before, 'das Abwerfen ändert nichts am Zugablauf');
 });
