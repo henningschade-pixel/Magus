@@ -169,7 +169,43 @@ const FlowFx = (() => {
       });
     });
   }
+
+  /* Heilfluss heilt (seit 0.7.2.3): aus jedem Heilmarker steigt eine grüne Wolke mit Lichtpunkten und kleinen Pluszeichen auf, zieht in weichem Bogen zur Lebensanzeige und heilt dort (kein Text); wie beim Todesfluss zeigen die HP bis zum Einschlag noch den alten Stand */
+  const healMs = n => curseMs(n);   // gleicher Zeitplan wie beim Todesfluss
+  function heal(fx) {
+    if (off()) return;
+    const who = fx.who, w = who === ME ? 's' : 'o', toks = [...stage.querySelectorAll('.healtok[data-who="' + w + '"]')], n = Math.max(1, Math.min(toks.length || 1, 4)), hp = hpOf(who), C = '#93c24f', D = '#2f7a2f', Lt = '#e8ffb8';
+    const srcs = []; for (let i = 0; i < n; i++) { const q = deathPos(w, i); srcs.push(at(toks[i]) || { x: q.x + 28, y: q.y + 28 }); }
+    const life = .75, N = 36, dur = curseStart(n - 1) + CURSE_F + .65;
+    const puff = (ctx, x, y, r, a, col) => { if (a <= 0.01) return; const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, rgba(lighten(col, .3), a)); g.addColorStop(.45, rgba(col, a * .65)); g.addColorStop(1, rgba(D, 0)); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); };
+    const plus = (ctx, x, y, s, a) => { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = rgba(Lt, a); ctx.lineWidth = Math.max(1.5, s * .38); ctx.lineCap = 'round'; ctx.shadowColor = C; ctx.shadowBlur = 8; ctx.beginPath(); ctx.moveTo(x - s, y); ctx.lineTo(x + s, y); ctx.moveTo(x, y - s); ctx.lineTo(x, y + s); ctx.stroke(); ctx.restore(); };
+    run(dur, (ctx, t) => {
+      srcs.forEach((sr, i) => {
+        const d = curseStart(i), rr = rng(41 + i * 29), cx = (sr.x + hp.x) / 2 + (rr() - .5) * 90, cy = Math.min(sr.y, hp.y) - 60 - rr() * 50;
+        const bez = q => { const e = eio(clamp(q)); return [(1 - e) * (1 - e) * sr.x + 2 * (1 - e) * e * cx + e * e * hp.x, (1 - e) * (1 - e) * sr.y + 2 * (1 - e) * e * cy + e * e * hp.y]; };
+        const gl = seg(t, d - .12, d + .1) * (1 - seg(t, d + .1, d + .4));   // der Marker glimmt auf, wenn die Wolke aufsteigt
+        if (gl > 0) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; puff(ctx, sr.x, sr.y, 38, gl * .8, C); ctx.restore(); plus(ctx, sr.x, sr.y - 24 * gl, 7 + 3 * gl, gl * .9); }
+        for (let k = 0; k < N; k++) {   // Schweif aus weichen Wolkenballen, dazwischen Lichtpunkte und Pluszeichen
+          const r = rng(1900 + i * 97 + k * 7), ts = d + k / N * CURSE_F * .95, age = (t - ts) / life; if (age <= 0 || age >= 1) continue;
+          const [bx, by] = bez((ts - d) / CURSE_F), x = bx + (r() - .5) * 26 + Math.sin(k * 1.7 + age * 5) * 7 * age, y = by + (r() - .5) * 18 - 34 * age;
+          const rad = (8 + 20 * Math.pow(age, .7)) * (.75 + .6 * r()), al = Math.pow(1 - age, 1.4) * .55 * seg(age, 0, .08);
+          puff(ctx, x, y, rad, al, k % 3 === 0 ? D : C);
+          if (k % 4 === 0) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; puff(ctx, x, y, rad * .45, al * .6, Lt); ctx.restore(); }
+          if (k % 6 === 0) plus(ctx, x, y - 8 * age, 4 + 2 * (1 - age), (1 - age) * .85);
+        }
+        const tau = (t - d) / CURSE_F;
+        if (tau > 0 && tau < 1) { const [hx, hy] = bez(tau); ctx.save(); ctx.globalCompositeOperation = 'lighter'; puff(ctx, hx, hy, 22, .9, C); orb(ctx, hx, hy, 5, C, '#ffffff'); ctx.restore(); }
+        const im = seg(t, d + CURSE_F, d + CURSE_F + .55);   // Heilung an der Lebensanzeige
+        if (im > 0 && im < 1) {
+          ctx.save(); ctx.globalCompositeOperation = 'lighter';
+          puff(ctx, hp.x, hp.y, 20 + 46 * eo(im), (1 - im) * .85, C);
+          ctx.strokeStyle = rgba(lighten(C, .5), (1 - im) * .9); ctx.lineWidth = 4 * (1 - im) + 1; ctx.shadowColor = C; ctx.shadowBlur = 12; ctx.beginPath(); ctx.ellipse(hp.x, hp.y, 14 + im * 62, 8 + im * 24, 0, 0, 7); ctx.stroke(); ctx.restore();
+          for (let k = 0; k < 6; k++) { const a = k / 6 * 6.28 + i, rd = 10 + 46 * eo(im); plus(ctx, hp.x + Math.cos(a) * rd, hp.y + Math.sin(a) * rd * .6 - 26 * im, 5 * (1 - im) + 2, (1 - im) * .8); }   // Pluszeichen steigen von der Lebensanzeige auf
+        }
+      });
+    });
+  }
   const attack = fx => KampfFx.attack(fx), defense = fx => KampfFx.defense(fx), resetEx = () => KampfFx.reset();
-  return { lifeflow, aggro, drain, ruin, curse, curseMs, attack, defense, resetEx, wait: () => KampfFx.remaining(), busy: () => KampfFx.busy(), hp: pid => hpOf(pid) };
+  return { lifeflow, aggro, drain, ruin, curse, curseMs, heal, healMs, attack, defense, resetEx, wait: () => KampfFx.remaining(), busy: () => KampfFx.busy(), hp: pid => hpOf(pid) };
 })();
 
