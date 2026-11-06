@@ -19,7 +19,7 @@ test('Sounds sind hörbar (mittlerer Pegel über -45 dB), nicht stumm', { skip: 
   }
 });
 
-test('Effekte sind normalisiert: mittlerer Pegel um -20 dB (±3), Spitze nicht über 0 dB; Ultimate und Todes-Fluch sind absichtlich lauter', { skip: spawnSync('ffmpeg', ['-version']).status !== 0 && 'ffmpeg fehlt' }, () => {
+test('Effekte sind normalisiert: mittlerer Pegel um -20 dB (±3), Spitze nicht über 0 dB; Ultimate und Todesfluss sind absichtlich lauter', { skip: spawnSync('ffmpeg', ['-version']).status !== 0 && 'ffmpeg fehlt' }, () => {
   const LOUD = new Set(['ultimate', 'curse']);
   for (const n of names) {
     const r = spawnSync('ffmpeg', ['-nostats', '-i', path.join(dir, n + '.mp3'), '-af', 'volumedetect', '-f', 'null', '-'], { encoding: 'utf8' });

@@ -349,3 +349,5 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .arcs .arcfx{animation:arcfx .9s ease-in-out infinite;stroke-linecap:butt}
 .arcs .arcfx.hp{stroke:#e0653f}.arcs .arcfx.mana{stroke:#4a9be0}.arcs .arcfx.bg{stroke:#141416}
 @keyframes arcfx{0%,100%{opacity:0}50%{opacity:1}}
+
+.crefh{font-size:11px;letter-spacing:.06em;text-transform:uppercase;margin:2px 0 1px;line-height:1.2;opacity:.85}.crefh.F{color:var(--fire)}.crefh.W{color:var(--water)}.crefh.E{color:var(--earth)}

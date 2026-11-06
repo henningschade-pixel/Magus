@@ -46,7 +46,7 @@ test('Läuterung entfernt auch eigene Spiegelmarker und gibt dafür ein Nachzieh
   assert.equal(me.stats.freeDraws, 1);
 });
 
-test('Ultimate in der Verteidigung: alle drei Farben erlaubt, mit Feuer als erster Karte Todes-Fluch für den Angreifer', () => {
+test('Ultimate in der Verteidigung: alle drei Farben erlaubt, mit Feuer als erster Karte Todesfluss für den Angreifer', () => {
   const { s, me, op } = combatSetup(11, ['F1']);
   op.stats.limit = 3; op.stats.mana = 9;
   op.deck.hand.forEach((x, i) => { if (x) op.deck.hand[i] = Object.assign({}, x, { id: ['F3', 'W2', 'E2'][i] || x.id }); });
@@ -212,7 +212,7 @@ test('Monsterdecks passen zur Magie: zu jeder Magiestufe ab 2 eine Karte dieser 
   }
 });
 
-test('Fliehen: nur im Monsterkampf, im eigenen Angriffszug, bei Monster ohne Mana und ohne Todes-Fluch', () => {
+test('Fliehen: nur im Monsterkampf, im eigenen Angriffszug, bei Monster ohne Mana und ohne Todesfluss', () => {
   const fresh = () => combatSetup(11, ['F1']);
   let { s, c, me, op } = fresh();
   assert.equal(M.canFlee(s, 0), false, 'Monster hat noch Mana');
@@ -221,7 +221,7 @@ test('Fliehen: nur im Monsterkampf, im eigenen Angriffszug, bei Monster ohne Man
   assert.equal(M.canFlee(s, 0), true);
   assert.equal(M.canFlee(s, 1), false, 'nur der Angreifer');
   me.stats.death = 1;
-  assert.equal(M.canFlee(s, 0), false, 'Todes-Fluch');
+  assert.equal(M.canFlee(s, 0), false, 'Todesfluss');
   assert.equal(M.apply(s, { pid: 0, type: 'flee' }).ok, false);
   delete me.stats.death;
   const hp = c.sides.b.stats.hp, gold = me.stats.gold, sp0 = s.players.map(p => p.sp), g1 = s.players[1].stats.gold;
@@ -582,7 +582,7 @@ test('Läuterung kann auch eigene Nachziehtokens zerstören (ohne Gutschrift)', 
   assert.equal(me.stats.freeDraws, 1, 'ein eigener Token zerstört, kein neuer gutgeschrieben');
 });
 
-test('Todes-Fluch aus der Verteidigung wirkt nicht sofort, sondern erst in der nächsten Angriffsphase des Verfluchten', () => {
+test('Todesfluss aus der Verteidigung wirkt nicht sofort, sondern erst in der nächsten Angriffsphase des Verfluchten', () => {
   const { s, me, op } = combatSetup(11, ['F1']);
   op.stats.limit = 3; op.stats.mana = 9;
   op.deck.hand.forEach((x, i) => { if (x) op.deck.hand[i] = Object.assign({}, x, { id: ['F3', 'W2', 'E2'][i] || x.id }); });
@@ -591,7 +591,7 @@ test('Todes-Fluch aus der Verteidigung wirkt nicht sofort, sondern erst in der n
   [0, 1, 2].forEach(i => assert.ok(M.apply(s, { pid: op.ctrl, type: 'mark', slot: i }).ok));   // erste Karte F3: Feuer-Ultimate
   assert.ok(M.apply(s, { pid: op.ctrl, type: 'defend' }).ok);
   assert.ok(me.stats.death >= 1);
-  assert.ok(me.stats.hp >= hp0 - 5 && !s.log.slice(-6).some(e => /Todes-Fluch: /.test(e.txt)), 'kein Fluchschaden am Ende dieser Phase');
+  assert.ok(me.stats.hp >= hp0 - 5 && !s.log.slice(-6).some(e => /Todesfluss: /.test(e.txt)), 'kein Fluchschaden am Ende dieser Phase');
 });
 
 test('Pluswürfel „Magie“: eine Magiestufe mehr auf der Folgemagie des Monsters (das überlegene Element: Feuer → Wasser, Erde → Feuer, Wasser → Erde), mit passender Karte', () => {
@@ -773,7 +773,7 @@ test('Ultimate im Angriff nach Farbe der ersten Karte: Erde legt Heilmarker, der
   me.stats.maxHp = 9; me.stats.hp = 2;
   [0, 1, 2].forEach(i => assert.ok(M.apply(s, { pid: 0, type: 'mark', slot: i }).ok));
   assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
-  assert.equal(me.stats.heal, 2, 'Heilmarker Stufe 2 bei mir'); assert.equal(op.stats.death || 0, 0, 'kein Todes-Fluch für den Gegner');
+  assert.equal(me.stats.heal, 2, 'Heilmarker Stufe 2 bei mir'); assert.equal(op.stats.death || 0, 0, 'kein Todesfluss für den Gegner');
   assert.ok(M.apply(s, { pid: op.ctrl, type: 'pass' }).ok);
   assert.equal(me.stats.hp, 4, 'Heilfluss: +2 HP am Ende meiner Angriffsphase');
 });
@@ -793,7 +793,7 @@ test('Ultimate in der Verteidigung: Erde legt Heilmarker, Wasser einen Regenboge
     M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
     [0, 1, 2].forEach(i => assert.ok(M.apply(s, { pid: op.ctrl, type: 'mark', slot: i }).ok));
     assert.ok(M.apply(s, { pid: op.ctrl, type: 'defend' }).ok);
-    assert.ok(op.stats[key] >= 1, key + ' beim Verteidiger'); assert.equal(me.stats.death || 0, 0, 'kein Todes-Fluch');
+    assert.ok(op.stats[key] >= 1, key + ' beim Verteidiger'); assert.equal(me.stats.death || 0, 0, 'kein Todesfluss');
   }
 });
 

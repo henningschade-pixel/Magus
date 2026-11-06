@@ -135,7 +135,7 @@ const FlowFx = (() => {
       if (tu > 0) { ctx.save(); ctx.font = '700 22px Alegreya, serif'; ctx.textAlign = 'center'; ctx.fillStyle = rgba('#ffb347', tu); ctx.shadowColor = F; ctx.shadowBlur = 10; ctx.fillText('−' + n + (n === 1 ? ' Karte' : ' Karten'), T.x, T.y - 70 - 12 * seg(t, t0 + .1, t0 + 1)); ctx.restore(); }
     });
   }
-  /* Todes-Fluch zehrt: aus jedem Todesmarker steigt eine violette Wolke auf, zieht in weichem Bogen zur Lebensanzeige und schlägt dort ein (kein Text) */
+  /* Todesfluss zehrt: aus jedem Todesmarker steigt eine violette Wolke auf, zieht in weichem Bogen zur Lebensanzeige und schlägt dort ein (kein Text) */
   const CURSE_F = .85, curseStart = i => .1 + i * .12;
   const curseMs = n => Math.round(1000 * (curseStart(Math.max(0, n - 1)) + CURSE_F));   // Dauer bis zum Einschlag der letzten Wolke
   function curse(fx) {

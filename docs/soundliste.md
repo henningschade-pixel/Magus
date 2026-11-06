@@ -26,7 +26,7 @@ Alle Soundeffekte des Spiels: die fünf vorhandenen und die geplanten. Jeder Ein
 | `play` | Karte wird ausgespielt oder abgelegt | 0,6 s |
 | `shuffle` | Deck wird gemischt (ab zwei gemischten Stapeln) | 2,6 s |
 | `break` | Spiegel zerbricht, oder Marker wird entfernt (Läuterung, Todesmarker) | 1,8 s |
-| `curse` | Todes-Fluch zehrt am Ende einer Angriffsphase HP | 1,0 s |
+| `curse` | Todesfluss zehrt am Ende einer Angriffsphase HP | 1,0 s |
 
 **flip** (≈ 0,5–1 s): Eine dicke Spielkarte wird kurz umgeblättert; leises Papierknistern mit einem Hauch Magie.
 Prompt: *“A single thick playing card being flipped over on a wooden table, soft paper snap, very subtle magical shimmer, close microphone, 0.6 seconds.”*
@@ -87,7 +87,7 @@ Prompt: *“A warm healing spell: a gentle harp glissando with a soft choir-like
 **mirror_cast** (≈ 0,8–1,2 s) – Ein Spiegel wird aufgebaut (Wasser+Feuer / Wasser+Erde).
 Prompt: *“A magical mirror materializing: a glassy sparkle that sweeps upward and settles with a quiet crystalline ring, 1 second.”*
 
-**ultimate** (≈ 3–4 s) – Ultimate (alle drei Farben): Todes-Fluch. Der größte Sound im Spiel.
+**ultimate** (≈ 3–4 s) – Ultimate (alle drei Farben): Todesfluss. Der größte Sound im Spiel.
 Prompt: *“An epic dark ultimate spell: a deep rising drone and swirling elemental whooshes of fire, earth and water converging, a huge booming impact and a sinister low choir-like tail, 3.5 seconds, cinematic.”* Suche: ultimate spell, dark magic cast.
 
 ---
