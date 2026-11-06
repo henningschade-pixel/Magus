@@ -335,6 +335,8 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 [data-shieldfx="oF"] .mirstack[data-who="o"] .msh.F{visibility:hidden}
 [data-shieldfx="oE"] .mirstack[data-who="o"] .msh.E{visibility:hidden}
 [data-shieldfx="oW"] .mirstack[data-who="o"] .msh.W{visibility:hidden}
+[data-shieldfx="sR"] .mirstack[data-who="s"] .msh.R{visibility:hidden}
+[data-shieldfx="oR"] .mirstack[data-who="o"] .msh.R{visibility:hidden}
 
 /* Sanftes Abdunkeln des Spielfelds (wie im Schild-Effekt): Hauptmenü, Statistik, Deckübersicht */
 @keyframes dimin{from{opacity:0}to{opacity:1}}
@@ -978,7 +980,7 @@ function mirrorAdd(stats, el, n) {
 }
 function mirrorTake(stats, el, n) { if (stats.mirrorEl) { stats.mirrorEl[el] = Math.max(0, stats.mirrorEl[el] - n); mirrorSync(stats); } }
 function mirrorTakeAny(stats, n) { for (const el of ELEMENTS) { while (n > 0 && mirrorOf(stats, el) > 0) { mirrorTake(stats, el, 1); n--; } } }
-// Ultimates (seit 0.7 nach der Farbe der ersten Karte): Feuer = Todesfluss (stats.death, Marker beim Gegner), Erde = Heilfluss (stats.heal, grüner Marker mit Plus bei sich selbst: +1 HP je Marker am Ende der eigenen Angriffsphase), Wasser = Prisma (stats.rainbow, bei sich selbst: wie ein Spiegel, aber gegen jede Farbe und er verbraucht sich nicht). Alle drei Marker entfernt nur die Läuterung.
+// Ultimates (seit 0.7 nach der Farbe der ersten Karte): Feuer = Todesfluss (stats.death, Marker beim Gegner), Erde = Heilfluss (stats.heal, grüner Marker mit Plus bei sich selbst: +1 HP je Marker am Ende der eigenen Angriffsphase), Wasser = Prisma (stats.rainbow, bei sich selbst: wie ein Spiegel, aber gegen jede Farbe; seit 0.7.2.2 verliert auch er Stufen, aber erst nachdem die Stufen des Farbspiegels aufgebraucht sind). Alle drei Marker entfernt nur die Läuterung.
 // Wirksamer Schild gegen einen Angriff der Farbe el: der höhere von Farbspiegel und Prisma.
 function shieldOf(stats, el) { return Math.max(mirrorOf(stats, el), stats.rainbow || 0); }
 // Läuterung: gewählte Marker (sm/om/sd/od/sh/oh/sr/or/st/ot), höchstens S; ohne Wahl automatisch eigene Todesmarker, dann Spiegel, Prisma und Heilmarker des Gegners.
@@ -1013,7 +1015,7 @@ function deathTick(state, side) {
 function castUltimate(side, opp, el, lvl) {
   lvl = Math.max(1, Math.min(MAX_MIRROR, lvl));
   if (el === 'E') { side.stats.heal = Math.max(side.stats.heal || 0, lvl); return { text: 'Ultimate ' + lvl + ' (Erde): Heilfluss, ' + side.stats.heal + ' HP am Ende jeder eigenen Angriffsphase bis Kampfende', fx: { kind: 'ultimate', who: side.ctrl, to: side.ctrl, el: 'E', n: lvl } }; }
-  if (el === 'W') { side.stats.rainbow = Math.max(side.stats.rainbow || 0, lvl); return { text: 'Ultimate ' + lvl + ' (Wasser): Prisma Stufe ' + side.stats.rainbow + ' (gegen jede Farbe, verbraucht sich nicht)', fx: { kind: 'ultimate', who: side.ctrl, to: side.ctrl, el: 'W', n: lvl } }; }
+  if (el === 'W') { side.stats.rainbow = Math.max(side.stats.rainbow || 0, lvl); return { text: 'Ultimate ' + lvl + ' (Wasser): Prisma Stufe ' + side.stats.rainbow + ' (gegen jede Farbe, verliert Stufen wie ein Spiegel)', fx: { kind: 'ultimate', who: side.ctrl, to: side.ctrl, el: 'W', n: lvl } }; }
   opp.stats.death = Math.max(opp.stats.death || 0, lvl);
   return { text: 'Ultimate ' + lvl + ' (Feuer): Todesfluss für ' + opp.name + ' (' + opp.stats.death + ' HP am Ende jeder seiner Angriffsphasen bis Kampfende)', fx: { kind: 'ultimate', who: side.ctrl, to: opp.ctrl, el: 'F', n: lvl } };
 }
@@ -1088,31 +1090,34 @@ function canFlee(state, pid) {
   return me.ctrl === pid && opp.stats.mana <= 0 && !(me.stats.death > 0);
 }
 function recoverGain(state) { const r = state.rules.recoverByStage; return r ? (r[Math.min(r.length, Math.max(1, state.stage)) - 1] || 1) : 1; }
-// Ergebnis einer Verteidigung (Spiegel, Rückwurf, Restschaden): gemeinsam für die Ausführung (execDefense) und die Vorschau der Oberfläche (previewDefense). mir: Spiegelstufe der Angriffsfarbe nach dem Kombo (seit 0.4 wirkt der Kombo vor der Verteidigung); ohne Angabe zählt der Spiegel, der jetzt liegt.
-// Seit 0.7 zählt auch der Prisma (stats.rainbow, gegen jede Farbe): Es wirkt der höhere von Farbspiegel und Prisma; liegt der Prisma gleich hoch oder höher, ist er der wirksame (perm) und verliert keine Stufen. used: ausgeglichener plus zurückgeworfener Schaden, lost: dabei verbrauchte Spiegelstufen (0 beim Prisma).
-function defenseOutcome(stats, color, pending, block, mir) {
-  const mLvl = mir === undefined ? shieldOf(stats, color) : mir, missing = Math.max(0, pending - block), excess = Math.max(0, block - pending);
-  const perm = mLvl > 0 && (stats.rainbow || 0) >= mLvl;
-  const absorb = Math.min(mLvl, missing), refl = Math.min(mLvl, excess, pending);
-  return { mLvl, perm, absorb, refl, used: absorb + refl, lost: perm ? 0 : absorb + refl, leftover: missing - absorb };
+// Ergebnis einer Verteidigung (Spiegel, Rückwurf, Restschaden): gemeinsam für die Ausführung (execDefense) und die Vorschau der Oberfläche (previewDefense). mir: wirksame Schildstufe gegen die Angriffsfarbe nach dem Kombo (seit 0.4 wirkt der Kombo vor der Verteidigung); std und rb: Stufe des Farbspiegels dieser Farbe und des Prisma nach dem Kombo. Ohne Angaben zählen die Stufen, die jetzt liegen.
+// Seit 0.7 zählt auch der Prisma (stats.rainbow, gegen jede Farbe): Es wirkt der höhere von Farbspiegel und Prisma (mLvl). Seit 0.7.2.2 verliert auch der Prisma Stufen wie ein Farbspiegel, aber der Farbspiegel wird immer zuerst verbraucht: used (ausgeglichener plus zurückgeworfener Schaden) geht zuerst von der Stufe des Farbspiegels ab (lostStd), der Rest vom Prisma (lostRb); lost ist die Summe.
+function defenseOutcome(stats, color, pending, block, mir, std, rb) {
+  const m0 = std === undefined ? mirrorOf(stats, color) : std, r0 = rb === undefined ? (stats.rainbow || 0) : rb;
+  const mLvl = mir === undefined ? Math.max(m0, r0) : mir, missing = Math.max(0, pending - block), excess = Math.max(0, block - pending);
+  const absorb = Math.min(mLvl, missing), refl = Math.min(mLvl, excess, pending), used = absorb + refl;
+  const lostStd = Math.min(used, m0), lostRb = Math.min(used - lostStd, r0);
+  return { mLvl, absorb, refl, used, lostStd, lostRb, lost: lostStd + lostRb, std: m0, rb: r0, leftover: missing - absorb };
 }
 // Was ein Kombo der Verteidigung für den laufenden Angriff ändert: der Spiegel der Angriffsfarbe wirkt seit 0.4 schon gegen diesen Angriff. Die Heilung wirkt seit 0.5.4 wieder nach dem Schaden (heal: Stufe, hp: HP vor dem Schaden).
 function defenseComboPre(stats, ev, color) {
-  const lvs = ev && ev.ord && !(ev.levels && ev.levels.ulti > 0) ? levelsFor(ev) : null, own = shieldOf(stats, color);
-  if (!lvs) return { heal: 0, hp: stats.hp, mir: ev && ev.ultiEl === 'W' && ev.levels.ulti > 0 ? Math.max(own, Math.min(ev.levels.ulti, MAX_MIRROR)) : own };   // Ultimate Wasser in der Verteidigung: der Prisma wirkt schon gegen diesen Angriff
-  return { heal: lvs.gh || 0, hp: stats.hp, mir: lvs.fw > 0 && ev.ord.el === color ? Math.max(own, Math.min(lvs.fw, MAX_MIRROR)) : own };
+  const lvs = ev && ev.ord && !(ev.levels && ev.levels.ulti > 0) ? levelsFor(ev) : null;
+  let std = mirrorOf(stats, color), rb = stats.rainbow || 0;
+  if (!lvs) { if (ev && ev.ultiEl === 'W' && ev.levels.ulti > 0) rb = Math.max(rb, Math.min(ev.levels.ulti, MAX_MIRROR)); }   // Ultimate Wasser in der Verteidigung: der Prisma wirkt schon gegen diesen Angriff
+  else if (lvs.fw > 0 && ev.ord.el === color) std = Math.max(std, Math.min(lvs.fw, MAX_MIRROR));
+  return { heal: lvs ? lvs.gh || 0 : 0, hp: stats.hp, mir: Math.max(std, rb), std, rb };
 }
 // Vorschau für die Knöpfe „Verteidigen“ und „Passen“, ohne etwas zu ändern: Mana-Kosten, Block, Restschaden und die HP danach (beim Verteidiger und, durch den Spiegelrückwurf, beim Angreifer). null, wenn gerade keine Verteidigung ansteht oder die Auswahl nicht geht.
 function previewDefense(state, passOnly) {
   const c = state.combat;
   if (!c || c.forced || c.action !== 'defense') return null;
   const side = c.sides[c.turn], att = c.sides[c.turn === 'a' ? 'b' : 'a'];
-  let block = 0, cost = 0, pre = { heal: 0, hp: side.stats.hp, mir: shieldOf(side.stats, c.color) };   // Heilung (heal) wirkt nach dem Schaden
+  let block = 0, cost = 0, pre = defenseComboPre(side.stats, null, c.color);   // Heilung (heal) wirkt nach dem Schaden
   if (!passOnly) {
     const sel = selection(side.deck);
     if (sel.length) { const ev = evalDefense(side.stats, sel, c.color); if (!ev.valid || ev.affordable === false) return null; block = ev.block || 0; cost = ev.cost || 0; pre = defenseComboPre(side.stats, ev, c.color); }
   }
-  const o = defenseOutcome(side.stats, c.color, c.pending, block, pre.mir);
+  const o = defenseOutcome(side.stats, c.color, c.pending, block, pre.mir, pre.std, pre.rb);
   return Object.assign({ who: side.ctrl, att: att.ctrl, cost, block, heal: pre.heal, hpAfter: Math.max(0, healedHp(side.stats, pre.hp - o.leftover, pre.heal)), attHpAfter: Math.max(0, att.stats.hp - o.refl) }, o);
 }
 function execDefense(state, passOnly) {
@@ -1149,7 +1154,7 @@ function execDefense(state, passOnly) {
   // Spiegel (dauerhaft, je Farbe eine Stufe von höchstens 3, die Farben zählen getrennt). Gegen einen Angriff in seiner Farbe gleicht er zuerst fehlende Verteidigung aus
   // (höchstens seine Stufe) und verliert dafür je ausgeglichenen Schaden eine Stufe. Nur wenn der Verteidiger mehr verteidigt als nötig, wirft er den
   // Überschuss zurück (ebenfalls höchstens seine Stufe und höchstens der eingehende Schaden) und verliert dafür je zurückgeworfenen Schaden eine Stufe. Das gilt auch beim Passen.
-  const { mLvl, perm, absorb, refl, used, lost, leftover } = defenseOutcome(side.stats, c.color, c.pending, block);
+  const { mLvl, absorb, refl, used, lostStd, lostRb, lost, std, rb, leftover } = defenseOutcome(side.stats, c.color, c.pending, block);
   const hpPre = { [side.ctrl]: side.stats.hp, [attacker.ctrl]: attacker.stats.hp };   // HP vor dem Schaden, aber nach dem Kombo (Oberfläche zeigt sie, bis die Geschosse einschlagen)
   side.stats.hp = side.stats.hp - leftover;   // vorläufig, die Heilung (seit 0.5.4 nach dem Schaden) gleicht ihn noch aus; danach nie unter 0
   const defEl = sel.length && sel[0].el && !sel[0].curse ? sel[0].el : c.color;
@@ -1157,10 +1162,13 @@ function execDefense(state, passOnly) {
   log(state, side.name + (passOnly ? ' passt und nimmt den Schaden hin' : ' verteidigt' + (block ? ' (Block ' + block + ')' : ' ohne Block')) + ' und verliert ' + leftover + ' HP' + '.', side.ctrl, defFx);
   if (used > 0) {
     if (refl > 0) attacker.stats.hp = Math.max(0, attacker.stats.hp - refl);
-    if (lost > 0) mirrorTake(side.stats, c.color, lost);
+    if (lostStd > 0) mirrorTake(side.stats, c.color, lostStd);
+    if (lostRb > 0) side.stats.rainbow = Math.max(0, (side.stats.rainbow || 0) - lostRb);
     const stufen = lost + ' Stufe' + (lost === 1 ? '' : 'n');
-    log(state, (perm ? 'Prisma: ' : 'Spiegel: ') + side.name + (refl > 0 ? ' wirft ' + refl + ' Schaden auf ' + attacker.name + ' zurück' : ' gleicht ' + absorb + ' Schaden aus') + (perm ? ' (der Schild bleibt bestehen).' : ' und verliert ' + stufen + '.'), side.ctrl, undefined);
-    if (!perm) defFx.mirror = { hpPre, elem: c.color, markers: mLvl, broken: lost, who: side.ctrl, att: attacker.ctrl, r: refl, abs: absorb, d: c.pending, blk: block };   // der Schild-Effekt gilt dem Farbspiegel; der Prisma (perm) verliert nichts und hat keinen Bruch-Effekt   // der Schild-Effekt läuft in der Verteidigungsanimation, vor dem Schaden auf den HP
+    log(state, (lostRb > 0 ? (lostStd > 0 ? 'Spiegel und Prisma: ' : 'Prisma: ') : 'Spiegel: ') + side.name + (refl > 0 ? ' wirft ' + refl + ' Schaden auf ' + attacker.name + ' zurück' : ' gleicht ' + absorb + ' Schaden aus') + ' und verliert ' + stufen + (lostRb > 0 && lostStd > 0 ? ' (' + lostStd + ' vom Spiegel, ' + lostRb + ' vom Prisma)' : '') + '.', side.ctrl, undefined);
+    // Schild-Effekt (Oberfläche): bricht ein Farbspiegel, gilt er ihm, sonst dem Prisma (elem 'R'); er läuft in der Verteidigungsanimation, vor dem Schaden auf den HP
+    defFx.mirror = lostStd > 0 ? { hpPre, elem: c.color, markers: std, broken: lostStd, who: side.ctrl, att: attacker.ctrl, r: refl, abs: absorb, d: c.pending, blk: block }
+      : { hpPre, elem: 'R', markers: rb, broken: lostRb, who: side.ctrl, att: attacker.ctrl, r: refl, abs: absorb, d: c.pending, blk: block };
   }
   if (healLvl > 0) {   // Heilung nach Angriff und Verteidigung (seit 0.5.4): gleicht den Schaden nachträglich aus, höchstens bis zum Maximum
     const hTexts = [], hFxs = [];
@@ -2215,9 +2223,9 @@ function mirrorStack(s, x, y, who) {
         : '<button class="mtok ' + e + ' lf' + (sel ? ' sel' : '') + '" data-act="lfm" data-k="' + who + 'm" data-e="' + e + '" title="Lifeflow: Spiegelmarker ' + M.NAMES[e] + ' wählen (Klick: einen mehr, nach dem Maximum wieder alle weg). ' + sel + ' von ' + n + ' gewählt.">' + n + (sel ? '<i class="lfb">✓' + sel + '</i>' : '') + '</button>';
     } else t += shield ? '<div class="msh ' + e + '" title="' + tip + '"><img src="' + shield + '">' + mul + '</div>' : '<div class="mtok ' + e + '" title="' + tip + '">' + n + '</div>';
   }
-  if (s.rainbow > 0) {   // Prisma (Wasser-Ultimate): gegen jede Farbe, verbraucht sich nicht; nur Läuterung entfernt ihn
+  if (s.rainbow > 0) {   // Prisma (Wasser-Ultimate): gegen jede Farbe; verliert Stufen wie ein Farbspiegel (erst nach dem Farbspiegel); Läuterung entfernt ihn
     const n = s.rainbow, mul = n > 1 ? '<b class="mul">×' + n + '</b>' : '', sel = L ? L.picks.filter(p => p === who + 'r').length : 0;
-    const tip = 'Prisma Stufe ' + n + ': Wie ein Spiegel, aber gegen jede Farbe: Er gleicht fehlende Verteidigung bis zu ' + n + ' Schaden aus oder wirft den Überschuss einer zu starken Verteidigung (höchstens ' + n + ') zurück. Er verbraucht sich nicht; nur Läuterung kann ihn entfernen. Gilt der höhere von Farbspiegel und Prisma.';
+    const tip = 'Prisma Stufe ' + n + ': Wie ein Spiegel, aber gegen jede Farbe: Er gleicht fehlende Verteidigung bis zu ' + n + ' Schaden aus oder wirft den Überschuss einer zu starken Verteidigung (höchstens ' + n + ') zurück. Dabei verliert er je eine Stufe, aber erst, nachdem die Stufen des Farbspiegels aufgebraucht sind. Läuterung kann ihn ebenfalls entfernen. Es gilt der höhere von Farbspiegel und Prisma.';
     const svg = '<svg viewBox="0 0 40 52"><defs><linearGradient id="rbw' + (who || 'x') + '" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff5a4d"/><stop offset=".25" stop-color="#ffc83d"/><stop offset=".5" stop-color="#7bd36b"/><stop offset=".75" stop-color="#4aa6f5"/><stop offset="1" stop-color="#a06bff"/></linearGradient></defs><path d="M20 2 L37 9 V26 C37 38 29 46 20 50 C11 46 3 38 3 26 V9 Z" fill="url(#rbw' + (who || 'x') + ')" stroke="#fff" stroke-width="2.2" stroke-opacity=".85"/><path d="M20 8 L31 12.5 V26 C31 34 26 40 20 43 Z" fill="#fff" fill-opacity=".22"/></svg>';
     t += L ? '<button class="msh R lf' + (sel ? ' sel' : '') + '" data-act="lfm" data-k="' + who + 'r" title="Läuterung: Prisma wählen (Klick: einen mehr, nach dem Maximum wieder alle weg). ' + sel + ' von ' + n + ' gewählt.">' + svg + mul + (sel ? '<i class="lfb">✓' + sel + '</i>' : '') + '</button>'
       : '<div class="msh R" title="' + tip + '">' + svg + mul + '</div>';
@@ -2815,12 +2823,12 @@ const ORD_ROWS = [['ra', 'Lähmung', 'F', 'E'], ['rm', 'Zerrüttung', 'F', 'W'],
 // Wirkung der Ultimate nach der Farbe der ersten Karte (seit 0.7)
 function ultiText(el, lv) {
   if (el === 'E') return 'Heilfluss (Erde): Du bekommst ' + lv + ' Heilmarker und heilst ' + lv + ' HP am Ende jeder deiner Angriffsphasen bis Kampfende (höchstens bis zu den max. HP).';
-  if (el === 'W') return 'Prisma (Wasser): Du bekommst einen Schild der Stufe ' + lv + ' gegen jede Farbe. Er gleicht fehlende Verteidigung aus oder wirft Überschuss zurück, verbraucht sich aber nicht.';
+  if (el === 'W') return 'Prisma (Wasser): Du bekommst einen Schild der Stufe ' + lv + ' gegen jede Farbe. Er gleicht fehlende Verteidigung aus oder wirft Überschuss zurück und verliert dabei Stufen wie ein Spiegel, aber erst nach dem Farbspiegel.';
   return 'Todesfluss (Feuer): Der Gegner bekommt ' + lv + ' Todesmarker und verliert ' + lv + ' HP am Ende jeder seiner Angriffsphasen bis Kampfende.';
 }
 // Kurzfassungen für die Kombo-Übersicht (die ausführliche Wirkung steht im Tooltip)
 const ORD_SHORT = { ra: '2·S Flüche auf den Ablagestapel des Gegners', rm: 'Gegner wirft S Handkarten ab', bm: 'Roter Spiegel der Stufe S (dauerhaft)', bg: 'Grüner Spiegel der Stufe S (dauerhaft)', gh: 'Heilt S HP', gr: 'Entfernt S Marker, je Marker 1 Nachziehtoken' };
-const ULTI_SHORT = { F: 'Gegner verliert S HP am Ende jeder seiner Angriffsphasen', E: 'Du heilst S HP am Ende jeder deiner Angriffsphasen', W: 'Schild der Stufe S gegen jede Farbe, verbraucht sich nicht' };
+const ULTI_SHORT = { F: 'Gegner verliert S HP am Ende jeder seiner Angriffsphasen', E: 'Du heilst S HP am Ende jeder deiner Angriffsphasen', W: 'Schild der Stufe S gegen jede Farbe (verliert Stufen wie ein Spiegel, nach dem Farbspiegel)' };
 function ordText(k, lv, short) {
   if (k === 'ra' && lv === 'S') return 'Lege 2·S Fluchkarten (2/4/6) auf den Ablagestapel der Gegenseite; sie kommen beim nächsten Nachziehen des Gegners zuerst auf seine Hand und werden beim darauffolgenden Nachziehen dauerhaft vernichtet';
   if (k === 'ra') return short ? 2 * lv + ' Flüche auf den Ablagestapel der Gegenseite' : 'Lege ' + 2 * lv + ' Flüche auf den Ablagestapel der Gegenseite; sie kommen beim nächsten Nachziehen des Gegners zuerst auf seine Hand und werden beim darauffolgenden Nachziehen dauerhaft vernichtet';
@@ -3041,6 +3049,158 @@ const CurseFx = (() => {
   return { play };
 })();
 
+/* ---------- Ultimate-Rituale für Heilfluss (Erde) und Prisma (Wasser), aus der Ultimate-Werkstatt (seit 0.7.2.2): mittig auf dem Bildschirm, wie das Pentagramm des Todesfluss (20-todesfluch.js). Die Marker und ihre Wirkung zeigt das Spiel selbst. ---------- */
+const UltFx = (() => {
+  const BIG = 3000, clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x)), lerp = (a, b, t) => a + (b - a) * t, seg = (u, a, b) => clamp((u - a) / (b - a));
+  const eo = x => 1 - Math.pow(1 - x, 3), eio = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+  function rng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+  const rgba = (hex, a) => { if (hex[0] === 'r') return hex.replace('rgb(', 'rgba(').replace(')', ',' + clamp(a) + ')'); const n = parseInt(hex.slice(1), 16); return 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + clamp(a) + ')'; };
+  const lighten = (hex, k) => { const n = parseInt(hex.slice(1), 16), f = c => Math.round(c + (255 - c) * k); return 'rgb(' + f(n >> 16 & 255) + ',' + f(n >> 8 & 255) + ',' + f(n & 255) + ')'; };
+  const mix = (a, b, k) => { const n = parseInt(a.slice(1), 16), m = parseInt(b.slice(1), 16), f = (x, y) => Math.round(x + (y - x) * k); return '#' + ((1 << 24) + (f(n >> 16 & 255, m >> 16 & 255) << 16) + (f(n >> 8 & 255, m >> 8 & 255) << 8) + f(n & 255, m & 255)).toString(16).slice(1); };
+  const EL = { F: '#ff7a3d', E: '#93c24f', W: '#52a6f5' }, C = { x: 360, y: 268 };
+  // Werte der Ultimate-Werkstatt (Standard)
+  const P = { dur: 4, size: 1.2, dark: .55, flash: 1, shake: .5, particles: 50, seed: 3,
+    hColor: '#93c24f', hRings: 2, hVines: 6, hVineH: 1, hPlus: 1, hLight: .7, hPulse: 3, hGlow: 14,
+    pColor: '#52a6f5', pRainbow: .6, pPrism: 1, pBeam: 1, pDome: 1, pFacets: 6, pShimmer: 1, pGlints: 16, pGlow: 12 };
+  function glowLine(ctx,col,w,glow,alpha,draw){
+    ctx.save();ctx.lineCap='round';ctx.lineJoin='round';
+    ctx.shadowColor=col;ctx.shadowBlur=glow;ctx.strokeStyle=rgba(col,alpha*.8);ctx.lineWidth=w*1.8;ctx.beginPath();draw();ctx.stroke();
+    ctx.shadowBlur=0;ctx.strokeStyle=rgba(lighten(col,.55),alpha);ctx.lineWidth=w*.8;ctx.beginPath();draw();ctx.stroke();ctx.restore();
+  }
+  function puff(ctx,x,y,r,col,a){const g=ctx.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,rgba(col,a));g.addColorStop(1,rgba(col,0));ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r,0,7);ctx.fill()}
+  function vignette(ctx,a,cx,cy){if(a<=0)return;const v=ctx.createRadialGradient(cx,cy-40,40,cx,cy-40,450);v.addColorStop(0,'rgba(0,0,0,0)');v.addColorStop(1,'rgba(0,0,0,'+a+')');ctx.fillStyle=v;ctx.fillRect(-BIG,-BIG,2*BIG,2*BIG)}
+  function rrect(ctx,x,y,w,h,r){r=Math.min(r,w/2,h/2);ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
+  function star4(ctx,x,y,r,col,a){ctx.save();ctx.globalCompositeOperation='lighter';ctx.fillStyle=rgba(col,a);ctx.beginPath();for(let i=0;i<8;i++){const an=i*Math.PI/4-Math.PI/2,rr=i%2?r*.28:r;ctx.lineTo(x+Math.cos(an)*rr,y+Math.sin(an)*rr)}ctx.closePath();ctx.fill();ctx.restore()}
+  
+  /* ---------- Heilfluss (Erde): grüner Kreis mit Pluszeichen, Ranken, aufsteigendes Licht ---------- */
+  function fxHeal(ctx,p,t,D,u){
+    const col=p.hColor,S=p.size,R=150*S,tilt=.42,Cc={x:C.x,y:C.y+30},gl=p.hGlow,top=-Math.PI/2;
+    const fin=1-seg(u,.93,1),flick=1-.25*(.5+.5*Math.sin(t*23+Math.sin(t*7)*2)),inten=fin*flick;
+    vignette(ctx,p.dark*.7*eo(seg(u,0,.12))*(1-seg(u,.95,1)),Cc.x,Cc.y);
+    ctx.save();ctx.translate(Cc.x,Cc.y);ctx.scale(1,tilt);   // Boden
+    const fg=ctx.createRadialGradient(0,0,0,0,0,R*1.2);fg.addColorStop(0,rgba(col,.34*seg(u,.1,.5)*inten));fg.addColorStop(1,rgba(col,0));ctx.fillStyle=fg;ctx.beginPath();ctx.arc(0,0,R*1.25,0,7);ctx.fill();
+    for(let i=0;i<Math.round(p.hRings);i++){const rf=[1,.8,.6][i],pr=eio(seg(u,.03+i*.07,.2+i*.06));if(pr>0)glowLine(ctx,col,2.4*(i?.75:1),gl,inten,()=>ctx.arc(0,0,R*rf,top,top+Math.PI*2*pr))}
+    const n=10;
+    for(let i=0;i<n;i++){const a=top+i/n*Math.PI*2,al=seg(u,.16+i/n*.12,.22+i/n*.12);if(al<=0)continue;const x=Math.cos(a)*R*1.12,y=Math.sin(a)*R*1.12,h=R*.07;glowLine(ctx,col,1.8,gl*.5,inten*al,()=>{ctx.moveTo(x-h,y);ctx.lineTo(x+h,y);ctx.moveTo(x,y-h);ctx.lineTo(x,y+h)})}
+    ctx.restore();
+    const nV=Math.round(p.hVines),rr=rng(p.seed+11);   // Ranken wachsen aus dem Ring
+    for(let i=0;i<nV;i++){
+      const hr=rr(),pr1=rr(),pr2=rr();   // Zufallswerte immer in gleicher Reihenfolge ziehen
+      const a=i/nV*Math.PI*2+.3,gv=eo(seg(u,.16+i*.02,.5+i*.015))*(1-seg(u,.9,.96));if(gv<=0)continue;
+      const bx=Cc.x+Math.cos(a)*R*.95,by=Cc.y+Math.sin(a)*R*.95*tilt,Hh=(70+hr*60)*p.hVineH*S/1.2,ph=pr1*6,sw=10+pr2*10,dir=Math.cos(a)>0?1:-1;
+      const pt=s=>({x:bx+Math.sin(s*4+ph)*sw*s*dir+dir*s*12,y:by-s*Hh});
+      glowLine(ctx,col,1.7,gl*.5,inten*.9,()=>{for(let k=0;k<=24;k++){const s=gv*k/24,q=pt(s);k?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y)}});
+      for(let k=1;k<=4;k++){const s=gv*k/4.3;if(s<.12)continue;const q=pt(s);ctx.save();ctx.translate(q.x,q.y);ctx.rotate((k%2?-1:1)*.9-Math.PI/2);ctx.fillStyle=rgba(lighten(col,.25),.85*inten);ctx.shadowColor=col;ctx.shadowBlur=gl*.5;ctx.beginPath();ctx.ellipse(8,0,9,3.6,0,0,7);ctx.fill();ctx.restore()}
+    }
+    const lc=seg(u,.5,.8)*(1-seg(u,.93,1))*p.hLight;   // Lichtsäule
+    if(lc>0){const pw=100*S*(1+.1*Math.sin(t*9));ctx.save();ctx.globalCompositeOperation='lighter';const gy=ctx.createLinearGradient(0,Cc.y,0,Cc.y-380);gy.addColorStop(0,rgba(lighten(col,.3),.5*lc*flick));gy.addColorStop(1,rgba(col,0));[1,.6,.3].forEach((f,i)=>{ctx.fillStyle=gy;ctx.globalAlpha=i?.7:.32;ctx.fillRect(Cc.x-pw*f/2,Cc.y-380,pw*f,380)});ctx.restore()}
+    const pl=seg(u,.42,.62),py=C.y-75;   // Pluszeichen
+    if(pl>0){
+      const fade=1-seg(u,.9,.97),sc=(.4+.6*eo(pl))*(1+.06*Math.sin(t*6)*seg(u,.62,.9)),arm=40*S*p.hPlus*sc,wd=arm*.42;
+      if(fade>0){ctx.save();ctx.translate(C.x,py);ctx.shadowColor=col;ctx.shadowBlur=gl*1.6;ctx.fillStyle=rgba(lighten(col,.6),.95*pl*fade*flick);ctx.beginPath();rrect(ctx,-arm,-wd/2,2*arm,wd,wd/2);rrect(ctx,-wd/2,-arm,wd,2*arm,wd/2);ctx.fill();
+        ctx.shadowBlur=0;ctx.strokeStyle=rgba(lighten(col,.4),.55*pl*fade);ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,arm*1.5,0,7);ctx.stroke();ctx.restore()}
+    }
+    for(let k=0;k<Math.round(p.hPulse);k++){const q=seg(u,.6+k*.06,.82+k*.06);if(q>0&&q<1){ctx.save();ctx.globalCompositeOperation='lighter';ctx.strokeStyle=rgba(lighten(col,.4),(1-q)*.8*fin);ctx.lineWidth=4*(1-q)+1;const r2=R*(.2+1.1*eo(q));ctx.beginPath();ctx.ellipse(Cc.x,Cc.y,r2,r2*tilt,0,0,7);ctx.stroke();ctx.restore()}}
+    const nP=Math.round(p.particles),pa=seg(u,.18,.45)*(1-seg(u,.9,1));   // aufsteigende Lichtpunkte
+    if(nP>0&&pa>0){
+      const pr=rng(p.seed+13);ctx.save();ctx.globalCompositeOperation='lighter';
+      for(let i=0;i<nP;i++){const r1=pr(),r2=pr(),r3=pr(),ph=(r1+t*(.12+.25*r2)/(D/4))%1,an=r1*Math.PI*2,rad=R*Math.sqrt(r2)*.9,x=Cc.x+Math.cos(an)*rad+Math.sin(ph*7+r3*6)*8,y=Cc.y+Math.sin(an)*rad*tilt-ph*230*(.5+.6*r3);ctx.fillStyle=rgba(i%4?lighten(col,.45):'#ffe9a8',Math.sin(Math.PI*ph)*pa*.9);ctx.beginPath();ctx.arc(x,y,1.2+r3*2.2,0,7);ctx.fill()}
+      ctx.restore();
+    }
+    const fl=p.flash*seg(u,.88,.92)*(1-seg(u,.92,.99));
+    if(fl>0){ctx.fillStyle=rgba(lighten(col,.8),fl*.42);ctx.fillRect(-BIG,-BIG,2*BIG,2*BIG)}
+  }
+  
+  /* ---------- Prisma (Wasser): Lichtstrahl spaltet sich im Kristall in drei Farben, daraus wächst die Schildkuppel ---------- */
+  const prismCols=p=>[mix(p.pColor,EL.F,p.pRainbow),mix(p.pColor,EL.E,p.pRainbow),mix(p.pColor,EL.W,p.pRainbow)];
+  function domeGeom(p){const rx=165*p.size*p.pDome*.95;return{c:{x:C.x,y:C.y+78},rx,ry:rx*.85}}
+  function fxPrism(ctx,p,t,D,u){
+    const S=p.size,s=62*S*p.pPrism,Pc={x:C.x,y:C.y-14},gl=p.pGlow,cols=prismCols(p),dg=domeGeom(p),pc=p.pColor;
+    const dp=eio(seg(u,.55,.78)),out=1-eio(seg(u,.9,.99)),fin=1-seg(u,.93,1);
+    vignette(ctx,p.dark*eo(seg(u,0,.12))*(1-seg(u,.95,1)),Pc.x,Pc.y);
+    const pr=eo(seg(u,.03,.2)),sc=(.3+.7*pr)*(1-.8*eio(seg(u,.9,.99)));
+    const V=[[0,-s*1.05],[-s*.95,s*.58],[s*.95,s*.58]].map(v=>({x:Pc.x+v[0]*sc,y:Pc.y+v[1]*sc}));
+    const E=lerpP(V[0],V[1],.55),X=lerpP(V[0],V[2],.55);
+    // Kuppel (hinter dem Prisma)
+    if(dp>0&&out>0){
+      const {c,rx,ry}=dg;ctx.save();ctx.globalAlpha=out;
+      const fillg=ctx.createRadialGradient(c.x,c.y-ry*.45,rx*.1,c.x,c.y-ry*.3,rx*1.05);fillg.addColorStop(0,rgba(lighten(pc,.6),.04*dp));fillg.addColorStop(1,rgba(pc,.26*dp));
+      ctx.fillStyle=fillg;ctx.beginPath();ctx.ellipse(c.x,c.y,rx,ry,0,Math.PI,Math.PI*2);ctx.ellipse(c.x,c.y,rx,rx*.28,0,0,Math.PI);ctx.closePath();ctx.fill();   // Fläche
+      const lg=ctx.createLinearGradient(c.x-rx,0,c.x+rx,0);lg.addColorStop(0,cols[0]);lg.addColorStop(.5,cols[1]);lg.addColorStop(1,cols[2]);
+      ctx.save();ctx.lineCap='round';ctx.shadowColor=cols[1];ctx.shadowBlur=gl;ctx.strokeStyle=lg;ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(c.x,c.y,rx,ry,0,Math.PI,Math.PI+Math.PI*dp);ctx.stroke();ctx.restore();   // Rand
+      ctx.strokeStyle=rgba(lighten(pc,.5),.5*dp);ctx.lineWidth=1.6;ctx.beginPath();ctx.ellipse(c.x,c.y,rx,rx*.28,0,0,Math.PI);ctx.stroke();ctx.strokeStyle=rgba(pc,.25*dp);ctx.beginPath();ctx.ellipse(c.x,c.y,rx,rx*.28,0,Math.PI,Math.PI*2);ctx.stroke();   // Standring
+      const nF=Math.round(p.pFacets),fa=seg(u,.62,.8);   // Facetten
+      if(nF>1&&fa>0){
+        ctx.strokeStyle=rgba(lighten(pc,.65),.3*fa);ctx.lineWidth=1.2;
+        for(let i=1;i<nF;i++){const th=Math.PI+i/nF*Math.PI,bx=c.x+rx*Math.cos(th);ctx.beginPath();ctx.moveTo(bx,c.y+Math.sin(th)*0);ctx.quadraticCurveTo(c.x+(bx-c.x)*.92,c.y-ry*.7,c.x,c.y-ry);ctx.stroke()}
+        [.35,.7].forEach(h=>{const rxh=rx*Math.sqrt(1-h*h);ctx.beginPath();ctx.ellipse(c.x,c.y-ry*h,rxh,rxh*.28,0,0,Math.PI);ctx.stroke()});
+      }
+      const sh=seg(u,.76,.94);   // Schimmer läuft über die Kuppel
+      if(sh>0&&sh<1&&p.pShimmer>0){
+        ctx.save();ctx.beginPath();ctx.ellipse(c.x,c.y,rx,ry,0,Math.PI,Math.PI*2);ctx.ellipse(c.x,c.y,rx,rx*.28,0,0,Math.PI);ctx.closePath();ctx.clip();
+        const bx=lerp(c.x-rx*1.3,c.x+rx*1.3,eio(sh)),sg=ctx.createLinearGradient(bx-60,0,bx+60,0);sg.addColorStop(0,'rgba(255,255,255,0)');sg.addColorStop(.5,'rgba(255,255,255,'+(.5*Math.sin(Math.PI*sh)*Math.min(1,p.pShimmer))+')');sg.addColorStop(1,'rgba(255,255,255,0)');
+        ctx.fillStyle=sg;ctx.fillRect(c.x-rx,c.y-ry,2*rx,ry+rx*.3);ctx.restore();
+      }
+      const nG=Math.round(p.pGlints),gr=rng(p.seed+21);   // Glitzern
+      for(let i=0;i<nG;i++){const an=Math.PI+gr()*Math.PI,rd=Math.sqrt(gr())*.95,ph=gr()*6,sp=2+gr()*3,x=c.x+Math.cos(an)*rx*rd,y=c.y+Math.sin(an)*ry*rd*.9,tw=Math.max(0,Math.sin(t*sp+ph));
+        if(tw>0)star4(ctx,x,y,3+5*tw,i%3===0?'#ffffff':cols[i%3],tw*dp*.9)}
+      ctx.restore();
+    }
+    // Prisma (Kristall)
+    if(pr>0&&out>0){
+      ctx.save();ctx.globalAlpha=out;
+      const gg=ctx.createLinearGradient(0,V[0].y,0,V[1].y);gg.addColorStop(0,'rgba(215,238,255,.34)');gg.addColorStop(1,rgba(pc,.16));
+      ctx.fillStyle=gg;ctx.beginPath();V.forEach((v,i)=>i?ctx.lineTo(v.x,v.y):ctx.moveTo(v.x,v.y));ctx.closePath();ctx.fill();
+      glowLine(ctx,lighten(pc,.35),2.4,gl*1.2,.95*pr,()=>{V.forEach((v,i)=>i?ctx.lineTo(v.x,v.y):ctx.moveTo(v.x,v.y));ctx.closePath()});
+      ctx.strokeStyle=rgba('#ffffff',.22*pr);ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(V[0].x,V[0].y);ctx.lineTo((V[1].x+V[2].x)/2,V[1].y);ctx.moveTo(Pc.x,Pc.y+s*.05*sc);ctx.lineTo(V[1].x,V[1].y);ctx.moveTo(Pc.x,Pc.y+s*.05*sc);ctx.lineTo(V[2].x,V[2].y);ctx.stroke();
+      ctx.restore();
+    }
+    // einfallender Strahl, Brechung, drei Strahlen
+    const bm=eo(seg(u,.2,.38)),B0={x:-30,y:E.y+80},ex=seg(u,.42,.6);
+    if(bm>0&&out>0&&fin>0){
+      ctx.save();ctx.globalCompositeOperation='lighter';ctx.globalAlpha=out;
+      const Bm=lerpP(B0,E,bm);ctx.lineCap='round';
+      ctx.strokeStyle=rgba('#ffffff',.3);ctx.lineWidth=11;ctx.beginPath();ctx.moveTo(B0.x,B0.y);ctx.lineTo(Bm.x,Bm.y);ctx.stroke();
+      ctx.shadowColor='#ffffff';ctx.shadowBlur=gl;ctx.strokeStyle=rgba('#ffffff',.95);ctx.lineWidth=3.4;ctx.beginPath();ctx.moveTo(B0.x,B0.y);ctx.lineTo(Bm.x,Bm.y);ctx.stroke();
+      const ins=seg(u,.34,.44);if(ins>0){ctx.strokeStyle=rgba('#ffffff',.7*ins*(1-ex*.6));ctx.lineWidth=2.4;ctx.beginPath();ctx.moveTo(E.x,E.y);ctx.lineTo(lerp(E.x,X.x,ins),lerp(E.y,X.y,ins));ctx.stroke()}
+      for(let k=0;k<3;k++){
+        const q=eo(seg(u,.42+k*.03,.6+k*.03));if(q<=0)continue;
+        const ang=.1+(k-1)*.24*p.pBeam,Ln=230*S*q,tx=X.x+Math.cos(ang)*Ln,ty=X.y+Math.sin(ang)*Ln,al=(1-.75*dp)*q;
+        const g2=ctx.createLinearGradient(X.x,X.y,tx,ty);g2.addColorStop(0,rgba(lighten(cols[k],.5),al));g2.addColorStop(1,rgba(cols[k],al*.2));
+        ctx.shadowBlur=gl;ctx.shadowColor=cols[k];ctx.strokeStyle=g2;ctx.lineWidth=7*(1-.4*q);ctx.beginPath();ctx.moveTo(X.x,X.y);ctx.lineTo(tx,ty);ctx.stroke();
+        ctx.shadowBlur=0;ctx.strokeStyle=rgba('#ffffff',al*.7);ctx.lineWidth=1.8;ctx.beginPath();ctx.moveTo(X.x,X.y);ctx.lineTo(lerp(X.x,tx,.8),lerp(X.y,ty,.8));ctx.stroke();
+        if(q>.9)star4(ctx,tx,ty,10,cols[k],al);
+      }
+      ctx.restore();
+    }
+    const nP=Math.round(p.particles*.6),pa=seg(u,.4,.6)*(1-seg(u,.9,1));
+    if(nP>0&&pa>0){const pr2=rng(p.seed+23);ctx.save();ctx.globalCompositeOperation='lighter';
+      for(let i=0;i<nP;i++){const r1=pr2(),r2=pr2(),r3=pr2(),ph=(r1+t*(.15+.3*r2)/(D/3))%1,x=X.x+ph*200*S*(.6+r3*.5),y=X.y+(r2-.35)*ph*150*S;ctx.fillStyle=rgba(lighten(cols[i%3],.5),Math.sin(Math.PI*ph)*pa*.8);ctx.beginPath();ctx.arc(x,y,1+r3*1.8,0,7);ctx.fill()}ctx.restore()}
+    const fl=p.flash*(seg(u,.55,.6)*(1-seg(u,.6,.7))*.35+seg(u,.9,.93)*(1-seg(u,.93,.99))*.55);
+    if(fl>0){ctx.fillStyle=rgba(lighten(pc,.85),fl*.45);ctx.fillRect(-BIG,-BIG,2*BIG,2*BIG)}
+  }
+  function lerpP(a,b,q){return{x:lerp(a.x,b.x,q),y:lerp(a.y,b.y,q)}}
+  const cvs = {}, raf = {};
+  function play(kind) {   // 'E' Heilfluss, 'W' Prisma
+    if (FAST || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
+    let cv = cvs[kind];
+    if (!cv) { cv = cvs[kind] = document.createElement('canvas'); cv.width = SW; cv.height = 800; cv.style.cssText = 'position:absolute;left:0;top:0;width:' + SW + 'px;height:800px;z-index:290;pointer-events:none'; stage.appendChild(cv); }
+    cancelAnimationFrame(raf[kind]);
+    fxUntil = Math.max(fxUntil, Date.now() + P.dur * 1000);
+    const ctx = cv.getContext('2d'), k = 1.45, t0 = performance.now(), D = P.dur;
+    const step = ts => {
+      const t = (ts - t0) / 1000;
+      ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, SW, 800);
+      if (t >= D) { cv.remove(); cvs[kind] = null; return; }
+      const u = t / D, amp = P.shake * (kind === 'E' ? (u > .88 ? 6 * Math.exp(-(u - .88) * D * 6) : 0) : (u > .74 ? 4 * Math.exp(-(u - .74) * D * 6) : 0));
+      ctx.setTransform(k, 0, 0, k, SW / 2 - C.x * k, 400 - C.y * k);   // Mitte des Rituals = Bildschirmmitte
+      ctx.translate(Math.sin(t * 95) * amp, Math.cos(t * 80) * amp * .7);
+      (kind === 'E' ? fxHeal : fxPrism)(ctx, P, t, D, clamp(u)); raf[kind] = requestAnimationFrame(step);
+    };
+    raf[kind] = requestAnimationFrame(step);
+  }
+  return { play };
+})();
 /* ---------- Schild-Effekt (aus der Schild-Werkstatt, Variante „Mitte“): Das Schildbild des Spiegels fliegt vergrößert in die Bildschirmmitte. Dort prallen die Geschosse auf, ein Rückwurf fliegt zum Angreifer, ungeblockter Schaden lässt Stufen brechen (Risse; ohne Stufe zerspringt das Schild). Ein überstandenes Schild fliegt zurück. ---------- */
 const MirrorFx = (() => {
   const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x)), lerp = (a, b, t) => a + (b - a) * t, seg = (u, a, b) => clamp((u - a) / (b - a));
@@ -3048,11 +3208,12 @@ const MirrorFx = (() => {
   function rng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
   const rgba = (hex, a) => { const n = parseInt(hex.slice(1), 16); return 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + clamp(a) + ')'; };
   const lighten = (hex, k) => { const n = parseInt(hex.slice(1), 16), f = c => Math.round(c + (255 - c) * k); return 'rgb(' + f(n >> 16 & 255) + ',' + f(n >> 8 & 255) + ',' + f(n & 255) + ')'; };
-  const EL = { F: '#ff7a3d', E: '#93c24f', W: '#52a6f5' };
+  const EL = { F: '#ff7a3d', E: '#93c24f', W: '#52a6f5', R: '#8fb4ff' };   // R: Prisma (Wasser-Ultimate), verliert seit 0.7.2.2 Stufen wie ein Farbspiegel
   // Werte der Schild-Werkstatt (Export des Spielers)
   const P = { size: 240, fly: .55, back: .55, hold: .5, dim: .45, glow: 60, flash: 1.5, shake: .5, cracks: 8, scatter: 1, gravity: 1, tempo: 1, spark: 1 };
   const IMGS = {};
-  function img(e) { if (!IMGS[e] && IMG['shield_' + e]) { const i = new Image(); i.src = IMG['shield_' + e]; IMGS[e] = i; } return IMGS[e]; }
+  const PRISMA_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="132" height="180" viewBox="0 0 40 52"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff5a4d"/><stop offset=".25" stop-color="#ffc83d"/><stop offset=".5" stop-color="#7bd36b"/><stop offset=".75" stop-color="#4aa6f5"/><stop offset="1" stop-color="#a06bff"/></linearGradient></defs><path d="M20 2 L37 9 V26 C37 38 29 46 20 50 C11 46 3 38 3 26 V9 Z" fill="url(#g)" stroke="#fff" stroke-width="2.2" stroke-opacity=".85"/><path d="M20 8 L31 12.5 V26 C31 34 26 40 20 43 Z" fill="#fff" fill-opacity=".22"/></svg>';
+  function img(e) { if (!IMGS[e]) { const src = e === 'R' ? 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(PRISMA_SVG) : IMG['shield_' + e]; if (src) { const i = new Image(); i.src = src; IMGS[e] = i; } } return IMGS[e]; }
   function orb(ctx, x, y, r, col) {
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
     const g = ctx.createRadialGradient(x, y, 0, x, y, r * 3); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(.25, rgba(col, .85)); g.addColorStop(1, rgba(col, 0));
@@ -3118,7 +3279,7 @@ const MirrorFx = (() => {
   const shown = {};
   function track() {
     const seen = {};
-    stage.querySelectorAll('.mirstack .msh').forEach(el => { const w = el.parentElement.dataset.who, e = ['F', 'E', 'W'].find(k => el.classList.contains(k)); if (w && e) { shown[w + e] = toStage(el); seen[w + e] = 1; } });
+    stage.querySelectorAll('.mirstack .msh').forEach(el => { const w = el.parentElement.dataset.who, e = ['F', 'E', 'W', 'R'].find(k => el.classList.contains(k)); if (w && e) { shown[w + e] = toStage(el); seen[w + e] = 1; } });
     if (!G || G.phase !== 'combat') for (const k in shown) if (!seen[k] && !stage.dataset.shieldfx) delete shown[k];   // außerhalb eines Kampfes ist nichts mehr zu merken
   }
   function play(fx) {
@@ -3902,7 +4063,7 @@ function earthFormRaw(ctx, x, by, seed, i, t, tCrack, tRise, endAt, ending) {
 let leadPrev = null;
 const fdSel = new Set();   // Zerrüttung: von mir gewählte Abwurfkarten (Handplätze)
 const forcedMe = () => !!(G && G.phase === 'combat' && G.combat && G.combat.forced && G.combat.forced.pid === ME);
-let curKey = null, curDown = false, mkSeen = null, dthSeen = null, fxFor = null, fxLast = 0;
+let curKey = null, curDown = false, mkSeen = null, dthSeen = null, hlSeen = null, rbSeen = null, fxFor = null, fxLast = 0;
 // Sekundär ausgelöste Effekte (Spiegel wirft Schaden zurück, Todesfluss zehrt) kurz an der betroffenen Seite einblenden
 // Ton zu einem Kampfeffekt (Angriff und Verteidigung bringen ihre Sounds im Ablauf der Animation selbst mit)
 function fxSound(f) {
@@ -4052,7 +4213,11 @@ function renderInner() {
     const dd = (sa.death || 0) + (sb.death || 0);   // Todesfluss-Marker hinzugekommen -> Fluch-Sound
     if (dthSeen && dthSeen.c === G.combat && dd > dthSeen.n) CurseFx.play();
     dthSeen = { c: G.combat, n: dd };
-  } else { mkSeen = null; dthSeen = null; }
+    const hl = (sa.heal || 0) + (sb.heal || 0), rb = (sa.rainbow || 0) + (sb.rainbow || 0);   // Heilfluss- bzw. Prisma-Marker hinzugekommen -> Ritual (seit 0.7.2.2)
+    if (hlSeen && hlSeen.c === G.combat && hl > hlSeen.n) UltFx.play('E');
+    if (rbSeen && rbSeen.c === G.combat && rb > rbSeen.n) UltFx.play('W');
+    hlSeen = { c: G.combat, n: hl }; rbSeen = { c: G.combat, n: rb };
+  } else { mkSeen = null; dthSeen = null; hlSeen = null; rbSeen = null; }
   if (manaPv > 0 && cx.combat) { const mv = panels.querySelector('.sbody[data-lead] [data-pv="mana"]'), st = cx.myStats; if (mv) { mv.innerHTML = '<span class="pvdn">' + Math.max(0, st.mana - manaPv) + '</span>/' + st.maxMana; ArcFx.mark(mv, st.mana + '/' + st.maxMana, null, true); } }   // Mana nach dem Ausspielen in Rot; der Anteil auf dem Mana-Bogen blinkt dazu (seit 0.5.6.5)
   { const mine = panels.querySelector('.sbody[data-lead]');   // Knopfspalte weich ein- und ausfahren
     if (mine) { const now = mine.classList.contains('hasup'); if (leadPrev !== null && leadPrev !== now) { mine.classList.toggle('hasup', leadPrev); void mine.offsetWidth; mine.classList.toggle('hasup', now); } leadPrev = now; } }
@@ -4083,7 +4248,7 @@ function showStart(pg) {
     h += '<img class="logo" alt="" src="assets/img/logo.webp"><div class="menulist">' +
       (run ? menuBtn('resume', 'Spiel fortsetzen', '', 'primary') : '') +
       menuTo('single', 'Einzelspieler', run ? '' : 'primary') + menuTo('multi', 'Mehrspieler') + menuTo('settings', 'Einstellungen') + menuBtn('quit', 'Beenden') + '</div>' +
-      '<div class="menufoot">' + menuTo('about', 'Neu in Version 0.7.2.1', 'link') + '</div>';
+      '<div class="menufoot">' + menuTo('about', 'Neu in Version 0.7.2.2', 'link') + '</div>';
   } else if (pg === 'single') {
     h += '<h2>Einzelspieler</h2><div class="menulist">' +
       menuBtn('newgame', run ? 'Neues Spiel gegen den Computer' : 'Gegen den Computer spielen', '', run ? '' : 'primary') +
@@ -4096,7 +4261,7 @@ function showStart(pg) {
   } else if (pg === 'settings') {
     h += '<h2>Einstellungen</h2><div class="menulist">' + settingsHTML() + back + '</div>';
   } else if (pg === 'about') {
-    h += '<p class="note intro" style="margin-top:-2px"><b>Danke, dass du Magus testest!</b> <b>Neu in Version 0.7.2.1:</b> Keine Spieländerung: Die neue <b>Ultimate-Werkstatt</b> (Effektwerkstatt für die Kombos aus allen drei Elementen) zeigt Todesfluss, Prisma und Heilfluss als Ritual mit Markern und Wirkung; sie liegt im Projekt unter <b>werkstatt/</b>. <b>Version 0.7.1.2:</b> Umbenennung in den Kombos: Das Wasser-Ultimate heißt jetzt <b>Prisma</b> (vorher Regenbogenschild), die beiden Spiegel-Kombos heißen <b>Feuerspiegel</b> und <b>Erdspiegel</b>. <b>Version 0.7.1.1:</b> In der Kombo-Übersicht ist die Schrift größer und füllt das Fenster; die Farbgruppen (Feuer, Wasser, Erde) sind getönt und durch Abstand getrennt. <b>Version 0.7.0.3:</b> Die Kombo-Übersicht nutzt die volle Höhe ihres Fensters. <b>Version 0.7.0.2:</b> In der Kombo-Übersicht entfallen die Farbüberschriften und der Zusatz „(Ultimate)“; die Reihenfolge nach Farbe bleibt. <b>Version 0.7.0.1:</b> Die <b>Kombo-Übersicht</b> ordnet alle Kombos nach Farbe der ersten Karte; die Ultimate steht unter ihrer Farbe (Feuer <b>Todesfluss</b>, Wasser Regenbogenschild, Erde Heilfluss) und alles ist ohne Scrollen sichtbar. Der Todes-Fluch heißt jetzt Todesfluss. <b>Version 0.7:</b> <b>Ultimates nach Farbe der ersten Karte:</b> Feuer wirkt wie bisher als Todesfluss, Erde legt einen <b>Heilfluss</b> (grüne Marker mit Plus heilen dich am Ende jeder deiner Angriffsphasen), Wasser einen <b>Regenbogenschild</b> (wirkt gegen jede Farbe wie ein Spiegel, verbraucht sich aber nicht). Alle drei Marker entfernt nur die Läuterung. <b>Gold opfern</b> geht ohne Obergrenze. <b>Karten</b> lassen sich unabhängig von der entwickelten Magie kaufen. Die <b>Strafe des roten Nachziehmarkers</b> (Mana und Gold) wächst mit dem Abschnitt (1/2/3); vor dem Nachziehen warnt eine Abfrage. Der Hinweistext zur Schildwirkung entfällt. <b>Version 0.6.1.2:</b> Gegen endlose Patt-Schleifen im Zuschauermodus: Die KI flieht nur noch bei deutlichem Rückstand und nach 15 Runden ohne entschiedenen Kampf gar nicht mehr. <b>Version 0.6.0.3:</b> Die entwickelte Magie ist deutlicher hervorgehoben: erreichte Stufen haben einen hellen Rand und ein stärkeres Leuchten, die übrigen Steine sind dunkler und grau. <b>Version 0.6.0.2:</b> Das Magie-Board sitzt höher im Panel und ist etwas kleiner; die Kaufknöpfe für Magie liegen am äußeren Rand des Rings statt weiter innen. <b>Version 0.6.0.1:</b> Über den Siegpunkten in der Ringmitte steht kein Stern mehr. <b>Version 0.6:</b> Die Magie steht jetzt auf einem <b>dreifachen Ouroboros</b>: Feuer (rot) oben, Erde (grün) rechts unten, Wasser (blau) links unten; je Ring ein Edelstein, innen Stufe 1, außen Stufe 3. Erreichte Stufen leuchten, die übrigen sind abgedunkelt. Die <b>Siegpunkte</b> stehen in der Mitte des Rings. <b>Version 0.5.7.3:</b> Das Spiel heißt wieder <b>Magus</b> (der Name Trimagus ist zurückgenommen). <b>Version 0.5.7.2:</b> Der Opfern-Knopf steht immer da, solange du Gold opfern könntest. Er beginnt bei 0 Münzen und ist dann teiltransparent; mit ▶ stellst du die Anzahl ein. <b>Version 0.5.7.1:</b> Die Pfeile ◀ ▶ zum Opfern erscheinen nur, wenn sie nutzbar sind (◀ ab 1 Münze, ▶ solange Gold zum Aufstocken da ist, höchstens 4); sonst sind sie durchsichtig. <b>Version 0.5.7:</b> In der Verteidigung steht der <b>zu erwartende HP- und Mana-Verlust</b> schon vor dem Überfahren mit der Maus in den Werten und ändert sich mit den markierten Karten. <b>Neu in Version 0.5.6.6:</b> Beim Opfern zeigt der Münzknopf die Zahl der Münzen erst ab 2 als Plakette; bei 1 steht er ohne Zahl, bei 0 ist er durchsichtig. <b>Version 0.5.6.5:</b> Solange Karten markiert sind, blendet der Manapunkt, den sie kosten, auf dem Mana-Bogen aus und ein (zusammen mit dem roten Manawert). <b>Version 0.5.6.4:</b> Beim Überfahren eines Knopfes (Verteidigen, Passen, Erholen, Nachziehen, Plus-Knöpfe) blendet auf dem gebogenen HP- bzw. Mana-Balken der betroffene Anteil aus und ein, zum Beispiel der eine Manapunkt, den ein Angriff kostet. Die Werte erscheinen dabei weiter in Rot (weniger) oder Grün (mehr). <b>Version 0.5.5:</b> Die Würfelseite „Hand“ (mehr Handkarten) zeigt jetzt eine Hand statt dreier Karten. <b>Version 0.5.4.1:</b> Der Todesfluss zeigt keine Textzeile mehr: Aus jedem Todesmarker steigt eine violette Wolke auf, fliegt zur Lebensanzeige und zehrt dort die HP; bis zum Einschlag zeigt die Anzeige noch den alten Stand. <b>Version 0.5.4:</b> Die Heilung der Verteidigung wirkt wieder nach Angriff und Verteidigung: Sie gleicht den Schaden nachträglich aus (höchstens bis zu den maximalen HP). Die Zerrüttung und die übrigen Kombos wirken weiterhin davor. <b>Version 0.5.3.1:</b> Die Todesmarker stehen nicht mehr als kleine Symbole in der Limit-Zeile, sondern liegen als einzelne, größere Marker neben den Nachziehtokens auf dem Tisch (eigene über deinem Nachziehstapel, die des Gegners neben seinem). <b>Version 0.5.3:</b> Alle Knöpfe links (Opfern, HP, Mana, Limit) stehen jetzt auf einer Linie unter dem Münzknopf. HP und Mana stehen nicht mehr als Balken in den Zeilen, sondern als gebogene Linien links (HP) und rechts (Mana) neben der Magiescheibe. <b>Version 0.5.2.2:</b> Die Pfeile ◀ ▶ zum Opfern stehen jetzt links und rechts neben dem Münzknopf. <b>Version 0.5.2.1:</b> Die Versionsbeschreibung nennt nur noch die Versionen ab 0.4. <b>Version 0.5.2:</b> <b>Opfern wie die anderen Knöpfe:</b> Ein goldener Münzknopf steht links neben dem Gold, die Zahl der geopferten Münzen zeigt er als Plakette. Mit den Pfeilen ◀ ▶ daneben stellst du die Anzahl ein; die Schaltfläche „Opfern“ ist entfallen. <b>Version 0.5.1:</b> <b>Das Spiel hieß ab hier Trimagus.</b> Du startest mit <b>Ausspiellimit 1</b> (vorher 2). Jede Weiterentwicklung wird mit jedem Kauf teurer: die erste kostet 1 Gold, die zweite 2 Gold (gilt für Ausspiellimit, Handplätze, Nachziehlimit, max. HP und max. Mana; die Magie kostet wie bisher 1, 2, 3 … Upgrade-Punkte). Jede Entwicklung ist auf <b>Stufe 3</b> begrenzt, also auf zwei Ausbauten: Ausspiellimit 1 bis 3, Handplätze 3 bis 5, Nachziehlimit 1 bis 3, max. HP 4 bis 8, max. Mana 4 bis 6, Magie 1 bis 3. Die Monster behalten ihre Werte. Der Computer ist noch nicht neu abgestimmt. <b>Version 0.4.1:</b> Keine Spieländerung: Vier weitere Ideen sind als Notizen festgehalten (Umbenennung in Trimagus, Upgrades höchstens 3, Start mit 3 Siegpunkten, Siegpunkt-Belohnung 2 in Stufe 2 und 3 in Stufe 3). <b>Neu in Version 0.4:</b> Vier Regeländerungen. <b>Monster:</b> Die zweite Magie eines Monsters ist jetzt die <b>überlegene</b> (Feuer-Monster: Wasser, Erde-Monster: Feuer, Wasser-Monster: Erde). <b>Combo zuerst:</b> Auch in der Verteidigung wirkt der Combo-Effekt vor der Verteidigung selbst; die Heilung füllt die HP also auf, bevor der Schaden trifft, und ein Spiegel-Combo wirkt sofort gegen den laufenden Angriff. <b>Ausgleich:</b> Nach einer Niederlage gegen ein Monster erhält ihn nur noch der Verlierer. <b>Nur Gold:</b> Der Abschnittsbonus beträgt je Monster 1, 2 und 3 Gold (3, 6, 9 Gold je Abschnitt), der Ausgleich nach einer Niederlage 1, 2 und 3 Gold; es gibt keine Upgrade-Punkte mehr als Bonus. Computer neu abgestimmt.</p><div class="menulist">' + back + '</div>';
+    h += '<p class="note intro" style="margin-top:-2px"><b>Danke, dass du Magus testest!</b> <b>Neu in Version 0.7.2.2:</b> Die Ultimates <b>Heilfluss</b> und <b>Prisma</b> haben jetzt ein eigenes Ritual auf dem Bildschirm (wie das Pentagramm des Todesfluss). Die <b>Stufen des Prisma verfallen</b> wie die eines Farbspiegels, verbraucht wird aber immer zuerst der Farbspiegel. <b>Version 0.7.2.1:</b> Keine Spieländerung: Die neue <b>Ultimate-Werkstatt</b> (Effektwerkstatt für die Kombos aus allen drei Elementen) zeigt Todesfluss, Prisma und Heilfluss als Ritual mit Markern und Wirkung; sie liegt im Projekt unter <b>werkstatt/</b>. <b>Version 0.7.1.2:</b> Umbenennung in den Kombos: Das Wasser-Ultimate heißt jetzt <b>Prisma</b> (vorher Regenbogenschild), die beiden Spiegel-Kombos heißen <b>Feuerspiegel</b> und <b>Erdspiegel</b>. <b>Version 0.7.1.1:</b> In der Kombo-Übersicht ist die Schrift größer und füllt das Fenster; die Farbgruppen (Feuer, Wasser, Erde) sind getönt und durch Abstand getrennt. <b>Version 0.7.0.3:</b> Die Kombo-Übersicht nutzt die volle Höhe ihres Fensters. <b>Version 0.7.0.2:</b> In der Kombo-Übersicht entfallen die Farbüberschriften und der Zusatz „(Ultimate)“; die Reihenfolge nach Farbe bleibt. <b>Version 0.7.0.1:</b> Die <b>Kombo-Übersicht</b> ordnet alle Kombos nach Farbe der ersten Karte; die Ultimate steht unter ihrer Farbe (Feuer <b>Todesfluss</b>, Wasser Regenbogenschild, Erde Heilfluss) und alles ist ohne Scrollen sichtbar. Der Todes-Fluch heißt jetzt Todesfluss. <b>Version 0.7:</b> <b>Ultimates nach Farbe der ersten Karte:</b> Feuer wirkt wie bisher als Todesfluss, Erde legt einen <b>Heilfluss</b> (grüne Marker mit Plus heilen dich am Ende jeder deiner Angriffsphasen), Wasser einen <b>Regenbogenschild</b> (wirkt gegen jede Farbe wie ein Spiegel, verbraucht sich aber nicht). Alle drei Marker entfernt nur die Läuterung. <b>Gold opfern</b> geht ohne Obergrenze. <b>Karten</b> lassen sich unabhängig von der entwickelten Magie kaufen. Die <b>Strafe des roten Nachziehmarkers</b> (Mana und Gold) wächst mit dem Abschnitt (1/2/3); vor dem Nachziehen warnt eine Abfrage. Der Hinweistext zur Schildwirkung entfällt. <b>Version 0.6.1.2:</b> Gegen endlose Patt-Schleifen im Zuschauermodus: Die KI flieht nur noch bei deutlichem Rückstand und nach 15 Runden ohne entschiedenen Kampf gar nicht mehr. <b>Version 0.6.0.3:</b> Die entwickelte Magie ist deutlicher hervorgehoben: erreichte Stufen haben einen hellen Rand und ein stärkeres Leuchten, die übrigen Steine sind dunkler und grau. <b>Version 0.6.0.2:</b> Das Magie-Board sitzt höher im Panel und ist etwas kleiner; die Kaufknöpfe für Magie liegen am äußeren Rand des Rings statt weiter innen. <b>Version 0.6.0.1:</b> Über den Siegpunkten in der Ringmitte steht kein Stern mehr. <b>Version 0.6:</b> Die Magie steht jetzt auf einem <b>dreifachen Ouroboros</b>: Feuer (rot) oben, Erde (grün) rechts unten, Wasser (blau) links unten; je Ring ein Edelstein, innen Stufe 1, außen Stufe 3. Erreichte Stufen leuchten, die übrigen sind abgedunkelt. Die <b>Siegpunkte</b> stehen in der Mitte des Rings. <b>Version 0.5.7.3:</b> Das Spiel heißt wieder <b>Magus</b> (der Name Trimagus ist zurückgenommen). <b>Version 0.5.7.2:</b> Der Opfern-Knopf steht immer da, solange du Gold opfern könntest. Er beginnt bei 0 Münzen und ist dann teiltransparent; mit ▶ stellst du die Anzahl ein. <b>Version 0.5.7.1:</b> Die Pfeile ◀ ▶ zum Opfern erscheinen nur, wenn sie nutzbar sind (◀ ab 1 Münze, ▶ solange Gold zum Aufstocken da ist, höchstens 4); sonst sind sie durchsichtig. <b>Version 0.5.7:</b> In der Verteidigung steht der <b>zu erwartende HP- und Mana-Verlust</b> schon vor dem Überfahren mit der Maus in den Werten und ändert sich mit den markierten Karten. <b>Neu in Version 0.5.6.6:</b> Beim Opfern zeigt der Münzknopf die Zahl der Münzen erst ab 2 als Plakette; bei 1 steht er ohne Zahl, bei 0 ist er durchsichtig. <b>Version 0.5.6.5:</b> Solange Karten markiert sind, blendet der Manapunkt, den sie kosten, auf dem Mana-Bogen aus und ein (zusammen mit dem roten Manawert). <b>Version 0.5.6.4:</b> Beim Überfahren eines Knopfes (Verteidigen, Passen, Erholen, Nachziehen, Plus-Knöpfe) blendet auf dem gebogenen HP- bzw. Mana-Balken der betroffene Anteil aus und ein, zum Beispiel der eine Manapunkt, den ein Angriff kostet. Die Werte erscheinen dabei weiter in Rot (weniger) oder Grün (mehr). <b>Version 0.5.5:</b> Die Würfelseite „Hand“ (mehr Handkarten) zeigt jetzt eine Hand statt dreier Karten. <b>Version 0.5.4.1:</b> Der Todesfluss zeigt keine Textzeile mehr: Aus jedem Todesmarker steigt eine violette Wolke auf, fliegt zur Lebensanzeige und zehrt dort die HP; bis zum Einschlag zeigt die Anzeige noch den alten Stand. <b>Version 0.5.4:</b> Die Heilung der Verteidigung wirkt wieder nach Angriff und Verteidigung: Sie gleicht den Schaden nachträglich aus (höchstens bis zu den maximalen HP). Die Zerrüttung und die übrigen Kombos wirken weiterhin davor. <b>Version 0.5.3.1:</b> Die Todesmarker stehen nicht mehr als kleine Symbole in der Limit-Zeile, sondern liegen als einzelne, größere Marker neben den Nachziehtokens auf dem Tisch (eigene über deinem Nachziehstapel, die des Gegners neben seinem). <b>Version 0.5.3:</b> Alle Knöpfe links (Opfern, HP, Mana, Limit) stehen jetzt auf einer Linie unter dem Münzknopf. HP und Mana stehen nicht mehr als Balken in den Zeilen, sondern als gebogene Linien links (HP) und rechts (Mana) neben der Magiescheibe. <b>Version 0.5.2.2:</b> Die Pfeile ◀ ▶ zum Opfern stehen jetzt links und rechts neben dem Münzknopf. <b>Version 0.5.2.1:</b> Die Versionsbeschreibung nennt nur noch die Versionen ab 0.4. <b>Version 0.5.2:</b> <b>Opfern wie die anderen Knöpfe:</b> Ein goldener Münzknopf steht links neben dem Gold, die Zahl der geopferten Münzen zeigt er als Plakette. Mit den Pfeilen ◀ ▶ daneben stellst du die Anzahl ein; die Schaltfläche „Opfern“ ist entfallen. <b>Version 0.5.1:</b> <b>Das Spiel hieß ab hier Trimagus.</b> Du startest mit <b>Ausspiellimit 1</b> (vorher 2). Jede Weiterentwicklung wird mit jedem Kauf teurer: die erste kostet 1 Gold, die zweite 2 Gold (gilt für Ausspiellimit, Handplätze, Nachziehlimit, max. HP und max. Mana; die Magie kostet wie bisher 1, 2, 3 … Upgrade-Punkte). Jede Entwicklung ist auf <b>Stufe 3</b> begrenzt, also auf zwei Ausbauten: Ausspiellimit 1 bis 3, Handplätze 3 bis 5, Nachziehlimit 1 bis 3, max. HP 4 bis 8, max. Mana 4 bis 6, Magie 1 bis 3. Die Monster behalten ihre Werte. Der Computer ist noch nicht neu abgestimmt. <b>Version 0.4.1:</b> Keine Spieländerung: Vier weitere Ideen sind als Notizen festgehalten (Umbenennung in Trimagus, Upgrades höchstens 3, Start mit 3 Siegpunkten, Siegpunkt-Belohnung 2 in Stufe 2 und 3 in Stufe 3). <b>Neu in Version 0.4:</b> Vier Regeländerungen. <b>Monster:</b> Die zweite Magie eines Monsters ist jetzt die <b>überlegene</b> (Feuer-Monster: Wasser, Erde-Monster: Feuer, Wasser-Monster: Erde). <b>Combo zuerst:</b> Auch in der Verteidigung wirkt der Combo-Effekt vor der Verteidigung selbst; die Heilung füllt die HP also auf, bevor der Schaden trifft, und ein Spiegel-Combo wirkt sofort gegen den laufenden Angriff. <b>Ausgleich:</b> Nach einer Niederlage gegen ein Monster erhält ihn nur noch der Verlierer. <b>Nur Gold:</b> Der Abschnittsbonus beträgt je Monster 1, 2 und 3 Gold (3, 6, 9 Gold je Abschnitt), der Ausgleich nach einer Niederlage 1, 2 und 3 Gold; es gibt keine Upgrade-Punkte mehr als Bonus. Computer neu abgestimmt.</p><div class="menulist">' + back + '</div>';
   } else if (pg === 'quit') {
     h += '<p class="note" style="text-align:center;font-size:19px">Danke fürs Spielen!<br>Ein Browser-Tab lässt sich vom Spiel aus nicht immer schließen. Schließe diesen Tab oder dieses Fenster einfach selbst.</p><div class="menulist">' + back + '</div>';
   }

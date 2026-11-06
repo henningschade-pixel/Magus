@@ -5,11 +5,12 @@ const MirrorFx = (() => {
   function rng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
   const rgba = (hex, a) => { const n = parseInt(hex.slice(1), 16); return 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + clamp(a) + ')'; };
   const lighten = (hex, k) => { const n = parseInt(hex.slice(1), 16), f = c => Math.round(c + (255 - c) * k); return 'rgb(' + f(n >> 16 & 255) + ',' + f(n >> 8 & 255) + ',' + f(n & 255) + ')'; };
-  const EL = { F: '#ff7a3d', E: '#93c24f', W: '#52a6f5' };
+  const EL = { F: '#ff7a3d', E: '#93c24f', W: '#52a6f5', R: '#8fb4ff' };   // R: Prisma (Wasser-Ultimate), verliert seit 0.7.2.2 Stufen wie ein Farbspiegel
   // Werte der Schild-Werkstatt (Export des Spielers)
   const P = { size: 240, fly: .55, back: .55, hold: .5, dim: .45, glow: 60, flash: 1.5, shake: .5, cracks: 8, scatter: 1, gravity: 1, tempo: 1, spark: 1 };
   const IMGS = {};
-  function img(e) { if (!IMGS[e] && IMG['shield_' + e]) { const i = new Image(); i.src = IMG['shield_' + e]; IMGS[e] = i; } return IMGS[e]; }
+  const PRISMA_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="132" height="180" viewBox="0 0 40 52"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff5a4d"/><stop offset=".25" stop-color="#ffc83d"/><stop offset=".5" stop-color="#7bd36b"/><stop offset=".75" stop-color="#4aa6f5"/><stop offset="1" stop-color="#a06bff"/></linearGradient></defs><path d="M20 2 L37 9 V26 C37 38 29 46 20 50 C11 46 3 38 3 26 V9 Z" fill="url(#g)" stroke="#fff" stroke-width="2.2" stroke-opacity=".85"/><path d="M20 8 L31 12.5 V26 C31 34 26 40 20 43 Z" fill="#fff" fill-opacity=".22"/></svg>';
+  function img(e) { if (!IMGS[e]) { const src = e === 'R' ? 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(PRISMA_SVG) : IMG['shield_' + e]; if (src) { const i = new Image(); i.src = src; IMGS[e] = i; } } return IMGS[e]; }
   function orb(ctx, x, y, r, col) {
     ctx.save(); ctx.globalCompositeOperation = 'lighter';
     const g = ctx.createRadialGradient(x, y, 0, x, y, r * 3); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(.25, rgba(col, .85)); g.addColorStop(1, rgba(col, 0));
@@ -75,7 +76,7 @@ const MirrorFx = (() => {
   const shown = {};
   function track() {
     const seen = {};
-    stage.querySelectorAll('.mirstack .msh').forEach(el => { const w = el.parentElement.dataset.who, e = ['F', 'E', 'W'].find(k => el.classList.contains(k)); if (w && e) { shown[w + e] = toStage(el); seen[w + e] = 1; } });
+    stage.querySelectorAll('.mirstack .msh').forEach(el => { const w = el.parentElement.dataset.who, e = ['F', 'E', 'W', 'R'].find(k => el.classList.contains(k)); if (w && e) { shown[w + e] = toStage(el); seen[w + e] = 1; } });
     if (!G || G.phase !== 'combat') for (const k in shown) if (!seen[k] && !stage.dataset.shieldfx) delete shown[k];   // außerhalb eines Kampfes ist nichts mehr zu merken
   }
   function play(fx) {

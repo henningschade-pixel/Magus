@@ -797,14 +797,32 @@ test('Ultimate in der Verteidigung: Erde legt Heilmarker, Wasser ein Prisma (jew
   }
 });
 
-test('Prisma wirkt gegen jede Farbe und verbraucht sich nicht', () => {
+test('Prisma wirkt gegen jede Farbe und verliert dabei Stufen wie ein Spiegel (seit 0.7.2.2)', () => {
   for (const att of ['F2', 'E2', 'W2']) {
     const { s, op } = combatSetup(11, [att]);
     op.stats.rainbow = 2; op.stats.hp = op.stats.maxHp = 9;
     M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
     assert.ok(M.apply(s, { pid: op.ctrl, type: 'pass' }).ok);
-    assert.equal(op.stats.hp, 9, att + ': der Schild gleicht den Schaden aus'); assert.equal(op.stats.rainbow, 2, att + ': er bleibt bestehen');
+    assert.equal(op.stats.hp, 9, att + ': der Schild gleicht den Schaden aus'); assert.ok((op.stats.rainbow || 0) < 2, att + ': er verliert Stufen');
   }
+});
+
+test('Standardschilde werden vor dem Prisma verbraucht (0.7.2.2)', () => {
+  // Feuerangriff F2 ohne Verteidigung: Der Schild gleicht bis zu seiner Stufe (hier 2, der höhere von Feuerspiegel 1 und Prisma 2) aus; der Feuerspiegel gibt seine eine Stufe zuerst her, der Rest kommt vom Prisma
+  const { s, op } = combatSetup(11, ['F2']);
+  op.stats.mirrorEl = { F: 1, E: 0, W: 0 }; op.stats.mirror = 1; op.stats.rainbow = 2; op.stats.hp = op.stats.maxHp = 9;
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+  const pv = M.previewDefense(s, true);
+  assert.equal(pv.lostStd, 1, 'Vorschau: erst der Farbspiegel'); assert.equal(pv.lostRb, pv.used - 1, 'Vorschau: der Rest vom Prisma');
+  assert.ok(M.apply(s, { pid: op.ctrl, type: 'pass' }).ok);
+  assert.equal(op.stats.mirror || 0, 0, 'Farbspiegel aufgebraucht'); assert.equal(op.stats.rainbow, 2 - pv.lostRb, 'Prisma verliert nur den Rest');
+  assert.equal(op.stats.hp, 9 - pv.leftover);
+  // ein höherer Farbspiegel deckt alles allein: das Prisma bleibt unberührt
+  const t = combatSetup(11, ['F2']);
+  t.op.stats.mirrorEl = { F: 3, E: 0, W: 0 }; t.op.stats.mirror = 3; t.op.stats.rainbow = 1; t.op.stats.hp = t.op.stats.maxHp = 9;
+  M.apply(t.s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(t.s, { pid: 0, type: 'attack' }).ok);
+  assert.ok(M.apply(t.s, { pid: t.op.ctrl, type: 'pass' }).ok);
+  assert.equal(t.op.stats.rainbow, 1, 'Prisma unberührt'); assert.ok((t.op.stats.mirror || 0) < 3, 'der Farbspiegel hat Stufen verloren');
 });
 
 test('Läuterung entfernt Heilmarker und Prismen des Gegners', () => {
