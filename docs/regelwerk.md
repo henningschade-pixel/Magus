@@ -440,3 +440,7 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 ## Änderung 0.7.2.16 (06.11.)
 
 - **Schatten dichter:** Die Kante der Marker ist 2 statt 3 px stark, der Wurfschatten liegt bei 2/3 px Versatz (vorher 3/4 px). Nur Darstellung.
+
+## Änderung 0.7.2.17 (06.11.)
+
+- **Innenschatten:** Das Multispiegel-Schild hat einen weichen dunklen Schatten, der vom Rand nach innen fällt (auch in der Bruch-Animation). Nur Darstellung.
