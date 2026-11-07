@@ -2,7 +2,7 @@
 // Alle Gewichte der KI an einer Stelle (abgestimmt per Selbstspiel: Änderungen wurden nur übernommen, wenn sie sich in 800 Partien mit getauschten Plätzen klar durchsetzten). Pro Platz überschreibbar (setParams), damit Varianten gegeneinander spielen können.
 const DEFAULTS = {
   // Ausbaureihenfolge der Upgrade-Punkte
-  limitA: 1, slotA: 5, manaA: 4, hpA: 6, limitB: 3, slotB: 5,
+  limitA: 1, slotA: 5, manaA: 4, hpA: 7, limitB: 3, slotB: 5,
   // Lust, ein Monster anzugreifen
   cBase: 34, cHp: 3, cMana: 1.5, cWt: 3.5, cMon: 0.8, minHp: 1, minMana: 2,
   // Nachziehmarker rot (Nachziehen schenkt dem Gegner Gold bzw. ein Nachziehtoken): dRed Abschlag auf das
@@ -17,7 +17,7 @@ const DEFAULTS = {
   // über 1, höchstens 6) darunter liegt; sacRes: Gold, das dabei übrig bleiben muss (Vorrang der Verbesserungen)
   sacG: 0, mgGoal: 2, sacRes: 0,
   // sacSur (seit 0.7.7.5): Überschussgold. Kann die KI nichts mehr für Gold verbessern und hat mindestens sacSur Gold, opfert sie es im Tempel für die nächste Magiestufe (auch bei sacG 0 und über mgGoal hinaus); 0 = aus. Vorher blieb die Magie bei Stufe 1 stehen, während sich über 100 Gold ansammelten.
-  sacSur: 6,
+  sacSur: 1,   // abgestimmt (0.7.7.6): Scan 1 bis 20 gegen den Pool, 1 ist am besten (65 % statt 52 % bei 6)
   // rAtk: Angriffslust auf ein Monster, solange der Marker rot ist (statt nachzuziehen und dem Gegner Gold zu
   // schenken); Nachziehlimit (Upgrade-Punkte): dlMax bis zu welcher Stufe die KI es kauft (0 = nie), dlPos
   // Stelle in der Ausbaureihenfolge von pickSpend (0 = vor allem anderen, 4 = nach den A-Zielen, 9 = zuletzt);
