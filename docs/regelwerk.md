@@ -618,3 +618,8 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 
 - **Schild vor jeder Schadensquelle (Regeländerung):** Das Schild (`stats.rainbow`) mindert nicht mehr nur den Angriffsschaden, sondern **jeden** HP-Verlust: auch den **Rückwurf der Falle** (der Angreifer verliert nur den Rest über seinen Ladungen), den **Todesfluss** und die **Erschöpfung**. Je gemindertem Schaden geht eine Ladung verloren (Engine: `shieldHit`). Der eingehende Angriffsschaden sinkt durch die Falle weiterhin um den vollen Rückwurf. Passt zur Reihenfolge von 0.8.3.1: Das Schild wirkt in jeder Stufe vor dem Abzug der HP. Golden-Datei neu erzeugt (absichtliche Regeländerung); drei neue Tests.
 
+## Änderung 0.8.5 (07.11.)
+
+- **KI auf die neuen blauen Kombos abgestimmt, keine Änderung nötig:** `PARAMS=wFW,wTrap,uMana,uHeal,mirKeep,mirAvoid,wDeath,wEW,wFE,wDraw,lfDeath,lfHeal,keepB node tools/balance/opt2.js 3 600` (Pool: Champion plus drei früh angreifende Gegner). Runde 1: bester Kandidat `wDeath` 8 mit +0,9 Punkten, `wFW` 0,6 mit +0,7; Runde 2: `uMana` 0,7 mit +0,6. Alle liegen unter der Übernahmeschwelle (1,5 Standardfehler, etwa ±2 Punkte), nichts wurde übernommen; die Standardwerte der KI bleiben. Die Gewichte für Falle (`wTrap`), Schild (`wFW`), Manafluss (`uMana`) und Hellsicht liegen damit nahe am Optimum. Runde 3 entfiel, weil Runde 2 nichts übernahm. Gemessen wurde auf dem Regelstand 0.8.4 (vor der Änderung 0.8.4.1, die das Schild vor jeder Schadensquelle wirken lässt); `wFW` (Schild) ist danach nicht neu gemessen.
+- `wTrap` und `mirKeep` sind jetzt in der Schrittweitentabelle von `tools/balance/opt.js` und damit für `opt2.js` abstimmbar.
+- Keine Regel- und keine KI-Änderung; `tests/golden.json` bleibt unverändert.
