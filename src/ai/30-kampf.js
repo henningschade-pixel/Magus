@@ -8,11 +8,11 @@ function threatScores(opp) {
   }
   return out;
 }
-// Wert einer Falle der Stufe lvl (Blau + Rot, seit 0.8): Sie wirft 2·S unblockbaren Schaden zurück, wenn der Gegner in ihrer Farbe angreift. Die KI legt die Farbe an, mit der der Gegner nach seinem Deck am ehesten angreift; wq.wTrap gewichtet den erwarteten Rückwurf. Eine schon liegende Falle wird ersetzt, das mindert den Wert.
+// Wert einer Falle der Stufe lvl (Blau + Rot, seit 0.8): Sie wirft S (1/2/3) unblockbaren Schaden zurück, wenn der Gegner in ihrer Farbe angreift. Die KI legt die Farbe an, mit der der Gegner nach seinem Deck am ehesten angreift; wq.wTrap gewichtet den erwarteten Rückwurf. Eine schon liegende Falle wird ersetzt, das mindert den Wert.
 function trapWorth(side, opp, Q, lvl) {
   if (!(lvl > 0)) return 0;
   const sc = threatScores(opp), tot = sc.F + sc.E + sc.W, top = Math.max(sc.F, sc.E, sc.W), p = tot > 0 ? top / tot : 1 / 3;
-  return lvl * 2 * p * Q.wTrap * (side.stats.trap ? 0.3 : 1);
+  return lvl * p * Q.wTrap * (side.stats.trap ? 0.3 : 1);
 }
 // Wert eines Schilds der Stufe lvl (Blau + Grün, seit 0.8): Es bringt die Ladungen auf die Stufe, gewertet wird nur der Zugewinn gegenüber den Ladungen, die schon liegen.
 function shieldWorth(side, Q, lvl) { return lvl > 0 ? Math.max(0, lvl - (side.stats.rainbow || 0)) * Q.wFW : 0; }

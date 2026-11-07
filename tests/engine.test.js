@@ -320,21 +320,22 @@ function trapFall(el, lvl, att, dmgHp) {
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
   return { s, me, op, disc: op.deck.discard };
 }
-test('Falle: Passt die Farbe des Schadens, werden 2/4/6 unblockbar zurückgeworfen und der eingehende Schaden sinkt entsprechend', () => {
+test('Falle: Passt die Farbe des Schadens, werden 1/2/3 unblockbar zurückgeworfen und der eingehende Schaden sinkt entsprechend', () => {
   const { me, op, s } = trapFall('F', 1, 'F3');
-  assert.equal(me.stats.hp, 7, 'Stufe 1 wirft 2 zurück');
+  assert.equal(me.stats.hp, 8, 'Stufe 1 wirft 1 zurück');
   assert.equal(op.stats.trap, undefined, 'die Karte ist aufgedeckt und liegt nicht mehr');
   assert.ok(op.deck.discard.some(x => x.uid === 9001), 'Karte auf dem Ablagestapel');
-  assert.ok(s.combat.pending <= 1, 'eingehender Schaden um den Rückwurf gemindert');
-  const t = trapFall('F', 3, 'F3'); assert.equal(t.me.stats.hp, 6, 'Rückwurf höchstens der eingehende Schaden (3), nicht 6');
+  assert.ok(s.combat.pending <= 2, 'eingehender Schaden um den Rückwurf gemindert');
+  const t = trapFall('F', 3, 'F3'); assert.equal(t.me.stats.hp, 6, 'Stufe 3 wirft 3 zurück (der eingehende Schaden ist 3)');
 });
 test('Falle: Andere Farbe wirkt nicht, die Karte kommt trotzdem auf den Ablagestapel', () => {
   const { me, op, disc } = trapFall('F', 3, 'W2');
   assert.equal(me.stats.hp, 9); assert.equal(op.stats.trap, undefined); assert.ok(disc.some(x => x.uid === 9001));
 });
-test('Falle: Die Stufe 2 wirft 4 zurück, gedeckelt durch den Schaden', () => {
-  assert.equal(trapFall('F', 2, 'F3').me.stats.hp, 6);   // Schaden 3, Rückwurf min(4, 3) = 3
-  assert.equal(trapFall('F', 2, 'F1').me.stats.hp, 8);   // Schaden 1
+test('Falle: Stufe S wirft S zurück (1/2/3), gedeckelt durch den eingehenden Schaden', () => {
+  assert.equal(trapFall('F', 2, 'F3').me.stats.hp, 7);   // Schaden 3, Rückwurf 2
+  assert.equal(trapFall('F', 3, 'F1').me.stats.hp, 8);   // Schaden 1, Rückwurf min(3, 1) = 1
+  assert.equal(trapFall('F', 3, 'F2').me.stats.hp, 7);   // Schaden 2, Rückwurf min(3, 2) = 2
 });
 test('Falle legen: Rot + Blau zieht drei Karten vom Stapel (nicht in die Hand), eine liegt verdeckt vor mir, die übrigen kommen auf den Ablagestapel', () => {
   const { s, me, c } = combatSetup(11, ['F2', 'W2']);

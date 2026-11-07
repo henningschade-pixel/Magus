@@ -261,11 +261,11 @@ function trapSet(state, side, card, lvl) {
   if (side.stats.trap) side.deck.discard.push(side.stats.trap.card);   // eine liegende Falle wird durch eine neue ersetzt (die alte kommt in den Ablagestapel)
   side.stats.trap = { card, el: pc.el, tier: pc.tier, lvl };
 }
-// Die Falle wird aufgedeckt, sobald Schaden eingeht (vor der Verteidigung). Entspricht die Farbe des Schadens der Farbe der Karte, wirft sie 2/4/6 (Stufe 1/2/3) unblockbaren Schaden auf den Angreifer zurück (höchstens der eingehende Schaden, der entsprechend sinkt). Danach kommt die Karte auf den Ablagestapel, auch ohne Rückwurf.
+// Die Falle wird aufgedeckt, sobald Schaden eingeht (vor der Verteidigung). Entspricht die Farbe des Schadens der Farbe der Karte, wirft sie 1/2/3 (Stufe 1/2/3) unblockbaren Schaden auf den Angreifer zurück (höchstens der eingehende Schaden, der entsprechend sinkt). Danach kommt die Karte auf den Ablagestapel, auch ohne Rückwurf.
 function springTrap(state, owner, att, color, dmg, fxs, texts) {
   const t = owner.stats.trap; if (!t) return 0;
   delete owner.stats.trap; owner.deck.discard.push(t.card);
-  const hit = t.el === color, refl = hit ? Math.min(2 * t.lvl, dmg) : 0;
+  const hit = t.el === color, refl = hit ? Math.min(t.lvl, dmg) : 0;
   if (refl > 0) att.stats.hp = Math.max(0, att.stats.hp - refl);
   texts.push('Falle von ' + owner.name + ' (' + NAMES[t.el] + (hit ? ') trifft: ' + refl + ' unblockbarer Schaden zurück' : '), Angriff in ' + NAMES[color] + ': keine Wirkung'));
   fxs.push({ kind: 'trap', who: owner.ctrl, to: att.ctrl, el: t.el, card: t.card.id, attElem: color, hit, refl, lvl: t.lvl });
