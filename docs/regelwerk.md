@@ -614,3 +614,7 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 
 - **Einstellungen aufgeräumt:** Jede Gruppe (Ton, Spiel) hat eine Kopfzeile; rechts steht der Ton-Schalter beziehungsweise „Standardwerte“ für die Spielwerte. Die beiden Spielwerte stehen mit kompakten −/+-Knöpfen je in einer Zeile; die Seite ist breiter und passt in das Fenster (vorher ragte „Zurück“ heraus). Nur Oberfläche.
 
+## Änderung 0.8.4.1 (07.11.)
+
+- **Schild vor jeder Schadensquelle (Regeländerung):** Das Schild (`stats.rainbow`) mindert nicht mehr nur den Angriffsschaden, sondern **jeden** HP-Verlust: auch den **Rückwurf der Falle** (der Angreifer verliert nur den Rest über seinen Ladungen), den **Todesfluss** und die **Erschöpfung**. Je gemindertem Schaden geht eine Ladung verloren (Engine: `shieldHit`). Der eingehende Angriffsschaden sinkt durch die Falle weiterhin um den vollen Rückwurf. Passt zur Reihenfolge von 0.8.3.1: Das Schild wirkt in jeder Stufe vor dem Abzug der HP. Golden-Datei neu erzeugt (absichtliche Regeländerung); drei neue Tests.
+

@@ -162,6 +162,12 @@ function finishStep(state, info) {
 // Angriffszug endet ohne Schaden: die Gegenseite greift an (Verteidigung entfällt).
 const MAX_LVL = 3;   // höchste Kombostufe und Höchstzahl der Schildladungen
 // Schild (Blau + Grün, seit 0.8; stats.rainbow, Grafik des früheren Multischilds): Ladungen 1/2/3. Er mindert eingehenden, nicht geblockten Schaden gegen jede Farbe und verliert je gemindertem Schaden eine Ladung. Ein neues Schild bringt die Ladungen auf die Stufe (nicht addiert, höchstens 3).
+// Das Schild wirkt vor jeder Schadensquelle (seit 0.8.3.2): auch gegen den Rückwurf der Falle, den Todesfluss und die Erschöpfung. Es mindert den Schaden um höchstens seine Ladungen und verliert je gemindertem Schaden eine Ladung. Gibt den tatsächlich verlorenen Schaden zurück; absorbed (optional) meldet die Minderung.
+function shieldHit(stats, dmg) {
+  const ab = Math.min(stats.rainbow || 0, Math.max(0, dmg));
+  if (ab > 0) { stats.rainbow -= ab; if (!stats.rainbow) delete stats.rainbow; }
+  return { hit: dmg - ab, absorbed: ab };
+}
 function shieldAdd(stats, n) { stats.rainbow = Math.max(stats.rainbow || 0, Math.min(n, MAX_LVL)); }
 // Ultimates (seit 0.7 nach der Farbe der ersten Karte): Feuer = Todesfluss (stats.death, Marker beim Gegner), Erde = Heilfluss (stats.heal, +1 HP je Marker am Ende der eigenen Angriffsphase), Wasser = Manafluss (seit 0.8, stats.manaflow: +1 Mana je Marker am Ende der eigenen Angriffsphase). Alle drei Marker entfernt nur die Läuterung.
 // Läuterung: gewählte Marker (sm/om Manamarker, sd/od Todesmarker, sh/oh Heilmarker, sr/or Schildmarker, st/ot Nachziehtokens), höchstens S; ohne Wahl automatisch eigene Todesmarker, dann Schild-, Mana- und Heilmarker des Gegners.
@@ -187,14 +193,16 @@ function deathTick(state, side, done) {   // done: Nummer des Angriffszugs (1, 2
   const dmg = Math.min(side.stats.death || 0, side.stats.deathPhase === undefined ? Infinity : side.stats.deathPhase); delete side.stats.deathPhase;
   if (hpDecided(state)) return;   // Stufe 3 (Flusseffekte) kommt nach Stufe 1 (Rückwurf) und 2 (Schaden nach der Verteidigung): ist dort schon eine Seite auf 0 HP gefallen, wirkt kein Fluss mehr
   if (dmg > 0) {
-    side.stats.hp = Math.max(0, side.stats.hp - dmg);
-    log(state, 'Todesfluss: ' + side.name + ' verliert ' + dmg + ' HP am Ende der Angriffsphase.', side.ctrl);
+    const sh = shieldHit(side.stats, dmg);   // das Schild mindert auch den Todesfluss
+    side.stats.hp = Math.max(0, side.stats.hp - sh.hit);
+    log(state, 'Todesfluss: ' + side.name + ' verliert ' + sh.hit + ' HP am Ende der Angriffsphase' + (sh.absorbed ? ' (Schild mindert um ' + sh.absorbed + ')' : '') + '.', side.ctrl);
   }
   // Erschöpfung (seit 0.7.7.2): Nach je exhaustRounds Kampfrunden (Standard 10, 0 = aus) steigt sie um 1; beide Seiten (auch das Monster) verlieren am Ende ihrer Angriffsphase so viele HP, wie die Erschöpfung hoch ist. Runde 1–10: 0, Runde 11–20: 1, Runde 21–30: 2 …
   const exLvl = exhaustionLevel(state, done);
   if (exLvl > 0 && side.stats.hp > 0) {
-    side.stats.hp = Math.max(0, side.stats.hp - exLvl);
-    log(state, 'Erschöpfung ' + exLvl + ': ' + side.name + ' verliert ' + exLvl + ' HP am Ende der Angriffsphase.', side.ctrl);
+    const sh = shieldHit(side.stats, exLvl);   // das Schild mindert auch die Erschöpfung
+    side.stats.hp = Math.max(0, side.stats.hp - sh.hit);
+    log(state, 'Erschöpfung ' + exLvl + ': ' + side.name + ' verliert ' + sh.hit + ' HP am Ende der Angriffsphase' + (sh.absorbed ? ' (Schild mindert um ' + sh.absorbed + ')' : '') + '.', side.ctrl);
     if (side.stats.hp <= 0) return;
   }
   // Heilfluss (Erd-Ultimate): am Ende der eigenen Angriffsphase +1 HP je Heilmarker (nur Marker, die schon zu Beginn der Phase lagen: healPhase wie deathPhase), höchstens bis zu den maximalen HP; nur wer noch steht
@@ -274,9 +282,10 @@ function springTrap(state, owner, att, color, dmg, fxs, texts) {
   const t = owner.stats.trap; if (!t) return 0;
   delete owner.stats.trap; owner.deck.discard.push(t.card);
   const hit = t.el === color, refl = hit ? Math.min(t.lvl, dmg) : 0;
-  if (refl > 0) att.stats.hp = Math.max(0, att.stats.hp - refl);
-  texts.push('Falle von ' + owner.name + ' (' + NAMES[t.el] + (hit ? ') trifft: ' + refl + ' unblockbarer Schaden zurück' : '), Angriff in ' + NAMES[color] + ': keine Wirkung'));
-  fxs.push({ kind: 'trap', who: owner.ctrl, to: att.ctrl, el: t.el, card: t.card.id, attElem: color, hit, refl, lvl: t.lvl });
+  const sh = refl > 0 ? shieldHit(att.stats, refl) : { hit: 0, absorbed: 0 };   // das Schild des Angreifers mindert auch den Rückwurf (er bleibt unblockbar, das Schild ist aber kein Block)
+  if (sh.hit > 0) att.stats.hp = Math.max(0, att.stats.hp - sh.hit);
+  texts.push('Falle von ' + owner.name + ' (' + NAMES[t.el] + (hit ? ') trifft: ' + refl + ' unblockbarer Schaden zurück' + (sh.absorbed ? ', Schild von ' + att.name + ' mindert um ' + sh.absorbed : '') : '), Angriff in ' + NAMES[color] + ': keine Wirkung'));
+  fxs.push({ kind: 'trap', who: owner.ctrl, to: att.ctrl, el: t.el, card: t.card.id, attElem: color, hit, refl, abs: sh.absorbed, lvl: t.lvl });
   return refl;
 }
 // Wirkung der Kombos (Angriff und nach der Verteidigung): plan = [[Schlüssel, Stufe], ...]
