@@ -58,7 +58,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .fxnote i{font-style:normal;font-size:28px;line-height:1}
 .fxnote.mirror{border-color:var(--water);box-shadow:0 0 18px rgba(82,166,245,.5)}.fxnote.mirror i{color:var(--water)}
 @keyframes fxin{0%{opacity:0;transform:translateY(10px) scale(.96)}10%{opacity:1;transform:none}80%{opacity:1}100%{opacity:0;transform:translateY(-8px)}}
-.card.fadeout{pointer-events:none;z-index:400}
+.card.fadeout{pointer-events:none;z-index:280}
 /* Verbrennen (Verkohlen): die Karte vergraut und dunkelt ab, steigt auf und zerfällt von unten nach oben */
 .card.fadeout .inner{animation:burnash 1.2s ease-in forwards;-webkit-mask-image:linear-gradient(to top,transparent 0,transparent 40%,#000 62%,#000 100%);mask-image:linear-gradient(to top,transparent 0,transparent 40%,#000 62%,#000 100%);-webkit-mask-size:100% 193%;mask-size:100% 193%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
 @keyframes burnash{0%{translate:0 0;opacity:1;filter:none;-webkit-mask-position:0 0;mask-position:0 0}

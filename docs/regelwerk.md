@@ -632,3 +632,8 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 ## Änderung 0.8.6.1 (07.11.)
 
 - **Siegbedingung: Siegpunkte > Tempelstufe > Gold (Regeländerung):** Bei Gleichstand an Siegpunkten nach dem dritten Showdown entscheidet zuerst die Tempelstufe, danach das Gold (vorher umgekehrt). Engine: `65-kampfablauf.js` (Spielende), Endbildschirm: „bei gleicher Tempelstufe das meiste Gold“ bzw. „bei Punktgleichstand die höhere Tempelstufe“. Die Spielanleitung (Präsentation, Seiten 2 und 20) nennt die neue Reihenfolge. Gemeint ist die Tempelstufe, wie bisher als Kriterium verwendet, nicht der Punktestand im Tempel.
+
+## Änderung 0.8.7.1 (08.11.)
+
+- **Karten unter den Bildschirmen (keine Regel- und keine KI-Änderung):** Karten, die zum Stapel zurückfliegen oder verbrennen, sowie gekaufte Karten, die noch auf ihren Platz warten, hatten die Ebene 400 und lagen damit über dem Endbildschirm (ebenfalls Ebene 400) und den Menü- und Startbildschirmen (Ebene 300). Sie liegen jetzt auf Ebene 280, unter allen Bildschirmen, aber weiter über dem Spielfeld. Änderung in `src/ui/15-karten.js` und `src/style.css` (`.card.fadeout`).
+- Die Versionsbeschreibung im Spiel nennt die Änderung; `tests/golden.json` bleibt unverändert.
