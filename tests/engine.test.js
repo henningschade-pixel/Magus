@@ -1180,3 +1180,13 @@ test('Schild mindert auch den Todesfluss am Ende der Angriffsphase', () => {
   assert.ok(M.apply(s, { pid: op.ctrl, type: 'pass' }).ok);
   assert.equal(me.stats.hp, 9, 'der Todesfluss von 2 wurde geschluckt'); assert.equal(me.stats.rainbow, undefined);
 });
+
+test('Falle: Wird der gesamte Schaden zurückgeworfen, entfällt die Verteidigung; der Verteidiger greift direkt an (0.8.7.3)', () => {
+  const full = trapFall('F', 3, 'F1');   // Schaden 1, Rückwurf 1: nichts bleibt übrig
+  assert.equal(full.s.combat.action, 'attack', 'keine Verteidigungsphase');
+  assert.equal(full.s.combat.pending, 0);
+  assert.equal(full.s.combat.sides[full.s.combat.turn].ctrl, 1, 'der Verteidiger ist jetzt im Angriffszug');
+  const part = trapFall('F', 1, 'F3');   // Schaden 3, Rückwurf 1: Rest 2
+  assert.equal(part.s.combat.action, 'defense', 'bei Restschaden bleibt die Verteidigung');
+  assert.equal(part.s.combat.pending, 2);
+});

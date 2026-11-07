@@ -642,3 +642,7 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 
 - **Sinnlose Knöpfe inaktiv (keine Regel- und keine KI-Änderung):** Im Kampfpanel ist **Erholen** ausgegraut, wenn das eigene Mana schon voll ist, und **Nachziehen**, wenn bei rotem Nachziehmarker das Mana für die Kosten nicht reicht (der Knopf zeigt den Grund als Tooltip). Nur die Oberfläche (`src/ui/18-kampf.js`); die Engine lässt Erholen bei vollem Mana weiterhin zu, damit die KI und gespeicherte Spiellogs unverändert laufen.
 - Die Versionsbeschreibung im Spiel nennt die Änderung; `tests/golden.json` bleibt unverändert.
+
+## Änderung 0.8.7.3 (08.11.)
+
+- **Verteidigung bei vollem Rückwurf (keine Regeländerung):** Wirft die Falle den gesamten eingehenden Schaden zurück, entfällt die Verteidigungsphase wie beim Angriff ohne Schaden: Der Verteidiger ist sofort im Angriffszug, die Angriffsphase des Angreifers endet mit ihren Flusseffekten. Das war schon so (`execAttack` in `65-kampfablauf.js`); neu ist nur ein Test dazu in `tests/engine.test.js`.
