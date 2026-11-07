@@ -510,3 +510,7 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 ## Änderung 0.7.6.8 (07.11.)
 
 - **Multischild kräftiger:** Die Verlaufsfarben des Multischilds (Marker und Schild-Effekt) sind weniger entsättigt. Keine Regeländerung.
+
+## Änderung 0.7.7.1 (07.11.)
+
+- **Kampfrunden, höchstens 20:** `maxRounds` steht jetzt auf 20 (vorher 10; 0 = aus). Nach 20 Runden (40 Angriffszügen) endet ein Kampf unentschieden, sofern bis dahin keiner auf 0 HP gefallen ist; Anzeige „Runde N von 20“. Anlass: Ein Spiellog (Seed 2127820936) zeigte einen dritten Showdown mit 148 Aktionen ohne HP-Änderung (beide 8/8 HP). Die KI-Parameter (`stallFrom`, `stallDec`, `aThr`) sind weiterhin auf 10 Runden abgestimmt und nicht angepasst. Die KI-Referenzpartien (`tests/golden.json`) sind neu erzeugt.
