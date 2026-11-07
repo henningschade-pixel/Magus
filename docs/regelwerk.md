@@ -85,7 +85,7 @@ Die Farbe der ersten markierten Karte bestimmt die Rolle (Feuer aggressiv, Wasse
 |---|---|---|
 | Lähmung | Feuer + Erde | **2·S Fluchkarten** (2 / 4 / 6) auf den Ablagestapel der Gegenseite |
 | Hellsicht | Wasser + Feuer | ziehe S Karten; für jede entscheiden: auf die Hand (sofern Platz), auf den Ablagestapel oder zurück zum Händler (aus dem Deck) |
-| Falle | Feuer + Wasser | ziehe bis zu drei Karten und lege eine davon verdeckt vor dich (Stufe S, kein Marker) |
+| Falle | Feuer + Wasser | ziehe drei Karten vom Stapel, lege eine davon verdeckt vor dich, die übrigen kommen auf den Ablagestapel (Stufe S, kein Marker) |
 | Schild | Wasser + Erde | Schild mit S Ladungen (nicht addiert, höchstens 3) |
 | Heilung | Erde + Wasser | S HP heilen |
 | Läuterung | Erde + Feuer | S beliebige Marker vom Brett entfernen, je entferntem Marker ein Nachziehtoken |
@@ -576,4 +576,9 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 ## Änderung 0.8.0.4 (07.11.)
 
 - **Hellsicht-Auswahl ohne erneutes Einblenden:** Beim Anklicken von „Auf die Hand“, „Ablegen“ oder „Abwerfen“ färbt sich nur der Knopf ein; die Karten bleiben stehen und blenden nicht neu ein (vorher wurde das Overlay bei jeder Wahl neu aufgebaut und wirkte wie eine weitere Karte). Nur Darstellung.
+
+## Änderung 0.8.0.5 (07.11.)
+
+- **Falle zieht vom Stapel und zeigt die Karten in der Mitte:** Die drei Karten kommen direkt vom Zugstapel (nicht mehr in freie Handplätze), liegen groß im Vordergrund, unter jeder Karte steht „Als Falle legen“ (Fluchkarten sind gesperrt). Die gewählte liegt verdeckt vor dir, die übrigen gehen auf den Ablagestapel; die Hand bleibt unverändert. Gibt es nur eine mögliche Karte, gilt sie sofort. Unentschiedene Karten kehren bei Kampfende in den Ablagestapel zurück.
+- KI: wählt die Karte in der Farbe, mit der der Gegner nach seinem Deck am ehesten angreift. Die Hervorhebung der Handkarten als Kandidaten entfällt.
 

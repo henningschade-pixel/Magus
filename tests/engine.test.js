@@ -336,12 +336,20 @@ test('Falle: Die Stufe 2 wirft 4 zurück, gedeckelt durch den Schaden', () => {
   assert.equal(trapFall('F', 2, 'F3').me.stats.hp, 6);   // Schaden 3, Rückwurf min(4, 3) = 3
   assert.equal(trapFall('F', 2, 'F1').me.stats.hp, 8);   // Schaden 1
 });
-test('Falle legen: Rot + Blau zieht bis zu drei Karten, eine davon liegt verdeckt vor mir und ist kein Marker', () => {
+test('Falle legen: Rot + Blau zieht drei Karten vom Stapel (nicht in die Hand), eine liegt verdeckt vor mir, die übrigen kommen auf den Ablagestapel', () => {
   const { s, me, c } = combatSetup(11, ['F2', 'W2']);
+  me.deck.draw = ['E1', 'F1', 'W1', 'E2'].map((id, i) => ({ id, uid: 8000 + i }));   // zuletzt gezogen: E2, W1, F1
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
+  const handN = me.deck.hand.filter(Boolean).length - 2, d0 = me.deck.discard.length;
   assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
-  if (c.forced && c.forced.kind === 'trap') { assert.ok(c.forced.slots.length >= 2 && c.forced.slots.length <= 3); assert.ok(M.apply(s, { pid: 0, type: 'fd', slots: [c.forced.slots[0]] }).ok); }
-  assert.ok(me.stats.trap, 'Falle liegt'); assert.equal(me.stats.trap.lvl, 2);
+  assert.ok(c.forced && c.forced.kind === 'trap' && c.forced.cards.length === 3, 'drei Karten zur Wahl');
+  assert.deepEqual(c.forced.cards.map(x => x.id), ['E2', 'W1', 'F1']);
+  assert.equal(me.deck.hand.filter(Boolean).length, handN, 'die gezogenen Karten ersetzen die Hand nicht');
+  assert.equal(M.apply(s, { pid: 0, type: 'attack' }).ok, false, 'vorher keine andere Aktion');
+  assert.ok(M.apply(s, { pid: 0, type: 'fd', slots: [1] }).ok);
+  assert.ok(me.stats.trap && me.stats.trap.el === 'W' && me.stats.trap.lvl === 2, 'Falle liegt: W1, Stufe 2');
+  assert.deepEqual(me.deck.discard.slice(d0 + 2).map(x => x.id).sort(), ['E2', 'F1'], 'die nicht gewählten kommen auf den Ablagestapel (nach den zwei Kombokarten)');
+  assert.equal(me.deck.hand.filter(Boolean).length, handN);
   assert.equal(JSON.stringify(me.deck.marks), '[]');
 });
 
@@ -919,7 +927,7 @@ test('Fallenwahl (zuvor Abwerfen nach Zerrüttung) ist kein Zug: Zugzähler, Pas
   assert.ok(c.forced && c.forced.kind === 'trap', 'Falle: der Spieler wählt eine der gezogenen Karten');
   const snap = () => JSON.stringify({ turn: c.turn, action: c.action, turns: c.turns, tot: s.combatTurnsTotal, passed: [me.passed, op.passed], marker: s.players.map(p => [p.drawN, p.drawRed]), mons: [c.sides.b.monster && c.sides.b.monster.drawN, c.sides.b.monster && c.sides.b.monster.drawRed] });
   const before = snap(), pid = c.forced.pid, side = c.sides.a.ctrl === pid ? c.sides.a : c.sides.b;
-  const slots = [c.forced.slots[0]];
+  const slots = [0];
   assert.ok(M.apply(s, { pid, type: 'fd', slots }).ok);
   assert.equal(c.forced, null);
   assert.equal(snap(), before, 'die Fallenwahl ändert nichts am Zugablauf');

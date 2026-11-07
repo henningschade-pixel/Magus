@@ -88,7 +88,7 @@ function forcedPick(state, pid) {
   const c = state.combat, v = c.sides.a.ctrl === pid ? c.sides.a : c.sides.b, d = v.deck, mag = v.stats.mag;
   if (c.forced.kind === 'trap') {   // Falle: die gezogene Karte in der Farbe, mit der der Gegner nach seinem Deck am ehesten angreift
     const sc = threatScores(c.sides.a.ctrl === pid ? c.sides.b : c.sides.a);
-    const cs = c.forced.slots.filter(sl => d.hand[sl]).map(sl => ({ slot: sl, v: sc[M.parseCard(d.hand[sl].id).el] || 0 })).sort((x, y) => y.v - x.v || x.slot - y.slot);
+    const cs = c.forced.cards.map((cd, i) => ({ slot: i, curse: M.parseCard(cd.id).curse, v: (sc[M.parseCard(cd.id).el] || 0) })).filter(x => !x.curse).sort((x, y) => y.v - x.v || x.slot - y.slot);
     return cs.length ? [cs[0].slot] : [];
   }
   const cards = d.hand.map((h, slot) => h ? { slot, v: (M.parseCard(h.id).curse ? -5 : M.parseCard(h.id).tier + 0.15 * (mag[M.parseCard(h.id).el] || 0)) + (h.locked ? 4 : 0) } : null).filter(Boolean).sort((x, y) => x.v - y.v || x.slot - y.slot);

@@ -65,7 +65,7 @@ function evaluateEnd(state) {
 function endCombat(state, end) {
   const c = state.combat, res = { mode: c.mode, reason: end.reason, winner: end.winner, monsterDefeated: false, elem: c.elem, stage: state.stage, turns: c.turns, fled: end.fled || null };   // elem/stage/turns: für die Balance-Auswertung
   if (state.keepSnap) res.snap = JSON.parse(JSON.stringify(c));   // Oberfläche: Endstand des Kampfes (vor Zurücksetzen und Rückkehr in die Weltphase)
-  if (c.forced && c.forced.kind === 'sight') { const fs = c.sides.a.ctrl === c.forced.pid ? c.sides.a : c.sides.b; if (fs.kind === 'player') c.forced.cards.forEach(cd => fs.deck.discard.push(cd)); c.forced = null; }   // unentschiedene Hellsicht-Karten kehren in den Ablagestapel zurück
+  if (c.forced && c.forced.cards) { const fs = c.sides.a.ctrl === c.forced.pid ? c.sides.a : c.sides.b; if (fs.kind === 'player') c.forced.cards.forEach(cd => fs.deck.discard.push(cd)); c.forced = null; }   // unentschiedene Hellsicht- und Fallen-Karten kehren in den Ablagestapel zurück
   state.players.forEach(p => { if (p.stats.trap) p.deck.discard.push(p.stats.trap.card); p.stats.freeDraws = 0; p.deck.marks = []; ['death', 'deathPhase', 'heal', 'healPhase', 'manaflow', 'manaPhase', 'rainbow', 'trap'].forEach(k => { delete p.stats[k]; }); });   // die Fallenkarte kehrt in den Ablagestapel zurück (wird gleich mit gemischt)
   state.players.forEach(p => stripCurseCards(state, p.deck));
   ['healPhase', 'death', 'deathPhase', 'heal', 'manaflow', 'manaPhase', 'rainbow', 'trap'].forEach(k => { delete c.sides.b.stats[k]; });
@@ -241,26 +241,25 @@ function sightResolve(state, side, cards, pick) {
   });
   return out;
 }
-// Falle (Rot + Blau, seit 0.8.0.1; vorher Blau + Rot, seit 0.8): Die Seite zieht drei Karten (soweit Handplätze frei sind) und legt eine davon verdeckt vor sich (stats.trap = { card, el, tier, lvl }; kein Marker, die Läuterung erreicht sie nicht). Welche, wählt der Spieler (c.forced mit kind 'trap'; ohne Wahlmöglichkeit gleich). Fluchkarten kommen nicht in Frage.
+// Falle (Rot + Blau, seit 0.8.0.1; vorher Blau + Rot, seit 0.8): Die Seite zieht drei Karten vom Zugstapel (seit 0.8.0.5 nicht mehr in die Hand) und legt eine davon verdeckt vor sich; die übrigen kommen auf den Ablagestapel (stats.trap = { card, el, tier, lvl }; kein Marker, die Läuterung erreicht sie nicht). Welche, wählt der Spieler (c.forced mit kind 'trap'; ohne Wahlmöglichkeit gleich). Fluchkarten kommen nicht in Frage.
 function trapDraw(state, side, lvl) {
-  const d = side.deck, free = [];
-  for (let i = 0; i < d.hand.length && free.length < 3; i++) if (!d.hand[i]) free.push(i);
-  const before = d.hand.map(x => x && x.uid);
-  for (const i of free) {   // wie fillHand, aber nur drei Karten
+  const d = side.deck, cards = [];
+  for (let i = 0; i < 3; i++) {   // drei Karten direkt vom Zugstapel (der Ablagestapel wird bei Bedarf gemischt); sie ersetzen keine Handkarten
     if (!d.draw.length && d.discard.length) { d.draw = d.discard.splice(0); state.rng.shuffle(d.draw); }
     if (!d.draw.length) break;
-    d.hand[i] = d.draw.pop();
+    cards.push(d.draw.pop());
   }
-  const slots = free.filter(i => d.hand[i] && d.hand[i].uid !== before[i] && !parseCard(d.hand[i].id).curse);
-  const drawn = free.filter(i => d.hand[i] && d.hand[i].uid !== before[i]).length;
-  if (slots.length === 1) trapSet(state, side, slots[0], lvl);
-  else if (slots.length > 1) state.combat.forced = { pid: side.ctrl, n: 1, kind: 'trap', slots, lvl };
-  return { drawn, choose: slots.length > 1, none: slots.length === 0 };
+  const ok = cards.map((cd, i) => parseCard(cd.id).curse ? -1 : i).filter(i => i >= 0);
+  if (ok.length === 1) { trapSet(state, side, cards[ok[0]], lvl); cards.forEach((cd, i) => { if (i !== ok[0]) d.discard.push(cd); }); }
+  else if (ok.length > 1) state.combat.forced = { pid: side.ctrl, n: 1, kind: 'trap', cards, lvl };
+  else cards.forEach(cd => d.discard.push(cd));
+  return { drawn: cards.length, choose: ok.length > 1, none: ok.length === 0 };
 }
-function trapSet(state, side, slot, lvl) {
-  const d = side.deck, card = d.hand[slot], pc = parseCard(card.id);
-  d.hand[slot] = null; d.marks = d.marks.filter(i => i !== slot); card.locked = false;
-  side.stats.trap = { card, el: pc.el, tier: pc.tier, lvl };   // eine liegende Falle wird durch eine neue ersetzt (die alte kommt in den Ablagestapel)
+function trapSet(state, side, card, lvl) {
+  const pc = parseCard(card.id);
+  card.locked = false;
+  if (side.stats.trap) side.deck.discard.push(side.stats.trap.card);   // eine liegende Falle wird durch eine neue ersetzt (die alte kommt in den Ablagestapel)
+  side.stats.trap = { card, el: pc.el, tier: pc.tier, lvl };
 }
 // Die Falle wird aufgedeckt, sobald Schaden eingeht (vor der Verteidigung). Entspricht die Farbe des Schadens der Farbe der Karte, wirft sie 2/4/6 (Stufe 1/2/3) unblockbaren Schaden auf den Angreifer zurück (höchstens der eingehende Schaden, der entsprechend sinkt). Danach kommt die Karte auf den Ablagestapel, auch ohne Rückwurf.
 function springTrap(state, owner, att, color, dmg, fxs, texts) {
@@ -444,12 +443,13 @@ function applyCombat(state, a) {
     const trapPick = c.forced.kind === 'trap';
     if (a.type !== 'fd') return fail(c.forced.pid === pid ? (trapPick ? 'Falle: Wähle zuerst die Karte, die du verdeckt vor dich legst.' : 'Zerrüttung: Wähle zuerst ' + c.forced.n + ' Handkarte' + (c.forced.n === 1 ? '' : 'n') + ' zum Abwerfen.') : (trapPick ? 'Der Gegner wählt gerade seine Falle.' : 'Der Gegner wählt gerade seine Abwurfkarten.'));
     if (c.forced.pid !== pid) return fail(trapPick ? 'Der Gegner wählt gerade seine Falle.' : 'Der Gegner wählt gerade seine Abwurfkarten.');
-    if (trapPick) {   // Falle: eine der eben gezogenen Karten verdeckt vor sich legen
-      const v = c.sides.a.ctrl === pid ? c.sides.a : c.sides.b, sl = Array.isArray(a.slots) ? a.slots.map(Number) : [];
-      if (sl.length !== 1 || !c.forced.slots.includes(sl[0]) || !v.deck.hand[sl[0]]) return fail('Wähle genau eine der gezogenen Karten als Falle.');
-      trapSet(state, v, sl[0], c.forced.lvl);
+    if (trapPick) {   // Falle: eine der gezogenen Karten verdeckt vor sich legen, die übrigen auf den Ablagestapel
+      const v = c.sides.a.ctrl === pid ? c.sides.a : c.sides.b, sl = Array.isArray(a.slots) ? a.slots.map(Number) : [], cards = c.forced.cards;
+      if (sl.length !== 1 || !cards[sl[0]] || parseCard(cards[sl[0]].id).curse) return fail('Wähle genau eine der gezogenen Karten als Falle.');
+      trapSet(state, v, cards[sl[0]], c.forced.lvl);
+      cards.forEach((cd, i) => { if (i !== sl[0]) v.deck.discard.push(cd); });
       c.forced = null;
-      log(state, v.name + ' legt eine Karte verdeckt als Falle vor sich.', pid);
+      log(state, v.name + ' legt eine Karte verdeckt als Falle vor sich, ' + (cards.length - 1) + ' auf den Ablagestapel.', pid);
       return { ok: true };
     }
     const v = c.sides.a.ctrl === pid ? c.sides.a : c.sides.b, pick = Array.isArray(a.pick) ? a.pick : [], cards = c.forced.cards;   // Hellsicht: je Karte Hand (t), Ablage (a) oder Händler (d)
