@@ -573,3 +573,7 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 
 - **Hellsicht im Vordergrund:** Die gezogenen Karten liegen groß über dem Kampffeld (abgedunkelter Hintergrund, Einblend-Animation), unter jeder stehen die drei Möglichkeiten „Auf die Hand“, „Ablegen“ und „Abwerfen“ (zurück zum Händler); mit „Bestätigen“ gilt die Wahl. Keine Regeländerung. Der Gegner sieht die Karten nicht, nur den Hinweis im Kampffeld.
 
+## Änderung 0.8.0.4 (07.11.)
+
+- **Hellsicht-Auswahl ohne erneutes Einblenden:** Beim Anklicken von „Auf die Hand“, „Ablegen“ oder „Abwerfen“ färbt sich nur der Knopf ein; die Karten bleiben stehen und blenden nicht neu ein (vorher wurde das Overlay bei jeder Wahl neu aufgebaut und wirkte wie eine weitere Karte). Nur Darstellung.
+
