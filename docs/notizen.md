@@ -2,6 +2,16 @@
 
 Gedanken zu Regeln und Balance, über die noch nicht entschieden ist. Neue Einträge oben.
 
+## Idee: neue Kombo „Ziehen und zählen“ (07.11.)
+
+Eine neue Kombo: Der Spieler zieht N Karten. Gezählt wird dann etwas, und an das Ergebnis wird ein Effekt gebunden. Mögliche Zählweisen (nur gesammelt, nichts entschieden):
+
+- die Anzahl der Sekundärkarten,
+- die Anzahl der unterschiedlichen Farben,
+- weitere Zählweisen sind offen („oder oder oder“).
+
+Offen: Was genau gezählt wird (die gezogenen Karten oder die markierten?), welcher Effekt an die Zahl gebunden wird, welche Farbkombination die Kombo auslöst, wie N bestimmt wird und welche Kosten sie hat. Zu prüfen mit der KI (`npm run balance`), sobald daraus eine Regel wird.
+
 ## Idee: Dreierkombo erst ab Stufe 2 (06.11.)
 
 Eine Dreierkombo (Ultimate aus allen drei Farben) setzt Stufe 2 der primären Magie voraus. Als „primär“ ist hier das Primärelement gemeint, also die Farbe der zuerst markierten Karte (siehe `docs/regelwerk.md`, Abschnitt Angriff). Offen zur Umsetzung: Zählt dafür die Magiestufe im Primärelement (Magie-Board) oder die Kartenstufe der ersten Karte? Gilt die Voraussetzung auch in der Verteidigung (dort ist die Primärfarbe die Verteidigungsfarbe)? Zu prüfen mit der KI: Wie oft wird die Ultimate dadurch seltener, und ändert sich die Balance (`npm run balance`)?
