@@ -582,3 +582,11 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Falle zieht vom Stapel und zeigt die Karten in der Mitte:** Die drei Karten kommen direkt vom Zugstapel (nicht mehr in freie Handplätze), liegen groß im Vordergrund, unter jeder Karte steht „Als Falle legen“ (Fluchkarten sind gesperrt). Die gewählte liegt verdeckt vor dir, die übrigen gehen auf den Ablagestapel; die Hand bleibt unverändert. Gibt es nur eine mögliche Karte, gilt sie sofort. Unentschiedene Karten kehren bei Kampfende in den Ablagestapel zurück.
 - KI: wählt die Karte in der Farbe, mit der der Gegner nach seinem Deck am ehesten angreift. Die Hervorhebung der Handkarten als Kandidaten entfällt.
 
+## Änderung 0.8.0.6 (07.11.)
+
+- **Falle und Hellsicht mischen bei Bedarf:** Reicht der Zugstapel für die gezogenen Karten nicht, wird (wie beim normalen Nachziehen) der Ablagestapel gemischt und weitergezogen; die Restkarten des Zugstapels kommen zuerst. Im Ablagestapel liegen dann auch die eben gespielten Kombokarten. Das war im Ablauf schon so (gleiche Mischlogik wie `fillHand`); neu ist ein Test, der es absichert. Gibt es auch danach zu wenig Karten, wird gezogen, was da ist.
+
+## Änderung 0.8.0.7 (07.11.)
+
+- **Fallenkarte schlichter:** Die liegende Falle hat keinen blauen Rahmen und keinen Schein mehr; sie zeigt nur die Karte (für den Besitzer mit ihrem Symbol, für den Gegner umgedreht, also die Rückseite) mit einem Stufenzähler (×S) unten rechts, im Stil der anderen Marker. Nur Darstellung.
+

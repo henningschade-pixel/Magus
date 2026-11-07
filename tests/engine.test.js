@@ -353,6 +353,24 @@ test('Falle legen: Rot + Blau zieht drei Karten vom Stapel (nicht in die Hand), 
   assert.equal(JSON.stringify(me.deck.marks), '[]');
 });
 
+test('Falle und Hellsicht: Reicht der Zugstapel nicht, wird der Ablagestapel gemischt und weitergezogen', () => {
+  for (const [hand, kind, n] of [[['F2', 'W2'], 'trap', 3], [['W2', 'F2'], 'sight', 2]]) {
+    const { s, me, c } = combatSetup(11, hand);
+    me.deck.draw = [{ id: 'E1', uid: 1 }]; me.deck.discard = ['F1', 'W1', 'E2', 'F2'].map((id, i) => ({ id, uid: 10 + i }));
+    hand.forEach((_, i) => M.apply(s, { pid: 0, type: 'mark', slot: i }));
+    assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+    assert.ok(c.forced && c.forced.kind === kind, kind);
+    assert.equal(c.forced.cards.length, n, kind + ': volle Kartenzahl trotz kleinem Zugstapel');
+    assert.equal(c.forced.cards[0].id, 'E1', kind + ': zuerst die Restkarte des Zugstapels');
+    assert.equal(me.deck.discard.length, 0, kind + ': der Ablagestapel ging in den Zugstapel');
+  }
+  const { s, me, c } = combatSetup(11, ['F2', 'W2']);   // Zugstapel 1 Karte, Ablage leer: die beiden gespielten Kombokarten liegen danach im Ablagestapel und werden mit gemischt
+  me.deck.draw = [{ id: 'E1', uid: 1 }]; me.deck.discard = [];
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
+  assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+  assert.equal(c.forced.cards.length, 3, 'E1 plus die zwei gespielten Karten');
+});
+
 test('Hellsicht (Blau + Rot): zieht S Karten, je Karte Hand, Ablage oder zurück zum Händler', () => {
   const { s, me, c } = combatSetup(11, ['W2', 'F2']);
   me.deck.draw = ['E1', 'F1', 'W1', 'E2'].map((id, i) => ({ id, uid: 7000 + i }));   // zuletzt gezogen wird E2

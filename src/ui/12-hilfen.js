@@ -36,7 +36,7 @@ function mirrorStack(s, x, y, who) {
   if (s.trap) {   // Falle: verdeckte Karte; der Besitzer sieht seine Karte, der Gegner nur den Rücken. Sie ist kein Marker (die Läuterung erreicht sie nicht).
     const mine = who === 's', tr = s.trap, id = mine && tr.card && tr.card.id, lvl = tr.lvl || 1;
     const tip = mine ? 'Deine Falle (' + NAMES[tr.el] + ', Stufe ' + lvl + '): Wenn Schaden in ' + NAMES[tr.el] + ' eingeht, wirft sie ' + 2 * lvl + ' unblockbaren Schaden auf den Angreifer zurück (vor der Verteidigung, höchstens der eingehende Schaden). Sie wird bei jedem eingehenden Schaden aufgedeckt und danach abgelegt.' : 'Verdeckte Falle des Gegners: Sie wird aufgedeckt, sobald Schaden eingeht. Entspricht die Farbe des Schadens der Farbe der Karte, wirft sie Schaden zurück.';
-    t += wrap('<div class="trapcard' + (mine ? ' mine' : '') + '" data-who="' + who + '" title="' + tip + '"><img src="' + (id && IMG[id] ? IMG[id] : IMG.back) + '">' + (mine ? '<i class="tl">' + lvl + '</i>' : '') + '</div>');
+    t += wrap('<div class="trapcard' + (mine ? ' mine' : '') + '" data-who="' + who + '" title="' + tip + '"><img src="' + (id && IMG[id] ? IMG[id] : IMG.back) + '"><b class="mul">×' + lvl + '</b></div>');   // Stufe als Zähler wie bei den Markern; für den Gegner liegt die Karte umgedreht (Rückseite)
   }
   return '<div class="mirstack" data-who="' + (who || '') + '">' + t + '</div>';
 }

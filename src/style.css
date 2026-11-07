@@ -365,10 +365,9 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .crefh{font-size:11px;letter-spacing:.06em;text-transform:uppercase;margin:2px 0 1px;line-height:1.2;opacity:.85}.crefh.F{color:var(--fire)}.crefh.W{color:var(--water)}.crefh.E{color:var(--earth)}
 /* Manamarker (Manafluss, seit 0.8) wie der Heilmarker; Falle (Blau + Rot): verdeckte Karte in der Markerreihe, kein Marker */
 .manatok.healtok{width:46px;height:46px}
-.trapcard{position:relative;width:34px;height:48px;border-radius:4px;box-shadow:0 0 0 1.5px #1b140d,1px 2px 4px rgba(0,0,0,.7);cursor:help;background:#222;filter:saturate(.9)}
+.trapcard{position:relative;width:34px;height:48px;border-radius:4px;cursor:help;background:transparent}.trapcard .mul{position:absolute;right:-7px;bottom:-4px;z-index:2;font:700 20px Alegreya,serif;color:#f2d27a;text-shadow:0 0 2px #000,0 0 3px #000,0 0 6px #000}
 .trapcard img{width:100%;height:100%;object-fit:cover;border-radius:3px;display:block;transform:rotate(var(--r,0deg))}
-.trapcard.mine{box-shadow:0 0 0 2px #52a6f5,0 0 10px rgba(82,166,245,.7),1px 2px 4px rgba(0,0,0,.7)}
-.trapcard .tl{position:absolute;right:-6px;bottom:-5px;font:700 16px Alegreya,serif;color:#f2d27a;font-style:normal;text-shadow:0 0 2px #000,0 0 3px #000,0 0 6px #000}
+
 .trapfx{position:absolute;z-index:295;pointer-events:none;perspective:600px}
 .trapfx .tf{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform .55s ease-in-out}
 .trapfx .tf>div{position:absolute;inset:0;backface-visibility:hidden;border-radius:6px;overflow:hidden;box-shadow:0 0 0 2px #1b140d,0 0 18px rgba(82,166,245,.8)}
