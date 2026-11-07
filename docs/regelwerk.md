@@ -637,3 +637,8 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 
 - **Karten unter den Bildschirmen (keine Regel- und keine KI-Änderung):** Karten, die zum Stapel zurückfliegen oder verbrennen, sowie gekaufte Karten, die noch auf ihren Platz warten, hatten die Ebene 400 und lagen damit über dem Endbildschirm (ebenfalls Ebene 400) und den Menü- und Startbildschirmen (Ebene 300). Sie liegen jetzt auf Ebene 280, unter allen Bildschirmen, aber weiter über dem Spielfeld. Änderung in `src/ui/15-karten.js` und `src/style.css` (`.card.fadeout`).
 - Die Versionsbeschreibung im Spiel nennt die Änderung; `tests/golden.json` bleibt unverändert.
+
+## Änderung 0.8.7.2 (08.11.)
+
+- **Sinnlose Knöpfe inaktiv (keine Regel- und keine KI-Änderung):** Im Kampfpanel ist **Erholen** ausgegraut, wenn das eigene Mana schon voll ist, und **Nachziehen**, wenn bei rotem Nachziehmarker das Mana für die Kosten nicht reicht (der Knopf zeigt den Grund als Tooltip). Nur die Oberfläche (`src/ui/18-kampf.js`); die Engine lässt Erholen bei vollem Mana weiterhin zu, damit die KI und gespeicherte Spiellogs unverändert laufen.
+- Die Versionsbeschreibung im Spiel nennt die Änderung; `tests/golden.json` bleibt unverändert.
