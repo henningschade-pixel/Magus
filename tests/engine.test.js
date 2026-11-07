@@ -1036,3 +1036,17 @@ test('KI: Überschussgold fließt in Magie, es sammelt sich nicht über 100 Gold
   assert.ok(maxGold < 60, 'Endgold bleibt klein, höchstens ' + maxGold);
   assert.ok(mag / n > 1, 'die KI kauft Magie, im Mittel Fortschritt ' + (mag / n).toFixed(2));
 });
+
+test('KI: Tempelopfer nur mit Ergebnis, jedes Opfer wird im selben Zug von einem Magiekauf gefolgt (0.7.7.8)', () => {
+  let n = 0;
+  for (let seed = 1; seed <= 40; seed++) {
+    const s = M.newGame({ seed, ai: [true, true], first: seed & 1 });
+    let steps = 0;
+    while (!s.over && steps++ < 30000) {
+      const r = AI.runTurn(s, M.actor(s)); if (!r.ok) break;
+      const acts = r.acts || [];
+      acts.forEach((a, i) => { if (a.type === 'temple') { n++; assert.equal(acts[i + 1] && acts[i + 1].type, 'magic', 'Opfer von ' + a.amount + ' Gold ohne Magiekauf (Seed ' + seed + ')'); } });
+    }
+  }
+  assert.ok(n > 20, 'es wird geopfert (' + n + ')');
+});
