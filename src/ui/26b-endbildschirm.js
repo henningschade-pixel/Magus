@@ -97,7 +97,7 @@ function finaleHTML() {
   const title = cls === 'lose' ? 'Niederlage' : cls === 'draw' ? 'Unentschieden' : 'Sieg';
   const tag = cls === 'draw' ? 'Kein Sieger' : spec ? G.players[w].name + ' gewinnt die Partie' : cls === 'win' ? 'Du hast ' + opp.name + ' bezwungen' : opp.name + ' gewinnt die Partie';
   const sbj = !spec && w === ME ? 'Du hast' : w === null ? '' : G.players[w].name + ' hat';
-  const reason = w === null ? 'Bei Gleichstand an Siegpunkten, Gold und Tempelstufe gibt es keinen Sieger.' : sbj + (G.templeWin ? ' bei gleichem Gold die höhere Tempelstufe (' + me.temple.level + ' : ' + opp.temple.level + ').' : G.goldWin ? ' bei Punktgleichstand das meiste Gold (' + me.stats.gold + ' : ' + opp.stats.gold + ').' : ' die meisten Siegpunkte.');
+  const reason = w === null ? 'Bei Gleichstand an Siegpunkten, Tempelstufe und Gold gibt es keinen Sieger.' : sbj + (G.goldWin ? ' bei gleicher Tempelstufe das meiste Gold (' + me.stats.gold + ' : ' + opp.stats.gold + ').' : G.templeWin ? ' bei Punktgleichstand die höhere Tempelstufe (' + me.temple.level + ' : ' + opp.temple.level + ').' : ' die meisten Siegpunkte.');
   const cap = cls === 'lose' ? 4 : 5;
   let hl = []; try { hl = finHighlights(pid, cap); if (cls === 'lose') { const t = finTurning(pid); if (t) hl.push(t); } } catch (e) { hl = []; }   // ein Fehler im Rückblick darf den Endbildschirm nicht verhindern
   const F = finFights(pid), sd = F.filter(f => f.ev.type === 'showdown'), sum = k => F.reduce((n, f) => n + f[k], 0);

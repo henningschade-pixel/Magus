@@ -4,7 +4,7 @@ Dies ist die maßgebliche Fassung der Regeln. Sie ersetzt das Claude-Docs-Dokume
 
 ## Spielidee und Ablauf
 
-Duellspiel für zwei Personen: Deck und Magie ausbauen, Monster besiegen und in bis zu drei Showdowns Siegpunkte holen. Nach dem dritten Showdown entscheidet, wer mehr hat (bei Gleichstand das Gold, danach die Tempelstufe, danach unentschieden).
+Duellspiel für zwei Personen: Deck und Magie ausbauen, Monster besiegen und in bis zu drei Showdowns Siegpunkte holen. Nach dem dritten Showdown entscheidet, wer mehr hat (bei Gleichstand die Tempelstufe, danach das Gold, danach unentschieden; seit 0.8.6.1).
 
 **Siegpunkte im Überblick (seit v8):** Monsterkampf: besiegt der Angreifer das Monster, erhält er +1; verliert der Angreifer, verliert er 1 (nie unter 0); der Monsterführer gewinnt und verliert dabei nie Siegpunkte. Flucht und Unentschieden zählen nicht. Showdown: Sieger +1, Verlierer −1 (nie unter 0), Unentschieden und Flucht 0/0, kein Trostpreis. Je Abschnitt sind damit höchstens 4 Siegpunkte möglich (drei Monsterkämpfe und der Showdown), nach zwei Abschnitten 8 (`showdownSp`).
 
@@ -47,7 +47,7 @@ Im eigenen Zug genau eine Aktion, danach wechselt der Spieler: Nachziehen, in de
 
 Die bezahlten Karten werden aus dem Deck entfernt, nur die gekaufte kommt auf den Ablagestapel.
 
-**Tempel:** n Gold opfern ergibt n·(n+1)/2 Tempelpunkte; die nächste Tempelstufe kostet (aktuelle Stufe + 1) Punkte, jede erreichte Stufe gibt einen Upgrade-Punkt. Die Tempelstufe ist die Zahl der durch Opfer erlangten Upgrades (kostet die nächste Stufe 4 Punkte, hat man Stufe 3) und zählt als drittes Kriterium der Siegbedingung (nach Siegpunkten und Gold). Die Vorschau (Gold, Punkte, Bruch) zeigt sich schon beim Einstellen mit den Pfeilen.
+**Tempel:** n Gold opfern ergibt n·(n+1)/2 Tempelpunkte; die nächste Tempelstufe kostet (aktuelle Stufe + 1) Punkte, jede erreichte Stufe gibt einen Upgrade-Punkt. Die Tempelstufe ist die Zahl der durch Opfer erlangten Upgrades (kostet die nächste Stufe 4 Punkte, hat man Stufe 3) und zählt als zweites Kriterium der Siegbedingung (nach Siegpunkten, vor dem Gold; seit 0.8.6.1). Die Vorschau (Gold, Punkte, Bruch) zeigt sich schon beim Einstellen mit den Pfeilen.
 
 **Magie kaufen:** Stufe 2 kostet 1, Stufe 3 kostet 3 **Upgrade-Punkte** (seit 0.3, vorher Gold; siehe „Getauschte Kosten“).
 
@@ -199,7 +199,7 @@ Nur die **Bezahlung** ist vertauscht, nicht was man wann bekommt. Gold und Upgra
 | Nachziehlimit | 1 Upgrade-Punkt je Schritt | 1 Gold je Schritt |
 
 Die Knöpfe tauschen mit: Die goldene Münz-Scheibe sitzt jetzt an den Verbesserungen (HP, Mana, Limit, Handplatz, Nachziehlimit), das grüne Plus der Upgrade-Punkte rund um das Magiebrett. `swapCosts` 0 stellt die alte Zuordnung wieder her.
-Folge: Der Tempel ist jetzt der Weg zur Magie (Gold opfern, Punkte sammeln), Gold kauft die Werte im Kampf direkt. Die Siegbedingung ändert sich nicht (Gold bleibt das zweite, die Tempelstufe das dritte Kriterium).
+Folge: Der Tempel ist jetzt der Weg zur Magie (Gold opfern, Punkte sammeln), Gold kauft die Werte im Kampf direkt. Die Siegbedingung ändert sich dadurch nicht (zu dieser Zeit: Gold das zweite, die Tempelstufe das dritte Kriterium; seit 0.8.6.1 umgekehrt).
 KI: Auf 0.3 nachtrainiert (siehe `tools/balance/README.md`): Eröffnung mit zwei Farben auf Stufe 2, Gold in max. HP und Handplätze, kein Opfern für Magie (Magie kommt aus den Abschnittsboni und der Hilfe); 64,6 % Siegquote gegen die KI vor dem Nachtraining.
 
 ## Startsiegpunkte (Version 0.3, Schalter `startSp`, Standard 2)
@@ -628,3 +628,7 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 
 - **Spielanleitung als Präsentation (keine Regel- und keine KI-Änderung):** Zu Magus gibt es eine Anleitung im Stil eines analogen Spiels (Regelheft mit Pergamentfarben, Kartenrahmen und Elementfarben), 20 Seiten: Idee, Ablauf einer Partie, Material, Elementkreis, Startwerte, Karten, Zug der Weltphase, Nachziehen und Marker, Bibliothek und Tempel, Kauf von Magie und Upgrades, Angriff und Verteidigung, Aktionen statt Angriff, Kampfende, Monster, Monsterwürfel, Kombos, Ultimates, Showdown, Siegpunkte und Spielende. Grundlage ist der Regelstand 0.8.5. Die Präsentation liegt als Claude-Folienartefakt im claude.ai-Projekt „Magus“, nicht im Repository.
 - Die Versionsbeschreibung im Spiel nennt die Anleitung; `tests/golden.json` bleibt unverändert.
+
+## Änderung 0.8.6.1 (07.11.)
+
+- **Siegbedingung: Siegpunkte > Tempelstufe > Gold (Regeländerung):** Bei Gleichstand an Siegpunkten nach dem dritten Showdown entscheidet zuerst die Tempelstufe, danach das Gold (vorher umgekehrt). Engine: `65-kampfablauf.js` (Spielende), Endbildschirm: „bei gleicher Tempelstufe das meiste Gold“ bzw. „bei Punktgleichstand die höhere Tempelstufe“. Die Spielanleitung (Präsentation, Seiten 2 und 20) nennt die neue Reihenfolge. Gemeint ist die Tempelstufe, wie bisher als Kriterium verwendet, nicht der Punktestand im Tempel.
