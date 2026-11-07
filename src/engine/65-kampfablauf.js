@@ -115,7 +115,7 @@ function endCombat(state, end) {
     }
   } else {
     state.showdown++;
-    const goal = state.rules.winSp > 0 && state.showdown >= (state.rules.winSpFromShowdown || 1) && Math.max(state.players[0].sp, state.players[1].sp) >= state.rules.winSp && state.players[0].sp !== state.players[1].sp;   // seit 0.7.6.6: nur wer führt (bei Gleichstand geht es weiter)   // Siegbedingung: wer nach einem Showdown (ab winSpFromShowdown) winSp Siegpunkte hat, gewinnt sofort; die Partie endet dann vor dem nächsten Abschnitt
+    const goal = state.rules.winLead > 0 && state.showdown >= (state.rules.winSpFromShowdown || 1) && Math.abs(state.players[0].sp - state.players[1].sp) >= state.rules.winLead;   // seit 0.7.7.3: Siegbedingung ist der Vorsprung, nicht der Punktestand: Wer nach einem Showdown (ab winSpFromShowdown) mindestens winLead Siegpunkte vor dem Gegner liegt (4 : 0, 5 : 1 – nicht 4 : 1), gewinnt sofort; die Partie endet dann vor dem nächsten Abschnitt
     if (state.showdown >= 3 || goal) {
       state.over = true; state.phase = 'over';
       const s0 = state.players[0].sp, s1 = state.players[1].sp;
@@ -125,7 +125,7 @@ function endCombat(state, end) {
         if (g0 !== g1) { state.winner = g0 > g1 ? 0 : 1; state.goldWin = true; log(state, 'Gleichstand bei den Siegpunkten: Das Gold entscheidet (' + g0 + ' : ' + g1 + ').'); }
         else if (l0 !== l1) { state.winner = l0 > l1 ? 0 : 1; state.templeWin = true; log(state, 'Gleichstand bei Siegpunkten und Gold: Die Tempelstufe entscheidet (' + l0 + ' : ' + l1 + ').'); }
       }
-      log(state, state.winner === null ? 'Spielende: Gleichstand, kein Sieger.' : 'Spielende: ' + state.players[state.winner].name + (goal && state.showdown < 3 ? ' erreicht ' + state.rules.winSp + ' Siegpunkte und' : '') + ' gewinnt.');
+      log(state, state.winner === null ? 'Spielende: Gleichstand, kein Sieger.' : 'Spielende: ' + state.players[state.winner].name + (goal && state.showdown < 3 ? ' führt mit ' + state.rules.winLead + ' oder mehr Siegpunkten Vorsprung und' : '') + ' gewinnt.');
     } else {
       state.stage = state.showdown + 1;
       if (end.winner) { state.turn = end.winner === 'a' ? c.def : c.att; log(state, state.players[state.turn].name + ' verlor den Showdown und beginnt die nächste Runde.'); }   // der Verlierer beginnt

@@ -168,7 +168,7 @@ test('Siegpunkte: Monsterkampf +1 / -1 (nie unter 0), keine Beute, kein Trostpre
       if (r.monsterDefeated) { const g = s.players.map((p, i) => p.stats.goldGot - before[i].gold); assert.deepEqual(g, [0, 0], 'keine Beute für beide Spieler'); }
     }
     assert.ok(!s.log.some(l => /Trostpreis/.test(l.txt)), 'kein Trostpreis');
-    if (s.over && s.showdown < 3) { assert.ok(s.showdown >= 1, 'vorzeitiges Ende frühestens nach Showdown 1'); assert.ok(Math.max(s.players[0].sp, s.players[1].sp) >= 4 && s.players[0].sp !== s.players[1].sp, 'vorzeitiges Ende nur mit Führung ab 4 Siegpunkten'); }
+    if (s.over && s.showdown < 3) { assert.ok(s.showdown >= 1, 'vorzeitiges Ende frühestens nach Showdown 1'); assert.ok(Math.abs(s.players[0].sp - s.players[1].sp) >= 4, 'vorzeitiges Ende nur mit mindestens 4 Siegpunkten Vorsprung'); }
   }
   assert.ok(decided > 0 && floored > 0, 'Monsterkämpfe mit Sieger und Untergrenze 0 kamen vor');
 });
@@ -963,8 +963,8 @@ test('Erschöpfung: sie beendet einen festgefahrenen Kampf; fällt eine Seite au
   assert.ok(n < 200, 'in endlich vielen Zügen');
 });
 
-test('Vorzeitiges Ende: wer nach einem Showdown mit mindestens 4 Siegpunkten führt, gewinnt sofort (0.7.6.6)', () => {
-  assert.equal(M.DEFAULT_RULES ? M.DEFAULT_RULES.winSp : 4, 4);
+test('Vorzeitiges Ende: wer nach einem Showdown mindestens 4 Siegpunkte Vorsprung hat, gewinnt sofort; 4 : 1 genügt nicht (0.7.7.3)', () => {
+  assert.equal(M.DEFAULT_RULES ? M.DEFAULT_RULES.winLead : 4, 4);
   let early = 0, cont = 0;
   for (let seed = 8000; seed < 8030; seed++) {
     const s = M.newGame({ seed, ai: [true, true], first: seed & 1 });
@@ -974,13 +974,32 @@ test('Vorzeitiges Ende: wer nach einem Showdown mit mindestens 4 Siegpunkten fü
       if (s.showdown > shown) {   // ein Showdown wurde gerade beendet
         shown = s.showdown;
         const [a, b] = s.players.map(p => p.sp);
-        if (Math.max(a, b) >= 4 && a !== b) { assert.ok(s.over, 'Führung ab 4 Siegpunkten beendet das Spiel sofort (Showdown ' + shown + ', ' + a + ':' + b + ')'); early++; assert.equal(s.winner, a > b ? 0 : 1); }
-        else if (shown < 3) { assert.ok(!s.over, 'ohne Führung ab 4 geht es weiter'); cont++; }
+        if (Math.abs(a - b) >= 4) { assert.ok(s.over, 'Vorsprung ab 4 Siegpunkten beendet das Spiel sofort (Showdown ' + shown + ', ' + a + ':' + b + ')'); early++; assert.equal(s.winner, a > b ? 0 : 1); }
+        else if (shown < 3) { assert.ok(!s.over, 'ohne Vorsprung von 4 geht es weiter (' + a + ':' + b + ')'); cont++; }
       }
     }
     assert.ok(s.over);
   }
   assert.ok(early > 0 && cont > 0, 'beide Fälle kamen vor: ' + early + '/' + cont);
+});
+
+test('Vorzeitiges Ende: bei 4 : 1 (Vorsprung 3) geht es weiter, bei 5 : 1 und 4 : 0 endet das Spiel (0.7.7.3)', () => {
+  // Showdown 1 erreichen, Siegpunkte vorgeben, Seite a verliert den Showdown (b gewinnt: +1, a: −1)
+  const play = (before, after) => {
+    const s = M.newGame({ seed: 4, ai: [true, true], first: 0 });
+    let steps = 0; while (!s.over && !(s.phase === 'combat' && s.combat.mode === 'showdown') && steps++ < 20000) if (!AI.runTurn(s, M.actor(s)).ok) break;
+    const c = s.combat, w = c.sides.b.ctrl, l = c.sides.a.ctrl;
+    s.players[w].sp = before[0]; s.players[l].sp = before[1];
+    c.sides.a.stats.hp = 1; c.turn = 'a'; c.action = 'defense'; c.color = 'F'; c.pending = 99; c.sides.a.stats.mirror = 0;
+    c.sides.a.stats.mirrorEl = undefined; c.sides.a.stats.rainbow = 0;
+    assert.ok(M.apply(s, { pid: l, type: 'pass' }).ok);
+    assert.equal(s.lastCombat.winner, 'b');
+    assert.deepEqual([s.players[w].sp, s.players[l].sp], after);
+    return { s, w };
+  };
+  const r41 = play([3, 2], [4, 1]); assert.ok(!r41.s.over, '4 : 1 (Vorsprung 3): das Spiel geht weiter');
+  const r51 = play([4, 2], [5, 1]); assert.ok(r51.s.over && r51.s.winner === r51.w, '5 : 1 (Vorsprung 4): Spielende');
+  const r40 = play([3, 1], [4, 0]); assert.ok(r40.s.over && r40.s.winner === r40.w, '4 : 0 (Vorsprung 4): Spielende');
 });
 
 test('Zwei Schilde lösen aus: Farbspiegel und Multispiegel liefern beide einen Schild-Effekt (mirror, mirror2), Aufteilung stimmt (0.7.6.7)', () => {
