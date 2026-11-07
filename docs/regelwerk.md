@@ -519,3 +519,7 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 ## Änderung 0.7.7.3 (07.11.)
 
 - **Vorzeitiges Spielende nach Vorsprung, nicht nach Punktestand:** Fehler aus 0.7.6.6 behoben. Die Regel `winSp` (Führung mit mindestens 4 Siegpunkten) ist ersetzt durch `winLead` (Standard 4): Nach einem Showdown (ab `winSpFromShowdown` 1) endet das Spiel sofort, wenn ein Spieler **mindestens 4 Siegpunkte Vorsprung** hat (4 : 0, 5 : 1, 6 : 2 …). Bei 4 : 1 (Vorsprung 3) geht es weiter. Nach dem dritten Showdown endet das Spiel wie bisher (Siegpunkte, dann Gold, dann Tempelstufe). Das ändert die KI-Referenzpartien (`tests/golden.json` neu erzeugt).
+
+## Änderung 0.7.7.4 (07.11.)
+
+- **Versionsanzeige:** Der Link im Hauptmenü („Neu in Version …“) stand noch auf 0.7.6.8, während die Über-Seite schon die neue Nummer zeigte. Beide lesen die Nummer jetzt aus einer Konstante (`MAGUS_VERSION` in `src/ui/26a-darstellung.js`); ein Test prüft, dass keine Nummer mehr fest eingetragen ist und dass das Regelwerk einen Eintrag zur aktuellen Version hat.

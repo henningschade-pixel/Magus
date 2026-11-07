@@ -1013,3 +1013,14 @@ test('Zwei Schilde lösen aus: Farbspiegel und Multispiegel liefern beide einen 
   assert.equal(fx.mirror.abs + fx.mirror2.abs, 3, 'ausgeglichene Geschosse verteilen sich auf beide');
   assert.equal(me.stats.rainbow, 1, 'Multispiegel Stufe 3 − 2'); assert.equal(me.stats.mirror || 0, 0);
 });
+
+test('Versionsnummer: eine Konstante (MAGUS_VERSION) speist Menü-Link und Über-Seite, das Regelwerk hat einen Eintrag dazu (0.7.7.4)', () => {
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, '..', 'src', 'ui', '26a-darstellung.js'), 'utf8');
+  const v = (src.match(/const MAGUS_VERSION = '([0-9.]+)'/) || [])[1];
+  assert.ok(v, 'Konstante vorhanden');
+  assert.ok(!/Neu in Version [0-9]/.test(src), 'keine fest eingetragene Versionsnummer in „Neu in Version“');
+  assert.equal((src.match(/Neu in Version ' \+ MAGUS_VERSION/g) || []).length, 2, 'Menü-Link und Über-Seite');
+  const doc = fs.readFileSync(path.join(__dirname, '..', 'docs', 'regelwerk.md'), 'utf8');
+  assert.ok(doc.includes('## Änderung ' + v + ' '), 'Regelwerk-Eintrag für ' + v);
+});
