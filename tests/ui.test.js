@@ -401,3 +401,41 @@ test('Unter der Magiegrafik steht der Preis der nächsten Magiestufe; Opfern im 
     assert.deepEqual(errs, []);
   } finally { await b.close(); }
 });
+
+test('Endbildschirm: Sieg und Niederlage zeigen Rückblick, Klick überspringt, Kampfverlauf führt zurück', { skip: !chromium && 'Playwright nicht installiert', timeout: 90000 }, async () => {
+  const b = await chromium.launch({ executablePath: exe });
+  try {
+    const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
+    p.on('pageerror', e => errs.push(e.message));
+    await p.goto(url); await p.waitForTimeout(500);
+    await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(500);
+    // KI-Partie simulieren, in der der Computer gewinnt, und als Endstand übernehmen (Du verlierst)
+    const seed = await p.evaluate(() => {
+      const M = window.Magus, AI = window.MagusAI, G = window.__magus.state;
+      for (let seed = 1; seed < 80; seed++) {
+        const s = M.newGame({ seed, ai: [true, true], names: ['Du', 'Computer'] });
+        let n = 0; while (!s.over && n < 20000) { if (!AI.runTurn(s, M.actor(s)).ok) break; n++; }
+        if (s.over && s.winner === 1 && s.hist.length > 60) { Object.assign(G, s); window.__magus.pump(); return seed; }
+      }
+      return 0;
+    });
+    assert.ok(seed > 0, 'Partie mit Computersieg gefunden');
+    await p.waitForSelector('.box.finale.lose', { timeout: 5000 });
+    assert.match(await p.textContent('.box.finale .ftitle'), /Niederlage/);
+    await p.waitForFunction(() => document.querySelectorAll('.box.finale .fcard').length >= 3, null, { timeout: 5000 });
+    assert.match(await p.textContent('.box.finale .fhl'), /krassesten Züge/);
+    assert.ok(await p.$('.box.finale [data-act="stend"]') && await p.$('.box.finale [data-act="logdl"]') && await p.$('.box.finale [data-act="newgame"]'), 'Knöpfe vorhanden');
+    await p.click('.box.finale .ftitle');   // Klick überspringt die Animation
+    await p.waitForSelector('.box.finale.skip');
+    // Karte anklicken: Kampfverlauf, zurück über die Statistik, Schließen -> Endbildschirm ohne erneute Animation
+    await p.click('.box.finale .fcard[data-act="finfight"]'); await p.waitForSelector('[data-act="stfightback"]', { timeout: 5000 });
+    await p.click('[data-act="stfightback"]'); await p.click('[data-act="stclose"]');
+    await p.waitForSelector('.box.finale.seen', { timeout: 5000 });
+    // dieselbe Partie als Sieg
+    await p.evaluate(() => { const G = window.__magus.state; G.winner = 0; window.__magus.pump(); });
+    await p.waitForSelector('.box.finale.win', { timeout: 5000 });
+    assert.match(await p.textContent('.box.finale .ftitle'), /Sieg/);
+    assert.doesNotMatch(await p.textContent('.box.finale .freason'), /Du hat /);
+    assert.deepEqual(errs, []);
+  } finally { await b.close(); }
+});

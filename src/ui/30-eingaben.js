@@ -13,7 +13,9 @@ function onAct(d) {
     case 'homeback': homeMenuDraw(); break;
     case 'stfight': overlay.innerHTML = fightView(+d.i); break;
     case 'stfightback': overlay.innerHTML = statsView(); break;
-    case 'stend': statsOpen(true); stFromMenu = false; stFromEnd = true; break;
+    case 'stend': finaleSeen = G; statsOpen(true); stFromMenu = false; stFromEnd = true; break;
+    case 'finfight': finaleSeen = G; statsOpen(true); stFromMenu = false; stFromEnd = true; overlay.innerHTML = fightView(+d.i); break;   // Kampfverlauf aus dem Rückblick; „Zurück“ führt über die Statistik zum Endbildschirm
+    case 'finskip': { const f = overlay.querySelector('.finale'); if (f) f.classList.add('skip'); finaleSeen = G; break; }   // Klick auf den Endbildschirm: Animation überspringen
     case 'logdl': exportLog({}); break;
     case 'stclose': if (stFromEnd) { stFromEnd = false; showEnd(); } else if (stFromMenu) { stFromMenu = false; homeMenuDraw(); } else { overlay.style.display = 'none'; overlay.innerHTML = ''; pump(); } break;
     case 'stfit': statsFitView(); break;
@@ -179,7 +181,7 @@ function homeSettings() {
   overlay.innerHTML = '<div class="box start" style="width:420px"><h1 style="font-size:44px">Einstellungen</h1><div class="menulist" style="margin-top:10px">' + settingsHTML() + '<button class="btn" data-act="homeback">Zurück</button></div></div>';
 }
 // Klickton für Menü- und Bedienknöpfe (Aktionen mit eigenem Ton ausgenommen)
-const CLICK_ACTS = new Set(['sacdn', 'sacup', 'deckview', 'home', 'resume', 'restart', 'leave', 'newgame', 'newspec', 'specspeed', 'stend', 'logdl', 'stclose', 'stopen', 'sndtoggle', 'menu', 'quit', 'homeset', 'homeback', 'stfit', 'stwho', 'stser', 'dismiss']);
+const CLICK_ACTS = new Set(['sacdn', 'sacup', 'deckview', 'home', 'resume', 'restart', 'leave', 'newgame', 'newspec', 'specspeed', 'stend', 'finfight', 'logdl', 'stclose', 'stopen', 'sndtoggle', 'menu', 'quit', 'homeset', 'homeback', 'stfit', 'stwho', 'stser', 'dismiss']);
 stage.addEventListener('pointerdown', e => { const b = e.target.closest('button'); if (b && (b.id === 'homebtn' || b.id === 'statsbtn' || b.classList.contains('logdl') || CLICK_ACTS.has(b.dataset.act))) Snd.play('ui_click'); }, true);
 const homeBtn = document.createElement('button');
 homeBtn.id = 'homebtn'; homeBtn.title = 'Hauptmenü (die Partie bleibt erhalten)'; homeBtn.textContent = '⌂';
