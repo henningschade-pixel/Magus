@@ -16,19 +16,13 @@ function trapWorth(side, opp, Q, lvl) {
 }
 // Wert eines Schilds der Stufe lvl (Blau + Grün, seit 0.8): Es bringt die Ladungen auf die Stufe, gewertet wird nur der Zugewinn gegenüber den Ladungen, die schon liegen.
 function shieldWorth(side, Q, lvl) { return lvl > 0 ? Math.max(0, lvl - (side.stats.rainbow || 0)) * Q.wFW : 0; }
-// Zerrüttung: Der Gegner wirft S Handkarten seiner Wahl ab, zuerst Fluchkarten. Wert hat nur, was darüber hinaus echte Karten kostet.
-function ruinWorth(opp, n) {
-  if (!(n > 0)) return 0;
-  const hand = opp.deck.hand.filter(Boolean), curses = hand.filter(h => M.parseCard(h.id).curse).length;
-  return Math.max(0, Math.min(n, hand.length) - curses) * 0.9;
-}
 // Wert eines geordneten Kombos (ohne Ultimate) für die KI; gleiche Gewichte wie im Angriff
 // Läuterung gegen den eigenen Todesfluss (seit 0.7.4): Jeder entfernte eigene Todesmarker erspart einen HP-Verlust je Angriffsphase bis Kampfende; lfDeath ist der Wert je Marker.
 function purgeDeath(side, Q, lvl) { return Q.lfDeath > 0 && lvl > 0 ? Math.min(lvl, side.stats.death || 0) * Q.lfDeath : 0; }
 function ordComboWorth(side, opp, Q, rules, lvs, ev) {
   const st = side.stats, hurt = st.maxHp - st.hp, oMir = (opp.stats.manaflow || 0) + (opp.stats.rainbow || 0) + Q.lfHeal * (opp.stats.heal || 0);
   const wEw = oMir > 0 ? 1.2 + oMir * Math.max(0.3, Q.lfOppW || 0) : 0.1;
-  return trapWorth(side, opp, Q, lvs.tr) + shieldWorth(side, Q, lvs.sh) + lvs.fe * Q.wFE + lvs.ew * wEw + purgeDeath(side, Q, lvs.ew) + ruinWorth(opp, lvs.rm) + Math.min(lvs.gh * (rules.lifeflowHeal || 1), hurt) * Q.wEW + (lvs.gh > 0 && hurt === 0 ? 0.1 : 0);
+  return trapWorth(side, opp, Q, lvs.tr) + shieldWorth(side, Q, lvs.sh) + lvs.fe * Q.wFE + lvs.ew * wEw + purgeDeath(side, Q, lvs.ew) + Math.min(lvs.gh * (rules.lifeflowHeal || 1), hurt) * Q.wEW + (lvs.gh > 0 && hurt === 0 ? 0.1 : 0);
 }
 // Wert einer Ultimate der Stufe lvl nach der Farbe der ersten Karte (seit 0.7): Feuer Todesfluss beim Gegner, Erde Heilfluss und Wasser Manafluss bei mir selbst (seit 0.8). Liegt schon ein Marker gleicher oder höherer Stufe, bringt sie kaum etwas.
 function ultiWorth(side, opp, Q, el, lvl) {
@@ -52,7 +46,7 @@ function bestAttack(side, opp, hand, Q, state0, reserve) {
       const lvs = M.levelsFor(ev);
       let combo = 0;
       if (ev.levels.ulti > 0) combo = ultiWorth(side, opp, Q, ev.ultiEl || ev.prim, ev.levels.ulti);
-      else combo = trapWorth(side, opp, Q, lvs.tr) + shieldWorth(side, Q, lvs.sh) + lvs.fe * w.fe + lvs.ew * w.ew + purgeDeath(side, Q, lvs.ew) + ruinWorth(opp, lvs.rm) + Math.min(lvs.gh * 1, hurt) * Q.wEW + (lvs.gh > 0 && hurt === 0 ? 0.1 : 0);
+      else combo = trapWorth(side, opp, Q, lvs.tr) + shieldWorth(side, Q, lvs.sh) + lvs.fe * w.fe + lvs.ew * w.ew + purgeDeath(side, Q, lvs.ew) + Math.min(lvs.gh * 1, hurt) * Q.wEW + (lvs.gh > 0 && hurt === 0 ? 0.1 : 0);
       const dmg = ev.prim ? ev.damage : 0;
       let value = dmg * Q.aDmg + combo - ev.cost * Q.aCost + ev.curses * Q.aCurse;
       // Mana-Reserve: ohne Mana darf der unterlegene Gegner fliehen. Übersteht er den Angriff nach dem erwarteten Block, zählt der Angriff nicht als sicher tödlich.

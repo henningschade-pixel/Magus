@@ -1,5 +1,5 @@
 /* ---------- Kampf ---------- */
-const ORD_ROWS = [['ra', 'Lähmung', 'F', 'E'], ['rm', 'Zerrüttung', 'F', 'W'], ['wt', 'Falle', 'W', 'F'], ['ws', 'Schild', 'W', 'E'], ['gh', 'Heilung', 'E', 'W'], ['gr', 'Läuterung', 'E', 'F']];
+const ORD_ROWS = [['ra', 'Lähmung', 'F', 'E'], ['wt', 'Falle', 'F', 'W'], ['wt', 'Falle', 'W', 'F'], ['ws', 'Schild', 'W', 'E'], ['gh', 'Heilung', 'E', 'W'], ['gr', 'Läuterung', 'E', 'F']];
 // Wirkung der Ultimate nach der Farbe der ersten Karte (seit 0.7)
 function ultiText(el, lv) {
   if (el === 'E') return 'Heilfluss (Erde): Du bekommst ' + lv + ' Heilmarker und heilst ' + lv + ' HP am Ende jeder deiner Angriffsphasen bis Kampfende (höchstens bis zu den max. HP).';
@@ -7,12 +7,11 @@ function ultiText(el, lv) {
   return 'Todesfluss (Feuer): Der Gegner bekommt ' + lv + ' Todesmarker und verliert ' + lv + ' HP am Ende jeder seiner Angriffsphasen bis Kampfende.';
 }
 // Kurzfassungen für die Kombo-Übersicht (die ausführliche Wirkung steht im Tooltip)
-const ORD_SHORT = { ra: '2·S Flüche auf den Ablagestapel des Gegners', rm: 'Gegner wirft S Handkarten ab', wt: 'Zieht 3 Karten, eine davon verdeckt als Falle: wirft 2·S unblockbaren Schaden zurück', ws: 'Schild mit S Ladungen: mindert nicht geblockten Schaden', gh: 'Heilt S HP', gr: 'Entfernt S Marker, je Marker 1 Nachziehtoken' };
+const ORD_SHORT = { ra: '2·S Flüche auf den Ablagestapel des Gegners', wt: 'Zieht 3 Karten, eine davon verdeckt als Falle: wirft 2·S unblockbaren Schaden zurück', ws: 'Schild mit S Ladungen: mindert nicht geblockten Schaden', gh: 'Heilt S HP', gr: 'Entfernt S Marker, je Marker 1 Nachziehtoken' };
 const ULTI_SHORT = { F: 'Gegner verliert S HP am Ende jeder seiner Angriffsphasen', E: 'Du heilst S HP am Ende jeder deiner Angriffsphasen', W: 'Du regenerierst S Mana am Ende jeder deiner Angriffsphasen' };
 function ordText(k, lv, short) {
   if (k === 'ra' && lv === 'S') return 'Lege 2·S Fluchkarten (2/4/6) auf den Ablagestapel der Gegenseite; sie kommen beim nächsten Nachziehen des Gegners zuerst auf seine Hand und werden beim darauffolgenden Nachziehen dauerhaft vernichtet';
   if (k === 'ra') return short ? 2 * lv + ' Flüche auf den Ablagestapel der Gegenseite' : 'Lege ' + 2 * lv + ' Flüche auf den Ablagestapel der Gegenseite; sie kommen beim nächsten Nachziehen des Gegners zuerst auf seine Hand und werden beim darauffolgenden Nachziehen dauerhaft vernichtet';
-  if (k === 'rm') return 'Der Gegner muss ' + (lv === 'S' ? 'S' : lv) + ' Handkarte' + (lv === 1 ? '' : 'n') + ' seiner Wahl abwerfen';
   if (k === 'wt') return 'Ziehe drei Karten (soweit Handplätze frei sind) und lege eine davon verdeckt vor dich. Sie wird aufgedeckt, sobald Schaden eingeht: Entspricht die Farbe des Schadens ihrer Farbe, wirft sie ' + (lv === 'S' ? '2·S (2/4/6)' : 2 * lv) + ' unblockbaren Schaden auf den Angreifer zurück, vor der Verteidigung (der eingehende Schaden sinkt entsprechend, höchstens um den ganzen Schaden). Danach wird die Karte abgelegt, auch ohne Rückwurf. Sie ist kein Marker';
   if (k === 'ws') return 'Dein Schild hat danach ' + (lv === 'S' ? 'S' : lv) + ' Ladung' + (lv === 1 ? '' : 'en') + ' (nicht addiert, höchstens 3). Es mindert eingehenden, nicht geblockten Schaden gegen jede Farbe, je Schaden eine Ladung';
   if (k === 'gh') return 'Heile um ' + lv + ' HP';

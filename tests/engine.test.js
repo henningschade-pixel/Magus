@@ -567,10 +567,10 @@ test('Steigende Preise (priceRise): jeder Kauf einer Kategorie verteuert die nä
   for (let i = 0; i < 2; i++) { t.turn = 0; assert.ok(M.apply(t, { pid: 0, type: 'spend', what: 'hp' }).ok); } assert.equal(ts.gold, 7);
 });
 
-test('Kombo mit mehreren Karten der zweiten Farbe: F2, W1, W1 ergibt Zerrüttung 2 (Kartenstufen derselben Farbe zählen zusammen)', () => {
+test('Kombo mit mehreren Karten der zweiten Farbe: F2, W1, W1 ergibt Falle 2 (Kartenstufen derselben Farbe zählen zusammen)', () => {
   const st = { mag: { F: 3, E: 3, W: 3 }, mana: 9 }, ev = ids => M.evalAttack(st, ids.map(id => Object.assign({ id }, M.parseCard(id))));
-  assert.deepEqual([ev(['F2', 'W1', 'W1']).ord.key, ev(['F2', 'W1', 'W1']).ord.lvl], ['rm', 2]);
-  assert.equal(ev(['F2', 'W1']).ord.lvl, 1);
+  assert.deepEqual([ev(['F2', 'W1', 'W1']).ord.key, ev(['F2', 'W1', 'W1']).ord.lvl], ['wt', 2]);
+  assert.equal(ev(['F2', 'W1']).ord.lvl, 1); assert.equal(ev(['F2', 'W1']).ord.key, 'wt', 'Rot + Blau ist ebenfalls die Falle');
   assert.deepEqual([ev(['W1', 'F2', 'F1']).ord.key, ev(['W1', 'F2', 'F1']).ord.lvl], ['wt', 1]);   // andere erste Farbe: Falle (Blau + Rot), Stufe = Minimum der Farbsummen
   assert.deepEqual([ev(['W2', 'F1', 'F1']).ord.key, ev(['W2', 'F1', 'F1']).ord.lvl], ['wt', 2]);
   assert.deepEqual([ev(['W1', 'E1', 'E1']).ord.key, ev(['W1', 'E1', 'E1']).ord.lvl], ['ws', 1]);   // Blau + Grün: Schild
@@ -880,17 +880,17 @@ test('Strafe des Nachziehmarkers wächst mit der Spielstufe (0.7): Grundwert mal
   assert.equal(q.gold - g0, 3 * (s.rules.drawPenaltyGold || 0), 'der Gegner erhält die Strafe von Abschnitt 3');
 });
 
-test('Abwerfen nach Zerrüttung ist kein Zug: Zugzähler, Passen-Zähler, Nachziehmarker und Seite am Zug bleiben unverändert (0.7.6.3)', () => {
+test('Fallenwahl (zuvor Abwerfen nach Zerrüttung) ist kein Zug: Zugzähler, Passen-Zähler, Nachziehmarker und Seite am Zug bleiben unverändert (0.7.6.3)', () => {
   const { s, c, me, op } = combatSetup(11, ['F1', 'W1']);
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
   assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
-  assert.ok(c.forced, 'Zerrüttung: der Gegner muss abwerfen');
+  assert.ok(c.forced && c.forced.kind === 'trap', 'Falle: der Spieler wählt eine der gezogenen Karten');
   const snap = () => JSON.stringify({ turn: c.turn, action: c.action, turns: c.turns, tot: s.combatTurnsTotal, passed: [me.passed, op.passed], marker: s.players.map(p => [p.drawN, p.drawRed]), mons: [c.sides.b.monster && c.sides.b.monster.drawN, c.sides.b.monster && c.sides.b.monster.drawRed] });
   const before = snap(), pid = c.forced.pid, side = c.sides.a.ctrl === pid ? c.sides.a : c.sides.b;
-  const slots = side.deck.hand.map((x, i) => x ? i : -1).filter(i => i >= 0).slice(0, c.forced.n);
+  const slots = [c.forced.slots[0]];
   assert.ok(M.apply(s, { pid, type: 'fd', slots }).ok);
   assert.equal(c.forced, null);
-  assert.equal(snap(), before, 'das Abwerfen ändert nichts am Zugablauf');
+  assert.equal(snap(), before, 'die Fallenwahl ändert nichts am Zugablauf');
 });
 
 test('Opfern im Tempel ist kein Zug: der Spieler bleibt am Zug, der Nachziehmarker ändert sich nicht (0.7.6.4)', () => {

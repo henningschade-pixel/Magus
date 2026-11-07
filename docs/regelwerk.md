@@ -77,15 +77,14 @@ Der aktive Spieler wählt ein lebendes Monster und greift an, der Mitspieler fü
 
 ## Kombos und Ultimate
 
-Die Farbe der ersten markierten Karte bestimmt die Rolle (Feuer aggressiv, Wasser defensiv, Erde heilend), die zweite Farbe die Wirkung. Kombos gelten im Angriff und in der Verteidigung (dort wirken Zerrüttung, Lähmung und Läuterung vor der Verteidigung, Heilung und Schilde (Spiegel, Multispiegel) danach). Kombokarten kosten seit v7 wie alle Karten 1 Mana.
+Die Farbe der ersten markierten Karte bestimmt die Rolle (Feuer aggressiv, Wasser defensiv, Erde heilend), die zweite Farbe die Wirkung. Kombos gelten im Angriff und in der Verteidigung (dort wirken Lähmung und Läuterung vor der Verteidigung, Heilung und Schilde (Spiegel, Multispiegel) danach). Kombokarten kosten seit v7 wie alle Karten 1 Mana.
 
 **Kombostufe S:** je Farbe die Summe der markierten Kartenwerte (jede Karte höchstens so hoch wie die Magiestufe), davon die kleinere der beiden Summen, höchstens 3.
 
 | Kombo | Farben | Wirkung bei Stufe S |
 |---|---|---|
 | Lähmung | Feuer + Erde | **2·S Fluchkarten** (2 / 4 / 6) auf den Ablagestapel der Gegenseite |
-| Zerrüttung | Feuer + Wasser | Gegner wirft S Handkarten seiner Wahl ab |
-| Falle | Wasser + Feuer | ziehe bis zu drei Karten und lege eine davon verdeckt vor dich (Stufe S, kein Marker) |
+| Falle | Wasser + Feuer oder Feuer + Wasser | ziehe bis zu drei Karten und lege eine davon verdeckt vor dich (Stufe S, kein Marker) |
 | Schild | Wasser + Erde | Schild mit S Ladungen (nicht addiert, höchstens 3) |
 | Heilung | Erde + Wasser | S HP heilen |
 | Läuterung | Erde + Feuer | S beliebige Marker vom Brett entfernen, je entferntem Marker ein Nachziehtoken |
@@ -93,7 +92,7 @@ Die Farbe der ersten markierten Karte bestimmt die Rolle (Feuer aggressiv, Wasse
 
 **Fluchkarten:** Sie kommen erst in den Zugstapel, wenn der Ablagestapel gemischt wird. Auf der Hand belegen sie einen Platz und wirken nicht. Beim Nachziehen werden sie dauerhaft verworfen, am Kampfende verschwinden alle.
 
-**Falle (Blau + Rot, seit 0.8):** Die Seite zieht bis zu drei Karten (soweit Handplätze frei sind) und legt eine davon verdeckt vor sich; Fluchkarten kommen nicht in Frage, bei mehreren Kandidaten wählt der Spieler, bei einem gilt sie sofort. Die Karte ist kein Marker (die Läuterung erreicht sie nicht). Sobald Schaden eingeht, wird sie aufgedeckt, **vor der Verteidigung**: Entspricht der Schaden in seiner Farbe der Karte, werden **2 / 4 / 6** (Stufe 1 / 2 / 3) **unblockbarer Schaden** auf den Angreifer zurückgeworfen, höchstens in Höhe des eingehenden Schadens; der eingehende Schaden sinkt entsprechend. Danach kommt die Karte auf den Ablagestapel, auch wenn nichts reflektiert wurde. Am Kampfende kehrt eine noch liegende Karte in den Ablagestapel zurück. Eine neue Falle ersetzt die alte. In der Verteidigung gestellt, wirkt sie erst nach ihr.
+**Falle (Blau + Rot oder Rot + Blau; seit 0.8, Rot + Blau seit 0.8.0.1 statt der Zerrüttung):** Die Seite zieht bis zu drei Karten (soweit Handplätze frei sind) und legt eine davon verdeckt vor sich; Fluchkarten kommen nicht in Frage, bei mehreren Kandidaten wählt der Spieler, bei einem gilt sie sofort. Die Karte ist kein Marker (die Läuterung erreicht sie nicht). Sobald Schaden eingeht, wird sie aufgedeckt, **vor der Verteidigung**: Entspricht der Schaden in seiner Farbe der Karte, werden **2 / 4 / 6** (Stufe 1 / 2 / 3) **unblockbarer Schaden** auf den Angreifer zurückgeworfen, höchstens in Höhe des eingehenden Schadens; der eingehende Schaden sinkt entsprechend. Danach kommt die Karte auf den Ablagestapel, auch wenn nichts reflektiert wurde. Am Kampfende kehrt eine noch liegende Karte in den Ablagestapel zurück. Eine neue Falle ersetzt die alte. In der Verteidigung gestellt, wirkt sie erst nach ihr.
 
 **Schild (Blau + Grün, seit 0.8):** Es mindert eingehenden, nicht geblockten Schaden gegen **jede** Farbe um bis zu seine Ladungen (1 / 2 / 3) und verliert je geminderten Schaden eine Ladung. Ein neues Schild bringt die Ladungen auf die Stufe (nicht addiert, höchstens 3). Ein Rückwurf findet nicht mehr statt. In der Verteidigung gestellt, wirkt es erst nach ihr. Die Grafik ist die des früheren Multischilds, ohne dessen Anfangsanimation.
 
@@ -555,3 +554,9 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Entfallen:** Farbspiegel (rot, grün) und Multispiegel samt Rückwurf an Verteidigungsüberschuss und Spiegelbruch-Ablauf in der Engine; die Läuterungscodes `sm:F` usw. gelten nicht mehr.
 - **Animationen:** Neues Manafluss-Ritual (`fxMana` in `UltFx`, auch in der Ultimate-Werkstatt, Vorlagen „Manafluss einzeln“ und „kühl“); Manawolke in `FlowFx.heal` (Variante `mana`); `TrapFx` (Karte dreht sich um, Geschoss zum Angreifer, „−N“).
 - **KI und Tests:** KI bewertet Falle, Schild und Manafluss neu (`trapWorth`, `shieldWorth`, `uMana`, `wTrap`); Engine-Tests für Falle, Schild, Manafluss und Läuterung umgeschrieben; Golden-Datei neu erzeugt.
+
+## Änderung 0.8.0.1 (07.11.)
+
+- **Falle ersetzt die Zerrüttung:** Die Kombo Rot + Blau (erste Karte Feuer, zweite Wasser) legt jetzt ebenfalls die Falle; die Zerrüttung (Gegner wirft S Handkarten seiner Wahl ab) entfällt samt KI-Bewertung, Anzeige und Tabellenzeile. Die Falle gilt damit für beide Reihenfolgen (Blau + Rot und Rot + Blau), Stufe S wie bei allen geordneten Kombos aus der Summe der Kartenwerte je Farbe (kleinere Summe, höchstens 3). Rot + Blau schlägt in Feuer zu, Blau + Rot in Wasser.
+- Der Abwurf-Ablauf der Zerrüttung (`fd`) bleibt nur noch für die Fallenwahl in Gebrauch; der Ton `ruin` und die Animation `FlowFx.ruin` sind ungenutzt.
+- Tests: Zerrüttungs-Tests auf die Falle umgestellt.

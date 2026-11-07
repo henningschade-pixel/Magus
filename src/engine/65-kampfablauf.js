@@ -262,12 +262,7 @@ function applyComboPlan(state, side, opp, plan, ev, texts, fxs) {
       if (state.combat.forced && state.combat.forced.kind === 'trap') state.combat.forced.lvl = lvl;
     }
     if (k === 'fe') { texts.push('Lähmung ' + lvl + ': ' + inflictCurses(state, opp, lvl)); fxs.push({ kind: 'aggro', who: side.ctrl, to: opp.ctrl, n: lvl }); }
-    if (k === 'rm') {   // Zerrüttung: Der Gegner muss S Handkarten seiner Wahl abwerfen
-      const n = Math.min(lvl, opp.deck.hand.filter(Boolean).length);
-      if (n > 0) { c.forced = { pid: opp.ctrl, n }; fxs.push({ kind: 'ruin', who: side.ctrl, to: opp.ctrl, n }); }
-      texts.push('Zerrüttung ' + lvl + ': ' + opp.name + ' muss ' + n + ' Handkarte' + (n === 1 ? '' : 'n') + ' seiner Wahl abwerfen');
-    }
-    else if (k === 'gh') {
+    if (k === 'gh') {
       const before = side.stats.hp; side.stats.hp = healedHp(side.stats, before, lvl);
       texts.push('Heilung ' + lvl + ': +' + (side.stats.hp - before) + ' HP'); fxs.push({ kind: 'lifeflow', who: side.ctrl, to: opp.ctrl, got: {}, removed: 0, heal: side.stats.hp - before, draws: 0 });
     }
@@ -296,7 +291,7 @@ function execAttack(state) {
   if (!ev.affordable) return fail('Zu wenig Mana (' + ev.cost + ' nötig).');
   side.passed = 0;   // ein Angriff beendet die Serie der Passen-Züge
   const lvs = levelsFor(ev), death = ev.levels.ulti > 0, plan = [];
-  if (!death) for (const k of ['tr', 'sh', 'fe', 'ew', 'rm', 'gh']) if (lvs[k] > 0) plan.push([k, lvs[k]]);
+  if (!death) for (const k of ['tr', 'sh', 'fe', 'ew', 'gh']) if (lvs[k] > 0) plan.push([k, lvs[k]]);
   side.stats.mana -= ev.cost;
   consumeSelection(d, sel);
   const texts = [], fxs = [];
@@ -372,7 +367,7 @@ function execDefense(state, passOnly) {
   let healLvl = 0;
   if (defEv && defEv.ord) {
     const lvs = levelsFor(defEv), plan = [], texts = [], fxs = [];
-    for (const k of ['fe', 'ew', 'rm']) if (lvs[k] > 0) plan.push([k, lvs[k]]);
+    for (const k of ['fe', 'ew']) if (lvs[k] > 0) plan.push([k, lvs[k]]);
     lateShield = lvs.sh || 0; lateTrap = lvs.tr || 0;   // Heilung (gh), Schild und Falle wirken erst nach dem Schaden, Zerrüttung und die übrigen Kombos davor
     healLvl = lvs.gh || 0;
     applyComboPlan(state, side, attacker, plan, defEv, texts, fxs);
