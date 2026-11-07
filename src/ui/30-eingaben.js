@@ -179,7 +179,7 @@ function homeMenuDraw() {
 }
 function homeSettings() {
   menuView = homeSettings;
-  overlay.innerHTML = '<div class="box start" style="width:420px"><h1 style="font-size:44px">Einstellungen</h1><div class="menulist" style="margin-top:10px">' + settingsHTML() + '<button class="btn" data-act="homeback">Zurück</button></div></div>';
+  overlay.innerHTML = '<div class="box start" style="width:520px"><h1 style="font-size:44px">Einstellungen</h1><div class="menulist setpage" style="margin-top:10px">' + settingsHTML() + '<button class="btn" data-act="homeback">Zurück</button></div></div>';
 }
 // Klickton für Menü- und Bedienknöpfe (Aktionen mit eigenem Ton ausgenommen)
 const CLICK_ACTS = new Set(['sacdn', 'sacup', 'deckview', 'home', 'resume', 'restart', 'leave', 'newgame', 'newspec', 'specspeed', 'stend', 'finfight', 'logdl', 'stclose', 'stopen', 'sndtoggle', 'rule', 'menu', 'quit', 'homeset', 'homeback', 'stfit', 'stwho', 'stser', 'dismiss']);

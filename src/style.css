@@ -417,13 +417,20 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .volrow input[type=range]{flex:1;min-width:0;height:22px;accent-color:var(--gold);cursor:var(--cp)}
 
 /* Hauptmenü: Liste breiter Knöpfe */
-.setsec{margin:8px 0 0;font-size:17px;font-weight:normal;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);text-align:left}
-.setsec:first-child{margin-top:0}
-.rulebox{align-self:stretch;display:flex;flex-direction:column;gap:8px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:rgba(0,0,0,.25)}
-.rulerow{display:flex;align-items:center;gap:8px;font-size:18px}
-.rulerow span{flex:1;text-align:left}
-.rulerow .btn{font-size:22px;padding:2px 14px;min-width:42px}
-.rulerow output{width:44px;text-align:center;color:var(--gold);font-size:20px}
+.menulist.setpage{width:440px;gap:14px;margin-top:10px}
+.setgrp{align-self:stretch;display:flex;flex-direction:column;gap:6px}
+.sethead{display:flex;align-items:center;justify-content:space-between;min-height:34px}
+.sethead h3{margin:0;font-size:17px;font-weight:normal;letter-spacing:.1em;text-transform:uppercase;color:var(--mute)}
+.menulist .btn.small{font-size:16px;padding:4px 14px;min-width:0}
+.setbox,.setgrp .volbox{align-self:stretch;margin:0;padding:6px 14px;border:1px solid var(--line);border-radius:10px;background:rgba(0,0,0,.25);display:flex;flex-direction:column;gap:0}
+.setgrp .volbox{gap:6px;padding:10px 14px}
+.rulerow{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:19px;padding:6px 0}
+.rulerow+.rulerow{border-top:1px solid var(--line)}
+.rulerow span{text-align:left;white-space:nowrap}
+.stepper{display:flex;align-items:center;gap:6px}
+.menulist .stepper .btn{font-size:22px;padding:0;width:40px;height:36px;line-height:1;min-width:0}
+.stepper output{width:48px;text-align:center;color:var(--gold);font-size:22px}
+.sethint{margin:0;text-align:left;font-size:15px;color:var(--mute)}
 .menulist{align-self:stretch;display:flex;flex-direction:column;gap:10px;align-items:stretch;margin:6px auto 0;width:340px;max-width:100%}
 .menulist .btn{font-size:22px;padding:11px 28px}
 .menulist .mpbox{border:0;margin:0;padding:0}

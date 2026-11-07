@@ -609,3 +609,8 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 ## Änderung 0.8.3.1 (07.11.)
 
 - **Reihenfolge der Niederlagenprüfung (0 HP):** Die Engine prüft jetzt ausdrücklich in drei Stufen, und die erste Stufe mit einer Seite auf 0 HP entscheidet den Kampf: **1) reflektierter Schaden** (Rückwurf der Falle, vor der Verteidigung: der Angreifer ist besiegt, ohne dass der Verteidiger noch verteidigt oder Schaden nimmt), **2) Schaden nach der Verteidigung** (Restschaden nach Block und Schild, danach die Heilung), **3) Flusseffekte** am Ende der Angriffsphase (Todesfluss, Erschöpfung, danach Heil- und Manafluss). Folgen: Ein Todesfluss kann den Angreifer nicht mehr zusammen mit dem Verteidiger auf 0 bringen (kein Unentschieden), und ein Heil- oder Manafluss belebt niemanden wieder. Engine: neue Hilfsfunktion `hpDecided` in `65-kampfablauf.js` als Tor vor den Stufen 2 und 3; drei neue Tests („Niederlagenprüfung 1–3“). Die bisherigen Ergebnisse (Golden-Datei) bleiben unverändert.
+
+## Änderung 0.8.4 (07.11.)
+
+- **Einstellungen aufgeräumt:** Jede Gruppe (Ton, Spiel) hat eine Kopfzeile; rechts steht der Ton-Schalter beziehungsweise „Standardwerte“ für die Spielwerte. Die beiden Spielwerte stehen mit kompakten −/+-Knöpfen je in einer Zeile; die Seite ist breiter und passt in das Fenster (vorher ragte „Zurück“ heraus). Nur Oberfläche.
+

@@ -410,7 +410,7 @@ test('Spieleinstellungen (in den Einstellungen, Abschnitt Spiel): Runden bis Ers
     await p.goto(url); await p.waitForTimeout(500);
     const txt = () => p.evaluate(() => document.getElementById('overlay').innerText);
     await p.click('text=Einstellungen'); let t = await txt();
-    assert.ok(t.includes('Ton') && t.includes('Spiel'), 'Abschnitte Ton und Spiel');
+    assert.ok(/ton/i.test(t) && /spiel/i.test(t), 'Abschnitte Ton und Spiel');
     assert.ok(t.includes('Runden bis Erschöpfung') && t.includes('Siegpunkt-Vorsprung'), 'beide Einstellungen sichtbar');
     const out = () => p.locator('.rulerow output').allInnerTexts();
     assert.deepEqual(await out(), ['10', '4'], 'Standardwerte');
