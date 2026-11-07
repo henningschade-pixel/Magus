@@ -348,6 +348,8 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .volrow input[type=range]{flex:1;min-width:0;height:22px;accent-color:var(--gold);cursor:var(--cp)}
 
 /* Hauptmenü: Liste breiter Knöpfe */
+.setsec{margin:8px 0 0;font-size:17px;font-weight:normal;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);text-align:left}
+.setsec:first-child{margin-top:0}
 .rulebox{align-self:stretch;display:flex;flex-direction:column;gap:8px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:rgba(0,0,0,.25)}
 .rulerow{display:flex;align-items:center;gap:8px;font-size:18px}
 .rulerow span{flex:1;text-align:left}

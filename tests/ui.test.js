@@ -402,14 +402,15 @@ test('Unter der Magiegrafik steht der Preis der nächsten Magiestufe; Opfern im 
   } finally { await b.close(); }
 });
 
-test('Spieleinstellungen: Runden bis Erschöpfung und Siegpunkt-Vorsprung lassen sich einstellen, gelten für neue Spiele und bleiben gespeichert (0.8.1)', { skip: !chromium && 'Playwright nicht installiert', timeout: 60000 }, async () => {
+test('Spieleinstellungen (in den Einstellungen, Abschnitt Spiel): Runden bis Erschöpfung und Siegpunkt-Vorsprung lassen sich einstellen, gelten für neue Spiele und bleiben gespeichert (0.8.1)', { skip: !chromium && 'Playwright nicht installiert', timeout: 60000 }, async () => {
   const b = await chromium.launch({ executablePath: exe });
   try {
     const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
     p.on('pageerror', e => errs.push(e.message));
     await p.goto(url); await p.waitForTimeout(500);
     const txt = () => p.evaluate(() => document.getElementById('overlay').innerText);
-    await p.click('text=Spieleinstellungen'); let t = await txt();
+    await p.click('text=Einstellungen'); let t = await txt();
+    assert.ok(t.includes('Ton') && t.includes('Spiel'), 'Abschnitte Ton und Spiel');
     assert.ok(t.includes('Runden bis Erschöpfung') && t.includes('Siegpunkt-Vorsprung'), 'beide Einstellungen sichtbar');
     const out = () => p.locator('.rulerow output').allInnerTexts();
     assert.deepEqual(await out(), ['10', '4'], 'Standardwerte');
@@ -417,7 +418,7 @@ test('Spieleinstellungen: Runden bis Erschöpfung und Siegpunkt-Vorsprung lassen
     assert.deepEqual(await out(), ['9', '5']);
     await p.click('text=Zurück'); await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(600);
     assert.deepEqual(await p.evaluate(() => JSON.parse(localStorage.getItem('magus_rules'))), { exhaustRounds: 9, winLead: 5 });
-    await p.reload(); await p.waitForTimeout(500); await p.click('text=Spieleinstellungen');
+    await p.reload(); await p.waitForTimeout(500); await p.click('text=Einstellungen');
     assert.deepEqual(await out(), ['9', '5'], 'bleibt nach dem Neuladen erhalten');
     await p.click('text=Standardwerte'); assert.deepEqual(await out(), ['10', '4']);
     assert.deepEqual(errs, []);
