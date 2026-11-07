@@ -1154,3 +1154,29 @@ test('Niederlagenprüfung 3: Der Todesfluss am Phasenende besiegt den Angreifer;
   assert.equal(r.combatEnd.winner, 'b', 'der Angreifer fällt durch den Todesfluss');
   assert.equal(me.stats.hp, 0, 'der Heilfluss hat ihn nicht wieder aufgerichtet');
 });
+
+// Schild vor jeder Schadensquelle (0.8.3.2)
+test('Schild mindert den Rückwurf der Falle (und verliert je geminderten Schaden eine Ladung); der eingehende Schaden sinkt trotzdem um den vollen Rückwurf', () => {
+  const { s, me, op } = combatSetup(11, ['F3']);
+  me.stats.hp = me.stats.maxHp = 9; op.stats.hp = op.stats.maxHp = 9; me.stats.rainbow = 3;
+  op.stats.trap = { card: { id: 'F1', uid: 9001 }, el: 'F', tier: 1, lvl: 2 };
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+  assert.equal(me.stats.hp, 9, 'der Rückwurf von 2 wurde vom Schild geschluckt');
+  assert.equal(me.stats.rainbow, 1, 'zwei Ladungen verbraucht');
+  assert.equal(s.combat.pending, 1, 'Schaden 3 minus Rückwurf 2');
+});
+test('Schild mindert nur so viel des Rückwurfs, wie es Ladungen hat; der Rest geht auf die HP', () => {
+  const { s, me, op } = combatSetup(11, ['F3']);
+  me.stats.hp = me.stats.maxHp = 9; op.stats.hp = op.stats.maxHp = 9; me.stats.rainbow = 1;
+  op.stats.trap = { card: { id: 'F1', uid: 9001 }, el: 'F', tier: 1, lvl: 3 };
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+  assert.equal(me.stats.hp, 7); assert.equal(me.stats.rainbow, undefined);
+});
+test('Schild mindert auch den Todesfluss am Ende der Angriffsphase', () => {
+  const { s, me, op } = combatSetup(11, ['F1']);
+  me.stats.hp = me.stats.maxHp = 9; me.stats.death = 2; me.stats.deathPhase = 2; me.stats.rainbow = 2;
+  op.stats.hp = op.stats.maxHp = 9; op.stats.rainbow = 3;
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+  assert.ok(M.apply(s, { pid: op.ctrl, type: 'pass' }).ok);
+  assert.equal(me.stats.hp, 9, 'der Todesfluss von 2 wurde geschluckt'); assert.equal(me.stats.rainbow, undefined);
+});
