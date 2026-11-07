@@ -152,7 +152,7 @@ test('Läuterung: Todesmarker beider Seiten sind im Kampfbildschirm anklickbar',
   } finally { await b.close(); }
 });
 
-test('Läuterung: eigene und gegnerische Spiegelmarker sind im Kampfbildschirm anklickbar und werden entfernt', { skip: !chromium && 'Playwright nicht installiert', timeout: 60000 }, async () => {
+test('Läuterung: eigene und gegnerische Mana- und Schildmarker sind im Kampfbildschirm anklickbar und werden entfernt', { skip: !chromium && 'Playwright nicht installiert', timeout: 60000 }, async () => {
   const b = await chromium.launch({ executablePath: exe });
   try {
     const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
@@ -162,17 +162,17 @@ test('Läuterung: eigene und gegnerische Spiegelmarker sind im Kampfbildschirm a
     await p.evaluate(() => {
       const G = window.__magus.state, M = window.Magus; G.turn = 0; M.apply(G, { pid: 0, type: 'combat', elem: 'F' });
       const me = G.combat.sides.a, op = G.combat.sides.b; me.stats.limit = 3; me.stats.mag = { F: 3, E: 3, W: 3 }; me.stats.mana = me.stats.maxMana = 9;
-      me.stats.mirrorEl = { F: 2, E: 1, W: 0 }; me.stats.mirror = 3; op.stats.mirrorEl = { F: 0, E: 1, W: 0 }; op.stats.mirror = 1;
+      me.stats.manaflow = 2; op.stats.rainbow = 1;
       ['E2', 'F2'].forEach((id, i) => { me.deck.hand[i] = Object.assign({}, me.deck.hand[i], { id }); });
       M.apply(G, { pid: 0, type: 'mark', slot: 0 }); M.apply(G, { pid: 0, type: 'mark', slot: 1 }); window.__magus.pump();
     });
     await p.waitForTimeout(300);
-    const ks = await p.$$eval('.msh.lf, .mtok.lf', e => e.map(x => x.dataset.k + ':' + x.dataset.e));
-    assert.ok(ks.includes('sm:F') && ks.includes('sm:E'), 'eigene Spiegelmarker'); assert.ok(ks.includes('om:E'), 'gegnerischer Spiegelmarker');
-    await p.locator('.msh.lf[data-k="sm"][data-e="F"]').first().click();
-    assert.ok((await p.evaluate(() => window.__magus.state.combat.lfp)).includes('sm:F'));
+    const ks = await p.$$eval('.msh.lf, .mtok.lf, .manatok.lf', e => e.map(x => x.dataset.k));
+    assert.ok(ks.includes('sm'), 'eigener Manamarker'); assert.ok(ks.includes('or'), 'gegnerisches Schild');
+    await p.locator('.manatok.lf[data-k="sm"]').first().click();
+    assert.ok((await p.evaluate(() => window.__magus.state.combat.lfp)).includes('sm'));
     await p.click('[data-act="attack"]'); await p.waitForTimeout(600);
-    assert.equal(await p.evaluate(() => window.__magus.state.players[0].stats.mirrorEl.F), 1, 'ein eigener Spiegelmarker Feuer wurde entfernt');
+    assert.equal(await p.evaluate(() => window.__magus.state.players[0].stats.manaflow), 1, 'ein eigener Manamarker wurde entfernt');
     assert.deepEqual(errs, []);
   } finally { await b.close(); }
 });
@@ -213,7 +213,7 @@ test('Magie-Knöpfe: zu teure Stufen durchscheinend und gesperrt, ohne Upgrade-P
   } finally { await b.close(); }
 });
 
-test('Schild-Effekt: Der Rückwurf startet dort, wo das Schild angezeigt wurde, auch wenn es dabei verbraucht ist (nicht in der Ecke beim Nachziehstapel)', { skip: !chromium && 'Playwright nicht installiert', timeout: 60000 }, async () => {
+test('Schild-Effekt: Die Animation startet dort, wo das Schild angezeigt wurde, auch wenn es dabei verbraucht ist (nicht in der Ecke beim Nachziehstapel)', { skip: !chromium && 'Playwright nicht installiert', timeout: 60000 }, async () => {
   const b = await chromium.launch({ executablePath: exe });
   try {
     const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
@@ -223,12 +223,12 @@ test('Schild-Effekt: Der Rückwurf startet dort, wo das Schild angezeigt wurde, 
     const r = await p.evaluate(async () => {
       const mg = window.__magus, G = mg.state, M = window.Magus, out = {}, wait = ms => new Promise(r => setTimeout(r, ms));
       M.apply(G, { pid: 0, type: 'combat', elem: 'F' });
-      const me = G.combat.sides.a.stats; me.mirrorEl = { F: 1 }; me.mirror = 1; mg.pump(); await wait(400);
-      const stg = document.querySelector('#stage') || document.querySelector('[data-shieldfx], .stage') || document.body, sh = document.querySelector('.mirstack[data-who="s"] .msh.F').getBoundingClientRect(), sr = (document.getElementById('stage') || stg).getBoundingClientRect(), k = sr.width / (document.getElementById('stage') || stg).offsetWidth;
+      const me = G.combat.sides.a.stats; me.rainbow = 1; mg.pump(); await wait(400);
+      const stg = document.querySelector('#stage') || document.querySelector('[data-shieldfx], .stage') || document.body, sh = document.querySelector('.mirstack[data-who="s"] .msh.R').getBoundingClientRect(), sr = (document.getElementById('stage') || stg).getBoundingClientRect(), k = sr.width / (document.getElementById('stage') || stg).offsetWidth;
       out.soll = [(sh.left + sh.width / 2 - sr.left) / k, (sh.top + sh.height / 2 - sr.top) / k];
-      delete me.mirrorEl; delete me.mirror; mg.pump(); await wait(300);   // Schild aufgebraucht, nicht mehr in der Anzeige
-      out.weg = !document.querySelector('.mirstack[data-who="s"] .msh.F');
-      mg.MirrorFx.play({ who: 0, att: 1, to: 1, elem: 'F', r: 1, markers: 1, broken: 1, abs: 0 });
+      delete me.rainbow; mg.pump(); await wait(300);   // Schild aufgebraucht, nicht mehr in der Anzeige
+      out.weg = !document.querySelector('.mirstack[data-who="s"] .msh.R');
+      mg.MirrorFx.play({ who: 0, att: 1, to: 1, elem: 'R', r: 1, markers: 1, broken: 1, abs: 0 });
       out.ist = (document.getElementById('stage') || stg).dataset.shieldhome.split(',').map(Number);
       return out;
     });

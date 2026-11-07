@@ -122,5 +122,5 @@ return { ELEMENTS, SUPERIOR, NAMES, START_DECK, MAX_MAGIC, MAX_SLOTS, MIN_SLOTS,
   makeRng, parseCard, selection, newGame, apply, record, prim, actor, other, regen, handCounts,
   vendorOffers, vendorPlans, previewTemple, pointsForGold, nextLevelCost, maxed, limitStepCost, manaStepCost, hpStepCost, slotStepCost, magicCost, drawLimitCost, upField, magicField, payTxt,
   evalAttack, evalDefense, canFlee, stockOf, recoverGain, regenGain, comboLevels, levelsFor,
-  mirrorOf, shieldOf, drawPenaltyAmount, monsterAlive, monsterHand, markerOf, drawManaCost, drawGoldPenalty, previewDefense, defenseComboPre, allMonstersDead, magicProgress, spawnMonsters, spawnForGame };
+  drawPenaltyAmount, monsterAlive, monsterHand, markerOf, drawManaCost, drawGoldPenalty, previewDefense, defenseComboPre, allMonstersDead, magicProgress, spawnMonsters, spawnForGame };
 }));

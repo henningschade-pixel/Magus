@@ -34,19 +34,16 @@ const DEFAULTS = {
   // Angriffsbewertung; stallDec (seit 0.11 positiv): die Angriffsschwelle sinkt je zwei Kampfzüge nach stallFrom   // seit 0.7.6.5 (Kampfrunden-Limit 10): stallFrom 0, stallDec 3, aThr 0.4, damit die KI innerhalb von 10 Runden angreift
   // um so viel, damit festgefahrene Kämpfe enden (vorher −0,05 hob sie an: Patt-Schleifen bis 3000 Aktionen);
   // pasDec: die Angriffsschwelle sinkt um so viel je Passen-Zug des Gegners in Folge
-  // Ultimates nach Farbe (seit 0.7): uHeal Gewicht des Heilfluss (Erde, × wEW), uMulti Gewicht des Multispiegel (Wasser, × wFW), der Todesfluss (Feuer) zählt wDeath
-  uHeal: 3, uMulti: 1,
+  // Ultimates nach Farbe (seit 0.7): uHeal Gewicht des Heilfluss (Erde, × wEW), uMana Gewicht des Manafluss (Wasser, seit 0.8, × aCost je Mana), der Todesfluss (Feuer) zählt wDeath
+  uHeal: 3, uMana: 1.5,
   // Läuterung (seit 0.7.4): lfDeath Wert je entferntem eigenen Todesmarker, lfHeal Gewicht der gegnerischen Heilmarker unter den entfernbaren Markern
   lfDeath: 8, lfHeal: 4,
-  smart: 1, wMark: 0.5, keepB: 3, keepOn: 0, wDeath: 6, wDraw: 1.6, wFW: 1.3, wFE: 0.9, wEW: 2.8, aDmg: 0.7, aCost: 2.3, aCurse: 1.6, aThr: 0.4, oHits: 2, oFree: 4, stallDec: 3, stallFrom: 0, pasDec: 2,
+  smart: 1, wMark: 0.5, keepB: 3, keepOn: 0, wDeath: 6, wDraw: 1.6, wFW: 1.3, wTrap: 0.9, wFE: 0.9, wEW: 2.8, aDmg: 0.7, aCost: 2.3, aCurse: 1.6, aThr: 0.4, oHits: 2, oFree: 4, stallDec: 3, stallFrom: 0, pasDec: 2,
   // Erholen als Manaquelle: Angriffsschwelle steigt bei wenig Mana, Verzicht auf Verteidigung bringt Mana
   rW: 0, rRef: 3, dRec: 0, dU: 2,
   // Verteidigungsbewertung
-  dLeth: 40, dPend: 6, dCost: 1.4, dKeep: 0.9, mirW: 4, mirKeep: 3, mirAvoid: 2, lfOpp: 2, lfOppW: 0.8,
-  // Spiegel (Limit seit 0.16.1 je Farbe): mirMarg 1 wertet nur den Zugewinn gegenüber dem Spiegel der Farbe, mirGrade 1 gewichtet die
-  // Farbe nach Bedrohungsanteil (mindestens mirMin) statt pauschal 0,5 außer für die wahrscheinlichste Farbe
-  // lfColor 1: Läuterung entfernt Spiegel des Gegners zuerst in der Farbe, mit der ich selbst am stärksten angreife
-  mirMarg: 1, mirGrade: 1, mirMin: 0.3, lfColor: 1,
+  dLeth: 40, dPend: 6, dCost: 1.4, dKeep: 0.9, mirKeep: 3, mirAvoid: 2, lfOpp: 2, lfOppW: 0.8,
+  // Blaue Kombos (seit 0.8): wFW Gewicht des Schilds (Blau + Grün, je Ladung), wTrap Gewicht der Falle (Blau + Rot, × erwarteter Rückwurf); mirKeep Wert einer Schildladung, mirAvoid Abzug beim Angriff in ein Schild
   mBase: 14, mCost: 2.1, mCnt: 0.7, mTop: 2,
   // Ziel-Farbe: gegen ein Monster zählt die ihm überlegene Magie. mPlan: Bonus beim Magiekauf, vOff:
   // Aufwertungen anderer Farben zählen nur so viel

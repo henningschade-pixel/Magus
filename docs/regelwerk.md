@@ -85,24 +85,28 @@ Die Farbe der ersten markierten Karte bestimmt die Rolle (Feuer aggressiv, Wasse
 |---|---|---|
 | Lähmung | Feuer + Erde | **2·S Fluchkarten** (2 / 4 / 6) auf den Ablagestapel der Gegenseite |
 | Zerrüttung | Feuer + Wasser | Gegner wirft S Handkarten seiner Wahl ab |
-| Spiegel (rot) | Wasser + Feuer | roter Spiegel auf Stufe S (nicht addiert, höchstens Stufe 3 je Farbe) |
-| Spiegel (grün) | Wasser + Erde | grüner Spiegel auf Stufe S |
+| Falle | Wasser + Feuer | ziehe bis zu drei Karten und lege eine davon verdeckt vor dich (Stufe S, kein Marker) |
+| Schild | Wasser + Erde | Schild mit S Ladungen (nicht addiert, höchstens 3) |
 | Heilung | Erde + Wasser | S HP heilen |
 | Läuterung | Erde + Feuer | S beliebige Marker vom Brett entfernen, je entferntem Marker ein Nachziehtoken |
-| Ultimate | alle drei | je nach Farbe der ersten Karte: **Feuer** Todesfluss, **Erde** Heilfluss, **Wasser** Multispiegel (Stufe S) |
+| Ultimate | alle drei | je nach Farbe der ersten Karte: **Feuer** Todesfluss, **Erde** Heilfluss, **Wasser** Manafluss (Stufe S) |
 
 **Fluchkarten:** Sie kommen erst in den Zugstapel, wenn der Ablagestapel gemischt wird. Auf der Hand belegen sie einen Platz und wirken nicht. Beim Nachziehen werden sie dauerhaft verworfen, am Kampfende verschwinden alle.
 
-**Spiegel:** Dauerhaft (bis Kampfende), je Farbe eine Stufe (1 bis 3; die Farben zählen getrennt, bis zu 3 Stufen je Farbe, auch gleichzeitig). Er wirkt gegen Angriffe in seiner Farbe: (1) Fehlt dem Verteidiger Verteidigung, gleicht der Spiegel den fehlenden Schaden aus, höchstens in Höhe seiner Stufe, und verliert dafür je ausgeglichenem Schaden eine Stufe (die HP des Verteidigers werden um diesen Betrag geschont). (2) Verteidigt der Verteidiger mehr als nötig, wirft der Spiegel den Überschuss unblockbar auf den Angreifer zurück, höchstens in Höhe seiner Stufe und höchstens in Höhe des eingehenden Schadens, und verliert dafür je zurückgeworfenem Schaden eine Stufe. Beides schließt sich aus. Beim Erholen (ohne Verteidigung) gleicht der Spiegel ebenfalls aus. Wasserangriffe lassen sich nicht spiegeln.
+**Falle (Blau + Rot, seit 0.8):** Die Seite zieht bis zu drei Karten (soweit Handplätze frei sind) und legt eine davon verdeckt vor sich; Fluchkarten kommen nicht in Frage, bei mehreren Kandidaten wählt der Spieler, bei einem gilt sie sofort. Die Karte ist kein Marker (die Läuterung erreicht sie nicht). Sobald Schaden eingeht, wird sie aufgedeckt, **vor der Verteidigung**: Entspricht der Schaden in seiner Farbe der Karte, werden **2 / 4 / 6** (Stufe 1 / 2 / 3) **unblockbarer Schaden** auf den Angreifer zurückgeworfen, höchstens in Höhe des eingehenden Schadens; der eingehende Schaden sinkt entsprechend. Danach kommt die Karte auf den Ablagestapel, auch wenn nichts reflektiert wurde. Am Kampfende kehrt eine noch liegende Karte in den Ablagestapel zurück. Eine neue Falle ersetzt die alte. In der Verteidigung gestellt, wirkt sie erst nach ihr.
 
-**Läuterung:** Wählbar sind alle Marker auf dem Brett, auch eigene: Todesmarker, Spiegelmarker und **gegnerische Nachziehtokens**. Gegnerische Tokens werden nur zerstört, sie werden nicht gutgeschrieben. Für jeden anderen entfernten Marker erhält der Angreifer ein Nachziehtoken. Keine Heilung.
+**Schild (Blau + Grün, seit 0.8):** Es mindert eingehenden, nicht geblockten Schaden gegen **jede** Farbe um bis zu seine Ladungen (1 / 2 / 3) und verliert je geminderten Schaden eine Ladung. Ein neues Schild bringt die Ladungen auf die Stufe (nicht addiert, höchstens 3). Ein Rückwurf findet nicht mehr statt. In der Verteidigung gestellt, wirkt es erst nach ihr. Die Grafik ist die des früheren Multischilds, ohne dessen Anfangsanimation.
+
+**Farbspiegel (bis 0.7.7.8):** ersetzt durch Falle und Schild; der Multispiegel (Wasser-Ultimate) ist durch den Manafluss ersetzt.
+
+**Läuterung:** Wählbar sind alle Marker auf dem Brett, auch eigene: Todesmarker, Heil-, Mana- und Schildmarker sowie **gegnerische Nachziehtokens**. Gegnerische Tokens werden nur zerstört, sie werden nicht gutgeschrieben. Für jeden anderen entfernten Marker erhält der Angreifer ein Nachziehtoken. Keine Heilung.
 
 **Ultimate (Todesfluss):** Die Stufe ist das Minimum aus den drei Magiewerten und den drei höchsten Kartenstufen, höchstens 3. Der Gegner verliert S HP am Ende jeder eigenen Angriffsphase bis Kampfende; nur Läuterung kann Marker entfernen. Die Ultimate **gilt auch in der Verteidigung** (alle drei Farben, die Verteidigungsfarbe blockt, die beiden anderen sind Kombokarten): Nach der Verteidigung erhält der Angreifer den Todesfluss.
 
 **Ultimate nach Farbe (seit 0.7):** Die Farbe der ersten Karte entscheidet. Die Stufe S gilt wie bisher (Minimum der drei Kartensummen, höchstens 3); mehrere Marker einer Art werden nicht addiert, es gilt der höchste. Alle drei Marker entfernt nur die Läuterung (sie sind wählbar wie die Todesmarker).
 - **Feuer: Todesfluss** wie bisher (S Todesmarker beim Gegner, S HP Verlust am Ende jeder seiner Angriffsphasen).
 - **Erde: Heilfluss.** S grüne Marker mit Plus bei dir selbst: Am Ende jeder deiner Angriffsphasen heilst du S HP (höchstens bis zu den max. HP) bis Kampfende.
-- **Wasser: Multispiegel.** Ein Schild der Stufe S bei dir selbst, der gegen **jede** Farbe wirkt und nach der Mechanik der Spiegel arbeitet (gleicht fehlende Verteidigung bis S aus, wirft Überschuss bis S zurück), und verliert dabei Stufen wie ein Farbspiegel (seit 0.7.2.2, vorher verlor er keine). Gegenüber einem Farbspiegel zählt der höhere Wert; verbraucht werden aber **zuerst die Stufen des Farbspiegels**, erst der Rest geht vom Multispiegel ab. In der Verteidigung wirkt er schon gegen den laufenden Angriff.
+- **Wasser: Manafluss (seit 0.8, vorher Multispiegel).** S blaue Marker mit Kristall bei dir selbst: Am Ende jeder deiner Angriffsphasen regenerierst du S Mana (höchstens bis zum maximalen Mana) bis Kampfende. Nur Marker, die schon zu Beginn der Phase lagen, zählen. Die Läuterung kann sie entfernen. Animation: neues Ritual in der Ultimate-Werkstatt (Ring, Achtstern, aufsteigender Kristall, Manafunken), im Spiel eine blaue Wolke zur Manaanzeige.
 
 
 ## Monster
@@ -544,3 +548,10 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 
 - **KI opfert im Tempel nur, wenn das Opfer etwas bewirkt (`sacOpen`, Standard 1):** Regel für die KI: Gold wird nur geopfert, wenn (a) dadurch überhaupt Tempelpunkte (mindestens eine Stufe) entstehen und (b) die verfügbaren Punkte dann für die nächste Magiestufe reichen; sonst spart sie. Im Überschusszweig (`sacSur`, seit 0.7.7.5) war das schon so (`sacMagic` opfert erst, wenn `previewTemple(...).gained` den Bedarf deckt). Geprüft an 200 KI-Partien: 504 Opfer, **alle 504 unmittelbar von einem Magiekauf gefolgt**, im Mittel 3,01 Gold je Opfer, kein Opfer ohne Folge. Die einzige Stelle ohne Prüfung war die Eröffnung (2 bis 3 Gold, sobald Gold da ist, ohne Rücksicht auf die Punkte); sie ist jetzt wie der Überschusszweig abgesichert (`sacOpen` 0 stellt das alte Verhalten wieder her). Im Test kam die Stelle in 100 Partien nie zum Zug (0 Opfer vor dem ersten Showdown, mit und ohne Schalter 259 Opfer insgesamt, gleiche Siegquote 48,5 %); das Verhalten der KI ist also unverändert, Golden-Datei identisch.
 - Neuer Test: Jedes Tempelopfer der KI wird im selben Zug von einem Magiekauf gefolgt.
+
+## Änderung 0.8 (07.11.)
+
+- **Blaue Kombos überarbeitet:** (a) **Blau + Rot = Falle:** ziehe bis zu drei Karten, lege eine verdeckt vor dich; bei eingehendem Schaden wird sie aufgedeckt, passt die Farbe des Schadens, werden 2 / 4 / 6 unblockbar vor der Verteidigung reflektiert (gedeckelt durch den eingehenden Schaden, der entsprechend sinkt), danach kommt die Karte auf den Ablagestapel (auch ohne Rückwurf); sie ist kein Marker. (b) **Blau + Grün = Schild:** mindert eingehenden, nicht geblockten Schaden um 1 / 2 / 3 Ladungen, Grafik des Multischilds ohne Anfangsanimation. (c) **Blau + Rot + Grün = Manafluss:** regeneriert 1 / 2 / 3 Mana am Ende des eigenen Angriffszugs, Marker mit Kristall, Läuterung wählbar (Codes `sm`/`om`).
+- **Entfallen:** Farbspiegel (rot, grün) und Multispiegel samt Rückwurf an Verteidigungsüberschuss und Spiegelbruch-Ablauf in der Engine; die Läuterungscodes `sm:F` usw. gelten nicht mehr.
+- **Animationen:** Neues Manafluss-Ritual (`fxMana` in `UltFx`, auch in der Ultimate-Werkstatt, Vorlagen „Manafluss einzeln“ und „kühl“); Manawolke in `FlowFx.heal` (Variante `mana`); `TrapFx` (Karte dreht sich um, Geschoss zum Angreifer, „−N“).
+- **KI und Tests:** KI bewertet Falle, Schild und Manafluss neu (`trapWorth`, `shieldWorth`, `uMana`, `wTrap`); Engine-Tests für Falle, Schild, Manafluss und Läuterung umgeschrieben; Golden-Datei neu erzeugt.

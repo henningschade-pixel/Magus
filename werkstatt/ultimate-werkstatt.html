@@ -71,7 +71,7 @@ textarea{width:100%;min-height:150px;background:var(--ink);color:var(--bone);bor
 <div class="wrap">
   <header>
     <h1>Ultimate-Werkstatt</h1>
-    <p>Effektwerkstatt für die Kombos aus allen drei Elementen. Die Farbe der ersten Karte entscheidet: Feuer gibt den <b>Todesfluss</b>, Erde den <b>Heilfluss</b>, Wasser das <b>Multispiegel</b>. Gezeigt wird das Ritual selbst, danach die Marker auf dem Tisch und ihre Wirkung (HP-Verlust des Gegners, Heilung, Abwehr gegen jede Farbe). Im Spiel hat bisher nur der Todesfluss ein eigenes Ritual (Pentagramm, <code>CurseFx</code> in <code>src/ui/20-todesfluch.js</code>); Heilfluss und Multispiegel sind hier neue Entwürfe, im Spiel gibt es dazu bisher nur den Ton.</p>
+    <p>Effektwerkstatt für die Kombos aus allen drei Elementen. Die Farbe der ersten Karte entscheidet: Feuer gibt den <b>Todesfluss</b>, Erde den <b>Heilfluss</b>, Wasser den <b>Manafluss</b>. Gezeigt wird das Ritual selbst, danach die Marker auf dem Tisch und ihre Wirkung (HP-Verlust des Gegners, Heilung, Mana-Regeneration). Im Spiel stehen alle drei Rituale: Todesfluss (<code>CurseFx</code> in <code>src/ui/20-todesfluch.js</code>), Heilfluss und Manafluss (<code>UltFx</code> in <code>src/ui/20a-ultimates.js</code>, Manafluss seit 0.8; Parameter <code>m…</code> wie <code>P</code> dort).</p>
   </header>
   <div class="grid">
     <section class="stagebox" aria-label="Vorschau">
@@ -108,7 +108,7 @@ function rgba(hex,a){if(hex[0]==='r')return hex.replace('rgb(','rgba(').replace(
 function lighten(hex,k){const n=parseInt(hex.slice(1),16),f=c=>Math.round(c+(255-c)*k);return 'rgb('+f(n>>16&255)+','+f(n>>8&255)+','+f(n&255)+')'}
 function mix(a,b,k){const n=parseInt(a.slice(1),16),m=parseInt(b.slice(1),16),f=(x,y)=>Math.round(x+(y-x)*k);return '#'+((1<<24)+(f(n>>16&255,m>>16&255)<<16)+(f(n>>8&255,m>>8&255)<<8)+f(n&255,m&255)).toString(16).slice(1)}
 const EL={F:'#ff7a3d',E:'#93c24f',W:'#52a6f5'};
-const NAME={F:'Todesfluss',E:'Heilfluss',W:'Multispiegel'};
+const NAME={F:'Todesfluss',E:'Heilfluss',W:'Manafluss'};
 const ORDER=['F','W','E'];   // wie in der Kombo-Übersicht des Spiels: Feuer, Wasser, Erde
 const C={x:360,y:268};      // Mitte des Rituals
 
@@ -116,15 +116,15 @@ const C={x:360,y:268};      // Mitte des Rituals
 const DEF={view:'alle',fx:'F',level:2,dur:4,size:1.2,dark:.55,flash:1,shake:.5,particles:50,after:2,seed:3,
   tColor:'#a67bff',tTilt:.42,tRings:2,tRunes:14,tLine:2.5,tGlow:14,tFlicker:.4,tPillar:.6,
   hColor:'#93c24f',hRings:2,hVines:6,hVineH:1,hPlus:1,hLight:.7,hPulse:3,hGlow:14,
-  pColor:'#52a6f5',pRainbow:.6,pDome:1,pFacets:6,pShimmer:1,pGlints:16,pGlow:12};
+  mColor:'#52a6f5',mRings:2,mStar:8,mCrystal:1,mPulse:3,mGlow:14};
 const PRE={
  'Standard':{},
  'Wie im Spiel (Todesfluss)':{view:'einzeln',fx:'F',dur:4,size:1.2,dark:.55,shake:.5,particles:50,tColor:'#a67bff',tTilt:.42,tRings:2,tRunes:14,tLine:2.5,tGlow:14,tFlicker:.4,tPillar:.6},
  'Heilfluss einzeln':{view:'einzeln',fx:'E'},
- 'Multispiegel einzeln':{view:'einzeln',fx:'W'},
- 'Dezent':{size:.9,dur:3,dark:.3,flash:.5,shake:.2,particles:25,after:1.4,tRunes:10,tPillar:.3,hVines:4,hPulse:2,hLight:.4,pFacets:4,pGlints:8,pShimmer:.6},
- 'Wucht':{size:1.5,dur:5.2,dark:.7,flash:1.3,shake:1,particles:90,after:2.6,tRunes:20,tPillar:1,hVines:9,hVineH:1.5,hPulse:5,hLight:1.2,pFacets:10,pGlints:30,pShimmer:1.4},
- 'Nur Multispiegel, kühl':{view:'einzeln',fx:'W',pRainbow:0,pColor:'#7fd0ff'},
+ 'Manafluss einzeln':{view:'einzeln',fx:'W'},
+ 'Dezent':{size:.9,dur:3,dark:.3,flash:.5,shake:.2,particles:25,after:1.4,tRunes:10,tPillar:.3,hVines:4,hPulse:2,hLight:.4,mStar:6,mPulse:2},
+ 'Wucht':{size:1.5,dur:5.2,dark:.7,flash:1.3,shake:1,particles:90,after:2.6,tRunes:20,tPillar:1,hVines:9,hVineH:1.5,hPulse:5,hLight:1.2,mStar:12,mPulse:5},
+ 'Manafluss, kühl':{view:'einzeln',fx:'W',mColor:'#7fd0ff'},
  'Stufe 3':{level:3}
 };
 
@@ -134,8 +134,8 @@ function phases(p){
   const T=tl(p),D=p.dur;
   const L={F:[[0,'Kreis'],[.3*D,'Pentagramm'],[.62*D,'Aufladen'],[.9*D,'Entladung']],
            E:[[0,'Kreis'],[.18*D,'Ranken'],[.45*D,'Pluszeichen'],[.8*D,'Lichtstoß']],
-           W:[[0,'Kreis'],[.42*D,'Kuppel'],[.74*D,'Schimmer']]};
-  const tail=[[T.tM,'Marker']];if(p.after>0)tail.push([T.tA,{F:'Zehren',E:'Heilen',W:'Abwehr'}[p.fx]]);
+           W:[[0,'Kreis'],[.4*D,'Kristall'],[.84*D,'Zerstieben']]};
+  const tail=[[T.tM,'Marker']];if(p.after>0)tail.push([T.tA,{F:'Zehren',E:'Heilen',W:'Regeneration'}[p.fx]]);
   if(p.view==='alle')return[[0,'Ritual'],[.8*D,'Entladung']].concat(tail);
   return L[p.fx].concat(tail);
 }
@@ -241,61 +241,43 @@ function fxHeal(ctx,p,t,D,u){
   if(fl>0){ctx.fillStyle=rgba(lighten(col,.8),fl*.42);ctx.fillRect(-BIG,-BIG,2*BIG,2*BIG)}
 }
 
-/* ---------- Multispiegel (Wasser): erst bildet sich ein Kreis am Boden, aus ihm wächst die Schildkuppel (seit 0.7.2.4; vorher Prisma mit Kristall und Lichtstrahl) ---------- */
-const prismCols=p=>[mix(p.pColor,EL.F,p.pRainbow),mix(p.pColor,EL.E,p.pRainbow),mix(p.pColor,EL.W,p.pRainbow)];
-function domeGeom(p){const rx=165*p.size*p.pDome*.95;return{c:{x:C.x,y:C.y+78},rx,ry:rx*.85}}
-function fxPrism(ctx,p,t,D,u){
-  const gl=p.pGlow,cols=prismCols(p),dg=domeGeom(p),pc=p.pColor,{c,rx}=dg,rz=rx*.28;
-  const cf=eio(seg(u,.04,.38)),dp=eio(seg(u,.42,.74)),out=1-eio(seg(u,.9,.99));
-  vignette(ctx,p.dark*eo(seg(u,0,.12))*(1-seg(u,.95,1)),c.x,c.y-40);
-  const ry=dg.ry*dp;
-  if(out>0){
-    ctx.save();ctx.globalAlpha=out;
-    // Kreis: Ring zeichnet sich um die Mitte, innerer Gegenring, Rastmarken in den drei Farben, Drehung
-    if(cf>0){
-      const lg=ctx.createLinearGradient(c.x-rx,0,c.x+rx,0);lg.addColorStop(0,cols[0]);lg.addColorStop(.5,cols[1]);lg.addColorStop(1,cols[2]);
-      const a0=-Math.PI/2+t*.5,sw=Math.PI*2*cf;
-      ctx.save();ctx.lineCap='round';ctx.shadowColor=cols[1];ctx.shadowBlur=gl;ctx.strokeStyle=lg;ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(c.x,c.y,rx,rz,0,a0,a0+sw);ctx.stroke();
-      ctx.shadowBlur=gl*.5;ctx.strokeStyle=rgba(lighten(pc,.5),.7);ctx.lineWidth=1.8;ctx.beginPath();ctx.ellipse(c.x,c.y,rx*.84,rz*.84,0,a0+Math.PI,a0+Math.PI-sw*.9,true);ctx.stroke();ctx.restore();
-      const nT=12;
-      for(let i=0;i<nT;i++){const th=a0+i/nT*Math.PI*2-t*1.0,vis=cf>(i/nT)?1:0;if(!vis)continue;
-        const x1=c.x+Math.cos(th)*rx*.84,y1=c.y+Math.sin(th)*rz*.84,x2=c.x+Math.cos(th)*rx,y2=c.y+Math.sin(th)*rz;
-        ctx.strokeStyle=rgba(lighten(cols[i%3],.4),.8);ctx.lineWidth=2.2;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
-        star4(ctx,c.x+Math.cos(th)*rx*.92,c.y+Math.sin(th)*rz*.92,4+2*Math.sin(t*3+i),cols[i%3],.85)}
-      const gf=ctx.createRadialGradient(c.x,c.y,rx*.1,c.x,c.y,rx);gf.addColorStop(0,rgba(pc,0));gf.addColorStop(1,rgba(pc,.2*cf));
-      ctx.fillStyle=gf;ctx.beginPath();ctx.ellipse(c.x,c.y,rx,rz,0,0,7);ctx.fill();
-    }
-    // Kuppel: wächst aus dem Kreis nach oben (Höhe = dp)
-    if(dp>0){
-      const fillg=ctx.createRadialGradient(c.x,c.y-ry*.45,rx*.1,c.x,c.y-ry*.3,rx*1.05);fillg.addColorStop(0,rgba(lighten(pc,.6),.04*dp));fillg.addColorStop(1,rgba(pc,.26*dp));
-      ctx.fillStyle=fillg;ctx.beginPath();ctx.ellipse(c.x,c.y,rx,ry,0,Math.PI,Math.PI*2);ctx.ellipse(c.x,c.y,rx,rz,0,0,Math.PI);ctx.closePath();ctx.fill();
-      const lg2=ctx.createLinearGradient(c.x-rx,0,c.x+rx,0);lg2.addColorStop(0,cols[0]);lg2.addColorStop(.5,cols[1]);lg2.addColorStop(1,cols[2]);
-      ctx.save();ctx.lineCap='round';ctx.shadowColor=cols[1];ctx.shadowBlur=gl;ctx.strokeStyle=lg2;ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(c.x,c.y,rx,ry,0,Math.PI,Math.PI*2);ctx.stroke();ctx.restore();
-      const nF=Math.round(p.pFacets),fa=seg(u,.6,.78);
-      if(nF>1&&fa>0){
-        ctx.strokeStyle=rgba(lighten(pc,.65),.3*fa);ctx.lineWidth=1.2;
-        for(let i=1;i<nF;i++){const th=Math.PI+i/nF*Math.PI,bx=c.x+rx*Math.cos(th);ctx.beginPath();ctx.moveTo(bx,c.y);ctx.quadraticCurveTo(c.x+(bx-c.x)*.92,c.y-ry*.7,c.x,c.y-ry);ctx.stroke()}
-        [.35,.7].forEach(h=>{const rxh=rx*Math.sqrt(1-h*h);ctx.beginPath();ctx.ellipse(c.x,c.y-ry*h,rxh,rxh*.28,0,0,Math.PI);ctx.stroke()});
-      }
-      const sh=seg(u,.74,.92);
-      if(sh>0&&sh<1&&p.pShimmer>0){
-        ctx.save();ctx.beginPath();ctx.ellipse(c.x,c.y,rx,ry,0,Math.PI,Math.PI*2);ctx.ellipse(c.x,c.y,rx,rz,0,0,Math.PI);ctx.closePath();ctx.clip();
-        const bx=lerp(c.x-rx*1.3,c.x+rx*1.3,eio(sh)),sg=ctx.createLinearGradient(bx-60,0,bx+60,0);sg.addColorStop(0,'rgba(255,255,255,0)');sg.addColorStop(.5,'rgba(255,255,255,'+(.5*Math.sin(Math.PI*sh)*Math.min(1,p.pShimmer))+')');sg.addColorStop(1,'rgba(255,255,255,0)');
-        ctx.fillStyle=sg;ctx.fillRect(c.x-rx,c.y-ry,2*rx,ry+rz);ctx.restore();
-      }
-      const nG=Math.round(p.pGlints),gr=rng(p.seed+21);
-      for(let i=0;i<nG;i++){const an=Math.PI+gr()*Math.PI,rd=Math.sqrt(gr())*.95,ph=gr()*6,sp=2+gr()*3,x=c.x+Math.cos(an)*rx*rd,y=c.y+Math.sin(an)*ry*rd*.9,tw=Math.max(0,Math.sin(t*sp+ph));
-        if(tw>0)star4(ctx,x,y,3+5*tw,i%3===0?'#ffffff':cols[i%3],tw*dp*.9)}
-    }
+/* ---------- Manafluss (Wasser, seit 0.8): blauer Ring mit Achtstern am Boden, Manafunken ziehen spiralförmig zur Mitte und verdichten sich zu einem schwebenden Kristall; Pulse, dann stieben die Funken auseinander ---------- */
+  function fxMana(ctx,p,t,D,u){
+    const col=p.mColor,S=p.size,R=150*S,tilt=.42,Cc={x:C.x,y:C.y+30},gl=p.mGlow,top=-Math.PI/2,Lt=lighten(col,.6);
+    const fin=1-seg(u,.93,1),flick=1-.22*(.5+.5*Math.sin(t*21+Math.sin(t*6)*2)),inten=fin*flick;
+    vignette(ctx,p.dark*.75*eo(seg(u,0,.12))*(1-seg(u,.95,1)),Cc.x,Cc.y);
+    ctx.save();ctx.translate(Cc.x,Cc.y);ctx.scale(1,tilt);   // Boden
+    const fg=ctx.createRadialGradient(0,0,0,0,0,R*1.2);fg.addColorStop(0,rgba(col,.36*seg(u,.08,.45)*inten));fg.addColorStop(1,rgba(col,0));ctx.fillStyle=fg;ctx.beginPath();ctx.arc(0,0,R*1.25,0,7);ctx.fill();
+    for(let i=0;i<Math.round(p.mRings);i++){const rf=[1,.78,.58][i],pr=eio(seg(u,.03+i*.06,.2+i*.06));if(pr>0)glowLine(ctx,col,2.4*(i?.75:1),gl,inten,()=>ctx.arc(0,0,R*rf,top,top+Math.PI*2*pr))}
+    const n=Math.max(5,Math.round(p.mStar)),sp=eio(seg(u,.12,.44)),rs=R*.9;   // Achtstern: jede dritte Ecke verbunden, zeichnet sich der Reihe nach
+    if(sp>0){const tot=n*sp,full=Math.floor(tot),rest=tot-full,v=k=>{const a=top+((k*3)%n)/n*Math.PI*2+t*.12;return[Math.cos(a)*rs,Math.sin(a)*rs]};
+      glowLine(ctx,col,2,gl*.8,inten*.95,()=>{const a0=v(0);ctx.moveTo(a0[0],a0[1]);for(let k=1;k<=full&&k<=n;k++){const q=v(k);ctx.lineTo(q[0],q[1])}if(full<n&&rest>0){const a1=v(full),a2=v(full+1);ctx.lineTo(lerp(a1[0],a2[0],rest),lerp(a1[1],a2[1],rest))}})}
+    for(let i=0;i<12;i++){const a=top+i/12*Math.PI*2,al=seg(u,.16+i/12*.12,.22+i/12*.12);if(al<=0)continue;const x=Math.cos(a)*R*1.1,y=Math.sin(a)*R*1.1,h=R*.05;glowLine(ctx,col,1.6,gl*.5,inten*al,()=>{ctx.moveTo(x,y-h);ctx.lineTo(x+h,y);ctx.lineTo(x,y+h);ctx.lineTo(x-h,y);ctx.closePath()})}   // Rautenrunen am Rand
     ctx.restore();
+    const nP=Math.round(p.particles),pa=seg(u,.18,.5)*(1-seg(u,.78,.86));   // Manafunken: vom Ring spiralförmig zur Mitte, dabei aufwärts
+    if(nP>0&&pa>0){const pr=rng(p.seed+31);ctx.save();ctx.globalCompositeOperation='lighter';
+      for(let i=0;i<nP;i++){const r1=pr(),r2=pr(),r3=pr(),ph=(r1+t*(.18+.22*r2)/(D/4))%1,rad=R*.95*Math.pow(1-ph,1.2),an=r2*Math.PI*2+ph*5.5*(r3>.5?1:-1),x=Cc.x+Math.cos(an)*rad,y=Cc.y+Math.sin(an)*rad*tilt-ph*95*(.6+.6*r3);
+        puff(ctx,x,y,5+4*r3,col,Math.sin(Math.PI*ph)*pa*.5);ctx.fillStyle=rgba(i%4?Lt:'#ffffff',Math.sin(Math.PI*ph)*pa*.95);ctx.beginPath();ctx.arc(x,y,1.1+r3*1.9,0,7);ctx.fill()}
+      ctx.restore()}
+    const cr=eo(seg(u,.4,.66))*(1-eo(seg(u,.86,.94))),cy=C.y-62+Math.sin(t*2.4)*4*cr;   // Kristall
+    if(cr>0){const h=62*S*p.mCrystal*cr,w=h*.52,sx=Math.cos(t*2.2),fl=.75+.25*Math.sin(t*9);
+      ctx.save();ctx.translate(C.x,cy);
+      puff(ctx,0,0,h*1.7,col,.5*cr*inten);
+      ctx.shadowColor=col;ctx.shadowBlur=gl*1.8;
+      const P=[[0,-h],[w*sx,0],[0,h],[-w*sx,0]];
+      ctx.fillStyle=rgba(mix(col,'#ffffff',.55),.92*cr*flick);ctx.beginPath();P.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]));ctx.closePath();ctx.fill();
+      ctx.shadowBlur=0;ctx.fillStyle=rgba(col,.7*cr);ctx.beginPath();ctx.moveTo(0,-h);ctx.lineTo(w*sx,0);ctx.lineTo(0,h);ctx.closePath();ctx.fill();
+      ctx.strokeStyle=rgba('#ffffff',.85*cr*fl);ctx.lineWidth=1.6;ctx.beginPath();P.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]));ctx.closePath();ctx.stroke();
+      ctx.beginPath();ctx.moveTo(-w*sx,0);ctx.lineTo(w*sx,0);ctx.moveTo(0,-h);ctx.lineTo(0,h);ctx.stroke();
+      ctx.restore();star4(ctx,C.x+w*.2,cy-h*.3,7+5*Math.sin(t*7)**2,'#ffffff',.9*cr)}
+    for(let k=0;k<Math.round(p.mPulse);k++){const q=seg(u,.6+k*.06,.84+k*.06);if(q>0&&q<1){ctx.save();ctx.globalCompositeOperation='lighter';ctx.strokeStyle=rgba(lighten(col,.5),(1-q)*.8*fin);ctx.lineWidth=4*(1-q)+1;const r2=R*(.2+1.1*eo(q));ctx.beginPath();ctx.ellipse(Cc.x,Cc.y,r2,r2*tilt,0,0,7);ctx.stroke();ctx.restore()}}
+    const bs=seg(u,.84,.97);   // Abschluss: der Kristall zerstiebt in Funken
+    if(bs>0&&bs<1){const pr=rng(p.seed+37);ctx.save();ctx.globalCompositeOperation='lighter';
+      for(let i=0;i<26;i++){const a=pr()*Math.PI*2,sp2=60+pr()*150,x=C.x+Math.cos(a)*sp2*eo(bs),y=C.y-62+Math.sin(a)*sp2*.7*eo(bs)+bs*bs*40;ctx.fillStyle=rgba(i%3?Lt:'#ffffff',(1-bs)*.9);ctx.beginPath();ctx.arc(x,y,1.2+pr()*2.2,0,7);ctx.fill()}
+      ctx.restore()}
+    const fl2=p.flash*(seg(u,.4,.44)*(1-seg(u,.44,.54))*.28+seg(u,.86,.9)*(1-seg(u,.9,.97))*.42);
+    if(fl2>0){ctx.fillStyle=rgba(lighten(col,.8),fl2*.42);ctx.fillRect(-BIG,-BIG,2*BIG,2*BIG)}
   }
-  // Funken steigen aus dem Kreis auf, solange die Kuppel wächst
-  const nP=Math.round(p.particles*.6),pa=seg(u,.3,.5)*(1-seg(u,.8,.95));
-  if(nP>0&&pa>0){const pr2=rng(p.seed+23);ctx.save();ctx.globalCompositeOperation='lighter';
-    for(let i=0;i<nP;i++){const r1=pr2(),r2=pr2(),r3=pr2(),ph=(r1+t*(.15+.3*r2)/(D/3))%1,an=r2*Math.PI*2,x=c.x+Math.cos(an)*rx*(.4+.55*r3),y=c.y+Math.sin(an)*rz*(.4+.55*r3)-ph*dg.ry*(.6+.6*r3);ctx.fillStyle=rgba(lighten(cols[i%3],.5),Math.sin(Math.PI*ph)*pa*.8);ctx.beginPath();ctx.arc(x,y,1+r3*1.8,0,7);ctx.fill()}ctx.restore()}
-  const fl=p.flash*(seg(u,.4,.44)*(1-seg(u,.44,.54))*.3+seg(u,.9,.93)*(1-seg(u,.93,.99))*.5);
-  if(fl>0){ctx.fillStyle=rgba(lighten(pc,.85),fl*.45);ctx.fillRect(-BIG,-BIG,2*BIG,2*BIG)}
-}
 function lerpP(a,b,q){return{x:lerp(a.x,b.x,q),y:lerp(a.y,b.y,q)}}
 
 /* ---------- Marker auf dem Tisch ---------- */
@@ -310,24 +292,21 @@ function token(ctx,fx,p,x,y,r,a,lv){
     ctx.shadowColor=col;ctx.shadowBlur=10;ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r,0,7);ctx.fill();ctx.strokeStyle=col;ctx.lineWidth=2;ctx.stroke();ctx.shadowBlur=0;
     ctx.fillStyle=lighten(col,.7);ctx.beginPath();rrect(ctx,x-r*.55,y-r*.14,r*1.1,r*.28,r*.14);rrect(ctx,x-r*.14,y-r*.55,r*.28,r*1.1,r*.14);ctx.fill();
   }else{
-    const cols=prismCols(p),sh=()=>{ctx.beginPath();ctx.moveTo(x-r*.95,y-r*1.1);ctx.quadraticCurveTo(x,y-r*1.4,x+r*.95,y-r*1.1);ctx.quadraticCurveTo(x+r*1.05,y+r*.5,x,y+r*1.45);ctx.quadraticCurveTo(x-r*1.05,y+r*.5,x-r*.95,y-r*1.1);ctx.closePath()};
-    const g=ctx.createLinearGradient(0,y-r,0,y+r*1.4);g.addColorStop(0,'rgba(40,80,150,.95)');g.addColorStop(1,'rgba(14,30,70,.95)');
-    const eg=ctx.createLinearGradient(x-r,0,x+r,0);eg.addColorStop(0,cols[0]);eg.addColorStop(.5,cols[1]);eg.addColorStop(1,cols[2]);
-    ctx.shadowColor=cols[2];ctx.shadowBlur=10;sh();ctx.fillStyle=g;ctx.fill();ctx.strokeStyle=eg;ctx.lineWidth=2.4;ctx.stroke();ctx.shadowBlur=0;
-    ctx.strokeStyle='rgba(255,255,255,.75)';ctx.lineWidth=1.3;ctx.beginPath();ctx.moveTo(x,y-r*.55);ctx.lineTo(x-r*.5,y+r*.4);ctx.lineTo(x+r*.5,y+r*.4);ctx.closePath();ctx.stroke();
-    if(lv){ctx.fillStyle='#fff';ctx.font='700 '+Math.round(r*.7)+'px Cinzel,serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(String(lv),x,y+r*.12)}
+    const col=p.mColor,g=ctx.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,'rgba(40,90,150,.95)');g.addColorStop(1,'rgba(14,30,70,.95)');
+    ctx.shadowColor=col;ctx.shadowBlur=10;ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r,0,7);ctx.fill();ctx.strokeStyle=col;ctx.lineWidth=2;ctx.stroke();ctx.shadowBlur=0;
+    ctx.fillStyle=lighten(col,.75);ctx.beginPath();ctx.moveTo(x,y-r*.62);ctx.lineTo(x+r*.4,y);ctx.lineTo(x,y+r*.62);ctx.lineTo(x-r*.4,y);ctx.closePath();ctx.fill();
   }
   ctx.restore();
 }
-function tokenSpec(fx,p){return fx==='W'?{n:1,side:'own',from:{x:C.x,y:C.y+60}}:fx==='E'?{n:p.level,side:'own',from:{x:C.x,y:C.y-75}}:{n:p.level,side:'opp',from:{x:C.x,y:C.y+10}}}
+function tokenSpec(fx,p){return fx==='W'?{n:p.level,side:'own',from:{x:C.x,y:C.y-62}}:fx==='E'?{n:p.level,side:'own',from:{x:C.x,y:C.y-75}}:{n:p.level,side:'opp',from:{x:C.x,y:C.y+10}}}
 function drawTokens(ctx,fx,p,t,T){
   const sp=tokenSpec(fx,p);
   for(let i=0;i<sp.n;i++){
     const t0=T.tM+i*.12,q=seg(t,t0,t0+.55);if(q<=0)continue;
     const to=slot(sp.side,i),k=eio(q),ctl={x:(sp.from.x+to.x)/2,y:Math.min(sp.from.y,to.y)-60},pos=qpt(sp.from,to,ctl,k);
-    if(q<1){ctx.save();ctx.globalCompositeOperation='lighter';puff(ctx,pos.x,pos.y,26,fx==='F'?p.tColor:fx==='E'?p.hColor:p.pColor,.5*(1-q*.5));ctx.restore()}
-    token(ctx,fx,p,pos.x,pos.y,13*(.6+.4*k),Math.min(1,q*2.5),fx==='W'?p.level:0);
-    if(q>=1){const pop=1-seg(t,t0+.55,t0+.9);if(pop>0){ctx.save();ctx.globalCompositeOperation='lighter';puff(ctx,to.x,to.y,34,fx==='F'?p.tColor:fx==='E'?p.hColor:p.pColor,.5*pop);ctx.restore()}}
+    if(q<1){ctx.save();ctx.globalCompositeOperation='lighter';puff(ctx,pos.x,pos.y,26,fx==='F'?p.tColor:fx==='E'?p.hColor:p.mColor,.5*(1-q*.5));ctx.restore()}
+    token(ctx,fx,p,pos.x,pos.y,13*(.6+.4*k),Math.min(1,q*2.5),0);
+    if(q>=1){const pop=1-seg(t,t0+.55,t0+.9);if(pop>0){ctx.save();ctx.globalCompositeOperation='lighter';puff(ctx,to.x,to.y,34,fx==='F'?p.tColor:fx==='E'?p.hColor:p.mColor,.5*pop);ctx.restore()}}
   }
 }
 
@@ -335,15 +314,15 @@ function drawTokens(ctx,fx,p,t,T){
 function afterInfo(fx,p,t,T){
   const r={opp:.85,own:.45,fo:0,fs:0},a0=T.tA;
   if(fx==='F'||fx==='E')for(let i=0;i<p.level;i++){const arr=a0+i*.22+.7;if(t>=arr){if(fx==='F')r.opp-=.09;else r.own+=.08;const f=1-seg(t,arr,arr+.3);if(fx==='F')r.fo=Math.max(r.fo,f);else r.fs=Math.max(r.fs,f)}}
-  if(fx==='W')for(let i=0;i<3;i++){const hit=a0+i*.4+.55;if(t>=hit)r.fs=Math.max(r.fs,1-seg(t,hit,hit+.35))}
+  if(fx==='W')for(let i=0;i<p.level;i++){const arr=a0+i*.22+.7;if(t>=arr)r.fs=Math.max(r.fs,1-seg(t,arr,arr+.3))}
   return r;
 }
 function shieldArc(p){return{c:{x:C.x,y:H-30},rx:160,ry:96}}
 function drawAfter(ctx,fx,p,t,T){
   if(p.after<=0||t<T.tA)return;
   const a0=T.tA;
-  if(fx==='F'||fx==='E'){
-    const col=fx==='F'?p.tColor:p.hColor,side=fx==='F'?'opp':'own',bar=barC(side);
+  {
+    const col=fx==='F'?p.tColor:fx==='E'?p.hColor:p.mColor,side=fx==='F'?'opp':'own',bar=barC(side);
     for(let i=0;i<p.level;i++){
       const s0=a0+i*.22,q=seg(t,s0,s0+.7),from=slot(side,i);
       if(q<=0)continue;
@@ -354,21 +333,7 @@ function drawAfter(ctx,fx,p,t,T){
       const hold=1-seg(t,s0,s0+.3);if(hold>0)puff(ctx,from.x,from.y,30,col,.55*hold);
       ctx.restore();
       const arr=s0+.7,ft=seg(t,arr,arr+.7);
-      if(ft>0&&ft<1){ctx.save();ctx.globalAlpha=1-ft;ctx.fillStyle=lighten(col,.4);ctx.font='700 15px JetBrains Mono,monospace';ctx.textAlign='center';ctx.fillText(fx==='F'?'−1':'+1',bar.x+(i-(p.level-1)/2)*46,bar.y+(side==='opp'?32:-22)+(side==='opp'?1:-1)*ft*14);ctx.restore()}
-    }
-  }else{
-    const {c,rx,ry}=shieldArc(p),cols=prismCols(p),vis=eo(seg(t,a0,a0+.4));
-    const info=afterInfo('W',p,t,T);
-    ctx.save();ctx.lineCap='round';
-    const lg=ctx.createLinearGradient(c.x-rx,0,c.x+rx,0);lg.addColorStop(0,cols[0]);lg.addColorStop(.5,cols[1]);lg.addColorStop(1,cols[2]);
-    ctx.shadowColor=cols[1];ctx.shadowBlur=8+16*info.fs;ctx.strokeStyle=lg;ctx.globalAlpha=(.3+.6*info.fs)*vis;ctx.lineWidth=3+2*info.fs;
-    ctx.beginPath();ctx.ellipse(c.x,c.y,rx,ry,0,Math.PI,Math.PI*2);ctx.stroke();ctx.restore();
-    ctx.save();ctx.globalAlpha=.1*vis+.2*info.fs*vis;ctx.fillStyle=rgba(p.pColor,1);ctx.beginPath();ctx.ellipse(c.x,c.y,rx,ry,0,Math.PI,Math.PI*2);ctx.closePath();ctx.fill();ctx.restore();
-    for(let i=0;i<3;i++){
-      const s0=a0+i*.4,q=seg(t,s0,s0+.55),col=EL[['F','E','W'][i]],x1=C.x+(i-1)*70,y1=c.y-ry*Math.sqrt(Math.max(0,1-Math.pow((x1-c.x)/rx,2)));
-      if(q>0&&q<1){const x0=x1+(i-1)*40,y0=40,bx=lerp(x0,x1,q),by=lerp(y0,y1,q*q);ctx.save();ctx.globalCompositeOperation='lighter';puff(ctx,bx,by,16,col,.8);for(let k=1;k<5;k++)puff(ctx,lerp(x0,x1,q-k*.04),lerp(y0,y1,Math.pow(Math.max(0,q-k*.04),2)),12-k*2,col,.45-k*.08);ctx.restore()}
-      const hq=seg(t,s0+.55,s0+.95);
-      if(hq>0&&hq<1){ctx.save();ctx.globalCompositeOperation='lighter';ctx.strokeStyle=rgba(lighten(col,.5),(1-hq)*.9);ctx.lineWidth=3*(1-hq)+1;const rr2=8+hq*46;ctx.beginPath();ctx.ellipse(x1,y1,rr2,rr2*.5,0,0,7);ctx.stroke();star4(ctx,x1,y1,16*(1-hq),'#ffffff',1-hq);ctx.restore()}
+      if(ft>0&&ft<1){ctx.save();ctx.globalAlpha=1-ft;ctx.fillStyle=lighten(col,.4);ctx.font='700 15px JetBrains Mono,monospace';ctx.textAlign='center';ctx.fillText(fx==='F'?'−1':fx==='E'?'+1':'+1 Mana',bar.x+(i-(p.level-1)/2)*46,bar.y+(side==='opp'?32:-22)+(side==='opp'?1:-1)*ft*14);ctx.restore()}
     }
   }
 }
@@ -381,7 +346,7 @@ function hud(ctx,info,p,fx){
     ctx.fillStyle='#1c1c21';ctx.beginPath();rrect(ctx,x,y,w,h,6);ctx.fill();
     ctx.fillStyle=bc;ctx.beginPath();rrect(ctx,x,y,Math.max(2,w*clamp(v)),h,6);ctx.fill();
     ctx.strokeStyle='#4d4d55';ctx.lineWidth=1;ctx.beginPath();rrect(ctx,x,y,w,h,6);ctx.stroke();
-    if(fl>0){const col=fx==='F'?p.tColor:fx==='E'?p.hColor:p.pColor;ctx.save();ctx.globalCompositeOperation='lighter';ctx.shadowColor=col;ctx.shadowBlur=18;ctx.strokeStyle=rgba(lighten(col,.4),fl);ctx.lineWidth=3;ctx.beginPath();rrect(ctx,x,y,w,h,6);ctx.stroke();ctx.restore()}
+    if(fl>0){const col=fx==='F'?p.tColor:fx==='E'?p.hColor:p.mColor;ctx.save();ctx.globalCompositeOperation='lighter';ctx.shadowColor=col;ctx.shadowBlur=18;ctx.strokeStyle=rgba(lighten(col,.4),fl);ctx.lineWidth=3;ctx.beginPath();rrect(ctx,x,y,w,h,6);ctx.stroke();ctx.restore()}
     ctx.fillStyle='#8a8a92';ctx.textAlign='left';ctx.fillText(lab,x,y-5);
     for(let i=0;i<3;i++){const s=slot(side,i);ctx.strokeStyle='rgba(255,255,255,.14)';ctx.setLineDash([4,4]);ctx.beginPath();ctx.arc(s.x,s.y,14,0,7);ctx.stroke();ctx.setLineDash([])}
   });
@@ -403,7 +368,7 @@ function cell(ctx,fx,t,p){
   const T=tl(p),info=afterInfo(fx,p,t,T),u=clamp(t/p.dur);
   hud(ctx,info,p,fx);
   if(t<=p.dur){
-    if(fx==='F')fxCurse(ctx,p,t,p.dur,u);else if(fx==='E')fxHeal(ctx,p,t,p.dur,u);else fxPrism(ctx,p,t,p.dur,u);
+    if(fx==='F')fxCurse(ctx,p,t,p.dur,u);else if(fx==='E')fxHeal(ctx,p,t,p.dur,u);else fxMana(ctx,p,t,p.dur,u);
   }
   drawTokens(ctx,fx,p,t,T);drawAfter(ctx,fx,p,t,T);
 }
@@ -416,7 +381,7 @@ function draw(ctx,t,p){
       ctx.save();ctx.beginPath();ctx.rect(i*240,0,240,H);ctx.clip();
       ctx.translate(120+i*240-C.x*k+Math.sin(t*95)*amp,H/2-C.y*k+Math.cos(t*80)*amp*.7);ctx.scale(k,k);
       cell(ctx,fx,t,p);ctx.restore();
-      ctx.save();ctx.fillStyle=fx==='F'?p.tColor:fx==='E'?p.hColor:p.pColor;ctx.font='700 15px Cinzel,Georgia,serif';ctx.textAlign='center';ctx.fillText(NAME[fx],120+i*240,H-14);ctx.restore();
+      ctx.save();ctx.fillStyle=fx==='F'?p.tColor:fx==='E'?p.hColor:p.mColor;ctx.font='700 15px Cinzel,Georgia,serif';ctx.textAlign='center';ctx.fillText(NAME[fx],120+i*240,H-14);ctx.restore();
       if(i)ctx.fillStyle='rgba(255,255,255,.06)',ctx.fillRect(i*240-.5,0,1,H);
     });
   }else{
@@ -429,9 +394,9 @@ function draw(ctx,t,p){
 const FX={name:'ultimate',def:DEF,presets:PRE,
  ctrls:[
   {t:'h',l:'Szenario'},
-  {k:'view',t:'seg',l:'Ansicht',o:[['alle','Alle drei'],['einzeln','Einzeln']],hint:'„Alle drei“ zeigt Todesfluss, Multispiegel und Heilfluss nebeneinander (Reihenfolge wie in der Kombo-Übersicht), „Einzeln“ eines groß.'},
-  {k:'fx',t:'seg',l:'Ultimate (bei „Einzeln“)',o:[['F','Todesfluss'],['W','Multispiegel'],['E','Heilfluss']],hint:'Feuer = Todesfluss, Wasser = Multispiegel, Erde = Heilfluss: Die Farbe der ersten Karte entscheidet.'},
-  {k:'level',t:'rng',l:'Stufe S',min:1,max:3,step:1,hint:'Todesfluss und Heilfluss legen S Marker; beim Multispiegel steht S auf dem Schild.'},
+  {k:'view',t:'seg',l:'Ansicht',o:[['alle','Alle drei'],['einzeln','Einzeln']],hint:'„Alle drei“ zeigt Todesfluss, Manafluss und Heilfluss nebeneinander (Reihenfolge wie in der Kombo-Übersicht), „Einzeln“ eines groß.'},
+  {k:'fx',t:'seg',l:'Ultimate (bei „Einzeln“)',o:[['F','Todesfluss'],['W','Manafluss'],['E','Heilfluss']],hint:'Feuer = Todesfluss, Wasser = Manafluss, Erde = Heilfluss: Die Farbe der ersten Karte entscheidet.'},
+  {k:'level',t:'rng',l:'Stufe S',min:1,max:3,step:1,hint:'Todesfluss und Heilfluss legen S Marker; Manafluss legt S Marker (S Mana pro Zug).'},
   {t:'h',l:'Allgemein'},
   {k:'dur',t:'rng',l:'Dauer des Rituals',min:2,max:7,step:.1,u:' s'},
   {k:'size',t:'rng',l:'Größe',min:.6,max:1.8,step:.05,u:'×'},
@@ -439,7 +404,7 @@ const FX={name:'ultimate',def:DEF,presets:PRE,
   {k:'flash',t:'rng',l:'Blitz',min:0,max:1.5,step:.05,u:'×'},
   {k:'shake',t:'rng',l:'Wackeln',min:0,max:1.5,step:.05},
   {k:'particles',t:'rng',l:'Funken und Lichtpunkte',min:0,max:120,step:5},
-  {k:'after',t:'rng',l:'Wirkung danach',min:0,max:4,step:.1,u:' s',hint:'Nach dem Ritual und den Markern: Todesfluss zehrt am Gegner, Heilfluss heilt, Multispiegel wehrt drei Angriffe verschiedener Farbe ab. 0 blendet es aus.'},
+  {k:'after',t:'rng',l:'Wirkung danach',min:0,max:4,step:.1,u:' s',hint:'Nach dem Ritual und den Markern: Todesfluss zehrt am Gegner, Heilfluss heilt, Manafluss füllt Mana auf. 0 blendet es aus.'},
   {t:'h',l:'Todesfluss (Feuer)',c:'ft'},
   {k:'tColor',t:'col',l:'Farbe'},
   {k:'tTilt',t:'rng',l:'Neigung der Scheibe',min:.2,max:.8,step:.02},
@@ -458,14 +423,13 @@ const FX={name:'ultimate',def:DEF,presets:PRE,
   {k:'hLight',t:'rng',l:'Lichtsäule',min:0,max:1.5,step:.05,u:'×'},
   {k:'hPulse',t:'rng',l:'Heilwellen',min:0,max:5,step:1,hint:'Ringe, die vom Kreis nach außen laufen.'},
   {k:'hGlow',t:'rng',l:'Leuchten',min:0,max:30,step:1},
-  {t:'h',l:'Multispiegel (Wasser)',c:'fp'},
-  {k:'pColor',t:'col',l:'Grundfarbe'},
-  {k:'pRainbow',t:'rng',l:'Farbenspiel',min:0,max:1,step:.05,hint:'0 = alles in der Grundfarbe, 1 = der Kreis und der Rand zeigen Feuer, Erde und Wasser (das Multispiegel wirkt gegen jede Farbe).'},
-  {k:'pDome',t:'rng',l:'Größe der Kuppel',min:.6,max:1.6,step:.05,u:'×'},
-  {k:'pFacets',t:'rng',l:'Facetten',min:3,max:12,step:1},
-  {k:'pShimmer',t:'rng',l:'Schimmer',min:0,max:1.5,step:.05,u:'×'},
-  {k:'pGlints',t:'rng',l:'Glitzern',min:0,max:40,step:1},
-  {k:'pGlow',t:'rng',l:'Leuchten',min:0,max:30,step:1}
+  {t:'h',l:'Manafluss (Wasser)',c:'fp'},
+  {k:'mColor',t:'col',l:'Grundfarbe'},
+  {k:'mRings',t:'rng',l:'Ringe',min:1,max:3,step:1},
+  {k:'mStar',t:'rng',l:'Ecken des Sterns',min:5,max:12,step:1},
+  {k:'mCrystal',t:'rng',l:'Größe des Kristalls',min:.5,max:1.8,step:.05,u:'×'},
+  {k:'mPulse',t:'rng',l:'Pulse',min:0,max:6,step:1},
+  {k:'mGlow',t:'rng',l:'Leuchten',min:0,max:30,step:1}
  ]};
 
 /* ---------- Zustand und Bedienung ---------- */

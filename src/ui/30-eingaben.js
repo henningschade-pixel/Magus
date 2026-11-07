@@ -51,7 +51,7 @@ function onAct(d) {
     case 'lfm': {
       const L = lfCtx(); if (!L) break;
       const k = d.k, e = d.e || '', key = e ? k + ':' + e : k, have = lfHave(L.cx, k, e), n = L.picks.filter(x => x === key).length;
-      let m = (e || /^[so][dhtr]$/.test(k)) ? (n + 1 <= Math.min(have, L.lvl) ? n + 1 : 0) : (n > +d.i ? +d.i : +d.i + 1);   // Marker mit Zähler: einen mehr, nach dem Maximum alle weg
+      let m = (e || /^[so][dhtrm]$/.test(k)) ? (n + 1 <= Math.min(have, L.lvl) ? n + 1 : 0) : (n > +d.i ? +d.i : +d.i + 1);   // Marker mit Zähler: einen mehr, nach dem Maximum alle weg
       m = Math.min(m, have, L.lvl);
       const others = L.picks.filter(x => x !== key);
       while (others.length + m > L.lvl && others.length) others.shift();   // voll: die älteste andere Wahl weicht
@@ -68,8 +68,10 @@ stage.addEventListener('click', e => {
   const c = e.target.closest('.card.myhand');
   if (c) {
     if (G.phase === 'combat' && G.combat.forced) {   // Zerrüttung: Abwurfkarten wählen statt markieren
-      if (!forcedMe()) { toast('Der Gegner wählt gerade seine Abwurfkarten.'); return; }
-      const sl = +c.dataset.slot, need = Math.min(G.combat.forced.n, G.players[ME].deck.hand.filter(Boolean).length);
+      const fo = G.combat.forced, trap = fo.kind === 'trap';
+      if (!forcedMe()) { toast(trap ? 'Der Gegner wählt gerade seine Falle.' : 'Der Gegner wählt gerade seine Abwurfkarten.'); return; }
+      if (trap && !fo.slots.includes(+c.dataset.slot)) { toast('Wähle eine der gerade gezogenen Karten.'); return; }
+      const sl = +c.dataset.slot, need = trap ? 1 : Math.min(fo.n, G.players[ME].deck.hand.filter(Boolean).length);
       if (fdSel.has(sl)) fdSel.delete(sl); else { if (fdSel.size >= need) fdSel.clear(); fdSel.add(sl); }
       render(); return;
     }

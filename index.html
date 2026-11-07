@@ -58,6 +58,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .card.myhand{cursor:var(--cp)}
 .card.myhand:hover .face.front{filter:brightness(1.18)}
 .card.fd .face.front{box-shadow:0 0 0 3px #ff6b3d,0 0 22px rgba(255,107,61,.75)}
+.card.cand .face.front{box-shadow:0 0 0 2px rgba(82,166,245,.9),0 0 16px rgba(82,166,245,.6)}.card.cand.fd .face.front{box-shadow:0 0 0 3px #ff6b3d,0 0 22px rgba(255,107,61,.75)}
 .card.first .face.front{box-shadow:0 0 0 3px var(--gold),0 0 22px rgba(210,173,79,.65)}
 .card.bad .face.front{box-shadow:0 0 0 3px var(--bad)}
 .card .lockbtn{position:absolute;right:4px;top:4px;width:30px;height:30px;border-radius:50%;background:rgba(10,8,14,.78) center/60% no-repeat;border:1px solid var(--line);opacity:0;transition:opacity .15s;cursor:var(--cp)}
@@ -372,6 +373,20 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 @keyframes arcfx{0%,100%{opacity:0}50%{opacity:1}}
 
 .crefh{font-size:11px;letter-spacing:.06em;text-transform:uppercase;margin:2px 0 1px;line-height:1.2;opacity:.85}.crefh.F{color:var(--fire)}.crefh.W{color:var(--water)}.crefh.E{color:var(--earth)}
+/* Manamarker (Manafluss, seit 0.8) wie der Heilmarker; Falle (Blau + Rot): verdeckte Karte in der Markerreihe, kein Marker */
+.manatok.healtok{width:46px;height:46px}
+.trapcard{position:relative;width:34px;height:48px;border-radius:4px;box-shadow:0 0 0 1.5px #1b140d,1px 2px 4px rgba(0,0,0,.7);cursor:help;background:#222;filter:saturate(.9)}
+.trapcard img{width:100%;height:100%;object-fit:cover;border-radius:3px;display:block;transform:rotate(var(--r,0deg))}
+.trapcard.mine{box-shadow:0 0 0 2px #52a6f5,0 0 10px rgba(82,166,245,.7),1px 2px 4px rgba(0,0,0,.7)}
+.trapcard .tl{position:absolute;right:-6px;bottom:-5px;font:700 16px Alegreya,serif;color:#f2d27a;font-style:normal;text-shadow:0 0 2px #000,0 0 3px #000,0 0 6px #000}
+.trapfx{position:absolute;z-index:295;pointer-events:none;perspective:600px}
+.trapfx .tf{position:relative;width:100%;height:100%;transform-style:preserve-3d;transition:transform .55s ease-in-out}
+.trapfx .tf>div{position:absolute;inset:0;backface-visibility:hidden;border-radius:6px;overflow:hidden;box-shadow:0 0 0 2px #1b140d,0 0 18px rgba(82,166,245,.8)}
+.trapfx .tf img{width:100%;height:100%;object-fit:cover;display:block}
+.trapfx .tf .bk{transform:rotateY(0deg)}.trapfx .tf .fr{transform:rotateY(180deg)}
+.trapfx.up .tf{transform:rotateY(180deg)}
+.trapfx.hit .tf>div{box-shadow:0 0 0 3px #ff6b3d,0 0 30px rgba(255,107,61,.9)}
+.trapfx.miss{transition:opacity .5s}
 
 </style>
 </head>
@@ -757,7 +772,7 @@ function execVendor(state, pid, a) {
 }
 /* Magus – Regelkern (Teil 6): Kampf (Monsterkämpfe und Showdowns).
    Ein Angriffszug: Karten markieren (erste Karte bestimmt das Element), angreifen; die Gegenseite verteidigt.
-   Kombos aus zwei Elementen: Control (F+W), Lähmung (F+E), Lifeflow (E+W); alle drei ergeben eine Ultimate, deren Wirkung die Farbe der ersten Karte bestimmt (seit 0.7: Feuer Todesfluss, Erde Heilfluss, Wasser Prisma). */
+   Kombos aus zwei Elementen: Control (F+W), Lähmung (F+E), Lifeflow (E+W); alle drei ergeben eine Ultimate, deren Wirkung die Farbe der ersten Karte bestimmt (seit 0.7: Feuer Todesfluss, Erde Heilfluss, Wasser Multispiegel; seit 0.8: Wasser Manafluss). */
 
 /* ---------- Kampfberechnung ---------- */
 function comboLevels(tiers, mag, prim) {
@@ -776,16 +791,16 @@ function comboLevels(tiers, mag, prim) {
   if (prim && present.length === 2 && present.includes(prim)) {
     const other = present.find(e => e !== prim), key = ORD_COMBO[prim + other];
     const eff = e => tiers[e].reduce((a, t) => a + Math.min(t, mag[e]), 0);   // je Farbe die Summe der Kartenwerte (höchstens Magiestufe je Karte): mehrere Karten ergeben zusammen die Stufe
-    lv.ord = { key, lvl: Math.max(0, Math.min(3, eff(prim), eff(other))), el: key === 'bm' ? 'F' : key === 'bg' ? 'E' : null };
+    lv.ord = { key, lvl: Math.max(0, Math.min(3, eff(prim), eff(other))) };
   }
   return lv;
 }
-// Rot = Feuer (Lähmung), Blau = Wasser (Defensiv), Grün = Erde (Heilend): ra Flüche, rm Mana-Entzug, bm/bg roter/grüner Spiegel, gh Heilung, gr Marker entfernen + Nachziehen.
-const ORD_COMBO = { FE: 'ra', FW: 'rm', WF: 'bm', WE: 'bg', EW: 'gh', EF: 'gr' };
-// Kombostufen auf die Plätze fw (Spiegel), fe (Flüche), ew (Marker entfernen), rm (Mana-Entzug), gh (Heilung) abgebildet.
+// Rot = Feuer (Lähmung), Blau = Wasser (Defensiv), Grün = Erde (Heilend): ra Flüche, rm Zerrüttung, wt Falle (Blau + Rot), ws Schild (Blau + Grün), gh Heilung, gr Marker entfernen + Nachziehen. Seit 0.8 ersetzen Falle und Schild die Farbspiegel.
+const ORD_COMBO = { FE: 'ra', FW: 'rm', WF: 'wt', WE: 'ws', EW: 'gh', EF: 'gr' };
+// Kombostufen auf die Plätze tr (Falle), sh (Schild), fe (Flüche), ew (Marker entfernen), rm (Zerrüttung), gh (Heilung) abgebildet.
 function levelsFor(ev) {
-  const out = { fw: 0, fe: 0, ew: 0, rm: 0, gh: 0, ulti: ev.levels.ulti }, o = ev.ord;
-  if (o && o.lvl > 0 && !(ev.levels.ulti > 0)) out[{ ra: 'fe', rm: 'rm', bm: 'fw', bg: 'fw', gh: 'gh', gr: 'ew' }[o.key]] = o.lvl;
+  const out = { tr: 0, sh: 0, fe: 0, ew: 0, rm: 0, gh: 0, ulti: ev.levels.ulti }, o = ev.ord;
+  if (o && o.lvl > 0 && !(ev.levels.ulti > 0)) out[{ ra: 'fe', rm: 'rm', wt: 'tr', ws: 'sh', gh: 'gh', gr: 'ew' }[o.key]] = o.lvl;
   return out;
 }
 // Fluchkarten kosten beim Ausspielen je 1 Mana und zählen nicht als Element.
@@ -883,10 +898,9 @@ function evaluateEnd(state) {
 function endCombat(state, end) {
   const c = state.combat, res = { mode: c.mode, reason: end.reason, winner: end.winner, monsterDefeated: false, elem: c.elem, stage: state.stage, turns: c.turns, fled: end.fled || null };   // elem/stage/turns: für die Balance-Auswertung
   if (state.keepSnap) res.snap = JSON.parse(JSON.stringify(c));   // Oberfläche: Endstand des Kampfes (vor Zurücksetzen und Rückkehr in die Weltphase)
-  state.players.forEach(p => { p.stats.freeDraws = 0; p.deck.marks = []; delete p.stats.mirror; delete p.stats.mirrorEl; delete p.stats.mirrorFree; delete p.stats.death; delete p.stats.deathPhase; delete p.stats.heal; delete p.stats.rainbow; });
+  state.players.forEach(p => { if (p.stats.trap) p.deck.discard.push(p.stats.trap.card); p.stats.freeDraws = 0; p.deck.marks = []; ['death', 'deathPhase', 'heal', 'healPhase', 'manaflow', 'manaPhase', 'rainbow', 'trap'].forEach(k => { delete p.stats[k]; }); });   // die Fallenkarte kehrt in den Ablagestapel zurück (wird gleich mit gemischt)
   state.players.forEach(p => stripCurseCards(state, p.deck));
-  delete c.sides.b.stats.healPhase; delete c.sides.b.stats.death; delete c.sides.b.stats.deathPhase; delete c.sides.b.stats.heal; delete c.sides.b.stats.rainbow;
-  if (c.sides.b.monster) { delete c.sides.b.monster.stats.mirror; delete c.sides.b.monster.stats.mirrorEl; delete c.sides.b.monster.stats.mirrorFree; }
+  ['healPhase', 'death', 'deathPhase', 'heal', 'manaflow', 'manaPhase', 'rainbow', 'trap'].forEach(k => { delete c.sides.b.stats[k]; });
   const A = state.players[c.att], B = state.players[c.def];
   if (c.mode === 'monster') {
     const m = c.sides.b.monster;
@@ -970,32 +984,17 @@ function finishStep(state, info) {
   return null;
 }
 // Angriffszug endet ohne Schaden: die Gegenseite greift an (Verteidigung entfällt).
-// Spiegelmarker: Der Spiegel (Wasser+Feuer bzw. Wasser+Erde) legt Marker vor den Verteidiger; sie werfen Angriffsschaden zurück.
-const MAX_MIRROR = 3;
-// Spiegelmarker sind an ein Element (Magierichtung) gebunden: stats.mirrorEl = {F,E,W}, stats.mirror = Summe.
-function mirrorOf(stats, el) { return (stats.mirrorEl && stats.mirrorEl[el]) || 0; }
-function mirrorSync(stats) {
-  const m = stats.mirrorEl; const t = m ? (m.F || 0) + (m.E || 0) + (m.W || 0) : 0;
-  if (t > 0) stats.mirror = t; else { delete stats.mirror; delete stats.mirrorEl; delete stats.mirrorFree; }
-}
-// Ein Control der Stufe n bringt den Spiegel dieser Farbe auf n Marker (nicht obendrauf addiert); höchstens 3 Marker je Farbe, die Farben zählen getrennt.
-function mirrorAdd(stats, el, n) {
-  stats.mirrorEl = stats.mirrorEl || { F: 0, E: 0, W: 0 };
-  const cur = stats.mirrorEl[el] || 0;
-  stats.mirrorEl[el] = Math.max(cur, Math.min(n, MAX_MIRROR)); mirrorSync(stats);
-}
-function mirrorTake(stats, el, n) { if (stats.mirrorEl) { stats.mirrorEl[el] = Math.max(0, stats.mirrorEl[el] - n); mirrorSync(stats); } }
-function mirrorTakeAny(stats, n) { for (const el of ELEMENTS) { while (n > 0 && mirrorOf(stats, el) > 0) { mirrorTake(stats, el, 1); n--; } } }
-// Ultimates (seit 0.7 nach der Farbe der ersten Karte): Feuer = Todesfluss (stats.death, Marker beim Gegner), Erde = Heilfluss (stats.heal, grüner Marker mit Plus bei sich selbst: +1 HP je Marker am Ende der eigenen Angriffsphase), Wasser = Multispiegel (stats.rainbow, bei sich selbst: wie ein Spiegel, aber gegen jede Farbe; seit 0.7.2.2 verliert auch er Stufen, aber erst nachdem die Stufen des Farbspiegels aufgebraucht sind). Alle drei Marker entfernt nur die Läuterung.
-// Wirksamer Schild gegen einen Angriff der Farbe el: der höhere von Farbspiegel und Multispiegel.
-function shieldOf(stats, el) { return Math.max(mirrorOf(stats, el), stats.rainbow || 0); }
-// Läuterung: gewählte Marker (sm/om/sd/od/sh/oh/sr/or/st/ot), höchstens S; ohne Wahl automatisch eigene Todesmarker, dann Spiegel, Multispiegel und Heilmarker des Gegners.
+const MAX_LVL = 3;   // höchste Kombostufe und Höchstzahl der Schildladungen
+// Schild (Blau + Grün, seit 0.8; stats.rainbow, Grafik des früheren Multischilds): Ladungen 1/2/3. Er mindert eingehenden, nicht geblockten Schaden gegen jede Farbe und verliert je gemindertem Schaden eine Ladung. Ein neues Schild bringt die Ladungen auf die Stufe (nicht addiert, höchstens 3).
+function shieldAdd(stats, n) { stats.rainbow = Math.max(stats.rainbow || 0, Math.min(n, MAX_LVL)); }
+// Ultimates (seit 0.7 nach der Farbe der ersten Karte): Feuer = Todesfluss (stats.death, Marker beim Gegner), Erde = Heilfluss (stats.heal, +1 HP je Marker am Ende der eigenen Angriffsphase), Wasser = Manafluss (seit 0.8, stats.manaflow: +1 Mana je Marker am Ende der eigenen Angriffsphase). Alle drei Marker entfernt nur die Läuterung.
+// Läuterung: gewählte Marker (sm/om Manamarker, sd/od Todesmarker, sh/oh Heilmarker, sr/or Schildmarker, st/ot Nachziehtokens), höchstens S; ohne Wahl automatisch eigene Todesmarker, dann Schild-, Mana- und Heilmarker des Gegners.
 function lifeflowPicks(state, side, opp, lvl) {
   if (Array.isArray(state.combat.lfp)) return state.combat.lfp.slice(0, lvl);
-  const out = []; let om = opp.stats.mirror || 0, sd = side.stats.death || 0, orb = opp.stats.rainbow || 0, oh = opp.stats.heal || 0;
+  const out = []; let om = opp.stats.manaflow || 0, sd = side.stats.death || 0, orb = opp.stats.rainbow || 0, oh = opp.stats.heal || 0;
   while (out.length < lvl && sd > 0) { out.push('sd'); sd--; }
-  while (out.length < lvl && om > 0) { out.push('om'); om--; }
   while (out.length < lvl && orb > 0) { out.push('or'); orb--; }
+  while (out.length < lvl && om > 0) { out.push('om'); om--; }
   while (out.length < lvl && oh > 0) { out.push('oh'); oh--; }
   return out;
 }
@@ -1028,12 +1027,18 @@ function deathTick(state, side, done) {   // done: Nummer des Angriffszugs (1, 2
     const before = side.stats.hp; side.stats.hp = Math.min(side.stats.maxHp, side.stats.hp + hl);
     if (side.stats.hp > before) log(state, 'Heilfluss: ' + side.name + ' heilt ' + (side.stats.hp - before) + ' HP am Ende der Angriffsphase.', side.ctrl, { kind: 'healtick', who: side.ctrl, n: side.stats.hp - before, marks: hl });
   }
+  // Manafluss (Wasser-Ultimate, seit 0.8): am Ende der eigenen Angriffsphase +1 Mana je Marker (nur Marker, die schon zu Beginn der Phase lagen: manaPhase), höchstens bis zum maximalen Mana; nur wer noch steht
+  const mf = Math.min(side.stats.manaflow || 0, side.stats.manaPhase === undefined ? Infinity : side.stats.manaPhase); delete side.stats.manaPhase;
+  if (mf > 0 && side.stats.hp > 0) {
+    const before = side.stats.mana; side.stats.mana = Math.min(side.stats.maxMana, side.stats.mana + mf);
+    if (side.stats.mana > before) log(state, 'Manafluss: ' + side.name + ' regeneriert ' + (side.stats.mana - before) + ' Mana am Ende der Angriffsphase.', side.ctrl, { kind: 'manatick', who: side.ctrl, n: side.stats.mana - before, marks: mf });
+  }
 }
 // Ultimate wirken lassen: die Farbe der ersten Karte (el) bestimmt die Marker. who legt sie bei sich (Erde, Wasser) oder beim Gegner (Feuer).
 function castUltimate(side, opp, el, lvl) {
-  lvl = Math.max(1, Math.min(MAX_MIRROR, lvl));
+  lvl = Math.max(1, Math.min(MAX_LVL, lvl));
   if (el === 'E') { side.stats.heal = Math.max(side.stats.heal || 0, lvl); return { text: 'Ultimate ' + lvl + ' (Erde): Heilfluss, ' + side.stats.heal + ' HP am Ende jeder eigenen Angriffsphase bis Kampfende', fx: { kind: 'ultimate', who: side.ctrl, to: side.ctrl, el: 'E', n: lvl } }; }
-  if (el === 'W') { side.stats.rainbow = Math.max(side.stats.rainbow || 0, lvl); return { text: 'Ultimate ' + lvl + ' (Wasser): Multispiegel Stufe ' + side.stats.rainbow + ' (gegen jede Farbe, verliert Stufen wie ein Spiegel)', fx: { kind: 'ultimate', who: side.ctrl, to: side.ctrl, el: 'W', n: lvl } }; }
+  if (el === 'W') { side.stats.manaflow = Math.max(side.stats.manaflow || 0, lvl); return { text: 'Ultimate ' + lvl + ' (Wasser): Manafluss, ' + side.stats.manaflow + ' Mana am Ende jeder eigenen Angriffsphase bis Kampfende', fx: { kind: 'ultimate', who: side.ctrl, to: side.ctrl, el: 'W', n: lvl } }; }
   opp.stats.death = Math.max(opp.stats.death || 0, lvl);
   return { text: 'Ultimate ' + lvl + ' (Feuer): Todesfluss für ' + opp.name + ' (' + opp.stats.death + ' HP am Ende jeder seiner Angriffsphasen bis Kampfende)', fx: { kind: 'ultimate', who: side.ctrl, to: opp.ctrl, el: 'F', n: lvl } };
 }
@@ -1046,11 +1051,49 @@ function passAttackTurn(state) {
 
 // HP nach einer Heilung um lvl: höchstens bis zu den maximalen HP, nie weniger als vorher
 function healedHp(stats, hp, lvl) { return lvl > 0 ? Math.max(hp, Math.min(stats.maxHp, hp + lvl)) : hp; }
+// Falle (Blau + Rot, seit 0.8): Die Seite zieht drei Karten (soweit Handplätze frei sind) und legt eine davon verdeckt vor sich (stats.trap = { card, el, tier, lvl }; kein Marker, die Läuterung erreicht sie nicht). Welche, wählt der Spieler (c.forced mit kind 'trap'; ohne Wahlmöglichkeit gleich). Fluchkarten kommen nicht in Frage.
+function trapDraw(state, side, lvl) {
+  const d = side.deck, free = [];
+  for (let i = 0; i < d.hand.length && free.length < 3; i++) if (!d.hand[i]) free.push(i);
+  const before = d.hand.map(x => x && x.uid);
+  for (const i of free) {   // wie fillHand, aber nur drei Karten
+    if (!d.draw.length && d.discard.length) { d.draw = d.discard.splice(0); state.rng.shuffle(d.draw); }
+    if (!d.draw.length) break;
+    d.hand[i] = d.draw.pop();
+  }
+  const slots = free.filter(i => d.hand[i] && d.hand[i].uid !== before[i] && !parseCard(d.hand[i].id).curse);
+  const drawn = free.filter(i => d.hand[i] && d.hand[i].uid !== before[i]).length;
+  if (slots.length === 1) trapSet(state, side, slots[0], lvl);
+  else if (slots.length > 1) state.combat.forced = { pid: side.ctrl, n: 1, kind: 'trap', slots, lvl };
+  return { drawn, choose: slots.length > 1, none: slots.length === 0 };
+}
+function trapSet(state, side, slot, lvl) {
+  const d = side.deck, card = d.hand[slot], pc = parseCard(card.id);
+  d.hand[slot] = null; d.marks = d.marks.filter(i => i !== slot); card.locked = false;
+  side.stats.trap = { card, el: pc.el, tier: pc.tier, lvl };   // eine liegende Falle wird durch eine neue ersetzt (die alte kommt in den Ablagestapel)
+}
+// Die Falle wird aufgedeckt, sobald Schaden eingeht (vor der Verteidigung). Entspricht die Farbe des Schadens der Farbe der Karte, wirft sie 2/4/6 (Stufe 1/2/3) unblockbaren Schaden auf den Angreifer zurück (höchstens der eingehende Schaden, der entsprechend sinkt). Danach kommt die Karte auf den Ablagestapel, auch ohne Rückwurf.
+function springTrap(state, owner, att, color, dmg, fxs, texts) {
+  const t = owner.stats.trap; if (!t) return 0;
+  delete owner.stats.trap; owner.deck.discard.push(t.card);
+  const hit = t.el === color, refl = hit ? Math.min(2 * t.lvl, dmg) : 0;
+  if (refl > 0) att.stats.hp = Math.max(0, att.stats.hp - refl);
+  texts.push('Falle von ' + owner.name + ' (' + NAMES[t.el] + (hit ? ') trifft: ' + refl + ' unblockbarer Schaden zurück' : '), Angriff in ' + NAMES[color] + ': keine Wirkung'));
+  fxs.push({ kind: 'trap', who: owner.ctrl, to: att.ctrl, el: t.el, card: t.card.id, attElem: color, hit, refl, lvl: t.lvl });
+  return refl;
+}
 // Wirkung der Kombos (Angriff und nach der Verteidigung): plan = [[Schlüssel, Stufe], ...]
 function applyComboPlan(state, side, opp, plan, ev, texts, fxs) {
   const c = state.combat;
   for (const [k, lvl] of plan) {
-    if (k === 'fw') { const mel = ev.ord.el; mirrorAdd(side.stats, mel, lvl); fxs.push({ kind: 'mirrorcast', who: side.ctrl, to: opp.ctrl, elem: mel, n: lvl }); texts.push('Spiegel ' + lvl + ' (' + NAMES[mel] + ', ' + (side.stats.mirror || 0) + ' Marker)'); }
+    if (k === 'sh') { shieldAdd(side.stats, lvl); fxs.push({ kind: 'shieldcast', who: side.ctrl, to: opp.ctrl, n: lvl }); texts.push('Schild ' + lvl + ' (' + side.stats.rainbow + ' Ladung' + (side.stats.rainbow === 1 ? '' : 'en') + ')'); }
+    if (k === 'tr') {
+      if (side.stats.trap) { side.deck.discard.push(side.stats.trap.card); delete side.stats.trap; }
+      const r = trapDraw(state, side, lvl);
+      fxs.push({ kind: 'trapcast', who: side.ctrl, to: opp.ctrl, n: lvl });
+      texts.push('Falle ' + lvl + ': zieht ' + r.drawn + ' Karte' + (r.drawn === 1 ? '' : 'n') + (r.none ? ', keine eignet sich als Falle' : r.choose ? ' und legt eine davon verdeckt vor sich (Wahl)' : ' und legt eine davon verdeckt vor sich'));
+      if (state.combat.forced && state.combat.forced.kind === 'trap') state.combat.forced.lvl = lvl;
+    }
     if (k === 'fe') { texts.push('Lähmung ' + lvl + ': ' + inflictCurses(state, opp, lvl)); fxs.push({ kind: 'aggro', who: side.ctrl, to: opp.ctrl, n: lvl }); }
     if (k === 'rm') {   // Zerrüttung: Der Gegner muss S Handkarten seiner Wahl abwerfen
       const n = Math.min(lvl, opp.deck.hand.filter(Boolean).length);
@@ -1062,13 +1105,13 @@ function applyComboPlan(state, side, opp, plan, ev, texts, fxs) {
       texts.push('Heilung ' + lvl + ': +' + (side.stats.hp - before) + ' HP'); fxs.push({ kind: 'lifeflow', who: side.ctrl, to: opp.ctrl, got: {}, removed: 0, heal: side.stats.hp - before, draws: 0 });
     }
     else if (k === 'ew') {   // Läuterung: S Marker beliebig vom Brett nehmen, je entferntem Marker 1 Gratis-Nachziehen
-      const before = side.stats.hp, picks = lifeflowPicks(state, side, opp, lvl), names = { sd: 'eigene Todesmarker', od: 'Todesmarker des Gegners', sm: 'eigene Spiegelmarker', om: 'Spiegelmarker des Gegners', sh: 'eigene Heilmarker', oh: 'Heilmarker des Gegners', sr: 'eigene Regenbogenmarker', or: 'Regenbogenmarker des Gegners', st: 'eigene Nachziehtokens', ot: 'Nachziehtoken des Gegners' };
+      const before = side.stats.hp, picks = lifeflowPicks(state, side, opp, lvl), names = { sd: 'eigene Todesmarker', od: 'Todesmarker des Gegners', sm: 'eigene Manamarker', om: 'Manamarker des Gegners', sh: 'eigene Heilmarker', oh: 'Heilmarker des Gegners', sr: 'eigene Schildladungen', or: 'Schildladungen des Gegners', st: 'eigene Nachziehtokens', ot: 'Nachziehtoken des Gegners' };
       const got = {}; let removed = 0;
       for (const pk of picks) {
-        const [kk, mel] = pk.split(':');   // Spiegelmarker können mit Farbe gewählt werden, z. B. 'om:F'
-        const tgt = kk[0] === 's' ? side : opp, key = kk[1] === 'd' ? 'death' : kk[1] === 't' ? 'freeDraws' : kk[1] === 'h' ? 'heal' : kk[1] === 'r' ? 'rainbow' : 'mirror';
+        const kk = pk.split(':')[0];
+        const tgt = kk[0] === 's' ? side : opp, key = kk[1] === 'd' ? 'death' : kk[1] === 't' ? 'freeDraws' : kk[1] === 'h' ? 'heal' : kk[1] === 'r' ? 'rainbow' : 'manaflow';
         if ((tgt.stats[key] || 0) <= 0) continue;
-        if (key === 'mirror') { if (mel && mirrorOf(tgt.stats, mel) > 0) mirrorTake(tgt.stats, mel, 1); else mirrorTakeAny(tgt.stats, 1); } else { tgt.stats[key]--; if ((key === 'death' || key === 'heal' || key === 'rainbow') && tgt.stats[key] <= 0) delete tgt.stats[key]; }
+        tgt.stats[key]--; if (key !== 'freeDraws' && tgt.stats[key] <= 0) delete tgt.stats[key];
         removed++; got[kk] = (got[kk] || 0) + 1;
       }
       const dr = removed - (got.ot || 0) - (got.st || 0);   // Gratis-Nachziehen je entferntem Marker (zerstörte Nachziehtokens, eigene wie gegnerische, zählen nicht)
@@ -1086,20 +1129,23 @@ function execAttack(state) {
   if (!ev.affordable) return fail('Zu wenig Mana (' + ev.cost + ' nötig).');
   side.passed = 0;   // ein Angriff beendet die Serie der Passen-Züge
   const lvs = levelsFor(ev), death = ev.levels.ulti > 0, plan = [];
-  if (!death) for (const k of ['fw', 'fe', 'ew', 'rm', 'gh']) if (lvs[k] > 0) plan.push([k, lvs[k]]);
+  if (!death) for (const k of ['tr', 'sh', 'fe', 'ew', 'rm', 'gh']) if (lvs[k] > 0) plan.push([k, lvs[k]]);
   side.stats.mana -= ev.cost;
   consumeSelection(d, sel);
   const texts = [], fxs = [];
   applyComboPlan(state, side, opp, plan, ev, texts, fxs);
   if (death && (ev.ultiEl || ev.prim) === 'E' && side.stats.healPhase === undefined) side.stats.healPhase = side.stats.heal || 0;   // wie beim Todesfluss: ein in dieser Angriffsphase gelegter Heilmarker heilt erst am Ende der nächsten eigenen Angriffsphase
+  if (death && (ev.ultiEl || ev.prim) === 'W' && side.stats.manaPhase === undefined) side.stats.manaPhase = side.stats.manaflow || 0;   // ebenso der Manamarker
   if (death) { const u = castUltimate(side, opp, ev.ultiEl || ev.prim, ev.levels.ulti); fxs.push(u.fx); texts.push(u.text); }
   c.lfp = null;
-  const dmg = ev.prim ? ev.damage : 0;
+  const dmg0 = ev.prim ? ev.damage : 0;
+  let dmg = dmg0;
+  if (dmg0 > 0 && opp.stats.trap) dmg = dmg0 - springTrap(state, opp, side, ev.prim, dmg0, fxs, texts);   // die Falle wird aufgedeckt, sobald Schaden eingeht, vor der Verteidigung
   if (dmg > 0) fxs.push({ kind: 'attack', who: side.ctrl, to: opp.ctrl, elem: ev.prim, n: dmg });
-  log(state, side.name + ' greift an' + (ev.prim ? ' (' + NAMES[ev.prim] + ', Schaden ' + dmg + ')' : ' (nur Flüche)') + (texts.length ? ' – ' + texts.join(', ') : '') + '.', side.ctrl, fxs.length ? fxs : undefined);
+  log(state, side.name + ' greift an' + (ev.prim ? ' (' + NAMES[ev.prim] + ', Schaden ' + dmg0 + ')' : ' (nur Flüche)') + (texts.length ? ' – ' + texts.join(', ') : '') + '.', side.ctrl, fxs.length ? fxs : undefined);
   if (dmg > 0) { c.color = ev.prim; c.pending = dmg; c.turn = c.turn === 'a' ? 'b' : 'a'; c.action = 'defense'; c.atkTurns = (c.atkTurns || 0) + 1; }
   else passAttackTurn(state);
-  const res = finishStep(state, { k: 'A', who: side.key === 'a' ? 0 : 1, v: dmg });
+  const res = finishStep(state, { k: 'A', who: side.key === 'a' ? 0 : 1, v: dmg0 });
   return { ok: true, combatEnd: res };
 }
 // Fliehen: Im Monsterkampf und im Showdown darf jede Seite (im Monsterkampf der Angreifer ebenso wie der Spieler, der das Monster führt) den Kampf abbrechen, wenn der Gegner kein Mana mehr hat, ihr gerade kein Angriff entgegengebracht wird (eigener Angriffszug) und sie nicht unter einem Todesfluss steht. Kein Sieger, keine Beute; das Monster behält seine HP und sein Mana, und danach ist der Spieler am Zug, der das Monster geführt hat (er kann das angeschlagene Monster jetzt selbst angreifen).
@@ -1110,21 +1156,15 @@ function canFlee(state, pid) {
   return me.ctrl === pid && opp.stats.mana <= 0 && !(me.stats.death > 0);
 }
 function recoverGain(state) { const r = state.rules.recoverByStage; return r ? (r[Math.min(r.length, Math.max(1, state.stage)) - 1] || 1) : 1; }
-// Ergebnis einer Verteidigung (Spiegel, Rückwurf, Restschaden): gemeinsam für die Ausführung (execDefense) und die Vorschau der Oberfläche (previewDefense). mir: wirksame Schildstufe gegen die Angriffsfarbe nach dem Kombo (seit 0.4 wirkt der Kombo vor der Verteidigung); std und rb: Stufe des Farbspiegels dieser Farbe und des Multispiegel nach dem Kombo. Ohne Angaben zählen die Stufen, die jetzt liegen.
-// Seit 0.7 zählt auch der Multispiegel (stats.rainbow, gegen jede Farbe): Es wirkt der höhere von Farbspiegel und Multispiegel (mLvl). Seit 0.7.2.2 verliert auch der Multispiegel Stufen wie ein Farbspiegel, aber der Farbspiegel wird immer zuerst verbraucht: used (ausgeglichener plus zurückgeworfener Schaden) geht zuerst von der Stufe des Farbspiegels ab (lostStd), der Rest vom Multispiegel (lostRb); lost ist die Summe.
+// Ergebnis einer Verteidigung (Schild, Restschaden): gemeinsam für die Ausführung (execDefense) und die Vorschau der Oberfläche (previewDefense). Seit 0.8 gibt es nur noch das Schild (stats.rainbow): Es mindert den nicht geblockten Schaden gegen jede Farbe und verliert je gemindertem Schaden eine Ladung; einen Rückwurf gibt es nicht mehr (die Felder refl, lostStd, std und die Farbe bleiben der Form halber). rb: Ladungen nach dem Kombo; ohne Angabe zählen die Ladungen, die jetzt liegen.
 function defenseOutcome(stats, color, pending, block, mir, std, rb) {
-  const m0 = std === undefined ? mirrorOf(stats, color) : std, r0 = rb === undefined ? (stats.rainbow || 0) : rb;
-  const mLvl = mir === undefined ? Math.max(m0, r0) : mir, missing = Math.max(0, pending - block), excess = Math.max(0, block - pending);
-  const absorb = Math.min(mLvl, missing), refl = Math.min(mLvl, excess, pending), used = absorb + refl;
-  const lostStd = Math.min(used, m0), lostRb = Math.min(used - lostStd, r0);
-  return { mLvl, absorb, refl, used, lostStd, lostRb, lost: lostStd + lostRb, std: m0, rb: r0, leftover: missing - absorb };
+  const r0 = rb === undefined ? (stats.rainbow || 0) : rb, missing = Math.max(0, pending - block), absorb = Math.min(r0, missing);
+  return { mLvl: r0, absorb, refl: 0, used: absorb, lostStd: 0, lostRb: absorb, lost: absorb, std: 0, rb: r0, leftover: missing - absorb };
 }
-// Was ein Kombo der Verteidigung für den laufenden Angriff ändert: Schilde (Spiegel, Multispiegel) wirken seit 0.7.2.23 erst nach der Verteidigung (früher seit 0.4 schon gegen diesen Angriff). Die Heilung wirkt seit 0.5.4 wieder nach dem Schaden (heal: Stufe, hp: HP vor dem Schaden).
+// Was ein Kombo der Verteidigung für den laufenden Angriff ändert: Schild und Falle, die in der Verteidigung gestellt werden, wirken erst nach ihr (seit 0.7.2.23 für Schilde, seit 0.8 auch für die Falle). Die Heilung wirkt seit 0.5.4 wieder nach dem Schaden (heal: Stufe, hp: HP vor dem Schaden).
 function defenseComboPre(stats, ev, color) {
-  const lvs = ev && ev.ord && !(ev.levels && ev.levels.ulti > 0) ? levelsFor(ev) : null;
-  let std = mirrorOf(stats, color), rb = stats.rainbow || 0;
-  // seit 0.7.2.23 wirken in der Verteidigung gestellte Schilde (Farbspiegel, Multispiegel) erst nach ihr: std und rb bleiben beim bisherigen Stand
-  return { heal: lvs ? lvs.gh || 0 : 0, hp: stats.hp, mir: Math.max(std, rb), std, rb };
+  const lvs = ev && ev.ord && !(ev.levels && ev.levels.ulti > 0) ? levelsFor(ev) : null, rb = stats.rainbow || 0;
+  return { heal: lvs ? lvs.gh || 0 : 0, hp: stats.hp, mir: rb, std: 0, rb };
 }
 // Vorschau für die Knöpfe „Verteidigen“ und „Passen“, ohne etwas zu ändern: Mana-Kosten, Block, Restschaden und die HP danach (beim Verteidiger und, durch den Spiegelrückwurf, beim Angreifer). null, wenn gerade keine Verteidigung ansteht oder die Auswahl nicht geht.
 function previewDefense(state, passOnly) {
@@ -1155,48 +1195,36 @@ function execDefense(state, passOnly) {
   if (sel.length) consumeSelection(d, sel); else d.marks = [];
   const attacker = c.sides[c.turn === 'a' ? 'b' : 'a'];
   // Seit 0.4 wirkt der Kombo zuerst, danach die Verteidigung: Ein Spiegel dieser Farbe wirkte früher schon gegen den Angriff, auf den verteidigt wird; seit 0.7.2.23 stellt ihn die Verteidigung erst nach dem Schaden. Seit 0.5.4 gilt das nicht mehr für die Heilung: Sie wirkt wieder nach Angriff und Verteidigung (Zerrüttung und die übrigen Kombos bleiben davor).
-  let lateMulti = 0, lateMirror = 0;   // Schilde, die in dieser Verteidigung gestellt werden, wirken erst nach ihr (seit 0.7.2.23)
-  if (defEv && defEv.levels && defEv.levels.ulti > 0) {   // Ultimate in der Verteidigung: je nach Farbe der ersten Karte Todesfluss für den Angreifer (Feuer), Heilfluss (Erde) oder Multispiegel (Wasser) für den Verteidiger
+  let lateShield = 0, lateTrap = 0;   // Schild und Falle, die in dieser Verteidigung gestellt werden, wirken erst nach ihr
+  if (defEv && defEv.levels && defEv.levels.ulti > 0) {   // Ultimate in der Verteidigung: je nach Farbe der ersten Karte Todesfluss für den Angreifer (Feuer), Heilfluss (Erde) oder Manafluss (Wasser) für den Verteidiger
     const uel = defEv.ultiEl || defEv.el;
     if (uel !== 'E' && uel !== 'W' && attacker.stats.deathPhase === undefined) attacker.stats.deathPhase = attacker.stats.death || 0;
-    if (uel === 'W') lateMulti = defEv.levels.ulti;   // seit 0.7.2.23 wirkt der Multispiegel erst nach der Verteidigung (wie die Heilung), nicht schon gegen diesen Angriff
-    else {
     const u = castUltimate(side, attacker, uel, defEv.levels.ulti);
     log(state, side.name + ' wirkt eine Ultimate: ' + u.text + '.', side.ctrl, uel === 'E' || uel === 'W' ? Object.assign(u.fx, { first: true }) : { kind: 'aggro', who: side.ctrl, to: attacker.ctrl, n: defEv.levels.ulti, first: true, ult: true });
-    }
   }
   let healLvl = 0;
   if (defEv && defEv.ord) {
     const lvs = levelsFor(defEv), plan = [], texts = [], fxs = [];
     for (const k of ['fe', 'ew', 'rm']) if (lvs[k] > 0) plan.push([k, lvs[k]]);
-    lateMirror = lvs.fw || 0;   // Heilung (gh) wirkt seit 0.5.4 wieder erst nach dem Schaden, Zerrüttung und die übrigen Kombos davor
+    lateShield = lvs.sh || 0; lateTrap = lvs.tr || 0;   // Heilung (gh), Schild und Falle wirken erst nach dem Schaden, Zerrüttung und die übrigen Kombos davor
     healLvl = lvs.gh || 0;
     applyComboPlan(state, side, attacker, plan, defEv, texts, fxs);
     c.lfp = null;
     fxs.forEach(f => { f.first = true; });   // Oberfläche: Kombo-Animation läuft vor der Verteidigungsanimation
     if (texts.length) log(state, side.name + ' wirkt einen Kombo: ' + texts.join(', ') + '.', side.ctrl, fxs.length ? fxs : undefined);
   }
-  // Spiegel (dauerhaft, je Farbe eine Stufe von höchstens 3, die Farben zählen getrennt). Gegen einen Angriff in seiner Farbe gleicht er zuerst fehlende Verteidigung aus
-  // (höchstens seine Stufe) und verliert dafür je ausgeglichenen Schaden eine Stufe. Nur wenn der Verteidiger mehr verteidigt als nötig, wirft er den
-  // Überschuss zurück (ebenfalls höchstens seine Stufe und höchstens der eingehende Schaden) und verliert dafür je zurückgeworfenen Schaden eine Stufe. Das gilt auch beim Passen.
-  const { mLvl, absorb, refl, used, lostStd, lostRb, lost, std, rb, leftover } = defenseOutcome(side.stats, c.color, c.pending, block);
+  // Schild (dauerhaft, 1 bis 3 Ladungen): Er mindert den nicht geblockten Schaden gegen jede Farbe und verliert dafür je geminderten Schaden eine Ladung. Das gilt auch beim Passen.
+  const { absorb, used, lost, rb, leftover } = defenseOutcome(side.stats, c.color, c.pending, block);
   const hpPre = { [side.ctrl]: side.stats.hp, [attacker.ctrl]: attacker.stats.hp };   // HP vor dem Schaden, aber nach dem Kombo (Oberfläche zeigt sie, bis die Geschosse einschlagen)
   side.stats.hp = side.stats.hp - leftover;   // vorläufig, die Heilung (seit 0.5.4 nach dem Schaden) gleicht ihn noch aus; danach nie unter 0
   const defEl = sel.length && sel[0].el && !sel[0].curse ? sel[0].el : c.color;
   const defFx = { kind: 'defense', rec: !!passOnly, who: side.ctrl, to: attacker.ctrl, attElem: c.color, defElem: defEl, pending: c.pending, block, hpPre, afterCombo: !!(defEv && (defEv.ord || (defEv.levels && defEv.levels.ulti > 0))) };   // hpPre: HP vor dem Schaden, die Oberfläche zeigt sie, bis die Geschosse einschlagen
   log(state, side.name + (passOnly ? ' passt und nimmt den Schaden hin' : ' verteidigt' + (block ? ' (Block ' + block + ')' : ' ohne Block')) + ' und verliert ' + leftover + ' HP' + '.', side.ctrl, defFx);
   if (used > 0) {
-    if (refl > 0) attacker.stats.hp = Math.max(0, attacker.stats.hp - refl);
-    if (lostStd > 0) mirrorTake(side.stats, c.color, lostStd);
-    if (lostRb > 0) side.stats.rainbow = Math.max(0, (side.stats.rainbow || 0) - lostRb);
-    const stufen = lost + ' Stufe' + (lost === 1 ? '' : 'n');
-    log(state, (lostRb > 0 ? (lostStd > 0 ? 'Spiegel und Multispiegel: ' : 'Multispiegel: ') : 'Spiegel: ') + side.name + (refl > 0 ? ' wirft ' + refl + ' Schaden auf ' + attacker.name + ' zurück' : ' gleicht ' + absorb + ' Schaden aus') + ' und verliert ' + stufen + (lostRb > 0 && lostStd > 0 ? ' (' + lostStd + ' vom Spiegel, ' + lostRb + ' vom Multispiegel)' : '') + '.', side.ctrl, undefined);
-    // Schild-Effekt (Oberfläche): bricht ein Farbspiegel, gilt er ihm, sonst dem Multispiegel (elem 'R'); er läuft in der Verteidigungsanimation, vor dem Schaden auf den HP
-    const mkFx = (elem, markers, broken, ab, r) => ({ hpPre, elem, markers, broken, who: side.ctrl, att: attacker.ctrl, r, abs: ab, d: c.pending, blk: block });
-    if (lostStd > 0 && lostRb > 0) {   // seit 0.7.6.7: lösen Farbspiegel und Multispiegel beide aus, zeigt die Oberfläche beide nebeneinander (der Farbspiegel verbraucht zuerst, den Rest trägt der Multispiegel)
-      const a1 = Math.min(absorb, lostStd);
-      defFx.mirror = mkFx(c.color, std, lostStd, a1, lostStd - a1); defFx.mirror2 = mkFx('R', rb, lostRb, absorb - a1, refl - (lostStd - a1));
-    } else defFx.mirror = lostStd > 0 ? mkFx(c.color, std, lostStd, absorb, refl) : mkFx('R', rb, lostRb, absorb, refl);
+    side.stats.rainbow = Math.max(0, (side.stats.rainbow || 0) - lost); if (!side.stats.rainbow) delete side.stats.rainbow;
+    log(state, 'Schild: ' + side.name + ' mindert den Schaden um ' + absorb + ' und verliert ' + lost + ' Ladung' + (lost === 1 ? '' : 'en') + '.', side.ctrl, undefined);
+    // Schild-Effekt (Oberfläche, Grafik des Multischilds, elem 'R'): läuft in der Verteidigungsanimation, vor dem Schaden auf den HP
+    defFx.mirror = { hpPre, elem: 'R', markers: rb, broken: lost, who: side.ctrl, att: attacker.ctrl, r: 0, abs: absorb, d: c.pending, blk: block };
   }
   if (healLvl > 0 && side.stats.hp > 0) {   // Heilung nach Angriff und Verteidigung (seit 0.5.4): gleicht den Schaden nachträglich aus, höchstens bis zum Maximum; seit 0.7.6.2 nur, wenn der Verteidiger nach dem Schaden noch über 0 HP steht (sonst ist er besiegt und die Heilung verfällt)
     const hTexts = [], hFxs = [];
@@ -1204,15 +1232,13 @@ function execDefense(state, passOnly) {
     hFxs.forEach(f => { f.late = true; });   // Oberfläche: Heilungsanimation nach der Verteidigungsanimation
     log(state, side.name + ' heilt nach der Verteidigung: ' + hTexts.join(', ') + '.', side.ctrl, hFxs);
   }
-  if (lateMirror > 0) {   // Farbspiegel (Wasser + Feuer/Erde) nach Angriff und Verteidigung: gilt erst für den nächsten Angriff
-    const mTexts = [], mFxs = [];
-    applyComboPlan(state, side, attacker, [['fw', lateMirror]], defEv, mTexts, mFxs);
+  if (lateShield > 0 || (lateTrap > 0 && side.stats.hp > 0)) {   // Schild und Falle (Blau + Grün, Blau + Rot) nach Angriff und Verteidigung: gelten erst für den nächsten Angriff
+    const mTexts = [], mFxs = [], plan = [];
+    if (lateTrap > 0 && side.stats.hp > 0) plan.push(['tr', lateTrap]);
+    if (lateShield > 0) plan.push(['sh', lateShield]);
+    applyComboPlan(state, side, attacker, plan, defEv, mTexts, mFxs);
     mFxs.forEach(f => { f.late = true; });
     log(state, side.name + ' stellt nach der Verteidigung: ' + mTexts.join(', ') + '.', side.ctrl, mFxs);
-  }
-  if (lateMulti > 0) {   // Ultimate Wasser: Multispiegel nach der Verteidigung
-    const u = castUltimate(side, attacker, 'W', lateMulti);
-    log(state, side.name + ' wirkt eine Ultimate nach der Verteidigung: ' + u.text + '.', side.ctrl, Object.assign(u.fx, { late: true }));
   }
   side.stats.hp = Math.max(0, side.stats.hp);
   const attSide = attacker;   // wer gerade angegriffen hat: seine Angriffsphase endet mit dieser Verteidigung
@@ -1225,8 +1251,17 @@ function execDefense(state, passOnly) {
 function applyCombat(state, a) {
   const c = state.combat, pid = a.pid;
   if (c.forced) {   // Zerrüttung: Der Betroffene wählt die Karten, die er abwerfen muss; vorher ist keine andere Aktion möglich
-    if (a.type !== 'fd') return fail(c.forced.pid === pid ? 'Zerrüttung: Wähle zuerst ' + c.forced.n + ' Handkarte' + (c.forced.n === 1 ? '' : 'n') + ' zum Abwerfen.' : 'Der Gegner wählt gerade seine Abwurfkarten.');
-    if (c.forced.pid !== pid) return fail('Der Gegner wählt gerade seine Abwurfkarten.');
+    const trapPick = c.forced.kind === 'trap';
+    if (a.type !== 'fd') return fail(c.forced.pid === pid ? (trapPick ? 'Falle: Wähle zuerst die Karte, die du verdeckt vor dich legst.' : 'Zerrüttung: Wähle zuerst ' + c.forced.n + ' Handkarte' + (c.forced.n === 1 ? '' : 'n') + ' zum Abwerfen.') : (trapPick ? 'Der Gegner wählt gerade seine Falle.' : 'Der Gegner wählt gerade seine Abwurfkarten.'));
+    if (c.forced.pid !== pid) return fail(trapPick ? 'Der Gegner wählt gerade seine Falle.' : 'Der Gegner wählt gerade seine Abwurfkarten.');
+    if (trapPick) {   // Falle: eine der eben gezogenen Karten verdeckt vor sich legen
+      const v = c.sides.a.ctrl === pid ? c.sides.a : c.sides.b, sl = Array.isArray(a.slots) ? a.slots.map(Number) : [];
+      if (sl.length !== 1 || !c.forced.slots.includes(sl[0]) || !v.deck.hand[sl[0]]) return fail('Wähle genau eine der gezogenen Karten als Falle.');
+      trapSet(state, v, sl[0], c.forced.lvl);
+      c.forced = null;
+      log(state, v.name + ' legt eine Karte verdeckt als Falle vor sich.', pid);
+      return { ok: true };
+    }
     const v = c.sides.a.ctrl === pid ? c.sides.a : c.sides.b, dd = v.deck, slots = [...new Set((Array.isArray(a.slots) ? a.slots : []).map(Number))].filter(i => Number.isInteger(i) && dd.hand[i]);
     const need = Math.min(c.forced.n, dd.hand.filter(Boolean).length);
     if (slots.length !== need) return fail('Wähle genau ' + need + ' Handkarte' + (need === 1 ? '' : 'n') + ' zum Abwerfen.');
@@ -1539,7 +1574,7 @@ return { ELEMENTS, SUPERIOR, NAMES, START_DECK, MAX_MAGIC, MAX_SLOTS, MIN_SLOTS,
   makeRng, parseCard, selection, newGame, apply, record, prim, actor, other, regen, handCounts,
   vendorOffers, vendorPlans, previewTemple, pointsForGold, nextLevelCost, maxed, limitStepCost, manaStepCost, hpStepCost, slotStepCost, magicCost, drawLimitCost, upField, magicField, payTxt,
   evalAttack, evalDefense, canFlee, stockOf, recoverGain, regenGain, comboLevels, levelsFor,
-  mirrorOf, shieldOf, drawPenaltyAmount, monsterAlive, monsterHand, markerOf, drawManaCost, drawGoldPenalty, previewDefense, defenseComboPre, allMonstersDead, magicProgress, spawnMonsters, spawnForGame };
+  drawPenaltyAmount, monsterAlive, monsterHand, markerOf, drawManaCost, drawGoldPenalty, previewDefense, defenseComboPre, allMonstersDead, magicProgress, spawnMonsters, spawnForGame };
 }));</script>
 <script>/* Magus – einfacher Computergegner. Wählt nur Aktionen, die auch ein Mensch hätte. */
 (function (root, factory) {
@@ -1584,19 +1619,16 @@ const DEFAULTS = {
   // Angriffsbewertung; stallDec (seit 0.11 positiv): die Angriffsschwelle sinkt je zwei Kampfzüge nach stallFrom   // seit 0.7.6.5 (Kampfrunden-Limit 10): stallFrom 0, stallDec 3, aThr 0.4, damit die KI innerhalb von 10 Runden angreift
   // um so viel, damit festgefahrene Kämpfe enden (vorher −0,05 hob sie an: Patt-Schleifen bis 3000 Aktionen);
   // pasDec: die Angriffsschwelle sinkt um so viel je Passen-Zug des Gegners in Folge
-  // Ultimates nach Farbe (seit 0.7): uHeal Gewicht des Heilfluss (Erde, × wEW), uMulti Gewicht des Multispiegel (Wasser, × wFW), der Todesfluss (Feuer) zählt wDeath
-  uHeal: 3, uMulti: 1,
+  // Ultimates nach Farbe (seit 0.7): uHeal Gewicht des Heilfluss (Erde, × wEW), uMana Gewicht des Manafluss (Wasser, seit 0.8, × aCost je Mana), der Todesfluss (Feuer) zählt wDeath
+  uHeal: 3, uMana: 1.5,
   // Läuterung (seit 0.7.4): lfDeath Wert je entferntem eigenen Todesmarker, lfHeal Gewicht der gegnerischen Heilmarker unter den entfernbaren Markern
   lfDeath: 8, lfHeal: 4,
-  smart: 1, wMark: 0.5, keepB: 3, keepOn: 0, wDeath: 6, wDraw: 1.6, wFW: 1.3, wFE: 0.9, wEW: 2.8, aDmg: 0.7, aCost: 2.3, aCurse: 1.6, aThr: 0.4, oHits: 2, oFree: 4, stallDec: 3, stallFrom: 0, pasDec: 2,
+  smart: 1, wMark: 0.5, keepB: 3, keepOn: 0, wDeath: 6, wDraw: 1.6, wFW: 1.3, wTrap: 0.9, wFE: 0.9, wEW: 2.8, aDmg: 0.7, aCost: 2.3, aCurse: 1.6, aThr: 0.4, oHits: 2, oFree: 4, stallDec: 3, stallFrom: 0, pasDec: 2,
   // Erholen als Manaquelle: Angriffsschwelle steigt bei wenig Mana, Verzicht auf Verteidigung bringt Mana
   rW: 0, rRef: 3, dRec: 0, dU: 2,
   // Verteidigungsbewertung
-  dLeth: 40, dPend: 6, dCost: 1.4, dKeep: 0.9, mirW: 4, mirKeep: 3, mirAvoid: 2, lfOpp: 2, lfOppW: 0.8,
-  // Spiegel (Limit seit 0.16.1 je Farbe): mirMarg 1 wertet nur den Zugewinn gegenüber dem Spiegel der Farbe, mirGrade 1 gewichtet die
-  // Farbe nach Bedrohungsanteil (mindestens mirMin) statt pauschal 0,5 außer für die wahrscheinlichste Farbe
-  // lfColor 1: Läuterung entfernt Spiegel des Gegners zuerst in der Farbe, mit der ich selbst am stärksten angreife
-  mirMarg: 1, mirGrade: 1, mirMin: 0.3, lfColor: 1,
+  dLeth: 40, dPend: 6, dCost: 1.4, dKeep: 0.9, mirKeep: 3, mirAvoid: 2, lfOpp: 2, lfOppW: 0.8,
+  // Blaue Kombos (seit 0.8): wFW Gewicht des Schilds (Blau + Grün, je Ladung), wTrap Gewicht der Falle (Blau + Rot, × erwarteter Rückwurf); mirKeep Wert einer Schildladung, mirAvoid Abzug beim Angriff in ein Schild
   mBase: 14, mCost: 2.1, mCnt: 0.7, mTop: 2,
   // Ziel-Farbe: gegen ein Monster zählt die ihm überlegene Magie. mPlan: Bonus beim Magiekauf, vOff:
   // Aufwertungen anderer Farben zählen nur so viel
@@ -1891,32 +1923,22 @@ function worldPlan(state, pid) {
 
 /* ---------- Kampf ---------- */
 // Bedrohung je Farbe: Wie wahrscheinlich und wie stark greift der Gegner mit diesem Element an (Karten im Deck, begrenzt durch seine Magie).
-// useOwn: bestehende eigene Spiegel dieser Farbe senken den Wert (so war es, als sich alle Farben 3 Marker teilten).
-function mirrorScores(side, opp, useOwn) {
-  const d = opp.deck, all = [].concat(d.draw, d.discard, d.hand.filter(Boolean)), mag = opp.stats.mag, own = side.stats.mirrorEl || {}, out = {};
+function threatScores(opp) {
+  const d = opp.deck, all = [].concat(d.draw, d.discard, d.hand.filter(Boolean)), mag = opp.stats.mag, out = {};
   for (const e of M.ELEMENTS) {
     let v = 0; for (const c of all) { const p = M.parseCard(c.id); if (!p.curse && p.el === e) v += Math.min(p.tier, mag[e]); }
-    out[e] = v * (1 + 0.15 * mag[e]) / (useOwn ? 1 + 0.5 * (own[e] || 0) : 1);
+    out[e] = v * (1 + 0.15 * mag[e]);
   }
   return out;
 }
-// Farbe neuer Spiegelmarker: das Element, mit dem der Gegner am wahrscheinlichsten (und am stärksten) angreift.
-function pickMirrorEl(side, opp) {
-  const sc = mirrorScores(side, opp, true); let best = null, bv = -1;
-  for (const e of M.ELEMENTS) if (sc[e] > bv) { bv = sc[e]; best = e; }
-  return best;
+// Wert einer Falle der Stufe lvl (Blau + Rot, seit 0.8): Sie wirft 2·S unblockbaren Schaden zurück, wenn der Gegner in ihrer Farbe angreift. Die KI legt die Farbe an, mit der der Gegner nach seinem Deck am ehesten angreift; wq.wTrap gewichtet den erwarteten Rückwurf. Eine schon liegende Falle wird ersetzt, das mindert den Wert.
+function trapWorth(side, opp, Q, lvl) {
+  if (!(lvl > 0)) return 0;
+  const sc = threatScores(opp), tot = sc.F + sc.E + sc.W, top = Math.max(sc.F, sc.E, sc.W), p = tot > 0 ? top / tot : 1 / 3;
+  return lvl * 2 * p * Q.wTrap * (side.stats.trap ? 0.3 : 1);
 }
-// Wert eines Spiegel-Kombos der Stufe lvl in Farbe el. Seit 0.16.1 zählt das Limit von 3 Markern je Farbe (nicht mehr insgesamt) und die Stufen werden
-// nicht addiert: mirMarg 1 wertet nur den Zugewinn gegenüber dem Spiegel, der in dieser Farbe schon liegt. mirGrade 1 gewichtet die Farbe nach ihrem
-// Bedrohungsanteil (mindestens mirMin) statt pauschal mit 0,5 für jede Farbe außer der wahrscheinlichsten.
-function mirrorWorth(side, opp, Q, el, lvl) {
-  if (!(lvl > 0) || !el) return 0;
-  const own = M.mirrorOf(side.stats, el), gain = Q.mirMarg ? Math.max(0, lvl - own) : lvl;
-  let f;
-  if (Q.mirGrade) { const sc = mirrorScores(side, opp, false), top = Math.max(sc.F, sc.E, sc.W); f = top > 0 ? Math.max(Q.mirMin, Math.min(1, sc[el] / top)) : 1; }
-  else f = pickMirrorEl(side, opp) === el ? 1 : 0.5;
-  return gain * Q.wFW * f;
-}
+// Wert eines Schilds der Stufe lvl (Blau + Grün, seit 0.8): Es bringt die Ladungen auf die Stufe, gewertet wird nur der Zugewinn gegenüber den Ladungen, die schon liegen.
+function shieldWorth(side, Q, lvl) { return lvl > 0 ? Math.max(0, lvl - (side.stats.rainbow || 0)) * Q.wFW : 0; }
 // Zerrüttung: Der Gegner wirft S Handkarten seiner Wahl ab, zuerst Fluchkarten. Wert hat nur, was darüber hinaus echte Karten kostet.
 function ruinWorth(opp, n) {
   if (!(n > 0)) return 0;
@@ -1927,15 +1949,15 @@ function ruinWorth(opp, n) {
 // Läuterung gegen den eigenen Todesfluss (seit 0.7.4): Jeder entfernte eigene Todesmarker erspart einen HP-Verlust je Angriffsphase bis Kampfende; lfDeath ist der Wert je Marker.
 function purgeDeath(side, Q, lvl) { return Q.lfDeath > 0 && lvl > 0 ? Math.min(lvl, side.stats.death || 0) * Q.lfDeath : 0; }
 function ordComboWorth(side, opp, Q, rules, lvs, ev) {
-  const st = side.stats, hurt = st.maxHp - st.hp, oMir = (opp.stats.mirror || 0) + (opp.stats.rainbow || 0) + Q.lfHeal * (opp.stats.heal || 0);
+  const st = side.stats, hurt = st.maxHp - st.hp, oMir = (opp.stats.manaflow || 0) + (opp.stats.rainbow || 0) + Q.lfHeal * (opp.stats.heal || 0);
   const wEw = oMir > 0 ? 1.2 + oMir * Math.max(0.3, Q.lfOppW || 0) : 0.1;
-  return mirrorWorth(side, opp, Q, ev.ord && ev.ord.el, lvs.fw) + lvs.fe * Q.wFE + lvs.ew * wEw + purgeDeath(side, Q, lvs.ew) + ruinWorth(opp, lvs.rm) + Math.min(lvs.gh * (rules.lifeflowHeal || 1), hurt) * Q.wEW + (lvs.gh > 0 && hurt === 0 ? 0.1 : 0);
+  return trapWorth(side, opp, Q, lvs.tr) + shieldWorth(side, Q, lvs.sh) + lvs.fe * Q.wFE + lvs.ew * wEw + purgeDeath(side, Q, lvs.ew) + ruinWorth(opp, lvs.rm) + Math.min(lvs.gh * (rules.lifeflowHeal || 1), hurt) * Q.wEW + (lvs.gh > 0 && hurt === 0 ? 0.1 : 0);
 }
-// Wert einer Ultimate der Stufe lvl nach der Farbe der ersten Karte (seit 0.7): Feuer Todesfluss beim Gegner, Erde Heilfluss und Wasser Multispiegel bei mir selbst. Liegt schon ein Marker gleicher oder höherer Stufe, bringt sie kaum etwas.
+// Wert einer Ultimate der Stufe lvl nach der Farbe der ersten Karte (seit 0.7): Feuer Todesfluss beim Gegner, Erde Heilfluss und Wasser Manafluss bei mir selbst (seit 0.8). Liegt schon ein Marker gleicher oder höherer Stufe, bringt sie kaum etwas.
 function ultiWorth(side, opp, Q, el, lvl) {
   if (!(lvl > 0)) return 0;
   if (el === 'E') return lvl * Q.wEW * Q.uHeal * ((side.stats.heal || 0) >= lvl ? 0.1 : 1) * (side.stats.maxHp > side.stats.hp ? 1 : 0.6);
-  if (el === 'W') return lvl * Q.wFW * Q.uMulti * ((side.stats.rainbow || 0) >= lvl ? 0.1 : 1);
+  if (el === 'W') return lvl * Q.aCost * Q.uMana * ((side.stats.manaflow || 0) >= lvl ? 0.1 : 1) * (side.stats.maxMana > side.stats.mana ? 1 : 0.6);   // Manafluss: +S Mana je eigener Angriffsphase, jedes Mana ist etwa so viel wert wie sein Preis im Angriff
   return lvl * Q.wDeath * (opp.stats.death >= lvl ? 0.1 : 1) * (Q.smart ? Math.max(0.4, Math.min(1.4, opp.stats.hp / 4)) : 1);
 }
 function bestAttack(side, opp, hand, Q, state0, reserve) {
@@ -1948,19 +1970,19 @@ function bestAttack(side, opp, hand, Q, state0, reserve) {
     for (const ord of orders) {
       const ev = M.evalAttack(stats, ord);
       if (!ev.valid || !ev.affordable) continue;
-      const hurt = stats.maxHp - stats.hp, oMir = (opp.stats.mirror || 0) + (opp.stats.rainbow || 0) + Q.lfHeal * (opp.stats.heal || 0);
-      const w = { fe: Q.wFE, ew: oMir > 0 ? 1.2 + oMir * Math.max(0.3, Q.lfOppW || 0) : 0.1 };   // Läuterung lohnt, wenn der Gegner Spiegelmarker trägt
+      const hurt = stats.maxHp - stats.hp, oMir = (opp.stats.manaflow || 0) + (opp.stats.rainbow || 0) + Q.lfHeal * (opp.stats.heal || 0);
+      const w = { fe: Q.wFE, ew: oMir > 0 ? 1.2 + oMir * Math.max(0.3, Q.lfOppW || 0) : 0.1 };   // Läuterung lohnt, wenn der Gegner Schild- oder Manamarker trägt
       const lvs = M.levelsFor(ev);
       let combo = 0;
       if (ev.levels.ulti > 0) combo = ultiWorth(side, opp, Q, ev.ultiEl || ev.prim, ev.levels.ulti);
-      else combo = mirrorWorth(side, opp, Q, ev.ord && ev.ord.el, lvs.fw) + lvs.fe * w.fe + lvs.ew * w.ew + purgeDeath(side, Q, lvs.ew) + ruinWorth(opp, lvs.rm) + Math.min(lvs.gh * 1, hurt) * Q.wEW + (lvs.gh > 0 && hurt === 0 ? 0.1 : 0);
+      else combo = trapWorth(side, opp, Q, lvs.tr) + shieldWorth(side, Q, lvs.sh) + lvs.fe * w.fe + lvs.ew * w.ew + purgeDeath(side, Q, lvs.ew) + ruinWorth(opp, lvs.rm) + Math.min(lvs.gh * 1, hurt) * Q.wEW + (lvs.gh > 0 && hurt === 0 ? 0.1 : 0);
       const dmg = ev.prim ? ev.damage : 0;
       let value = dmg * Q.aDmg + combo - ev.cost * Q.aCost + ev.curses * Q.aCurse;
       // Mana-Reserve: ohne Mana darf der unterlegene Gegner fliehen. Übersteht er den Angriff nach dem erwarteten Block, zählt der Angriff nicht als sicher tödlich.
       const resHit = reserve && stats.mana - ev.cost <= 0 && (() => { const left = opp.stats.hp - Math.max(0, dmg - reserve.blk); return left > 0 && left <= reserve.hp; })();
       if (dmg >= opp.stats.hp && dmg > 0 && !resHit) value += 100;
       if (resHit) value -= reserve.v;
-      if (dmg > 0 && ev.prim && M.shieldOf(opp.stats, ev.prim) > 0) value -= Math.min(M.shieldOf(opp.stats, ev.prim), dmg) * Q.mirAvoid;   // Spiegel des Gegners: gleicht bis zu seiner Stufe von meinem Schaden aus (zurückgeworfen wird nur Überverteidigung)
+      if (dmg > 0 && (opp.stats.rainbow || 0) > 0) value -= Math.min(opp.stats.rainbow, dmg) * Q.mirAvoid;   // Schild des Gegners: mindert bis zu seinen Ladungen von meinem nicht geblockten Schaden
       if (ord.length > 1 && dmg === 0 && combo === 0 && ev.curses === 0) value -= 5;
       if (!best || value > best.value) best = { value, ord, ev, dmg };
     }
@@ -1986,6 +2008,11 @@ function keepLocks(state, side, opp, hand, Q) {
 // Zerrüttung: Die KI wirft zuerst Flüche, dann die schwächsten Karten ab (gesperrte Karten möglichst nicht)
 function forcedPick(state, pid) {
   const c = state.combat, v = c.sides.a.ctrl === pid ? c.sides.a : c.sides.b, d = v.deck, mag = v.stats.mag;
+  if (c.forced.kind === 'trap') {   // Falle: die gezogene Karte in der Farbe, mit der der Gegner nach seinem Deck am ehesten angreift
+    const sc = threatScores(c.sides.a.ctrl === pid ? c.sides.b : c.sides.a);
+    const cs = c.forced.slots.filter(sl => d.hand[sl]).map(sl => ({ slot: sl, v: sc[M.parseCard(d.hand[sl].id).el] || 0 })).sort((x, y) => y.v - x.v || x.slot - y.slot);
+    return cs.length ? [cs[0].slot] : [];
+  }
   const cards = d.hand.map((h, slot) => h ? { slot, v: (M.parseCard(h.id).curse ? -5 : M.parseCard(h.id).tier + 0.15 * (mag[M.parseCard(h.id).el] || 0)) + (h.locked ? 4 : 0) } : null).filter(Boolean).sort((x, y) => x.v - y.v || x.slot - y.slot);
   return cards.slice(0, Math.min(c.forced.n, cards.length)).map(x => x.slot);
 }
@@ -2054,14 +2081,11 @@ function combatPlan(state, pid) {
     if (best && best.value > Q.aThr + lowMana - Q.pasDec * (opp.passed || 0) - Q.stallDec * Math.max(0, Math.floor(((c.turns || 0) - Q.stallFrom) / 2))) {   // Passt der Gegner im Angriffszug, bleibt er ohne Druck: dann lohnt auch ein knapper Angriff (sonst wartet die KI, bis die Anti-Stillstands-Schwelle sinkt)   // lange ohne Angriff: Schwelle sinkt, damit die KI nicht endlos nachzieht
       const acts = best.ord.map(h => A({ type: 'mark', slot: h.slot }));
       const lvB = M.levelsFor(best.ev);
-      if (best.ev.levels.ulti <= 0 && lvB.ew > 0) {   // Läuterung: eigene Todesmarker, dann Spiegel des Gegners, zuletzt dessen Nachziehtokens
+      if (best.ev.levels.ulti <= 0 && lvB.ew > 0) {   // Läuterung: eigene Todesmarker, dann Schild und Manamarker des Gegners, zuletzt dessen Nachziehtokens
         const lvl = lvB.ew, pick = [];
         for (let i = 0; pick.length < lvl && i < (s.death || 0); i++) pick.push('sd');
-        if (Q.lfColor) {   // Spiegel des Gegners nach Farbe: zuerst die Farbe, mit der ich selbst am stärksten angreife (dort würde der Spiegel am meisten ausgleichen)
-          const th = mirrorScores(opp, side, false);
-          for (const e of M.ELEMENTS.slice().sort((x, y) => th[y] - th[x])) for (let i = 0; pick.length < lvl && i < M.mirrorOf(opp.stats, e); i++) pick.push('om:' + e);
-        } else for (let i = 0; pick.length < lvl && i < (opp.stats.mirror || 0); i++) pick.push('om');
         for (let i = 0; pick.length < lvl && i < (opp.stats.rainbow || 0); i++) pick.push('or');
+        for (let i = 0; pick.length < lvl && i < (opp.stats.manaflow || 0); i++) pick.push('om');
         for (let i = 0; pick.length < lvl && i < (opp.stats.heal || 0); i++) pick.push('oh');
         for (let i = 0; pick.length < lvl && i < (opp.stats.freeDraws || 0); i++) pick.push('ot');
         acts.push(A({ type: 'lfp', pick }));
@@ -2087,9 +2111,9 @@ function combatPlan(state, pid) {
     return [A({ type: 'recover' })];
   }
   // Verteidigung
-  const color = c.color, pend = c.pending, lethal = pend - Math.min(M.shieldOf(s, c.color), pend) >= s.hp;
+  const color = c.color, pend = c.pending, shield = s.rainbow || 0, lethal = pend - Math.min(shield, pend) >= s.hp;
   const cand = hand.filter(h => !h.curse);
-  const abs0 = Math.min(M.shieldOf(s, color), pend);   // ohne Verteidigung gleicht ein Spiegel bis zu seiner Stufe aus
+  const abs0 = Math.min(shield, pend);   // ohne Verteidigung mindert das Schild bis zu seinen Ladungen
   let best = { score: (pend - abs0) * (lethal ? Q.dLeth : Q.dPend) + abs0 * Q.mirKeep, ord: [] };   // Verzicht auf Verteidigung bringt Mana
   const variants = [];
   for (const sub0 of subsets(cand, Math.max(1, s.limit))) {
@@ -2099,15 +2123,12 @@ function combatPlan(state, pid) {
   for (const sub of variants) {
     const ev = M.evalDefense(s, sub, color);
     if (!ev.valid || ev.affordable === false) continue;
-    const left0 = Math.max(0, pend - (ev.block || 0)), lvM = M.defenseComboPre(s, ev, color).mir, absorbed = Math.min(lvM, left0), left = left0 - absorbed;   // Spiegel gleicht fehlende Verteidigung bis zu seiner Stufe aus; seit 0.4 wirkt ein Spiegel-Kombo der Verteidigung schon gegen diesen Angriff
+    const left0 = Math.max(0, pend - (ev.block || 0)), lvM = M.defenseComboPre(s, ev, color).mir, absorbed = Math.min(lvM, left0), left = left0 - absorbed;   // das Schild mindert den nicht geblockten Schaden bis zu seinen Ladungen (ein Schild-Kombo der Verteidigung wirkt erst danach)
     const nCurse = sub.filter(h => h.curse).length;
     let score = left * (lethal ? Q.dLeth : Q.dPend) + (ev.cost || 0) * Q.dCost + (sub.length - nCurse) * Q.dKeep - nCurse * 0.6;
-    if (lvM > 0) {   // Spiegel: Überschuss der Verteidigung wird bis zur Stufe zurückgeworfen; jeder ausgeglichene oder zurückgeworfene Schaden kostet eine Stufe
-      const opp = c.sides[c.turn === 'a' ? 'b' : 'a'], rel = Math.min(lvM, pend, Math.max(0, (ev.block || 0) - pend));
-      score -= rel * Q.mirW + (rel >= opp.stats.hp ? 60 : 0) - (rel + absorbed) * Q.mirKeep;
-    }
+    if (lvM > 0) score += absorbed * Q.mirKeep;   // jede geminderte Einheit Schaden kostet eine Schildladung
     if (ev.ord) { const o = c.sides[c.turn === 'a' ? 'b' : 'a'], lvD = Object.assign({}, M.levelsFor(ev)); if (left >= s.hp) lvD.gh = 0; score -= ordComboWorth(side, o, Q, state.rules, lvD, ev); }   // tödlicher Restschaden: die Heilung nach dem Schaden verfällt
-    if (Q.dU > 0 && ev.levels && ev.levels.ulti > 0) { const o = c.sides[c.turn === 'a' ? 'b' : 'a']; score -= Q.dU * (ev.ultiEl === 'F' ? ev.levels.ulti * Q.wDeath * (o.stats.death >= ev.levels.ulti ? 0.1 : 1) * Math.max(0.4, Math.min(1.4, o.stats.hp / 4)) : ultiWorth(side, o, Q, ev.ultiEl, ev.levels.ulti)); }   // Ultimate in der Verteidigung: Feuer Todesfluss für den Angreifer, Erde Heilfluss, Wasser Multispiegel
+    if (Q.dU > 0 && ev.levels && ev.levels.ulti > 0) { const o = c.sides[c.turn === 'a' ? 'b' : 'a']; score -= Q.dU * (ev.ultiEl === 'F' ? ev.levels.ulti * Q.wDeath * (o.stats.death >= ev.levels.ulti ? 0.1 : 1) * Math.max(0.4, Math.min(1.4, o.stats.hp / 4)) : ultiWorth(side, o, Q, ev.ultiEl, ev.levels.ulti)); }   // Ultimate in der Verteidigung: Feuer Todesfluss für den Angreifer, Erde Heilfluss, Wasser Manafluss
     if (score < best.score) best = { score, ord: sub };
   }
   if (!best.ord.length) return [A({ type: 'pass' })];
@@ -2279,39 +2300,38 @@ function ctx() {
   return { combat: false, myDeck: G.players[ME].deck, oppDeck: G.players[OPP].deck, myStats: G.players[ME].stats, oppStats: G.players[OPP].stats };
 }
 // Todesfluss (Ultimate): HP-Verlust am Ende jeder eigenen Angriffsphase, bis Kampfende.
-// Spiegel: je Element ein Schildmarker, mit Stufenzähler ab 2; seit 0.7.2.10 liegen sie am Ende der Markerreihe vor den Handkarten (wie Todes- und Heilmarker).
+// Schild (Blau + Grün, seit 0.8; Grafik des früheren Multischilds) und Falle (Blau + Rot): liegen am Ende der Markerreihe vor den Handkarten (wie Todes-, Heil- und Manamarker). Das Schild trägt einen Zähler (Ladungen) ab 2; die Falle ist eine verdeckte Karte (kein Marker), ich sehe meine eigene.
+function shieldSvg(who) {
+  const id = who || 'x';
+  return '<svg viewBox="0 0 40 52"><defs><linearGradient id="rbw' + id + '" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e8352c"/><stop offset=".25" stop-color="#f2b61a"/><stop offset=".5" stop-color="#2fb844"/><stop offset=".75" stop-color="#2b84ec"/><stop offset="1" stop-color="#8d4fe0"/></linearGradient><clipPath id="rbi' + id + 'c"><path d="M20 2 L37 9 V26 C37 38 29 46 20 50 C11 46 3 38 3 26 V9 Z"/></clipPath><filter id="rbi' + id + 'b" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="1.3"/></filter></defs><path d="M20 2 L37 9 V26 C37 38 29 46 20 50 C11 46 3 38 3 26 V9 Z" fill="url(#rbw' + id + ')"/><g clip-path="url(#rbi' + id + 'c)"><path d="M20 2 L37 9 V26 C37 38 29 46 20 50 C11 46 3 38 3 26 V9 Z" fill="none" stroke="#000" stroke-width="5" stroke-opacity=".85" filter="url(#rbi' + id + 'b)"/></g><path d="M20 2 L37 9 V26 C37 38 29 46 20 50 C11 46 3 38 3 26 V9 Z" fill="none" stroke="#b9c0cc" stroke-width="2.2" stroke-opacity=".6"/><path d="M20 2 L37 9 V26 C37 38 29 46 20 50 Z" fill="#000" fill-opacity=".3"/></svg>';
+}
 function mirrorStack(s, x, y, who) {
-  if (!(s.mirror > 0) && !(s.rainbow > 0)) return '';
+  if (!(s.rainbow > 0) && !s.trap) return '';
   const L = who ? lfCtx() : null;
   let t = '', idx = 0;
-  const mc = markCounts(s);   // Schildmarker bilden das Ende der Markerreihe vor den Handkarten (seit 0.7.2.10)
-  const wrap = h => { const q = deathPos(who, mc.nd + mc.nh + idx, mc.total); idx++; return '<div class="mpos" style="left:' + (q.x + 5) + 'px;top:' + (q.y - 1) + 'px;--r:' + q.rot + 'deg">' + h + '</div>'; };
-  for (const e of M.ELEMENTS) {
-    const n = (s.mirrorEl && s.mirrorEl[e]) || 0; if (n <= 0) continue;
-    const tip = 'Spiegel ' + M.NAMES[e] + ' Stufe ' + n + ': Dauerhaft. Gegen einen ' + M.NAMES[e] + '-Angriff gleicht er fehlende Verteidigung bis zu ' + n + ' Schaden aus und verliert dabei je eine Stufe. Verteidigst du mehr als nötig, wirft er den Überschuss (höchstens ' + n + ', und nie mehr als der eingehende Schaden) auf den Angreifer zurück und verliert dabei ebenfalls je eine Stufe.';
-    const shield = IMG['shield_' + e], mul = n > 1 ? '<b class="mul">×' + n + '</b>' : '';   // Schildbild je Farbe, bei mehreren Markern mit Multiplikator
-    if (L) {
-      const sel = L.picks.filter(p => p === who + 'm:' + e).length;
-      t += wrap(shield ? '<button class="msh ' + e + ' lf' + (sel ? ' sel' : '') + '" data-act="lfm" data-k="' + who + 'm" data-e="' + e + '" title="Lifeflow: Spiegelmarker ' + M.NAMES[e] + ' wählen (Klick: einen mehr, nach dem Maximum wieder alle weg). ' + sel + ' von ' + n + ' gewählt."><img src="' + shield + '">' + mul + (sel ? '<i class="lfb">✓' + sel + '</i>' : '') + '</button>'
-        : '<button class="mtok ' + e + ' lf' + (sel ? ' sel' : '') + '" data-act="lfm" data-k="' + who + 'm" data-e="' + e + '" title="Lifeflow: Spiegelmarker ' + M.NAMES[e] + ' wählen (Klick: einen mehr, nach dem Maximum wieder alle weg). ' + sel + ' von ' + n + ' gewählt.">' + n + (sel ? '<i class="lfb">✓' + sel + '</i>' : '') + '</button>');
-    } else t += wrap(shield ? '<div class="msh ' + e + '" title="' + tip + '"><img src="' + shield + '">' + mul + '</div>' : '<div class="mtok ' + e + '" title="' + tip + '">' + n + '</div>');
-  }
-  if (s.rainbow > 0) {   // Multispiegel (Wasser-Ultimate): gegen jede Farbe; verliert Stufen wie ein Farbspiegel (erst nach dem Farbspiegel); Läuterung entfernt ihn
+  const mc = markCounts(s);   // Schild und Falle bilden das Ende der Markerreihe vor den Handkarten (seit 0.7.2.10)
+  const wrap = h => { const q = deathPos(who, mc.nd + mc.nh + mc.nm + idx, mc.total); idx++; return '<div class="mpos" style="left:' + (q.x + 5) + 'px;top:' + (q.y - 1) + 'px;--r:' + q.rot + 'deg">' + h + '</div>'; };
+  if (s.rainbow > 0) {   // Schild: mindert eingehenden, nicht geblockten Schaden gegen jede Farbe; Läuterung entfernt Ladungen
     const n = s.rainbow, mul = n > 1 ? '<b class="mul">×' + n + '</b>' : '', sel = L ? L.picks.filter(p => p === who + 'r').length : 0;
-    const tip = 'Multispiegel Stufe ' + n + ': Wie ein Spiegel, aber gegen jede Farbe: Er gleicht fehlende Verteidigung bis zu ' + n + ' Schaden aus oder wirft den Überschuss einer zu starken Verteidigung (höchstens ' + n + ') zurück. Dabei verliert er je eine Stufe, aber erst, nachdem die Stufen des Farbspiegels aufgebraucht sind. Läuterung kann ihn ebenfalls entfernen. Es gilt der höhere von Farbspiegel und Multispiegel.';
-    const svg = '<svg viewBox="0 0 40 52"><defs><linearGradient id="rbw' + (who || 'x') + '" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e8352c"/><stop offset=".25" stop-color="#f2b61a"/><stop offset=".5" stop-color="#2fb844"/><stop offset=".75" stop-color="#2b84ec"/><stop offset="1" stop-color="#8d4fe0"/></linearGradient><clipPath id="' + 'rbi' + (who || 'x') + 'c"><path d="M20 2 L37 9 V26 C37 38 29 46 20 50 C11 46 3 38 3 26 V9 Z"/></clipPath><filter id="' + 'rbi' + (who || 'x') + 'b" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="1.3"/></filter></defs><path d="M20 2 L37 9 V26 C37 38 29 46 20 50 C11 46 3 38 3 26 V9 Z" fill="url(#rbw' + (who || 'x') + ')"/><g clip-path="url(#' + 'rbi' + (who || 'x') + 'c)"><path d="M20 2 L37 9 V26 C37 38 29 46 20 50 C11 46 3 38 3 26 V9 Z" fill="none" stroke="#000" stroke-width="5" stroke-opacity=".85" filter="url(#' + 'rbi' + (who || 'x') + 'b)"/></g><path d="M20 2 L37 9 V26 C37 38 29 46 20 50 C11 46 3 38 3 26 V9 Z" fill="none" stroke="#b9c0cc" stroke-width="2.2" stroke-opacity=".6"/><path d="M20 2 L37 9 V26 C37 38 29 46 20 50 Z" fill="#000" fill-opacity=".3"/></svg>';
-    t += wrap(L ? '<button class="msh R lf' + (sel ? ' sel' : '') + '" data-act="lfm" data-k="' + who + 'r" title="Läuterung: Multispiegel wählen (Klick: einen mehr, nach dem Maximum wieder alle weg). ' + sel + ' von ' + n + ' gewählt.">' + svg + mul + (sel ? '<i class="lfb">✓' + sel + '</i>' : '') + '</button>'
+    const tip = 'Schild, ' + n + ' Ladung' + (n === 1 ? '' : 'en') + ': Mindert eingehenden, nicht geblockten Schaden gegen jede Farbe, je Schaden eine Ladung. Läuterung kann Ladungen entfernen. In der Verteidigung gestellt, gilt es erst nach ihr.';
+    const svg = shieldSvg(who);
+    t += wrap(L ? '<button class="msh R lf' + (sel ? ' sel' : '') + '" data-act="lfm" data-k="' + who + 'r" title="Läuterung: Schildladungen wählen (Klick: eine mehr, nach dem Maximum wieder alle weg). ' + sel + ' von ' + n + ' gewählt.">' + svg + mul + (sel ? '<i class="lfb">✓' + sel + '</i>' : '') + '</button>'
       : '<div class="msh R" title="' + tip + '">' + svg + mul + '</div>');
+  }
+  if (s.trap) {   // Falle: verdeckte Karte; der Besitzer sieht seine Karte, der Gegner nur den Rücken. Sie ist kein Marker (die Läuterung erreicht sie nicht).
+    const mine = who === 's', tr = s.trap, id = mine && tr.card && tr.card.id, lvl = tr.lvl || 1;
+    const tip = mine ? 'Deine Falle (' + NAMES[tr.el] + ', Stufe ' + lvl + '): Wenn Schaden in ' + NAMES[tr.el] + ' eingeht, wirft sie ' + 2 * lvl + ' unblockbaren Schaden auf den Angreifer zurück (vor der Verteidigung, höchstens der eingehende Schaden). Sie wird bei jedem eingehenden Schaden aufgedeckt und danach abgelegt.' : 'Verdeckte Falle des Gegners: Sie wird aufgedeckt, sobald Schaden eingeht. Entspricht die Farbe des Schadens der Farbe der Karte, wirft sie Schaden zurück.';
+    t += wrap('<div class="trapcard' + (mine ? ' mine' : '') + '" data-who="' + who + '" title="' + tip + '"><img src="' + (id && IMG[id] ? IMG[id] : IMG.back) + '">' + (mine ? '<i class="tl">' + lvl + '</i>' : '') + '</div>');
   }
   return '<div class="mirstack" data-who="' + (who || '') + '">' + t + '</div>';
 }
 // Marker: einzelne Tokens, leicht verdreht und versetzt (Verteilung: deathPos).
 const TOK = 50, TOK_ROT = [-11, 7, -4, 12, -8, 5, 10, -6], TOK_DX = [-4, 5, -2, 6, 3, -5, 4, -3], TOK_DY = [0, -5, 3, -3, 4, -2, 2, -4];
-function markCounts(s) {   // dargestellte Marker je Art (Todes- und Heilmarker je ein Token mit Zähler) und Gesamtzahl für die Reihe vor den Handkarten
-  const nd = s.death > 0 ? 1 : 0, nh = s.heal > 0 ? 1 : 0, ns = M.ELEMENTS.filter(e => ((s.mirrorEl && s.mirrorEl[e]) || 0) > 0).length + (s.rainbow > 0 ? 1 : 0);
-  return { nd, nh, ns, total: nd + nh + ns };
+function markCounts(s) {   // dargestellte Marker je Art (Todes-, Heil- und Manamarker je ein Token mit Zähler; Schild und Falle) und Gesamtzahl für die Reihe vor den Handkarten
+  const nd = s.death > 0 ? 1 : 0, nh = s.heal > 0 ? 1 : 0, nm = s.manaflow > 0 ? 1 : 0, ns = (s.rainbow > 0 ? 1 : 0) + (s.trap ? 1 : 0);
+  return { nd, nh, nm, ns, total: nd + nh + nm + ns };
 }
-// seit 0.7.2.10 liegen alle Marker (Todes-, Heil- und Schildmarker) in einer lockeren Reihe mittig direkt vor den Handkarten ihres Spielers (eigene oberhalb, die des Gegners unterhalb der Hand), jeder leicht verdreht und versetzt; so verdecken sie weder Karten noch Anzeigen. i: laufende Nummer in der Reihe (Todesmarker, dann Heil-, dann Schildmarker), total: Anzahl aller Marker der Seite.
+// seit 0.7.2.10 liegen alle Marker (Todes-, Heil-, Mana- und Schildmarker, seit 0.8 auch die Falle) in einer lockeren Reihe mittig direkt vor den Handkarten ihres Spielers (eigene oberhalb, die des Gegners unterhalb der Hand), jeder leicht verdreht und versetzt; so verdecken sie weder Karten noch Anzeigen. i: laufende Nummer in der Reihe (Todesmarker, Heil-, Mana-, dann Schildmarker und Falle), total: Anzahl aller Marker der Seite.
 function deathPos(who, i, total) {
   const L = who === 's' ? L_MY : L_OP, T = Math.max(1, total || 1, i + 1), sx = Math.min(62, 400 / T), k = i % 8;
   const cy = who === 's' ? L.y - 80 : L.y + CH * L.s + 51;   // so hoch bzw. tief, dass auch die angehobenen (markierten) Karten (L.raise) und der Zähler (ragt unten ca. 10 px über den Token) frei bleiben
@@ -2326,6 +2346,15 @@ function healTokens(s, who) {   // seit 0.7.2.11 ein Token mit Zähler statt meh
   const q = deathPos(who, markCounts(s).nd, markCounts(s).total), pos = 'left:' + q.x + 'px;top:' + q.y + 'px;--r:' + q.rot + 'deg', tip = 'Heilmarker ×' + N + ': ' + N + ' HP Heilung am Ende jeder eigenen Angriffsphase bis Kampfende. Nur Läuterung kann Marker entfernen.';
   return L ? '<button class="healtok lf' + (sel ? ' sel' : '') + '" data-who="' + who + '" data-act="lfm" data-k="' + who + 'h" title="Läuterung: Heilmarker wählen (Klick: einen mehr, nach dem Maximum wieder alle weg). ' + sel + ' von ' + N + ' gewählt." style="' + pos + '">' + img + mul + (sel ? '<i class="lfb">✓' + sel + '</i>' : '') + '</button>'
     : '<div class="healtok" data-who="' + who + '" title="' + tip + '" style="' + pos + '">' + img + mul + '</div>';
+}
+// Manamarker (Wasser-Ultimate Manafluss, seit 0.8): blaue Tokens mit Kristall; +1 Mana je Marker am Ende der eigenen Angriffsphase. Sie liegen in der Reihe hinter den Heilmarkern derselben Seite.
+function manaTokens(s, who) {
+  const N = s.manaflow || 0; if (N <= 0) return '';
+  const L = lfCtx(), sel = L ? L.picks.filter(p => p === who + 'm').length : 0, mul = N > 1 ? '<b class="mul">×' + N + '</b>' : '';
+  const img = '<svg viewBox="0 0 56 56"><circle cx="28" cy="28" r="25" fill="#1d3558" stroke="#6a98cf" stroke-width="2.5"/><circle cx="28" cy="28" r="20" fill="#25508a" stroke="#142c4d" stroke-width="1.5"/><path d="M28 13 L38 28 L28 43 L18 28 Z" fill="#cfe6ff" stroke="#eaf4ff" stroke-width="1.5" stroke-linejoin="round"/><path d="M28 13 L38 28 L28 43 Z" fill="#8fc0f5"/><path d="M18 28 H38" stroke="#5a8fd0" stroke-width="1.4"/></svg>';
+  const mc = markCounts(s), q = deathPos(who, mc.nd + mc.nh, mc.total), pos = 'left:' + q.x + 'px;top:' + q.y + 'px;--r:' + q.rot + 'deg', tip = 'Manamarker ×' + N + ': ' + N + ' Mana Regeneration am Ende jeder eigenen Angriffsphase bis Kampfende (höchstens bis zum maximalen Mana). Nur Läuterung kann Marker entfernen.';
+  return L ? '<button class="healtok manatok lf' + (sel ? ' sel' : '') + '" data-who="' + who + '" data-act="lfm" data-k="' + who + 'm" title="Läuterung: Manamarker wählen (Klick: einen mehr, nach dem Maximum wieder alle weg). ' + sel + ' von ' + N + ' gewählt." style="' + pos + '">' + img + mul + (sel ? '<i class="lfb">✓' + sel + '</i>' : '') + '</button>'
+    : '<div class="healtok manatok" data-who="' + who + '" title="' + tip + '" style="' + pos + '">' + img + mul + '</div>';
 }
 function deathTokens(s, who) {   // seit 0.7.2.11 ein Token mit Zähler statt mehrerer Tokens
   const N = s.death || 0; if (N <= 0) return '';
@@ -2539,7 +2568,7 @@ function place(card, s) {
   if (!held) d.style.transform = rec.final;
   d.style.zIndex = held ? 400 : s.z;
   const wasDown = d.classList.contains('down'), flipped = !isNew && !!s.down !== wasDown && (s.zone === 'hand' || prevZone === 'hand') && !FAST && !reducedMotion();
-  d.classList.toggle('down', !!s.down); d.classList.toggle('marked', !!s.marked); d.classList.toggle('first', !!s.first); d.classList.toggle('fd', !!s.fd); d.classList.toggle('locked', !!s.locked);
+  d.classList.toggle('down', !!s.down); d.classList.toggle('marked', !!s.marked); d.classList.toggle('first', !!s.first); d.classList.toggle('fd', !!s.fd); d.classList.toggle('cand', !!s.cand); d.classList.toggle('locked', !!s.locked);
   d.classList.toggle('myhand', !!s.mine); d.dataset.slot = s.slot === undefined ? '' : s.slot;
   d.style.pointerEvents = s.mine ? 'auto' : 'none';
   if (flipped) { const ms = CardFlip.hand(d.querySelector('.inner'), s.down ? 0 : 180, s.down ? 180 : 0, wait); cardsUntil = Math.max(cardsUntil, Date.now() + ms); }   // Volle Drehung (Kartendreh-Werkstatt); nur Karten, die in die Hand kommen oder sie verlassen (Austeilen, Aufdecken); Mischen und Ablegen drehen ohne Animation
@@ -2557,7 +2586,7 @@ function layoutDeck(deck, L, mine) {
     if (!c) return;
     if (!forcedMe()) fdSel.clear();
     const fdm = mine && forcedMe() && fdSel.has(i), marked = deck.marks.includes(i) || fdm;
-    place(c, { x: slotX(i, n, L), y: L.y + (marked ? L.raise : 0), sc: L.s, down: !mine, z: 20 + i + (marked ? 30 : 0), marked, fd: fdm, locked: mine && c.locked, mine, slot: i, spawn, zone: 'hand', first: mine && marked && !fdm && isFirstAtk(deck, i)});
+    place(c, { x: slotX(i, n, L), y: L.y + (marked ? L.raise : 0), sc: L.s, down: !mine, z: 20 + i + (marked ? 30 : 0), marked, fd: fdm, cand: mine && forcedMe() && G.combat.forced.kind === 'trap' && G.combat.forced.slots.includes(i), locked: mine && c.locked, mine, slot: i, spawn, zone: 'hand', first: mine && marked && !fdm && isFirstAtk(deck, i)});
   });
 }
 // Nachziehlimit: drei Kreise unter dem Nachziehstapel (beide Spieler), der rot/grüne Marker liegt auf der Stufe des nächsten freien Nachziehens; Stufen über dem Limit sind abgedunkelt, auf der nächsten sitzt der Plus-Knopf (Upgrade-Punkte)
@@ -2621,7 +2650,7 @@ function renderCards() {
     const lf = lfCtx(), sel = lf ? lf.picks.filter(p => p === 'ot').length : 0, pos = 'left:' + L_OP.draw.x + 'px;top:' + (L_OP.draw.y + CH * L_OP.ps + (G.rules.drawMarker ? 48 : 22)) + 'px', inner = '<img src="' + IMG.gratis + '">' + (cx.oppStats.freeDraws > 1 ? '<b class="mul">×' + cx.oppStats.freeDraws + '</b>' : '') + (sel ? '<i class="lfb">✓' + sel + '</i>' : '');
     ph += lf ? '<button class="freedraw opp lf' + (sel ? ' sel' : '') + '" data-act="lfm" data-k="ot" title="Läuterung: gegnerische Nachziehtokens zerstören (Klick: einen mehr, nach dem Maximum wieder alle weg). Sie werden nicht gutgeschrieben." style="' + pos + '">' + inner + '</button>' : '<div class="freedraw opp" title="Gratis-Nachziehen des Gegners: ' + cx.oppStats.freeDraws + 'x" style="' + pos + '">' + inner + '</div>';
   }
-  if (cx.combat) ph += deathTokens(cx.myStats, 's') + deathTokens(cx.oppStats, 'o') + healTokens(cx.myStats, 's') + healTokens(cx.oppStats, 'o');   // Todesmarker als einzelne Tokens auf dem Tisch
+  if (cx.combat) ph += deathTokens(cx.myStats, 's') + deathTokens(cx.oppStats, 'o') + healTokens(cx.myStats, 's') + healTokens(cx.oppStats, 'o') + manaTokens(cx.myStats, 's') + manaTokens(cx.oppStats, 'o');   // Todesmarker als einzelne Tokens auf dem Tisch
   const pnd = G.players[ME].stats[M.upField(G)], slotC = M.slotStepCost(G, G.players[ME].stats);
   if (!cx.combat && pnd >= slotC && G.players[ME].slots < M.MAX_SLOTS) {
     const canSlot = myTurn();
@@ -2903,32 +2932,33 @@ function monsterCards() {
   return h;
 }
 /* ---------- Kampf ---------- */
-const ORD_ROWS = [['ra', 'Lähmung', 'F', 'E'], ['rm', 'Zerrüttung', 'F', 'W'], ['bm', 'Feuerspiegel', 'W', 'F'], ['bg', 'Erdspiegel', 'W', 'E'], ['gh', 'Heilung', 'E', 'W'], ['gr', 'Läuterung', 'E', 'F']];
+const ORD_ROWS = [['ra', 'Lähmung', 'F', 'E'], ['rm', 'Zerrüttung', 'F', 'W'], ['wt', 'Falle', 'W', 'F'], ['ws', 'Schild', 'W', 'E'], ['gh', 'Heilung', 'E', 'W'], ['gr', 'Läuterung', 'E', 'F']];
 // Wirkung der Ultimate nach der Farbe der ersten Karte (seit 0.7)
 function ultiText(el, lv) {
   if (el === 'E') return 'Heilfluss (Erde): Du bekommst ' + lv + ' Heilmarker und heilst ' + lv + ' HP am Ende jeder deiner Angriffsphasen bis Kampfende (höchstens bis zu den max. HP).';
-  if (el === 'W') return 'Multispiegel (Wasser): Du bekommst einen Schild der Stufe ' + lv + ' gegen jede Farbe. Er gleicht fehlende Verteidigung aus oder wirft Überschuss zurück und verliert dabei Stufen wie ein Spiegel, aber erst nach dem Farbspiegel. In der Verteidigung gestellt, gilt er erst nach ihr.';
+  if (el === 'W') return 'Manafluss (Wasser): Du bekommst ' + lv + ' Manamarker und regenerierst ' + lv + ' Mana am Ende jeder deiner Angriffsphasen bis Kampfende (höchstens bis zum maximalen Mana).';
   return 'Todesfluss (Feuer): Der Gegner bekommt ' + lv + ' Todesmarker und verliert ' + lv + ' HP am Ende jeder seiner Angriffsphasen bis Kampfende.';
 }
 // Kurzfassungen für die Kombo-Übersicht (die ausführliche Wirkung steht im Tooltip)
-const ORD_SHORT = { ra: '2·S Flüche auf den Ablagestapel des Gegners', rm: 'Gegner wirft S Handkarten ab', bm: 'Roter Spiegel der Stufe S (dauerhaft)', bg: 'Grüner Spiegel der Stufe S (dauerhaft)', gh: 'Heilt S HP', gr: 'Entfernt S Marker, je Marker 1 Nachziehtoken' };
-const ULTI_SHORT = { F: 'Gegner verliert S HP am Ende jeder seiner Angriffsphasen', E: 'Du heilst S HP am Ende jeder deiner Angriffsphasen', W: 'Schild der Stufe S gegen jede Farbe (verliert Stufen wie ein Spiegel, nach dem Farbspiegel)' };
+const ORD_SHORT = { ra: '2·S Flüche auf den Ablagestapel des Gegners', rm: 'Gegner wirft S Handkarten ab', wt: 'Zieht 3 Karten, eine davon verdeckt als Falle: wirft 2·S unblockbaren Schaden zurück', ws: 'Schild mit S Ladungen: mindert nicht geblockten Schaden', gh: 'Heilt S HP', gr: 'Entfernt S Marker, je Marker 1 Nachziehtoken' };
+const ULTI_SHORT = { F: 'Gegner verliert S HP am Ende jeder seiner Angriffsphasen', E: 'Du heilst S HP am Ende jeder deiner Angriffsphasen', W: 'Du regenerierst S Mana am Ende jeder deiner Angriffsphasen' };
 function ordText(k, lv, short) {
   if (k === 'ra' && lv === 'S') return 'Lege 2·S Fluchkarten (2/4/6) auf den Ablagestapel der Gegenseite; sie kommen beim nächsten Nachziehen des Gegners zuerst auf seine Hand und werden beim darauffolgenden Nachziehen dauerhaft vernichtet';
   if (k === 'ra') return short ? 2 * lv + ' Flüche auf den Ablagestapel der Gegenseite' : 'Lege ' + 2 * lv + ' Flüche auf den Ablagestapel der Gegenseite; sie kommen beim nächsten Nachziehen des Gegners zuerst auf seine Hand und werden beim darauffolgenden Nachziehen dauerhaft vernichtet';
   if (k === 'rm') return 'Der Gegner muss ' + (lv === 'S' ? 'S' : lv) + ' Handkarte' + (lv === 1 ? '' : 'n') + ' seiner Wahl abwerfen';
-  if (k === 'bm' || k === 'bg') return 'Dein ' + (k === 'bm' ? 'roter' : 'grüner') + ' Spiegel steht danach auf Stufe ' + lv + ' (nicht addiert, höchstens Stufe 3 je Farbe). Er ist dauerhaft, gleicht fehlende Verteidigung gegen Angriffe dieser Farbe bis zur Stufe aus und wirft den Überschuss einer zu starken Verteidigung zurück (ebenfalls höchstens bis zur Stufe und höchstens so viel wie der eingehende Schaden). Jeder ausgeglichene oder zurückgeworfene Schaden kostet ihn eine Stufe';
+  if (k === 'wt') return 'Ziehe drei Karten (soweit Handplätze frei sind) und lege eine davon verdeckt vor dich. Sie wird aufgedeckt, sobald Schaden eingeht: Entspricht die Farbe des Schadens ihrer Farbe, wirft sie ' + (lv === 'S' ? '2·S (2/4/6)' : 2 * lv) + ' unblockbaren Schaden auf den Angreifer zurück, vor der Verteidigung (der eingehende Schaden sinkt entsprechend, höchstens um den ganzen Schaden). Danach wird die Karte abgelegt, auch ohne Rückwurf. Sie ist kein Marker';
+  if (k === 'ws') return 'Dein Schild hat danach ' + (lv === 'S' ? 'S' : lv) + ' Ladung' + (lv === 1 ? '' : 'en') + ' (nicht addiert, höchstens 3). Es mindert eingehenden, nicht geblockten Schaden gegen jede Farbe, je Schaden eine Ladung';
   if (k === 'gh') return 'Heile um ' + lv + ' HP';
-  return 'Entferne ' + lv + ' beliebige Marker vom Brett (anklicken, auch eigene, Spiegelmarker und Nachziehtokens, die dann nur zerstört werden) und erhalte für jeden einen Nachziehtoken';
+  return 'Entferne ' + lv + ' beliebige Marker vom Brett (anklicken, auch eigene, Schild- und Manamarker und Nachziehtokens, die dann nur zerstört werden) und erhalte für jeden einen Nachziehtoken';
 }
-// Lifeflow: gewählte Marker (sd/om) als Zähler-Knöpfe
+// Läuterung: gewählte Marker (sd/or/om/oh) als Zähler-Knöpfe
 function lfPicks(cx, lvl) {
   const c = cx.c;
   if (Array.isArray(c.lfp)) return c.lfp.slice(0, lvl);
-  const out = []; let om = cx.theirs.stats.mirror || 0, sd = cx.myStats.death || 0, orb = cx.theirs.stats.rainbow || 0, oh = cx.theirs.stats.heal || 0;
+  const out = []; let om = cx.theirs.stats.manaflow || 0, sd = cx.myStats.death || 0, orb = cx.theirs.stats.rainbow || 0, oh = cx.theirs.stats.heal || 0;
   while (out.length < lvl && sd-- > 0) out.push('sd');
-  while (out.length < lvl && om-- > 0) out.push('om');
   while (out.length < lvl && orb-- > 0) out.push('or');
+  while (out.length < lvl && om-- > 0) out.push('om');
   while (out.length < lvl && oh-- > 0) out.push('oh');
   return out;
 }
@@ -2949,23 +2979,18 @@ function lfCtx() {
   if (!(lw > 0)) return null;
   return { cx, c, lvl: lw, picks: lfExpand(lfPicks(cx, lw), cx) };
 }
-// Spiegelmarker einer Wahl auf konkrete Farben abbilden (in der Reihenfolge, in der die Engine sie wegnimmt)
-function lfExpand(picks, cx) {
-  const out = [], left = { s: Object.assign({ F: 0, E: 0, W: 0 }, cx.myStats.mirrorEl || {}), o: Object.assign({ F: 0, E: 0, W: 0 }, cx.oppStats.mirrorEl || {}) };
-  picks.forEach(p => { const [k, e] = p.split(':'); if (e && (k === 'sm' || k === 'om')) left[k[0]][e]--; });
-  picks.forEach(p => { const [k, e] = p.split(':'); if ((k === 'sm' || k === 'om') && !e) { const el = M.ELEMENTS.find(x => left[k[0]][x] > 0); if (el) { left[k[0]][el]--; out.push(k + ':' + el); } } else out.push(p); });
-  return out;
-}
+// (Seit 0.8 gibt es keine Farbspiegel mehr: die Wahl gilt unverändert.)
+function lfExpand(picks, cx) { return picks.slice(); }
 function lfHave(cx, k, e) {
   const w = k[0] === 's' ? cx.myStats : cx.oppStats, t = k[1];
-  return t === 'c' ? (w.marks || 0) : t === 'd' ? (w.death || 0) : t === 'h' ? (w.heal || 0) : t === 'r' ? (w.rainbow || 0) : t === 't' ? (w.freeDraws || 0) : (e ? M.mirrorOf(w, e) : (w.mirror || 0));
+  return t === 'c' ? (w.marks || 0) : t === 'd' ? (w.death || 0) : t === 'h' ? (w.heal || 0) : t === 'r' ? (w.rainbow || 0) : t === 't' ? (w.freeDraws || 0) : (w.manaflow || 0);
 }
 function lfSummary(cx, lvl) {
   const L = lfCtx(), picks = L ? L.picks : lfExpand(lfPicks(cx, lvl), cx), cnt = {};
   picks.forEach(p => { cnt[p] = (cnt[p] || 0) + 1; });
-  const nm = { sd: 'eigener Todesmarker', od: 'Todesmarker des Gegners', sc: 'eigener Fluch', oc: 'Fluch des Gegners', sm: 'eigener Spiegel', om: 'Spiegel des Gegners', sh: 'eigener Heilmarker', oh: 'Heilmarker des Gegners', sr: 'eigenes Multispiegel', or: 'Multispiegel des Gegners', st: 'eigener Nachziehtoken', ot: 'Nachziehtoken des Gegners' };
+  const nm = { sd: 'eigener Todesmarker', od: 'Todesmarker des Gegners', sc: 'eigener Fluch', oc: 'Fluch des Gegners', sm: 'eigener Manamarker', om: 'Manamarker des Gegners', sh: 'eigener Heilmarker', oh: 'Heilmarker des Gegners', sr: 'eigene Schildladung', or: 'Schildladung des Gegners', st: 'eigener Nachziehtoken', ot: 'Nachziehtoken des Gegners' };
   const chips = Object.keys(cnt).map(p => { const [k, e] = p.split(':'); return '<span class="lfchip">' + nm[k] + (e ? ' ' + NAMES[e] : '') + (cnt[p] > 1 ? ' ×' + cnt[p] : '') + '</span>'; }).join('');
-  return '<div class="lfsum"><div class="note">Klicke beliebige Marker auf dem Brett (Totenköpfe, Heilmarker, Spiegelsteine und Prismen, auch deine eigenen). Gewählt: <b>' + picks.length + '/' + lvl + '</b></div><div class="lfchips">' + (chips || '<span class="note">kein Marker gewählt (nur Heilung)</span>') + '</div><button class="mini" data-act="lfauto" title="Wieder die automatische Auswahl verwenden">Automatisch</button></div>';
+  return '<div class="lfsum"><div class="note">Klicke beliebige Marker auf dem Brett (Totenköpfe, Heil- und Manamarker, Schilde, auch deine eigenen). Gewählt: <b>' + picks.length + '/' + lvl + '</b></div><div class="lfchips">' + (chips || '<span class="note">kein Marker gewählt (nur Heilung)</span>') + '</div><button class="mini" data-act="lfauto" title="Wieder die automatische Auswahl verwenden">Automatisch</button></div>';
 }
 // Gold, das im Tempel eingesetzt werden müsste, um die nächste Tempelstufe zu erreichen (n Gold ergeben n(n+1)/2 Punkte)
 function goldForNext(pool, level) { const need = M.nextLevelCost(level) - pool; let n = 1; while (M.pointsForGold(n) < need && n < 20) n++; return need <= 0 ? 0 : n; }
@@ -2979,6 +3004,14 @@ function combatCenter(cx) {
     const tip = 'Eine Kampfrunde ist ein Angriffszug jeder Seite.' + (ex > 0 ? ' Nach je ' + ex + ' Runden steigt die Erschöpfung um 1: Beide Seiten verlieren am Ende ihres Angriffszugs so viele HP, wie die Erschöpfung hoch ist.' : '') + (mr > 0 ? ' Nach ' + mr + ' Runden endet der Kampf unentschieden.' : '');
     return '<div class="note" style="margin-top:-2px" title="' + tip + '">Runde <b>' + (mr > 0 ? Math.min(mr, rd) : rd) + '</b>' + (mr > 0 ? ' von ' + mr : '') + (lv > 0 ? ' · <b style="color:#e0605a">Erschöpfung ' + lv + '</b>' : (ex > 0 ? ' · Erschöpfung ab Runde ' + (ex + 1) : '')) + '</div>';
   })();
+  if (c.forced && c.forced.kind === 'trap') {   // Falle: eine der gezogenen Karten wählen (ich) bzw. warten (Gegner)
+    const vs = c.sides.a.ctrl === c.forced.pid ? c.sides.a : c.sides.b;
+    h += c.forced.pid === ME
+      ? '<div class="preview"><b>Falle:</b> Wähle eine der gezogenen Karten, die du verdeckt vor dich legst. Klicke die Karte an.</div><div class="btnrow"><button class="btn primary" data-act="fd" ' + (fdSel.size === 1 ? '' : 'disabled') + '>Als Falle legen</button></div>'
+      : '<div class="preview"><b>Falle:</b> ' + esc(vs.name) + ' legt eine Karte verdeckt vor sich …</div>';
+    h += '</div>';
+    return '<div class="panel" style="' + box(LAYOUT.combat, 'padding:10px 14px') + '">' + h + '</div>';
+  }
   if (c.forced) {   // Zerrüttung: Abwurf wählen (ich) bzw. warten (Gegner)
     const vs = c.sides.a.ctrl === c.forced.pid ? c.sides.a : c.sides.b, need = Math.min(c.forced.n, vs.deck.hand.filter(Boolean).length);
     h += c.forced.pid === ME
@@ -3005,7 +3038,7 @@ function combatCenter(cx) {
       const ev = M.evalDefense(cx.myStats, sel, c.color);
       if (!sel.length) prev = '';
       else if (!ev.valid) prev = '<span class="bad">' + esc(ev.reason) + '</span>';
-      else { if (ev.cost > 0) manaPv = ev.cost; prev = ''; canExec = ev.affordable; val = ev.block || 0; if (ev.ord) { const r = ORD_ROWS.find(x => x[0] === ev.ord.key), late = ev.ord.key === 'gh' || ev.ord.key === 'bm' || ev.ord.key === 'bg'; prev += '<div class="note"><b>' + r[1] + '</b> Stufe ' + ev.ord.lvl + (late ? ' nach' : ' vor') + ' der Verteidigung: ' + ordText(r[0], ev.ord.lvl) + '</div>'; if (ev.ord.key === 'gr') prev += lfSummary(cx, ev.ord.lvl); } if (!ev.affordable) prev += '<div class="bad">Zu wenig Mana.</div>'; }
+      else { if (ev.cost > 0) manaPv = ev.cost; prev = ''; canExec = ev.affordable; val = ev.block || 0; if (ev.ord) { const r = ORD_ROWS.find(x => x[0] === ev.ord.key), late = ev.ord.key === 'gh' || ev.ord.key === 'wt' || ev.ord.key === 'ws'; prev += '<div class="note"><b>' + r[1] + '</b> Stufe ' + ev.ord.lvl + (late ? ' nach' : ' vor') + ' der Verteidigung: ' + ordText(r[0], ev.ord.lvl) + '</div>'; if (ev.ord.key === 'gr') prev += lfSummary(cx, ev.ord.lvl); } if (!ev.affordable) prev += '<div class="bad">Zu wenig Mana.</div>'; }
     }
   }
   h += '<div class="preview">' + prev + '</div><div class="btnrow">';
@@ -3032,8 +3065,8 @@ function comboRef(cx) {
     const o = ev && ev.valid && ev.ord && !(ev.levels.ulti > 0) ? ev.ord : null, uS0 = Math.min(3, mag.F, mag.E, mag.W);
     let fs = 20;   // Schriftgrad der Zeilen: füllt die Höhe des Fensters (seit 0.7.1.1); Texte und Hinweise skalieren mit
     const row = (name, els, lvl, text, on, tip) => '<div' + (tip ? ' title="' + esc(tip) + '"' : '') + ' class="cref p' + els[0] + (on ? ' on' : '') + '" style="padding:1px 8px;margin-bottom:0;font-size:' + fs + 'px;flex:1 1 0;display:flex;flex-direction:column;justify-content:center;gap:0"><div style="line-height:1.15"><b>' + name + '</b> ' + els.map(el).join(' + ') + (lvl ? ' <span class="note" style="font-size:.8em">· Stufe ' + lvl + '</span>' : '') + (text ? '<small style="font-size:' + Math.round(fs * 0.72) + 'px">' + text + '</small>' : '') + '</div></div>';
-    // Die Ultimate (alle drei Farben) steht seit 0.7 unter der Farbe ihrer ersten Karte: Feuer Todesfluss, Wasser Multispiegel, Erde Heilfluss.
-    const ULTI_NAME = { F: 'Todesfluss', W: 'Multispiegel', E: 'Heilfluss' }, ROLE = { F: 'Feuer', W: 'Wasser', E: 'Erde' };
+    // Die Ultimate (alle drei Farben) steht seit 0.7 unter der Farbe ihrer ersten Karte: Feuer Todesfluss, Wasser Manafluss (seit 0.8), Erde Heilfluss.
+    const ULTI_NAME = { F: 'Todesfluss', W: 'Manafluss', E: 'Heilfluss' }, ROLE = { F: 'Feuer', W: 'Wasser', E: 'Erde' };
     const ultiRow = (p, lvl, text, on, tip) => row(ULTI_NAME[p], [p, ...M.ELEMENTS.filter(x => x !== p)], lvl, text, on, tip);
     if (cols.length === 0) {   // noch nichts markiert: alle Kombos nach Farbe der ersten Karte, Wirkung als Tooltip
       fs = 18;
@@ -3145,7 +3178,7 @@ const CurseFx = (() => {
   return { play };
 })();
 
-/* ---------- Ultimate-Rituale für Heilfluss (Erde) und Multispiegel (Wasser), aus der Ultimate-Werkstatt (seit 0.7.2.2): mittig auf dem Bildschirm, wie das Pentagramm des Todesfluss (20-todesfluch.js). Die Marker und ihre Wirkung zeigt das Spiel selbst. ---------- */
+/* ---------- Ultimate-Rituale für Heilfluss (Erde) und Manafluss (Wasser, seit 0.8; bis 0.7.7 Multispiegel), aus der Ultimate-Werkstatt (seit 0.7.2.2): mittig auf dem Bildschirm, wie das Pentagramm des Todesfluss (20-todesfluch.js). Die Marker und ihre Wirkung zeigt das Spiel selbst. ---------- */
 const UltFx = (() => {
   const BIG = 3000, clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x)), lerp = (a, b, t) => a + (b - a) * t, seg = (u, a, b) => clamp((u - a) / (b - a));
   const eo = x => 1 - Math.pow(1 - x, 3), eio = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
@@ -3157,7 +3190,7 @@ const UltFx = (() => {
   // Werte der Ultimate-Werkstatt (Standard)
   const P = { dur: 4, size: 1.2, dark: .55, flash: 1, shake: .5, particles: 50, seed: 3,
     hColor: '#93c24f', hRings: 2, hVines: 6, hVineH: 1, hPlus: 1, hLight: .7, hPulse: 3, hGlow: 14,
-    pColor: '#52a6f5', pRainbow: .6, pDome: 1, pFacets: 6, pShimmer: 1, pGlints: 16, pGlow: 12 };
+    mColor: '#52a6f5', mRings: 2, mStar: 8, mCrystal: 1, mPulse: 3, mGlow: 14 };
   function glowLine(ctx,col,w,glow,alpha,draw){
     ctx.save();ctx.lineCap='round';ctx.lineJoin='round';
     ctx.shadowColor=col;ctx.shadowBlur=glow;ctx.strokeStyle=rgba(col,alpha*.8);ctx.lineWidth=w*1.8;ctx.beginPath();draw();ctx.stroke();
@@ -3207,64 +3240,46 @@ const UltFx = (() => {
     if(fl>0){ctx.fillStyle=rgba(lighten(col,.8),fl*.42);ctx.fillRect(-BIG,-BIG,2*BIG,2*BIG)}
   }
   
-  /* ---------- Multispiegel (Wasser): erst bildet sich ein Kreis am Boden, aus ihm wächst die Schildkuppel (seit 0.7.2.4; vorher Prisma mit Kristall und Lichtstrahl) ---------- */
-  const prismCols=p=>[mix(p.pColor,EL.F,p.pRainbow),mix(p.pColor,EL.E,p.pRainbow),mix(p.pColor,EL.W,p.pRainbow)];
-  function domeGeom(p){const rx=165*p.size*p.pDome*.95;return{c:{x:C.x,y:C.y+78},rx,ry:rx*.85}}
-  function fxPrism(ctx,p,t,D,u){
-    const gl=p.pGlow,cols=prismCols(p),dg=domeGeom(p),pc=p.pColor,{c,rx}=dg,rz=rx*.28;
-    const cf=eio(seg(u,.04,.38)),dp=eio(seg(u,.42,.74)),out=1-eio(seg(u,.9,.99));
-    vignette(ctx,p.dark*eo(seg(u,0,.12))*(1-seg(u,.95,1)),c.x,c.y-40);
-    const ry=dg.ry*dp;
-    if(out>0){
-      ctx.save();ctx.globalAlpha=out;
-      // Kreis: Ring zeichnet sich um die Mitte, innerer Gegenring, Rastmarken in den drei Farben, Drehung
-      if(cf>0){
-        const lg=ctx.createLinearGradient(c.x-rx,0,c.x+rx,0);lg.addColorStop(0,cols[0]);lg.addColorStop(.5,cols[1]);lg.addColorStop(1,cols[2]);
-        const a0=-Math.PI/2+t*.5,sw=Math.PI*2*cf;
-        ctx.save();ctx.lineCap='round';ctx.shadowColor=cols[1];ctx.shadowBlur=gl;ctx.strokeStyle=lg;ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(c.x,c.y,rx,rz,0,a0,a0+sw);ctx.stroke();
-        ctx.shadowBlur=gl*.5;ctx.strokeStyle=rgba(lighten(pc,.5),.7);ctx.lineWidth=1.8;ctx.beginPath();ctx.ellipse(c.x,c.y,rx*.84,rz*.84,0,a0+Math.PI,a0+Math.PI-sw*.9,true);ctx.stroke();ctx.restore();
-        const nT=12;
-        for(let i=0;i<nT;i++){const th=a0+i/nT*Math.PI*2-t*1.0,vis=cf>(i/nT)?1:0;if(!vis)continue;
-          const x1=c.x+Math.cos(th)*rx*.84,y1=c.y+Math.sin(th)*rz*.84,x2=c.x+Math.cos(th)*rx,y2=c.y+Math.sin(th)*rz;
-          ctx.strokeStyle=rgba(lighten(cols[i%3],.4),.8);ctx.lineWidth=2.2;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
-          star4(ctx,c.x+Math.cos(th)*rx*.92,c.y+Math.sin(th)*rz*.92,4+2*Math.sin(t*3+i),cols[i%3],.85)}
-        const gf=ctx.createRadialGradient(c.x,c.y,rx*.1,c.x,c.y,rx);gf.addColorStop(0,rgba(pc,0));gf.addColorStop(1,rgba(pc,.2*cf));
-        ctx.fillStyle=gf;ctx.beginPath();ctx.ellipse(c.x,c.y,rx,rz,0,0,7);ctx.fill();
-      }
-      // Kuppel: wächst aus dem Kreis nach oben (Höhe = dp)
-      if(dp>0){
-        const fillg=ctx.createRadialGradient(c.x,c.y-ry*.45,rx*.1,c.x,c.y-ry*.3,rx*1.05);fillg.addColorStop(0,rgba(lighten(pc,.6),.04*dp));fillg.addColorStop(1,rgba(pc,.26*dp));
-        ctx.fillStyle=fillg;ctx.beginPath();ctx.ellipse(c.x,c.y,rx,ry,0,Math.PI,Math.PI*2);ctx.ellipse(c.x,c.y,rx,rz,0,0,Math.PI);ctx.closePath();ctx.fill();
-        const lg2=ctx.createLinearGradient(c.x-rx,0,c.x+rx,0);lg2.addColorStop(0,cols[0]);lg2.addColorStop(.5,cols[1]);lg2.addColorStop(1,cols[2]);
-        ctx.save();ctx.lineCap='round';ctx.shadowColor=cols[1];ctx.shadowBlur=gl;ctx.strokeStyle=lg2;ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(c.x,c.y,rx,ry,0,Math.PI,Math.PI*2);ctx.stroke();ctx.restore();
-        const nF=Math.round(p.pFacets),fa=seg(u,.6,.78);
-        if(nF>1&&fa>0){
-          ctx.strokeStyle=rgba(lighten(pc,.65),.3*fa);ctx.lineWidth=1.2;
-          for(let i=1;i<nF;i++){const th=Math.PI+i/nF*Math.PI,bx=c.x+rx*Math.cos(th);ctx.beginPath();ctx.moveTo(bx,c.y);ctx.quadraticCurveTo(c.x+(bx-c.x)*.92,c.y-ry*.7,c.x,c.y-ry);ctx.stroke()}
-          [.35,.7].forEach(h=>{const rxh=rx*Math.sqrt(1-h*h);ctx.beginPath();ctx.ellipse(c.x,c.y-ry*h,rxh,rxh*.28,0,0,Math.PI);ctx.stroke()});
-        }
-        const sh=seg(u,.74,.92);
-        if(sh>0&&sh<1&&p.pShimmer>0){
-          ctx.save();ctx.beginPath();ctx.ellipse(c.x,c.y,rx,ry,0,Math.PI,Math.PI*2);ctx.ellipse(c.x,c.y,rx,rz,0,0,Math.PI);ctx.closePath();ctx.clip();
-          const bx=lerp(c.x-rx*1.3,c.x+rx*1.3,eio(sh)),sg=ctx.createLinearGradient(bx-60,0,bx+60,0);sg.addColorStop(0,'rgba(255,255,255,0)');sg.addColorStop(.5,'rgba(255,255,255,'+(.5*Math.sin(Math.PI*sh)*Math.min(1,p.pShimmer))+')');sg.addColorStop(1,'rgba(255,255,255,0)');
-          ctx.fillStyle=sg;ctx.fillRect(c.x-rx,c.y-ry,2*rx,ry+rz);ctx.restore();
-        }
-        const nG=Math.round(p.pGlints),gr=rng(p.seed+21);
-        for(let i=0;i<nG;i++){const an=Math.PI+gr()*Math.PI,rd=Math.sqrt(gr())*.95,ph=gr()*6,sp=2+gr()*3,x=c.x+Math.cos(an)*rx*rd,y=c.y+Math.sin(an)*ry*rd*.9,tw=Math.max(0,Math.sin(t*sp+ph));
-          if(tw>0)star4(ctx,x,y,3+5*tw,i%3===0?'#ffffff':cols[i%3],tw*dp*.9)}
-      }
-      ctx.restore();
-    }
-    // Funken steigen aus dem Kreis auf, solange die Kuppel wächst
-    const nP=Math.round(p.particles*.6),pa=seg(u,.3,.5)*(1-seg(u,.8,.95));
-    if(nP>0&&pa>0){const pr2=rng(p.seed+23);ctx.save();ctx.globalCompositeOperation='lighter';
-      for(let i=0;i<nP;i++){const r1=pr2(),r2=pr2(),r3=pr2(),ph=(r1+t*(.15+.3*r2)/(D/3))%1,an=r2*Math.PI*2,x=c.x+Math.cos(an)*rx*(.4+.55*r3),y=c.y+Math.sin(an)*rz*(.4+.55*r3)-ph*dg.ry*(.6+.6*r3);ctx.fillStyle=rgba(lighten(cols[i%3],.5),Math.sin(Math.PI*ph)*pa*.8);ctx.beginPath();ctx.arc(x,y,1+r3*1.8,0,7);ctx.fill()}ctx.restore()}
-    const fl=p.flash*(seg(u,.4,.44)*(1-seg(u,.44,.54))*.3+seg(u,.9,.93)*(1-seg(u,.93,.99))*.5);
-    if(fl>0){ctx.fillStyle=rgba(lighten(pc,.85),fl*.45);ctx.fillRect(-BIG,-BIG,2*BIG,2*BIG)}
+  /* ---------- Manafluss (Wasser, seit 0.8): blauer Ring mit Achtstern am Boden, Manafunken ziehen spiralförmig zur Mitte und verdichten sich zu einem schwebenden Kristall; Pulse, dann stieben die Funken auseinander ---------- */
+  function fxMana(ctx,p,t,D,u){
+    const col=p.mColor,S=p.size,R=150*S,tilt=.42,Cc={x:C.x,y:C.y+30},gl=p.mGlow,top=-Math.PI/2,Lt=lighten(col,.6);
+    const fin=1-seg(u,.93,1),flick=1-.22*(.5+.5*Math.sin(t*21+Math.sin(t*6)*2)),inten=fin*flick;
+    vignette(ctx,p.dark*.75*eo(seg(u,0,.12))*(1-seg(u,.95,1)),Cc.x,Cc.y);
+    ctx.save();ctx.translate(Cc.x,Cc.y);ctx.scale(1,tilt);   // Boden
+    const fg=ctx.createRadialGradient(0,0,0,0,0,R*1.2);fg.addColorStop(0,rgba(col,.36*seg(u,.08,.45)*inten));fg.addColorStop(1,rgba(col,0));ctx.fillStyle=fg;ctx.beginPath();ctx.arc(0,0,R*1.25,0,7);ctx.fill();
+    for(let i=0;i<Math.round(p.mRings);i++){const rf=[1,.78,.58][i],pr=eio(seg(u,.03+i*.06,.2+i*.06));if(pr>0)glowLine(ctx,col,2.4*(i?.75:1),gl,inten,()=>ctx.arc(0,0,R*rf,top,top+Math.PI*2*pr))}
+    const n=Math.max(5,Math.round(p.mStar)),sp=eio(seg(u,.12,.44)),rs=R*.9;   // Achtstern: jede dritte Ecke verbunden, zeichnet sich der Reihe nach
+    if(sp>0){const tot=n*sp,full=Math.floor(tot),rest=tot-full,v=k=>{const a=top+((k*3)%n)/n*Math.PI*2+t*.12;return[Math.cos(a)*rs,Math.sin(a)*rs]};
+      glowLine(ctx,col,2,gl*.8,inten*.95,()=>{const a0=v(0);ctx.moveTo(a0[0],a0[1]);for(let k=1;k<=full&&k<=n;k++){const q=v(k);ctx.lineTo(q[0],q[1])}if(full<n&&rest>0){const a1=v(full),a2=v(full+1);ctx.lineTo(lerp(a1[0],a2[0],rest),lerp(a1[1],a2[1],rest))}})}
+    for(let i=0;i<12;i++){const a=top+i/12*Math.PI*2,al=seg(u,.16+i/12*.12,.22+i/12*.12);if(al<=0)continue;const x=Math.cos(a)*R*1.1,y=Math.sin(a)*R*1.1,h=R*.05;glowLine(ctx,col,1.6,gl*.5,inten*al,()=>{ctx.moveTo(x,y-h);ctx.lineTo(x+h,y);ctx.lineTo(x,y+h);ctx.lineTo(x-h,y);ctx.closePath()})}   // Rautenrunen am Rand
+    ctx.restore();
+    const nP=Math.round(p.particles),pa=seg(u,.18,.5)*(1-seg(u,.78,.86));   // Manafunken: vom Ring spiralförmig zur Mitte, dabei aufwärts
+    if(nP>0&&pa>0){const pr=rng(p.seed+31);ctx.save();ctx.globalCompositeOperation='lighter';
+      for(let i=0;i<nP;i++){const r1=pr(),r2=pr(),r3=pr(),ph=(r1+t*(.18+.22*r2)/(D/4))%1,rad=R*.95*Math.pow(1-ph,1.2),an=r2*Math.PI*2+ph*5.5*(r3>.5?1:-1),x=Cc.x+Math.cos(an)*rad,y=Cc.y+Math.sin(an)*rad*tilt-ph*95*(.6+.6*r3);
+        puff(ctx,x,y,5+4*r3,col,Math.sin(Math.PI*ph)*pa*.5);ctx.fillStyle=rgba(i%4?Lt:'#ffffff',Math.sin(Math.PI*ph)*pa*.95);ctx.beginPath();ctx.arc(x,y,1.1+r3*1.9,0,7);ctx.fill()}
+      ctx.restore()}
+    const cr=eo(seg(u,.4,.66))*(1-eo(seg(u,.86,.94))),cy=C.y-62+Math.sin(t*2.4)*4*cr;   // Kristall
+    if(cr>0){const h=62*S*p.mCrystal*cr,w=h*.52,sx=Math.cos(t*2.2),fl=.75+.25*Math.sin(t*9);
+      ctx.save();ctx.translate(C.x,cy);
+      puff(ctx,0,0,h*1.7,col,.5*cr*inten);
+      ctx.shadowColor=col;ctx.shadowBlur=gl*1.8;
+      const P=[[0,-h],[w*sx,0],[0,h],[-w*sx,0]];
+      ctx.fillStyle=rgba(mix(col,'#ffffff',.55),.92*cr*flick);ctx.beginPath();P.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]));ctx.closePath();ctx.fill();
+      ctx.shadowBlur=0;ctx.fillStyle=rgba(col,.7*cr);ctx.beginPath();ctx.moveTo(0,-h);ctx.lineTo(w*sx,0);ctx.lineTo(0,h);ctx.closePath();ctx.fill();
+      ctx.strokeStyle=rgba('#ffffff',.85*cr*fl);ctx.lineWidth=1.6;ctx.beginPath();P.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]));ctx.closePath();ctx.stroke();
+      ctx.beginPath();ctx.moveTo(-w*sx,0);ctx.lineTo(w*sx,0);ctx.moveTo(0,-h);ctx.lineTo(0,h);ctx.stroke();
+      ctx.restore();star4(ctx,C.x+w*.2,cy-h*.3,7+5*Math.sin(t*7)**2,'#ffffff',.9*cr)}
+    for(let k=0;k<Math.round(p.mPulse);k++){const q=seg(u,.6+k*.06,.84+k*.06);if(q>0&&q<1){ctx.save();ctx.globalCompositeOperation='lighter';ctx.strokeStyle=rgba(lighten(col,.5),(1-q)*.8*fin);ctx.lineWidth=4*(1-q)+1;const r2=R*(.2+1.1*eo(q));ctx.beginPath();ctx.ellipse(Cc.x,Cc.y,r2,r2*tilt,0,0,7);ctx.stroke();ctx.restore()}}
+    const bs=seg(u,.84,.97);   // Abschluss: der Kristall zerstiebt in Funken
+    if(bs>0&&bs<1){const pr=rng(p.seed+37);ctx.save();ctx.globalCompositeOperation='lighter';
+      for(let i=0;i<26;i++){const a=pr()*Math.PI*2,sp2=60+pr()*150,x=C.x+Math.cos(a)*sp2*eo(bs),y=C.y-62+Math.sin(a)*sp2*.7*eo(bs)+bs*bs*40;ctx.fillStyle=rgba(i%3?Lt:'#ffffff',(1-bs)*.9);ctx.beginPath();ctx.arc(x,y,1.2+pr()*2.2,0,7);ctx.fill()}
+      ctx.restore()}
+    const fl2=p.flash*(seg(u,.4,.44)*(1-seg(u,.44,.54))*.28+seg(u,.86,.9)*(1-seg(u,.9,.97))*.42);
+    if(fl2>0){ctx.fillStyle=rgba(lighten(col,.8),fl2*.42);ctx.fillRect(-BIG,-BIG,2*BIG,2*BIG)}
   }
   function lerpP(a,b,q){return{x:lerp(a.x,b.x,q),y:lerp(a.y,b.y,q)}}
   const cvs = {}, raf = {};
-  function play(kind) {   // 'E' Heilfluss, 'W' Multispiegel
+  function play(kind) {   // 'E' Heilfluss, 'W' Manafluss
     if (FAST || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
     let cv = cvs[kind];
     if (!cv) { cv = cvs[kind] = document.createElement('canvas'); cv.width = SW; cv.height = 800; cv.style.cssText = 'position:absolute;left:0;top:0;width:' + SW + 'px;height:800px;z-index:290;pointer-events:none'; stage.appendChild(cv); }
@@ -3278,11 +3293,46 @@ const UltFx = (() => {
       const u = t / D, amp = P.shake * (kind === 'E' ? (u > .88 ? 6 * Math.exp(-(u - .88) * D * 6) : 0) : (u > .74 ? 4 * Math.exp(-(u - .74) * D * 6) : 0));
       ctx.setTransform(k, 0, 0, k, SW / 2 - C.x * k, 400 - C.y * k);   // Mitte des Rituals = Bildschirmmitte
       ctx.translate(Math.sin(t * 95) * amp, Math.cos(t * 80) * amp * .7);
-      (kind === 'E' ? fxHeal : fxPrism)(ctx, P, t, D, clamp(u)); raf[kind] = requestAnimationFrame(step);
+      (kind === 'E' ? fxHeal : fxMana)(ctx, P, t, D, clamp(u)); raf[kind] = requestAnimationFrame(step);
     };
     raf[kind] = requestAnimationFrame(step);
   }
   return { play };
+})();
+
+/* ---------- Falle (Blau + Rot, seit 0.8): die verdeckte Karte dreht sich um; trifft die Farbe, fliegt ein Geschoss zum Angreifer ---------- */
+const TrapFx = (() => {
+  const panelOf = pid => pid === ME ? stage.querySelector('.sbody[data-lead]') : stage.querySelector('.sbody:not([data-lead])');
+  const pos = (el, fb) => { if (!el) return fb; const r = el.getBoundingClientRect(), sr = stage.getBoundingClientRect(), k = sr.width / stage.offsetWidth; return { x: (r.left + r.width / 2 - sr.left) / k, y: (r.top + r.height / 2 - sr.top) / k }; };
+  const COL = { F: '#ff7a3d', E: '#93c24f', W: '#52a6f5' };
+  function play(f) {
+    if (FAST || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
+    const tc = stage.querySelector('.trapcard[data-who="' + (f.who === ME ? 's' : 'o') + '"]');
+    const from = pos(tc || panelOf(f.who), { x: SW / 2, y: f.who === ME ? 560 : 240 }), to = pos(panelOf(f.to), { x: SW / 2, y: f.to === ME ? 560 : 240 });
+    const w = 96, h = 134, el = document.createElement('div');
+    el.className = 'trapfx';
+    el.style.cssText = 'left:' + (from.x - w / 2) + 'px;top:' + (from.y - h / 2) + 'px;width:' + w + 'px;height:' + h + 'px;transition:left .35s,top .35s,width .35s,height .35s';
+    el.innerHTML = '<div class="tf"><div class="bk"><img src="' + IMG.back + '"></div><div class="fr"><img src="' + (f.card && IMG[f.card] ? IMG[f.card] : IMG.back) + '"></div></div>';
+    stage.appendChild(el);
+    const mid = { x: SW / 2, y: 400 };
+    requestAnimationFrame(() => { el.style.left = (mid.x - 70) + 'px'; el.style.top = (mid.y - 98) + 'px'; el.style.width = '140px'; el.style.height = '196px'; });
+    setTimeout(() => { el.classList.add('up'); Snd.play('shield_hit'); }, 380);
+    setTimeout(() => {
+      if (f.hit) {
+        el.classList.add('hit'); Snd.play('hit', 0, .9);
+        const o = document.createElement('div'); o.style.cssText = 'position:absolute;z-index:296;pointer-events:none;border-radius:50%;width:26px;height:26px;margin:-13px 0 0 -13px;left:' + mid.x + 'px;top:' + mid.y + 'px;background:radial-gradient(#fff,' + (COL[f.el] || '#ff7a3d') + ' 55%,rgba(0,0,0,0));box-shadow:0 0 22px ' + (COL[f.el] || '#ff7a3d') + ';transition:left .45s ease-in,top .45s ease-in';
+        stage.appendChild(o); requestAnimationFrame(() => { o.style.left = to.x + 'px'; o.style.top = to.y + 'px'; });
+        setTimeout(() => {
+          o.remove();
+          const n = document.createElement('div'); n.textContent = '\u2212' + f.refl; n.style.cssText = 'position:absolute;z-index:297;pointer-events:none;font:700 38px Alegreya,serif;color:#ff6b3d;text-shadow:0 0 4px #000,0 0 10px #000;left:' + (to.x - 20) + 'px;top:' + (to.y - 24) + 'px;transition:top .8s,opacity .8s';
+          stage.appendChild(n); requestAnimationFrame(() => { n.style.top = (to.y - 80) + 'px'; n.style.opacity = '0'; }); setTimeout(() => n.remove(), 900);
+        }, 460);
+      }
+    }, 1050);
+    setTimeout(() => { el.style.transition = 'opacity .45s'; el.style.opacity = '0'; }, f.hit ? 1650 : 1350);
+    setTimeout(() => el.remove(), f.hit ? 2150 : 1850);
+  }
+  return { play, ms: f => (f.hit ? 1650 : 1350) };
 })();
 /* ---------- Schild-Effekt (aus der Schild-Werkstatt, Variante „Mitte“): Das Schildbild des Spiegels fliegt vergrößert in die Bildschirmmitte. Dort prallen die Geschosse auf, ein Rückwurf fliegt zum Angreifer, ungeblockter Schaden lässt Stufen brechen (Risse; ohne Stufe zerspringt das Schild). Ein überstandenes Schild fliegt zurück. ---------- */
 const MirrorFx = (() => {
@@ -3406,6 +3456,7 @@ const FlowFx = (() => {
   // Mittelpunkt eines Oberflächenelements in Bühnenkoordinaten
   function at(el) { if (!el) return null; const r = el.getBoundingClientRect(), sr = stage.getBoundingClientRect(), k = sr.width / stage.offsetWidth; return { x: (r.left + r.width / 2 - sr.left) / k, y: (r.top + r.height / 2 - sr.top) / k }; }
   const panelOf = pid => pid === ME ? stage.querySelector('.sbody[data-lead]') : stage.querySelector('.sbody:not([data-lead])');
+  const manaPos = pid => at(panelOf(pid) && panelOf(pid).querySelector('[data-pv="mana"]')) || { x: 1000, y: pid === ME ? 740 : 110 };
   const hpOf = pid => at(panelOf(pid) && panelOf(pid).querySelector('[data-pv="hp"]')) || { x: pid === ME ? 1000 : 1000, y: pid === ME ? 700 : 70 };
   const markOf = pid => { const w = pid === ME ? 's' : 'o', q = deathPos(w, 0); return at(stage.querySelector('.deathtok[data-who="' + w + '"]')) || { x: q.x + 24, y: q.y + 24 }; };
   const drawOf = pid => { const L = pid === ME ? L_MY : L_OP; return pid === ME ? (at(stage.querySelector('.freedraw:not(.opp)')) || { x: L.draw.x + CW * L.ps / 2, y: L.draw.y - 20 }) : { x: L.draw.x + CW * L.ps / 2, y: L.draw.y + CH * L.ps / 2 }; };
@@ -3570,11 +3621,11 @@ const FlowFx = (() => {
   const healMs = n => curseMs(n);   // gleicher Zeitplan wie beim Todesfluss
   function heal(fx) {
     if (off()) return;
-    const who = fx.who, w = who === ME ? 's' : 'o', toks = [...stage.querySelectorAll('.healtok[data-who="' + w + '"]')], n = Math.max(1, Math.min(fx.marks || fx.n || 1, 4)), hp = hpOf(who), C = '#93c24f', D = '#2f7a2f', Lt = '#e8ffb8';
+    const who = fx.who, w = who === ME ? 's' : 'o', toks = [...stage.querySelectorAll((fx.mana ? '.manatok' : '.healtok:not(.manatok)') + '[data-who="' + w + '"]')], n = Math.max(1, Math.min(fx.marks || fx.n || 1, 4)), hp = fx.mana ? manaPos(who) : hpOf(who), C = fx.mana ? '#52a6f5' : '#93c24f', D = fx.mana ? '#1d4f94' : '#2f7a2f', Lt = fx.mana ? '#d6ecff' : '#e8ffb8';
     const srcs = []; for (let i = 0; i < n; i++) { const q = deathPos(w, i); srcs.push(at(toks[0]) || { x: q.x + 24, y: q.y + 24 }); }
     const life = .75, N = 36, dur = curseStart(n - 1) + CURSE_F + .65;
     const puff = (ctx, x, y, r, a, col) => { if (a <= 0.01) return; const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, rgba(lighten(col, .3), a)); g.addColorStop(.45, rgba(col, a * .65)); g.addColorStop(1, rgba(D, 0)); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); };
-    const plus = (ctx, x, y, s, a) => { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = rgba(Lt, a); ctx.lineWidth = Math.max(1.5, s * .38); ctx.lineCap = 'round'; ctx.shadowColor = C; ctx.shadowBlur = 8; ctx.beginPath(); ctx.moveTo(x - s, y); ctx.lineTo(x + s, y); ctx.moveTo(x, y - s); ctx.lineTo(x, y + s); ctx.stroke(); ctx.restore(); };
+    const plus = (ctx, x, y, s, a) => { if (fx.mana) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = rgba(Lt, a); ctx.shadowColor = C; ctx.shadowBlur = 8; ctx.beginPath(); ctx.moveTo(x, y - s * 1.3); ctx.lineTo(x + s * .8, y); ctx.lineTo(x, y + s * 1.3); ctx.lineTo(x - s * .8, y); ctx.closePath(); ctx.fill(); ctx.restore(); return; } ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = rgba(Lt, a); ctx.lineWidth = Math.max(1.5, s * .38); ctx.lineCap = 'round'; ctx.shadowColor = C; ctx.shadowBlur = 8; ctx.beginPath(); ctx.moveTo(x - s, y); ctx.lineTo(x + s, y); ctx.moveTo(x, y - s); ctx.lineTo(x, y + s); ctx.stroke(); ctx.restore(); };
     run(dur, (ctx, t) => {
       srcs.forEach((sr, i) => {
         const d = curseStart(i), rr = rng(41 + i * 29), cx = (sr.x + hp.x) / 2 + (rr() - .5) * 90, cy = Math.min(sr.y, hp.y) - 60 - rr() * 50;
@@ -4182,7 +4233,7 @@ function earthFormRaw(ctx, x, by, seed, i, t, tCrack, tRise, endAt, ending) {
   return { attack, defense, reset() { queue = []; endEx(); }, busy() { return queue.length > 0 || !!(ex && (ex.def || performance.now() - ex.t0 < ex.tAe * 1000 + 50)); }, remaining() { if (!ex || !ex.def) return 0; return Math.max(0, ex.def.T.end - (performance.now() - ex.t0) / 1000); } };
 })();
 // Aktuelle Versionsnummer: einzige Stelle, an der sie gesetzt wird (Menü-Link und Über-Seite lesen sie von hier; bei jedem Schritt hochzählen)
-const MAGUS_VERSION = '0.7.7.8';
+const MAGUS_VERSION = '0.8';
 /* ---------- Darstellung: Kampfeffekt-Ton, Cursor, render, Menüs, Start- und Ergebnis-Bildschirm ---------- */
 let leadPrev = null;
 const fdSel = new Set();   // Zerrüttung: von mir gewählte Abwurfkarten (Handplätze)
@@ -4197,7 +4248,8 @@ function fxSound(f) {
   else if (f.kind === 'aggro') Snd.play('aggro');
   else if (f.kind === 'ruin') Snd.play('ruin');
   else if (f.kind === 'lifeflow') Snd.play(f.removed > 0 || !(f.heal > 0) ? 'purify' : 'heal');
-  else if (f.kind === 'mirrorcast') Snd.play('shield_hit');   // Spiegelmarker wird gelegt: Schildsound
+  else if (f.kind === 'shieldcast' || f.kind === 'trapcast') Snd.play('shield_hit');   // Schild bzw. Falle wird gelegt
+  else if (f.kind === 'manatick') Snd.play('recover');
   else if (f.kind === 'recover') Snd.play('recover');
   if (f.kind === 'lifeflow') for (let i = 0; i < Math.min(f.removed || 0, 6); i++) Snd.play('break', .15 + i * .12, .8);   // Läuterung: für jeden zerstörten Marker/Token der Splitter-Sound
 }
@@ -4253,11 +4305,16 @@ function showFx() {
   let k = 0, preMs = 0;   // preMs: Wartezeit der Verteidigungsanimation hinter einer Kombo-Animation derselben Aktion
   for (const e of G.log) {
     if (e.n <= fxLast) continue;
-    const go = f => { if (!FAST) fxSound(f); if (f.kind === 'ultimate' && (f.el === 'E' || f.el === 'W')) UltFx.play(f.el); if (f.kind === 'lifeflow') FlowFx.lifeflow(f); else if (f.kind === 'aggro') FlowFx.aggro(f); else if (f.kind === 'drain') FlowFx.drain(f); else if (f.kind === 'ruin') FlowFx.ruin(f); else if (f.kind === 'attack') FlowFx.attack(f); else if (f.kind === 'defense') FlowFx.defense(f); };
+    const go = f => { if (!FAST) fxSound(f); if (f.kind === 'ultimate' && (f.el === 'E' || f.el === 'W')) UltFx.play(f.el); if (f.kind === 'trap') TrapFx.play(f); if (f.kind === 'lifeflow') FlowFx.lifeflow(f); else if (f.kind === 'aggro') FlowFx.aggro(f); else if (f.kind === 'drain') FlowFx.drain(f); else if (f.kind === 'ruin') FlowFx.ruin(f); else if (f.kind === 'attack') FlowFx.attack(f); else if (f.kind === 'defense') FlowFx.defense(f); };
     [].concat(e.fx || []).forEach(f => {
       if (f.kind === 'healtick') {   // Heilfluss: statt einer Textzeile Wolken aus den Heilmarkern zur Lebensanzeige (seit 0.7.2.3); die HP zeigen bis zur Heilung noch den alten Stand
         const wait = FAST ? 0 : Math.round(1000 * FlowFx.wait()), fly = FlowFx.healMs(Math.max(1, Math.min(4, f.marks || 1)));
         if (!FAST) { Snd.play('heal', wait / 1000, 0.9); holdHp(f.who, wait + fly, -(f.n || 0)); setTimeout(() => FlowFx.heal(f), wait); setTimeout(() => { if (G) render(); }, 0); setTimeout(() => { if (G) render(); }, wait + fly + 60); }
+        return;
+      }
+      if (f.kind === 'manatick') {   // Manafluss: Wolke aus den Manamarkern zur Manaanzeige; das Mana zeigt bis dahin den alten Stand
+        const wait = FAST ? 0 : Math.round(1000 * FlowFx.wait());
+        if (!FAST) { Snd.play('recover', wait / 1000, 0.9); setTimeout(() => FlowFx.heal(Object.assign({ mana: true }, f)), wait); }
         return;
       }
       if (f.late) { lateN++; setTimeout(() => { lateN--; go(f); }, Math.round(1000 * FlowFx.wait()) + 150); return; }
@@ -4392,7 +4449,7 @@ function showStart(pg) {
   } else if (pg === 'settings') {
     h += '<h2>Einstellungen</h2><div class="menulist">' + settingsHTML() + back + '</div>';
   } else if (pg === 'about') {
-    h += '<p class="note intro" style="margin-top:-2px"><b>Danke, dass du Magus testest!</b> <b>Neu in Version ' + MAGUS_VERSION + ':</b> <b>KI opfert nur mit Ergebnis:</b> Der Computergegner opfert im Tempel nur noch Gold, wenn die Punkte für eine Magiestufe wirklich herauskommen. Das galt für sein Überschussgold schon (alle 504 Opfer in 200 Partien endeten direkt in einem Magiekauf); jetzt gilt es auch in der Eröffnung. <b>Version 0.7.7.7:</b> <b>KI-Tempelopfer geprüft:</b> Die KI kann ihr Überschussgold jetzt auch gesammelt für mehrere Magiestufen auf einmal opfern (ein großes Opfer ergibt mehr Punkte als mehrere kleine). Die Messung zeigt, dass das Warten schlechter abschneidet als das sofortige Opfern; der Standard bleibt deshalb unverändert. <b>Version 0.7.7.6:</b> <b>KI nachtrainiert:</b> Der Computergegner opfert überschüssiges Gold jetzt sofort für Magie (Standard 1 statt 6) und baut seine HP etwas höher aus (7 statt 6). Gegen den Pool aus früh angreifenden Gegnern gewinnt er damit deutlich häufiger. <b>Version 0.7.7.5:</b> <b>KI setzt Überschussgold ein:</b> Kann der Computergegner nichts mehr für Gold verbessern, opfert er sein Gold im Tempel für die nächste Magiestufe. Vorher blieb seine Magie auf Stufe 1, und er sammelte über 100 Gold an. <b>Version 0.7.7.4:</b> Versionsnummer im Hauptmenü korrigiert. <b>Version 0.7.7.3:</b> <b>Vorzeitiges Spielende korrigiert:</b> Das Spiel endet nach einem Showdown, wenn ein Spieler mindestens <b>4 Siegpunkte Vorsprung</b> hat (4 : 0, 5 : 1). Bei 4 : 1 geht es weiter. <b>Version 0.7.7.2:</b> Die <b>Kampfrunden</b> sind nicht mehr begrenzt. Stattdessen gibt es die <b>Erschöpfung</b>: Nach je 10 Kampfrunden steigt sie um 1, und beide Seiten verlieren am Ende ihres Angriffszugs entsprechend viele HP (Runde 11–20: 1 HP, Runde 21–30: 2 HP …). <b>Version 0.7.6.8:</b> Die Farben des <b>Multischilds</b> sind kräftiger (Rot, Gelb, Grün, Blau, Violett). <b>Version 0.7.6.7:</b> Lösen <b>zwei Schilde</b> gleichzeitig aus (Farbspiegel und Multispiegel), laufen beide Schild-Effekte nebeneinander ab statt nur einer. <b>Version 0.7.6.6:</b> <b>Vorzeitiges Spielende:</b> Wer nach einem Showdown mit 4 oder mehr Siegpunkten führt, gewinnt das Spiel sofort; bei Gleichstand geht es weiter. <b>Version 0.7.6.5:</b> Die <b>Kampfrunden</b> werden gezählt (im Kampffenster: „Runde 3 von 10“) und sind auf 10 begrenzt. Eine Runde ist ein Angriffszug jeder Seite. Ist nach der 10. Runde keiner auf 0 HP gefallen, endet der Kampf unentschieden (Monster behält seine Verletzungen, im Showdown gibt es keine Siegpunkte). Die KI greift dafür früher an. <b>Version 0.7.6.4:</b> Das <b>Opfern von Gold im Tempel</b> ist kein Zug mehr: Du bleibst am Zug, kannst mehrmals opfern und danach in derselben Runde Magie kaufen; der Nachziehmarker bleibt dabei unverändert. Unter der Magiegrafik steht jetzt, was die <b>nächste Magiestufe</b> kostet. Die KI opfert und kauft entsprechend im selben Zug. <b>Version 0.7.6.3:</b> Das <b>Abwerfen nach einer Zerrüttung</b> ist kein Zug: Es zählt nicht für den Zugzähler und lässt den Nachziehmarker unverändert. <b>Version 0.7.6.2:</b> Die <b>Heilung</b> wirkt nach dem Schaden nur noch, wenn der Verteidiger ihn überlebt: Fällt er durch den Schaden auf 0 HP, ist er besiegt und die Heilung verfällt. <b>Version 0.7.6.1:</b> Die <b>Läuterung</b> lässt sich jetzt auch in der Verteidigung wählen: Eigene Nachziehtokens und Schilde (und alle anderen Marker) sind anklickbar, und die Vorschau sagt, dass die Läuterung <i>vor</i> der Verteidigung wirkt. <b>Version 0.7.5.1:</b> Der <b>Computergegner</b> wurde an die neuen Regeln angepasst: Er opfert kein Gold mehr für Magie, bewertet Heilfluss und Multispiegel neu, entfernt mit der Läuterung gezielt eigene Todesmarker und gegnerische Heilmarker und wartet mit der Eröffnung auf den ersten besiegten Monsterkampf statt auf zufälliges Gold; Angriffs- und Schadensgewichte sind neu abgestimmt. Die Regeln bleiben gleich. <b>Version 0.7.3.3:</b> Der Siegpunktestand sitzt mittig im innersten Ring des Magie-Boards. <b>Version 0.7.3.2:</b> Versatz am Magie-Board korrigiert: Die Leucht- und Abdunkelmarken der Stufen sitzen jetzt genau auf den Edelsteinen der neuen Grafik. <b>Version 0.7.3.1:</b> Das Magie-Board (unten rechts) hat eine neue Grafik: der dreifache Ouroboros mit roten, grünen und blauen Edelsteinen. <b>Version 0.7.2.24:</b> Jeder Spieler beginnt mit 3 statt 2 Siegpunkten. <b>Version 0.7.2.23:</b> Schilde (Farbspiegel und Multispiegel), die in der Verteidigung gestellt werden, wirken erst nach ihr, wie die Heilung: nicht mehr gegen den laufenden Angriff, aber ab dem nächsten. <b>Version 0.7.2.22:</b> Die Versionsliste zeigt nur noch die Updates der aktuellen Hauptversion 0.7 (ältere Einträge entfallen). <b>Version 0.7.2.21:</b> Der Innenschatten des Multispiegels ist etwas weicher. <b>Version 0.7.2.20:</b> Der Innenschatten am Rand des Multispiegels ist kleiner und härter. <b>Version 0.7.2.19:</b> Die Teilung des Multispiegels hat keine Trennlinie, nur die schattierte rechte Hälfte. <b>Version 0.7.2.18:</b> Der Multispiegel ist mittig von oben nach unten geteilt, die rechte Hälfte ist schattiert (wie bei den anderen Schildern). <b>Version 0.7.2.17:</b> Der Multispiegel wirft vom Rand einen Schatten nach innen. <b>Version 0.7.2.16:</b> Der Schatten der Marker liegt noch dichter am Marker. <b>Version 0.7.2.15:</b> Der Multispiegel ist dunkler und passt zu den übrigen Schildern. <b>Version 0.7.2.14:</b> Die Markerreihe liegt so, dass weder markierte Handkarten noch Zähler verdeckt werden. <b>Version 0.7.2.12:</b> Todes- und Heilmarker erscheinen nur noch als ein Token mit Zähler (×N), statt mehrfach abgebildet zu werden; der Multispiegel hatte den Zähler schon. <b>Version 0.7.2.11:</b> Alle Marker (Todes-, Heil- und Schildmarker) liegen in einer lockeren Reihe mittig direkt vor den Handkarten ihres Spielers und verdecken keine Anzeigen. <b>Version 0.7.2.10:</b> Der Schatten der Marker ist näher und härter; Schildmarker sind jetzt ebenfalls Pappmarker. <b>Version 0.7.2.9:</b> Todes- und Heilmarker haben eine dezente Tiefe und wirken wie ausgestanzte Pappmarker. <b>Version 0.7.2.8:</b> Der <b>Heilfluss</b> wirkt wie der Todesfluss erst am Ende der <b>nächsten</b> eigenen Angriffsphase, nicht schon in der Phase, in der die Ultimate gelegt wurde. <b>Version 0.7.2.7:</b> Das <b>Multischild</b> heißt jetzt <b>Multispiegel</b>. <b>Version 0.7.2.6:</b> Todes- und Heilmarker liegen als Haufen mittig vor dem Stapel ihres Spielers, leicht verdreht und versetzt (Todesmarker vorn, Heilmarker in einer zweiten Reihe); der Heilmarker ist kleiner und dezenter. <b>Version 0.7.2.5:</b> Das Ritual von <b>Heilfluss</b> und <b>Multischild</b> erscheint jetzt bei jedem Wirken der Ultimate, auch wenn die Stufe nicht steigt (vorher nur bei steigender Stufe). <b>Version 0.7.2.4:</b> Das <b>Prisma</b> heißt jetzt <b>Multischild</b>. Sein Ritual beginnt mit einem Kreis, aus dem die Schildkuppel wächst; Kristall und Lichtstrahl entfallen. <b>Version 0.7.2.3:</b> Der <b>Heilfluss</b> hat jetzt auch am Ende der Angriffsphase einen Effekt: Aus jedem Heilmarker steigt eine grüne Wolke zur Lebensanzeige und heilt dort (wie die Wolke des Todesfluss). <b>Version 0.7.2.2:</b> Die Ultimates <b>Heilfluss</b> und <b>Prisma</b> haben jetzt ein eigenes Ritual auf dem Bildschirm (wie das Pentagramm des Todesfluss). Die <b>Stufen des Prisma verfallen</b> wie die eines Farbspiegels, verbraucht wird aber immer zuerst der Farbspiegel. <b>Version 0.7.2.1:</b> Keine Spieländerung: Die neue <b>Ultimate-Werkstatt</b> (Effektwerkstatt für die Kombos aus allen drei Elementen) zeigt Todesfluss, Prisma und Heilfluss als Ritual mit Markern und Wirkung; sie liegt im Projekt unter <b>werkstatt/</b>. <b>Version 0.7.1.2:</b> Umbenennung in den Kombos: Das Wasser-Ultimate heißt jetzt <b>Prisma</b> (vorher Regenbogenschild), die beiden Spiegel-Kombos heißen <b>Feuerspiegel</b> und <b>Erdspiegel</b>. <b>Version 0.7.1.1:</b> In der Kombo-Übersicht ist die Schrift größer und füllt das Fenster; die Farbgruppen (Feuer, Wasser, Erde) sind getönt und durch Abstand getrennt. <b>Version 0.7.0.3:</b> Die Kombo-Übersicht nutzt die volle Höhe ihres Fensters. <b>Version 0.7.0.2:</b> In der Kombo-Übersicht entfallen die Farbüberschriften und der Zusatz „(Ultimate)“; die Reihenfolge nach Farbe bleibt. <b>Version 0.7.0.1:</b> Die <b>Kombo-Übersicht</b> ordnet alle Kombos nach Farbe der ersten Karte; die Ultimate steht unter ihrer Farbe (Feuer <b>Todesfluss</b>, Wasser Regenbogenschild, Erde Heilfluss) und alles ist ohne Scrollen sichtbar. Der Todes-Fluch heißt jetzt Todesfluss. <b>Version 0.7:</b> <b>Ultimates nach Farbe der ersten Karte:</b> Feuer wirkt wie bisher als Todesfluss, Erde legt einen <b>Heilfluss</b> (grüne Marker mit Plus heilen dich am Ende jeder deiner Angriffsphasen), Wasser einen <b>Regenbogenschild</b> (wirkt gegen jede Farbe wie ein Spiegel, verbraucht sich aber nicht). Alle drei Marker entfernt nur die Läuterung. <b>Gold opfern</b> geht ohne Obergrenze. <b>Karten</b> lassen sich unabhängig von der entwickelten Magie kaufen. Die <b>Strafe des roten Nachziehmarkers</b> (Mana und Gold) wächst mit dem Abschnitt (1/2/3); vor dem Nachziehen warnt eine Abfrage. Der Hinweistext zur Schildwirkung entfällt.</p><div class="menulist">' + back + '</div>';
+    h += '<p class="note intro" style="margin-top:-2px"><b>Danke, dass du Magus testest!</b> <b>Neu in Version ' + MAGUS_VERSION + ':</b> <b>Blaue Kombos überarbeitet:</b> Blau + Rot legt eine <b>Falle</b> (drei Karten ziehen, eine verdeckt vor dich legen; bei Schaden aufgedeckt: passt die Farbe, werden 2/4/6 unblockbar vor der Verteidigung zurückgeworfen). Blau + Grün ist ein <b>Schild</b> (mindert nicht geblockten Schaden um 1/2/3 Ladungen). Blau + Rot + Grün ist der <b>Manafluss</b> (1/2/3 Mana am Ende deines Angriffszugs, mit neuer Animation). <b>Version 0.7.7.8:</b> <b>KI opfert nur mit Ergebnis:</b> Der Computergegner opfert im Tempel nur noch Gold, wenn die Punkte für eine Magiestufe wirklich herauskommen. Das galt für sein Überschussgold schon (alle 504 Opfer in 200 Partien endeten direkt in einem Magiekauf); jetzt gilt es auch in der Eröffnung. <b>Version 0.7.7.7:</b> <b>KI-Tempelopfer geprüft:</b> Die KI kann ihr Überschussgold jetzt auch gesammelt für mehrere Magiestufen auf einmal opfern (ein großes Opfer ergibt mehr Punkte als mehrere kleine). Die Messung zeigt, dass das Warten schlechter abschneidet als das sofortige Opfern; der Standard bleibt deshalb unverändert. <b>Version 0.7.7.6:</b> <b>KI nachtrainiert:</b> Der Computergegner opfert überschüssiges Gold jetzt sofort für Magie (Standard 1 statt 6) und baut seine HP etwas höher aus (7 statt 6). Gegen den Pool aus früh angreifenden Gegnern gewinnt er damit deutlich häufiger. <b>Version 0.7.7.5:</b> <b>KI setzt Überschussgold ein:</b> Kann der Computergegner nichts mehr für Gold verbessern, opfert er sein Gold im Tempel für die nächste Magiestufe. Vorher blieb seine Magie auf Stufe 1, und er sammelte über 100 Gold an. <b>Version 0.7.7.4:</b> Versionsnummer im Hauptmenü korrigiert. <b>Version 0.7.7.3:</b> <b>Vorzeitiges Spielende korrigiert:</b> Das Spiel endet nach einem Showdown, wenn ein Spieler mindestens <b>4 Siegpunkte Vorsprung</b> hat (4 : 0, 5 : 1). Bei 4 : 1 geht es weiter. <b>Version 0.7.7.2:</b> Die <b>Kampfrunden</b> sind nicht mehr begrenzt. Stattdessen gibt es die <b>Erschöpfung</b>: Nach je 10 Kampfrunden steigt sie um 1, und beide Seiten verlieren am Ende ihres Angriffszugs entsprechend viele HP (Runde 11–20: 1 HP, Runde 21–30: 2 HP …). <b>Version 0.7.6.8:</b> Die Farben des <b>Multischilds</b> sind kräftiger (Rot, Gelb, Grün, Blau, Violett). <b>Version 0.7.6.7:</b> Lösen <b>zwei Schilde</b> gleichzeitig aus (Farbspiegel und Multispiegel), laufen beide Schild-Effekte nebeneinander ab statt nur einer. <b>Version 0.7.6.6:</b> <b>Vorzeitiges Spielende:</b> Wer nach einem Showdown mit 4 oder mehr Siegpunkten führt, gewinnt das Spiel sofort; bei Gleichstand geht es weiter. <b>Version 0.7.6.5:</b> Die <b>Kampfrunden</b> werden gezählt (im Kampffenster: „Runde 3 von 10“) und sind auf 10 begrenzt. Eine Runde ist ein Angriffszug jeder Seite. Ist nach der 10. Runde keiner auf 0 HP gefallen, endet der Kampf unentschieden (Monster behält seine Verletzungen, im Showdown gibt es keine Siegpunkte). Die KI greift dafür früher an. <b>Version 0.7.6.4:</b> Das <b>Opfern von Gold im Tempel</b> ist kein Zug mehr: Du bleibst am Zug, kannst mehrmals opfern und danach in derselben Runde Magie kaufen; der Nachziehmarker bleibt dabei unverändert. Unter der Magiegrafik steht jetzt, was die <b>nächste Magiestufe</b> kostet. Die KI opfert und kauft entsprechend im selben Zug. <b>Version 0.7.6.3:</b> Das <b>Abwerfen nach einer Zerrüttung</b> ist kein Zug: Es zählt nicht für den Zugzähler und lässt den Nachziehmarker unverändert. <b>Version 0.7.6.2:</b> Die <b>Heilung</b> wirkt nach dem Schaden nur noch, wenn der Verteidiger ihn überlebt: Fällt er durch den Schaden auf 0 HP, ist er besiegt und die Heilung verfällt. <b>Version 0.7.6.1:</b> Die <b>Läuterung</b> lässt sich jetzt auch in der Verteidigung wählen: Eigene Nachziehtokens und Schilde (und alle anderen Marker) sind anklickbar, und die Vorschau sagt, dass die Läuterung <i>vor</i> der Verteidigung wirkt. <b>Version 0.7.5.1:</b> Der <b>Computergegner</b> wurde an die neuen Regeln angepasst: Er opfert kein Gold mehr für Magie, bewertet Heilfluss und Multispiegel neu, entfernt mit der Läuterung gezielt eigene Todesmarker und gegnerische Heilmarker und wartet mit der Eröffnung auf den ersten besiegten Monsterkampf statt auf zufälliges Gold; Angriffs- und Schadensgewichte sind neu abgestimmt. Die Regeln bleiben gleich. <b>Version 0.7.3.3:</b> Der Siegpunktestand sitzt mittig im innersten Ring des Magie-Boards. <b>Version 0.7.3.2:</b> Versatz am Magie-Board korrigiert: Die Leucht- und Abdunkelmarken der Stufen sitzen jetzt genau auf den Edelsteinen der neuen Grafik. <b>Version 0.7.3.1:</b> Das Magie-Board (unten rechts) hat eine neue Grafik: der dreifache Ouroboros mit roten, grünen und blauen Edelsteinen. <b>Version 0.7.2.24:</b> Jeder Spieler beginnt mit 3 statt 2 Siegpunkten. <b>Version 0.7.2.23:</b> Schilde (Farbspiegel und Multispiegel), die in der Verteidigung gestellt werden, wirken erst nach ihr, wie die Heilung: nicht mehr gegen den laufenden Angriff, aber ab dem nächsten. <b>Version 0.7.2.22:</b> Die Versionsliste zeigt nur noch die Updates der aktuellen Hauptversion 0.7 (ältere Einträge entfallen). <b>Version 0.7.2.21:</b> Der Innenschatten des Multispiegels ist etwas weicher. <b>Version 0.7.2.20:</b> Der Innenschatten am Rand des Multispiegels ist kleiner und härter. <b>Version 0.7.2.19:</b> Die Teilung des Multispiegels hat keine Trennlinie, nur die schattierte rechte Hälfte. <b>Version 0.7.2.18:</b> Der Multispiegel ist mittig von oben nach unten geteilt, die rechte Hälfte ist schattiert (wie bei den anderen Schildern). <b>Version 0.7.2.17:</b> Der Multispiegel wirft vom Rand einen Schatten nach innen. <b>Version 0.7.2.16:</b> Der Schatten der Marker liegt noch dichter am Marker. <b>Version 0.7.2.15:</b> Der Multispiegel ist dunkler und passt zu den übrigen Schildern. <b>Version 0.7.2.14:</b> Die Markerreihe liegt so, dass weder markierte Handkarten noch Zähler verdeckt werden. <b>Version 0.7.2.12:</b> Todes- und Heilmarker erscheinen nur noch als ein Token mit Zähler (×N), statt mehrfach abgebildet zu werden; der Multispiegel hatte den Zähler schon. <b>Version 0.7.2.11:</b> Alle Marker (Todes-, Heil- und Schildmarker) liegen in einer lockeren Reihe mittig direkt vor den Handkarten ihres Spielers und verdecken keine Anzeigen. <b>Version 0.7.2.10:</b> Der Schatten der Marker ist näher und härter; Schildmarker sind jetzt ebenfalls Pappmarker. <b>Version 0.7.2.9:</b> Todes- und Heilmarker haben eine dezente Tiefe und wirken wie ausgestanzte Pappmarker. <b>Version 0.7.2.8:</b> Der <b>Heilfluss</b> wirkt wie der Todesfluss erst am Ende der <b>nächsten</b> eigenen Angriffsphase, nicht schon in der Phase, in der die Ultimate gelegt wurde. <b>Version 0.7.2.7:</b> Das <b>Multischild</b> heißt jetzt <b>Multispiegel</b>. <b>Version 0.7.2.6:</b> Todes- und Heilmarker liegen als Haufen mittig vor dem Stapel ihres Spielers, leicht verdreht und versetzt (Todesmarker vorn, Heilmarker in einer zweiten Reihe); der Heilmarker ist kleiner und dezenter. <b>Version 0.7.2.5:</b> Das Ritual von <b>Heilfluss</b> und <b>Multischild</b> erscheint jetzt bei jedem Wirken der Ultimate, auch wenn die Stufe nicht steigt (vorher nur bei steigender Stufe). <b>Version 0.7.2.4:</b> Das <b>Prisma</b> heißt jetzt <b>Multischild</b>. Sein Ritual beginnt mit einem Kreis, aus dem die Schildkuppel wächst; Kristall und Lichtstrahl entfallen. <b>Version 0.7.2.3:</b> Der <b>Heilfluss</b> hat jetzt auch am Ende der Angriffsphase einen Effekt: Aus jedem Heilmarker steigt eine grüne Wolke zur Lebensanzeige und heilt dort (wie die Wolke des Todesfluss). <b>Version 0.7.2.2:</b> Die Ultimates <b>Heilfluss</b> und <b>Prisma</b> haben jetzt ein eigenes Ritual auf dem Bildschirm (wie das Pentagramm des Todesfluss). Die <b>Stufen des Prisma verfallen</b> wie die eines Farbspiegels, verbraucht wird aber immer zuerst der Farbspiegel. <b>Version 0.7.2.1:</b> Keine Spieländerung: Die neue <b>Ultimate-Werkstatt</b> (Effektwerkstatt für die Kombos aus allen drei Elementen) zeigt Todesfluss, Prisma und Heilfluss als Ritual mit Markern und Wirkung; sie liegt im Projekt unter <b>werkstatt/</b>. <b>Version 0.7.1.2:</b> Umbenennung in den Kombos: Das Wasser-Ultimate heißt jetzt <b>Prisma</b> (vorher Regenbogenschild), die beiden Spiegel-Kombos heißen <b>Feuerspiegel</b> und <b>Erdspiegel</b>. <b>Version 0.7.1.1:</b> In der Kombo-Übersicht ist die Schrift größer und füllt das Fenster; die Farbgruppen (Feuer, Wasser, Erde) sind getönt und durch Abstand getrennt. <b>Version 0.7.0.3:</b> Die Kombo-Übersicht nutzt die volle Höhe ihres Fensters. <b>Version 0.7.0.2:</b> In der Kombo-Übersicht entfallen die Farbüberschriften und der Zusatz „(Ultimate)“; die Reihenfolge nach Farbe bleibt. <b>Version 0.7.0.1:</b> Die <b>Kombo-Übersicht</b> ordnet alle Kombos nach Farbe der ersten Karte; die Ultimate steht unter ihrer Farbe (Feuer <b>Todesfluss</b>, Wasser Regenbogenschild, Erde Heilfluss) und alles ist ohne Scrollen sichtbar. Der Todes-Fluch heißt jetzt Todesfluss. <b>Version 0.7:</b> <b>Ultimates nach Farbe der ersten Karte:</b> Feuer wirkt wie bisher als Todesfluss, Erde legt einen <b>Heilfluss</b> (grüne Marker mit Plus heilen dich am Ende jeder deiner Angriffsphasen), Wasser einen <b>Regenbogenschild</b> (wirkt gegen jede Farbe wie ein Spiegel, verbraucht sich aber nicht). Alle drei Marker entfernt nur die Läuterung. <b>Gold opfern</b> geht ohne Obergrenze. <b>Karten</b> lassen sich unabhängig von der entwickelten Magie kaufen. Die <b>Strafe des roten Nachziehmarkers</b> (Mana und Gold) wächst mit dem Abschnitt (1/2/3); vor dem Nachziehen warnt eine Abfrage. Der Hinweistext zur Schildwirkung entfällt.</p><div class="menulist">' + back + '</div>';
   } else if (pg === 'quit') {
     h += '<p class="note" style="text-align:center;font-size:19px">Danke fürs Spielen!<br>Ein Browser-Tab lässt sich vom Spiel aus nicht immer schließen. Schließe diesen Tab oder dieses Fenster einfach selbst.</p><div class="menulist">' + back + '</div>';
   }
@@ -4747,7 +4804,7 @@ function onAct(d) {
     case 'lfm': {
       const L = lfCtx(); if (!L) break;
       const k = d.k, e = d.e || '', key = e ? k + ':' + e : k, have = lfHave(L.cx, k, e), n = L.picks.filter(x => x === key).length;
-      let m = (e || /^[so][dhtr]$/.test(k)) ? (n + 1 <= Math.min(have, L.lvl) ? n + 1 : 0) : (n > +d.i ? +d.i : +d.i + 1);   // Marker mit Zähler: einen mehr, nach dem Maximum alle weg
+      let m = (e || /^[so][dhtrm]$/.test(k)) ? (n + 1 <= Math.min(have, L.lvl) ? n + 1 : 0) : (n > +d.i ? +d.i : +d.i + 1);   // Marker mit Zähler: einen mehr, nach dem Maximum alle weg
       m = Math.min(m, have, L.lvl);
       const others = L.picks.filter(x => x !== key);
       while (others.length + m > L.lvl && others.length) others.shift();   // voll: die älteste andere Wahl weicht
@@ -4764,8 +4821,10 @@ stage.addEventListener('click', e => {
   const c = e.target.closest('.card.myhand');
   if (c) {
     if (G.phase === 'combat' && G.combat.forced) {   // Zerrüttung: Abwurfkarten wählen statt markieren
-      if (!forcedMe()) { toast('Der Gegner wählt gerade seine Abwurfkarten.'); return; }
-      const sl = +c.dataset.slot, need = Math.min(G.combat.forced.n, G.players[ME].deck.hand.filter(Boolean).length);
+      const fo = G.combat.forced, trap = fo.kind === 'trap';
+      if (!forcedMe()) { toast(trap ? 'Der Gegner wählt gerade seine Falle.' : 'Der Gegner wählt gerade seine Abwurfkarten.'); return; }
+      if (trap && !fo.slots.includes(+c.dataset.slot)) { toast('Wähle eine der gerade gezogenen Karten.'); return; }
+      const sl = +c.dataset.slot, need = trap ? 1 : Math.min(fo.n, G.players[ME].deck.hand.filter(Boolean).length);
       if (fdSel.has(sl)) fdSel.delete(sl); else { if (fdSel.size >= need) fdSel.clear(); fdSel.add(sl); }
       render(); return;
     }

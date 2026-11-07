@@ -36,13 +36,13 @@ test('Läuterung zerstört gegnerische Nachziehtokens, ohne sie gutzuschreiben',
   assert.equal(me.stats.freeDraws, 0);
 });
 
-test('Läuterung entfernt auch eigene Spiegelmarker und gibt dafür ein Nachziehtoken', () => {
+test('Läuterung entfernt auch eigene Manamarker und gibt dafür ein Nachziehtoken', () => {
   const { s, me } = combatSetup(11, ['E1', 'F1']);
-  me.stats.mirrorEl = { F: 2, E: 1, W: 0 }; me.stats.mirror = 3; me.stats.freeDraws = 0;
+  me.stats.manaflow = 3; me.stats.freeDraws = 0;
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
-  assert.ok(M.apply(s, { pid: 0, type: 'lfp', pick: ['sm:F'] }).ok);
+  assert.ok(M.apply(s, { pid: 0, type: 'lfp', pick: ['sm'] }).ok);
   assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
-  assert.equal(me.stats.mirror, 2);
+  assert.equal(me.stats.manaflow, 2);
   assert.equal(me.stats.freeDraws, 1);
 });
 
@@ -57,39 +57,44 @@ test('Ultimate in der Verteidigung: alle drei Farben erlaubt, mit Feuer als erst
   assert.equal(me.stats.deathPhase, undefined, 'Der frisch gesprochene Fluch hat in dieser Phase nicht getickt (Marker verbraucht)');
 });
 
-// Spiegel: Verteidiger op mit Feuer-Spiegel der Stufe lvl, Angreifer me schlägt mit F2 zu; def = Verteidigungskarte (oder null = Erholen)
-function spiegelFall(lvl, def, att) {
+// Schild: Verteidiger op mit lvl Ladungen, Angreifer me schlägt mit F2 zu; def = Verteidigungskarte (oder null = Passen)
+function schildFall(lvl, def, att) {
   const { s, me, op } = combatSetup(11, [att || 'F2']);
   op.stats.mag = { F: 3, E: 3, W: 3 }; op.stats.limit = 3; op.stats.mana = 9; op.stats.hp = op.stats.maxHp = 9; me.stats.hp = me.stats.maxHp = 9;
-  op.stats.mirrorEl = { F: lvl, E: 0, W: 0 }; op.stats.mirror = lvl;
+  if (lvl) op.stats.rainbow = lvl;
   if (def) op.deck.hand[0] = Object.assign({}, op.deck.hand[0], { id: def });
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
   if (def) { assert.ok(M.apply(s, { pid: op.ctrl, type: 'mark', slot: 0 }).ok); assert.ok(M.apply(s, { pid: op.ctrl, type: 'defend' }).ok); }
   else assert.ok(M.apply(s, { pid: op.ctrl, type: 'pass' }).ok);
   return { me, op };
 }
-test('Spiegel reflektiert nichts, wenn genau so viel verteidigt wurde wie nötig', () => {
-  const { me, op } = spiegelFall(2, 'W2');                              // Block 2 = Schaden 2
-  assert.equal(me.stats.hp, 9); assert.equal(op.stats.hp, 9); assert.equal(op.stats.mirror, 2);
+test('Schild mindert nichts, wenn genau so viel verteidigt wurde wie nötig', () => {
+  const { me, op } = schildFall(2, 'W2');                               // Block 2 = Schaden 2
+  assert.equal(me.stats.hp, 9); assert.equal(op.stats.hp, 9); assert.equal(op.stats.rainbow, 2);
 });
-test('Spiegel gleicht fehlende Verteidigung aus und verliert dafür je eine Stufe', () => {
-  const { me, op } = spiegelFall(2, 'W1');                              // Block 1 von 2: Spiegel gleicht 1 aus
-  assert.equal(me.stats.hp, 9); assert.equal(op.stats.hp, 9); assert.equal(op.stats.mirror, 1);
+test('Schild mindert den nicht geblockten Schaden und verliert dafür je eine Ladung', () => {
+  const { me, op } = schildFall(2, 'W1');                               // Block 1 von 2: das Schild mindert 1
+  assert.equal(me.stats.hp, 9); assert.equal(op.stats.hp, 9); assert.equal(op.stats.rainbow, 1);
 });
-test('Spiegel gleicht höchstens seine Stufe aus, der Rest geht auf die HP (auch beim Passen)', () => {
-  let r = spiegelFall(3, null);                                         // Schaden 2, Stufe 3: alles ausgeglichen
-  assert.equal(r.op.stats.hp, 9); assert.equal(r.op.stats.mirror, 1); assert.equal(r.op.stats.mana, 9, 'Passen in der Verteidigung gibt kein Mana');
-  r = spiegelFall(1, null);                                             // Stufe 1: 1 ausgeglichen, 1 geht durch
-  assert.equal(r.op.stats.hp, 8); assert.equal(r.op.stats.mirror, undefined);
+test('Schild mindert höchstens seine Ladungen, der Rest geht auf die HP (auch beim Passen)', () => {
+  let r = schildFall(3, null);                                          // Schaden 2, 3 Ladungen: alles gemindert
+  assert.equal(r.op.stats.hp, 9); assert.equal(r.op.stats.rainbow, 1); assert.equal(r.op.stats.mana, 9, 'Passen in der Verteidigung gibt kein Mana');
+  r = schildFall(1, null);                                              // 1 Ladung: 1 gemindert, 1 geht durch
+  assert.equal(r.op.stats.hp, 8); assert.equal(r.op.stats.rainbow || 0, 0);
 });
-test('Spiegel wirft nur den Überschuss einer zu starken Verteidigung zurück und verliert dafür Stufen', () => {
-  const { me, op } = spiegelFall(3, 'W3');                              // Block 3, Schaden 2: Überschuss 1
-  assert.equal(me.stats.hp, 8); assert.equal(op.stats.hp, 9); assert.equal(op.stats.mirror, 2);
+test('Schild wirkt gegen jede Farbe und wirft nichts zurück', () => {
+  for (const att of ['F2', 'E2', 'W2']) {
+    const { me, op } = schildFall(2, null, att);
+    assert.equal(op.stats.hp, 9, att); assert.equal(op.stats.rainbow || 0, 0, att); assert.equal(me.stats.hp, 9, att + ': kein Rückwurf');
+  }
 });
-
-test('Rückwurf ist durch den eingehenden Schaden gedeckelt', () => {
-  const { me, op } = spiegelFall(3, 'W3', 'F1');                        // Schaden 1, Block 3 (Überschuss 2), Stufe 3: nur 1 wird zurückgeworfen
-  assert.equal(me.stats.hp, 8); assert.equal(op.stats.mirror, 2);
+test('Ein neues Schild bringt die Ladungen auf die Stufe, es addiert nicht (höchstens 3)', () => {
+  const st = {}; M.shieldAdd ? null : null;
+  const { s, me } = combatSetup(11, ['W2', 'E2']);
+  me.stats.rainbow = 1;
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
+  assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+  assert.equal(me.stats.rainbow, 2);
 });
 
 test('Monsterwerte je Stufe: Grundform ohne Würfel, mit Würfeln höchstens die Ausschläge der Seiten', () => {
@@ -295,43 +300,49 @@ test('Fliehen im Showdown: bei 0 Mana des Gegners möglich, Showdown endet ohne 
   assert.equal(s.showdown, 1);
 });
 
-test('Läuterung Stufe 3 entfernt beliebig gemischt eigene und gegnerische Spiegel- und Todesmarker', () => {
+test('Läuterung Stufe 3 entfernt beliebig gemischt eigene und gegnerische Mana-, Schild- und Todesmarker', () => {
   const { s, me, op } = combatSetup(11, ['E3', 'F3']);
-  me.stats.mirrorEl = { F: 2, E: 0, W: 0 }; me.stats.mirror = 2; me.stats.death = 1;
-  op.stats.mirrorEl = { F: 0, E: 1, W: 0 }; op.stats.mirror = 1; op.stats.death = 2; me.stats.freeDraws = 0;
+  me.stats.manaflow = 2; me.stats.death = 1;
+  op.stats.rainbow = 1; op.stats.death = 2; me.stats.freeDraws = 0;
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
-  assert.ok(M.apply(s, { pid: 0, type: 'lfp', pick: ['sm:F', 'om:E', 'od'] }).ok);
+  assert.ok(M.apply(s, { pid: 0, type: 'lfp', pick: ['sm', 'or', 'od'] }).ok);
   assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
-  assert.equal(me.stats.mirrorEl && me.stats.mirrorEl.F, 1, 'eigener Spiegel −1'); assert.equal(op.stats.mirror || 0, 0, 'gegnerischer Spiegel weg');
+  assert.equal(me.stats.manaflow, 1, 'eigener Manamarker −1'); assert.equal(op.stats.rainbow || 0, 0, 'gegnerisches Schild weg');
   assert.equal(op.stats.death, 1, 'gegnerischer Todesmarker −1'); assert.equal(me.stats.death, 1, 'eigener Todesmarker unberührt');
   assert.equal(me.stats.freeDraws, 3, 'je entferntem Marker ein Gratis-Nachziehen');
 });
 
-test('Spiegel-Kombo: Die Farben zählen getrennt, bis zu 3 Marker je Farbe (Erde 3 und Feuer 3 liegen zusammen)', () => {
-  const { s, me } = combatSetup(11, ['W2', 'F3']);
-  me.stats.mirrorEl = { F: 0, E: 3, W: 0 }; me.stats.mirror = 3;
-  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
-  assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
-  const f = M.mirrorOf(me.stats, 'F');
-  assert.ok(f > 0, 'Feuer-Spiegel kommt trotz Erde 3 dazu'); assert.ok(f <= 3, 'höchstens 3 je Farbe'); assert.equal(M.mirrorOf(me.stats, 'E'), 3, 'Erde bleibt');
-  assert.equal(me.stats.mirror, 3 + f, 'Summe beider Farben');
-  assert.ok(s.log.some(l => l.txt.includes('Spiegel ' + f + ' (Feuer, ' + (3 + f) + ' Marker)')), 'Protokoll nennt die Gesamtzahl');
+// Falle: Verteidiger op hat eine verdeckte Karte der Farbe el und Stufe lvl liegen, Angreifer me schlägt mit att zu
+function trapFall(el, lvl, att, dmgHp) {
+  const { s, me, op } = combatSetup(11, [att]);
+  op.stats.hp = op.stats.maxHp = 9; me.stats.hp = me.stats.maxHp = 9;
+  op.stats.trap = { card: { id: el + '1', uid: 9001 }, el, tier: 1, lvl };
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+  return { s, me, op, disc: op.deck.discard };
+}
+test('Falle: Passt die Farbe des Schadens, werden 2/4/6 unblockbar zurückgeworfen und der eingehende Schaden sinkt entsprechend', () => {
+  const { me, op, s } = trapFall('F', 1, 'F3');
+  assert.equal(me.stats.hp, 7, 'Stufe 1 wirft 2 zurück');
+  assert.equal(op.stats.trap, undefined, 'die Karte ist aufgedeckt und liegt nicht mehr');
+  assert.ok(op.deck.discard.some(x => x.uid === 9001), 'Karte auf dem Ablagestapel');
+  assert.ok(s.combat.pending <= 1, 'eingehender Schaden um den Rückwurf gemindert');
+  const t = trapFall('F', 3, 'F3'); assert.equal(t.me.stats.hp, 6, 'Rückwurf höchstens der eingehende Schaden (3), nicht 6');
 });
-
-test('Spiegel-Kombo: Mehr als 3 Marker je Farbe gibt es nicht', () => {
-  const { s, me } = combatSetup(11, ['W3', 'F3']);
-  me.stats.mirrorEl = { F: 2, E: 0, W: 0 }; me.stats.mirror = 2;
-  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
-  assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
-  assert.equal(M.mirrorOf(me.stats, 'F'), 3, 'auf Stufe 3 begrenzt, nicht addiert');
+test('Falle: Andere Farbe wirkt nicht, die Karte kommt trotzdem auf den Ablagestapel', () => {
+  const { me, op, disc } = trapFall('F', 3, 'W2');
+  assert.equal(me.stats.hp, 9); assert.equal(op.stats.trap, undefined); assert.ok(disc.some(x => x.uid === 9001));
 });
-
-test('Spiegel-Kombo auf leerem Brett: Marker der Farbe kommen dazu, Protokoll wie bisher', () => {
-  const { s, me } = combatSetup(11, ['W2', 'F3']);
+test('Falle: Die Stufe 2 wirft 4 zurück, gedeckelt durch den Schaden', () => {
+  assert.equal(trapFall('F', 2, 'F3').me.stats.hp, 6);   // Schaden 3, Rückwurf min(4, 3) = 3
+  assert.equal(trapFall('F', 2, 'F1').me.stats.hp, 8);   // Schaden 1
+});
+test('Falle legen: Blau + Rot zieht bis zu drei Karten, eine davon liegt verdeckt vor mir und ist kein Marker', () => {
+  const { s, me, c } = combatSetup(11, ['W2', 'F2']);
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
   assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
-  const f = M.mirrorOf(me.stats, 'F'); assert.ok(f > 0, 'Feuer-Spiegel liegt');
-  assert.ok(s.log.some(l => l.txt.includes('Spiegel ' + f + ' (Feuer, ' + f + ' Marker)')), 'bekannter Protokolltext');
+  if (c.forced && c.forced.kind === 'trap') { assert.ok(c.forced.slots.length >= 2 && c.forced.slots.length <= 3); assert.ok(M.apply(s, { pid: 0, type: 'fd', slots: [c.forced.slots[0]] }).ok); }
+  assert.ok(me.stats.trap, 'Falle liegt'); assert.equal(me.stats.trap.lvl, 2);
+  assert.equal(JSON.stringify(me.deck.marks), '[]');
 });
 
 test('Nachziehmarker Weltphase: Nachziehen bei rotem Marker gibt dem Gegner 1 Gold, jede andere Aktion stellt auf grün zurück', () => {
@@ -378,17 +389,14 @@ test('Nachziehmarker Kampf: bei rotem Marker ohne Mana ist Nachziehen nicht mög
   assert.ok(M.apply(s, { pid: 0, type: 'recover' }).ok, 'Erholen bleibt möglich');
 });
 
-test('KI-Läuterung entfernt Spiegel des Gegners nach Farbe: zuerst die Farbe, mit der sie selbst am stärksten angreift (Standard lfColor 1)', () => {
-  for (const [params, want] of [[null, ['om:E', 'om:F']], [{ lfColor: 0 }, ['om', 'om']]]) {
-    const { s, c, me, op } = combatSetup(11, ['E3', 'F3']);
-    me.deck.draw = Array.from({ length: 8 }, () => ({ id: 'E2' })); me.deck.discard = [];
-    op.stats.mirrorEl = { F: 1, E: 1, W: 0 }; op.stats.mirror = 2;
-    if (params) AI.setParams(0, Object.assign({}, params));
-    const acts = AI.plan(s, 0); AI.setParams(0, null);
-    const lf = acts.find(a => a.type === 'lfp');
-    assert.ok(lf, 'KI wählt die Läuterung: ' + acts.map(a => a.type).join(','));
-    assert.deepEqual(lf.pick, want, JSON.stringify(params));
-  }
+test('KI-Läuterung entfernt zuerst das Schild, dann die Manamarker des Gegners', () => {
+  const { s, c, me, op } = combatSetup(11, ['E3', 'F3']);
+  me.deck.draw = Array.from({ length: 8 }, () => ({ id: 'E2' })); me.deck.discard = [];
+  op.stats.rainbow = 1; op.stats.manaflow = 1;
+  const acts = AI.plan(s, 0);
+  const lf = acts.find(a => a.type === 'lfp');
+  assert.ok(lf, 'KI wählt die Läuterung: ' + acts.map(a => a.type).join(','));
+  assert.deepEqual(lf.pick, ['or', 'om']);
 });
 
 test('KI meidet Nachziehen bei rotem Nachziehmarker (Weltphase: Gold opfern statt dem Gegner Gold schenken; Kampf: kein Nachziehen)', () => {
@@ -563,7 +571,9 @@ test('Kombo mit mehreren Karten der zweiten Farbe: F2, W1, W1 ergibt Zerrüttung
   const st = { mag: { F: 3, E: 3, W: 3 }, mana: 9 }, ev = ids => M.evalAttack(st, ids.map(id => Object.assign({ id }, M.parseCard(id))));
   assert.deepEqual([ev(['F2', 'W1', 'W1']).ord.key, ev(['F2', 'W1', 'W1']).ord.lvl], ['rm', 2]);
   assert.equal(ev(['F2', 'W1']).ord.lvl, 1);
-  assert.deepEqual([ev(['W1', 'F2', 'W1']).ord.key, ev(['W1', 'F2', 'W1']).ord.lvl], ['bm', 2]);   // andere erste Farbe: Spiegel, ebenfalls Stufe 2
+  assert.deepEqual([ev(['W1', 'F2', 'F1']).ord.key, ev(['W1', 'F2', 'F1']).ord.lvl], ['wt', 1]);   // andere erste Farbe: Falle (Blau + Rot), Stufe = Minimum der Farbsummen
+  assert.deepEqual([ev(['W2', 'F1', 'F1']).ord.key, ev(['W2', 'F1', 'F1']).ord.lvl], ['wt', 2]);
+  assert.deepEqual([ev(['W1', 'E1', 'E1']).ord.key, ev(['W1', 'E1', 'E1']).ord.lvl], ['ws', 1]);   // Blau + Grün: Schild
   assert.equal(ev(['F1', 'F1', 'E2']).ord.lvl, 2); assert.equal(ev(['F1', 'F1', 'E1']).ord.lvl, 1);
 });
 
@@ -723,14 +733,14 @@ test('Läuterung in der Verteidigung: Wahl per lfp (eigener Spiegelmarker, eigen
   assert.equal(s.combat.lfp, null, 'die Wahl gilt nur für diese Verteidigung');
 });
 
-test('Schilde der Verteidigung wirken erst nach ihr (wie die Heilung, seit 0.7.2.23)', () => {
-  const { s, c, me } = combatSetup(11, ['W3', 'F3']);   // Wasser verteidigt gegen Feuer, Feuer als Kombokarte: roter Spiegel 3
+test('Schild der Verteidigung wirkt erst nach ihr (wie die Heilung, seit 0.7.2.23; Schild seit 0.8)', () => {
+  const { s, c, me } = combatSetup(11, ['W3', 'E3']);   // Wasser verteidigt gegen Feuer, Grün als Kombokarte: Schild 3
   me.stats.hp = 9; c.turn = 'a'; c.action = 'defense'; c.color = 'F'; c.pending = 5;
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
   const pv = M.previewDefense(s, false);
   assert.ok(M.apply(s, { pid: 0, type: 'defend' }).ok);
-  assert.equal(me.stats.hp, 7, 'Block 3, der neue Spiegel gleicht die fehlenden 2 noch nicht aus');
-  assert.equal(M.mirrorOf(me.stats, 'F'), 3, 'der Spiegel steht danach mit voller Stufe');
+  assert.equal(me.stats.hp, 7, 'Block 3, das neue Schild mindert die fehlenden 2 noch nicht');
+  assert.equal(me.stats.rainbow, 3, 'das Schild steht danach mit voller Ladung');
   assert.equal(pv.hpAfter, 7, 'Vorschau stimmt');
 });
 
@@ -806,15 +816,27 @@ test('Ultimate im Angriff nach Farbe der ersten Karte: Erde legt Heilmarker, der
   assert.equal(me.stats.hp, hp0 + 2, 'Heilfluss: +2 HP am Ende der nächsten eigenen Angriffsphase');
 });
 
-test('Ultimate im Angriff: Wasser legt ein Multispiegel der Stufe S bei mir', () => {
+test('Ultimate im Angriff: Wasser legt Manamarker der Stufe S bei mir', () => {
   const { s, me, op } = combatSetup(11, ['W2', 'F2', 'E2']);
   [0, 1, 2].forEach(i => assert.ok(M.apply(s, { pid: 0, type: 'mark', slot: i }).ok));
   assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
-  assert.equal(me.stats.rainbow, 2); assert.equal(op.stats.death || 0, 0);
+  assert.equal(me.stats.manaflow, 2); assert.equal(op.stats.death || 0, 0);
 });
 
-test('Ultimate in der Verteidigung: Erde legt Heilmarker, Wasser ein Multispiegel (jeweils beim Verteidiger)', () => {
-  for (const [att, def, key] of [['E1', ['E3', 'W2', 'F2'], 'heal'], ['F1', ['W2', 'F3', 'E2'], 'rainbow']]) {
+test('Manafluss: am Ende der eigenen Angriffsphase +S Mana (höchstens bis zum Maximum), nur Marker, die zu Beginn der Phase lagen', () => {
+  const { s, me, op } = combatSetup(11, ['F1']);
+  me.stats.manaflow = 2; me.stats.mana = 4; me.stats.maxMana = 9; op.stats.hp = op.stats.maxHp = 9;
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+  assert.ok(M.apply(s, { pid: op.ctrl, type: 'pass' }).ok);
+  assert.equal(me.stats.mana, 4 - 1 + 2, 'Angriff kostet 1, der Manafluss bringt 2');
+  const t = combatSetup(11, ['F1']); t.me.stats.manaflow = 3; t.me.stats.mana = 9; t.me.stats.maxMana = 9;
+  M.apply(t.s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(t.s, { pid: 0, type: 'attack' }).ok);
+  assert.ok(M.apply(t.s, { pid: t.op.ctrl, type: 'pass' }).ok);
+  assert.equal(t.me.stats.mana, 9, 'nicht über das Maximum');
+});
+
+test('Ultimate in der Verteidigung: Erde legt Heilmarker, Wasser Manamarker (jeweils beim Verteidiger)', () => {
+  for (const [att, def, key] of [['E1', ['E3', 'W2', 'F2'], 'heal'], ['F1', ['W2', 'F3', 'E2'], 'manaflow']]) {
     const { s, me, op } = combatSetup(11, [att]);
     op.stats.limit = 3; op.stats.mana = 9;
     op.deck.hand.forEach((x, i) => { if (x) op.deck.hand[i] = Object.assign({}, x, { id: def[i] || x.id }); });
@@ -825,7 +847,7 @@ test('Ultimate in der Verteidigung: Erde legt Heilmarker, Wasser ein Multispiege
   }
 });
 
-test('Multispiegel wirkt gegen jede Farbe und verliert dabei Stufen wie ein Spiegel (seit 0.7.2.2)', () => {
+test('Schild wirkt gegen jede Farbe und verliert dabei Ladungen (seit 0.7.2.2, Ladungen seit 0.8)', () => {
   for (const att of ['F2', 'E2', 'W2']) {
     const { s, op } = combatSetup(11, [att]);
     op.stats.rainbow = 2; op.stats.hp = op.stats.maxHp = 9;
@@ -835,23 +857,6 @@ test('Multispiegel wirkt gegen jede Farbe und verliert dabei Stufen wie ein Spie
   }
 });
 
-test('Standardschilde werden vor dem Multispiegel verbraucht (0.7.2.2)', () => {
-  // Feuerangriff F2 ohne Verteidigung: Der Schild gleicht bis zu seiner Stufe (hier 2, der höhere von Feuerspiegel 1 und Multispiegel 2) aus; der Feuerspiegel gibt seine eine Stufe zuerst her, der Rest kommt vom Multispiegel
-  const { s, op } = combatSetup(11, ['F2']);
-  op.stats.mirrorEl = { F: 1, E: 0, W: 0 }; op.stats.mirror = 1; op.stats.rainbow = 2; op.stats.hp = op.stats.maxHp = 9;
-  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
-  const pv = M.previewDefense(s, true);
-  assert.equal(pv.lostStd, 1, 'Vorschau: erst der Farbspiegel'); assert.equal(pv.lostRb, pv.used - 1, 'Vorschau: der Rest vom Multispiegel');
-  assert.ok(M.apply(s, { pid: op.ctrl, type: 'pass' }).ok);
-  assert.equal(op.stats.mirror || 0, 0, 'Farbspiegel aufgebraucht'); assert.equal(op.stats.rainbow, 2 - pv.lostRb, 'Multispiegel verliert nur den Rest');
-  assert.equal(op.stats.hp, 9 - pv.leftover);
-  // ein höherer Farbspiegel deckt alles allein: das Multispiegel bleibt unberührt
-  const t = combatSetup(11, ['F2']);
-  t.op.stats.mirrorEl = { F: 3, E: 0, W: 0 }; t.op.stats.mirror = 3; t.op.stats.rainbow = 1; t.op.stats.hp = t.op.stats.maxHp = 9;
-  M.apply(t.s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(t.s, { pid: 0, type: 'attack' }).ok);
-  assert.ok(M.apply(t.s, { pid: t.op.ctrl, type: 'pass' }).ok);
-  assert.equal(t.op.stats.rainbow, 1, 'Multispiegel unberührt'); assert.ok((t.op.stats.mirror || 0) < 3, 'der Farbspiegel hat Stufen verloren');
-});
 
 test('Läuterung entfernt Heilmarker und Prismen des Gegners', () => {
   const { s, me, op } = combatSetup(11, ['E3', 'F3']);
@@ -1002,17 +1007,6 @@ test('Vorzeitiges Ende: bei 4 : 1 (Vorsprung 3) geht es weiter, bei 5 : 1 und 4 
   const r40 = play([3, 1], [4, 0]); assert.ok(r40.s.over && r40.s.winner === r40.w, '4 : 0 (Vorsprung 4): Spielende');
 });
 
-test('Zwei Schilde lösen aus: Farbspiegel und Multispiegel liefern beide einen Schild-Effekt (mirror, mirror2), Aufteilung stimmt (0.7.6.7)', () => {
-  const { s, c, me } = combatSetup(11, ['W1']);
-  me.stats.mirrorEl = { F: 1, E: 0, W: 0 }; me.stats.mirror = 1; me.stats.rainbow = 3;
-  c.turn = 'a'; c.action = 'defense'; c.color = 'F'; c.pending = 3;   // keine Verteidigung: 3 fehlen, der Schild der Stufe 3 gleicht aus: 1 vom Farbspiegel, 2 vom Multispiegel
-  assert.ok(M.apply(s, { pid: 0, type: 'pass' }).ok);
-  const fx = s.log.find(l => /verliert 0 HP|verliert \d+ HP/.test(l.txt) && l.fx && l.fx.mirror).fx;
-  assert.ok(fx.mirror && fx.mirror2, 'beide Effekte');
-  assert.equal(fx.mirror.elem, 'F'); assert.equal(fx.mirror.broken, 1); assert.equal(fx.mirror2.elem, 'R'); assert.equal(fx.mirror2.broken, 2);
-  assert.equal(fx.mirror.abs + fx.mirror2.abs, 3, 'ausgeglichene Geschosse verteilen sich auf beide');
-  assert.equal(me.stats.rainbow, 1, 'Multispiegel Stufe 3 − 2'); assert.equal(me.stats.mirror || 0, 0);
-});
 
 test('Versionsnummer: eine Konstante (MAGUS_VERSION) speist Menü-Link und Über-Seite, das Regelwerk hat einen Eintrag dazu (0.7.7.4)', () => {
   const fs = require('fs'), path = require('path');

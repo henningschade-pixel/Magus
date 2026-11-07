@@ -1,4 +1,4 @@
-/* ---------- Ultimate-Rituale für Heilfluss (Erde) und Multispiegel (Wasser), aus der Ultimate-Werkstatt (seit 0.7.2.2): mittig auf dem Bildschirm, wie das Pentagramm des Todesfluss (20-todesfluch.js). Die Marker und ihre Wirkung zeigt das Spiel selbst. ---------- */
+/* ---------- Ultimate-Rituale für Heilfluss (Erde) und Manafluss (Wasser, seit 0.8; bis 0.7.7 Multispiegel), aus der Ultimate-Werkstatt (seit 0.7.2.2): mittig auf dem Bildschirm, wie das Pentagramm des Todesfluss (20-todesfluch.js). Die Marker und ihre Wirkung zeigt das Spiel selbst. ---------- */
 const UltFx = (() => {
   const BIG = 3000, clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x)), lerp = (a, b, t) => a + (b - a) * t, seg = (u, a, b) => clamp((u - a) / (b - a));
   const eo = x => 1 - Math.pow(1 - x, 3), eio = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
@@ -10,7 +10,7 @@ const UltFx = (() => {
   // Werte der Ultimate-Werkstatt (Standard)
   const P = { dur: 4, size: 1.2, dark: .55, flash: 1, shake: .5, particles: 50, seed: 3,
     hColor: '#93c24f', hRings: 2, hVines: 6, hVineH: 1, hPlus: 1, hLight: .7, hPulse: 3, hGlow: 14,
-    pColor: '#52a6f5', pRainbow: .6, pDome: 1, pFacets: 6, pShimmer: 1, pGlints: 16, pGlow: 12 };
+    mColor: '#52a6f5', mRings: 2, mStar: 8, mCrystal: 1, mPulse: 3, mGlow: 14 };
   function glowLine(ctx,col,w,glow,alpha,draw){
     ctx.save();ctx.lineCap='round';ctx.lineJoin='round';
     ctx.shadowColor=col;ctx.shadowBlur=glow;ctx.strokeStyle=rgba(col,alpha*.8);ctx.lineWidth=w*1.8;ctx.beginPath();draw();ctx.stroke();
@@ -60,64 +60,46 @@ const UltFx = (() => {
     if(fl>0){ctx.fillStyle=rgba(lighten(col,.8),fl*.42);ctx.fillRect(-BIG,-BIG,2*BIG,2*BIG)}
   }
   
-  /* ---------- Multispiegel (Wasser): erst bildet sich ein Kreis am Boden, aus ihm wächst die Schildkuppel (seit 0.7.2.4; vorher Prisma mit Kristall und Lichtstrahl) ---------- */
-  const prismCols=p=>[mix(p.pColor,EL.F,p.pRainbow),mix(p.pColor,EL.E,p.pRainbow),mix(p.pColor,EL.W,p.pRainbow)];
-  function domeGeom(p){const rx=165*p.size*p.pDome*.95;return{c:{x:C.x,y:C.y+78},rx,ry:rx*.85}}
-  function fxPrism(ctx,p,t,D,u){
-    const gl=p.pGlow,cols=prismCols(p),dg=domeGeom(p),pc=p.pColor,{c,rx}=dg,rz=rx*.28;
-    const cf=eio(seg(u,.04,.38)),dp=eio(seg(u,.42,.74)),out=1-eio(seg(u,.9,.99));
-    vignette(ctx,p.dark*eo(seg(u,0,.12))*(1-seg(u,.95,1)),c.x,c.y-40);
-    const ry=dg.ry*dp;
-    if(out>0){
-      ctx.save();ctx.globalAlpha=out;
-      // Kreis: Ring zeichnet sich um die Mitte, innerer Gegenring, Rastmarken in den drei Farben, Drehung
-      if(cf>0){
-        const lg=ctx.createLinearGradient(c.x-rx,0,c.x+rx,0);lg.addColorStop(0,cols[0]);lg.addColorStop(.5,cols[1]);lg.addColorStop(1,cols[2]);
-        const a0=-Math.PI/2+t*.5,sw=Math.PI*2*cf;
-        ctx.save();ctx.lineCap='round';ctx.shadowColor=cols[1];ctx.shadowBlur=gl;ctx.strokeStyle=lg;ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(c.x,c.y,rx,rz,0,a0,a0+sw);ctx.stroke();
-        ctx.shadowBlur=gl*.5;ctx.strokeStyle=rgba(lighten(pc,.5),.7);ctx.lineWidth=1.8;ctx.beginPath();ctx.ellipse(c.x,c.y,rx*.84,rz*.84,0,a0+Math.PI,a0+Math.PI-sw*.9,true);ctx.stroke();ctx.restore();
-        const nT=12;
-        for(let i=0;i<nT;i++){const th=a0+i/nT*Math.PI*2-t*1.0,vis=cf>(i/nT)?1:0;if(!vis)continue;
-          const x1=c.x+Math.cos(th)*rx*.84,y1=c.y+Math.sin(th)*rz*.84,x2=c.x+Math.cos(th)*rx,y2=c.y+Math.sin(th)*rz;
-          ctx.strokeStyle=rgba(lighten(cols[i%3],.4),.8);ctx.lineWidth=2.2;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
-          star4(ctx,c.x+Math.cos(th)*rx*.92,c.y+Math.sin(th)*rz*.92,4+2*Math.sin(t*3+i),cols[i%3],.85)}
-        const gf=ctx.createRadialGradient(c.x,c.y,rx*.1,c.x,c.y,rx);gf.addColorStop(0,rgba(pc,0));gf.addColorStop(1,rgba(pc,.2*cf));
-        ctx.fillStyle=gf;ctx.beginPath();ctx.ellipse(c.x,c.y,rx,rz,0,0,7);ctx.fill();
-      }
-      // Kuppel: wächst aus dem Kreis nach oben (Höhe = dp)
-      if(dp>0){
-        const fillg=ctx.createRadialGradient(c.x,c.y-ry*.45,rx*.1,c.x,c.y-ry*.3,rx*1.05);fillg.addColorStop(0,rgba(lighten(pc,.6),.04*dp));fillg.addColorStop(1,rgba(pc,.26*dp));
-        ctx.fillStyle=fillg;ctx.beginPath();ctx.ellipse(c.x,c.y,rx,ry,0,Math.PI,Math.PI*2);ctx.ellipse(c.x,c.y,rx,rz,0,0,Math.PI);ctx.closePath();ctx.fill();
-        const lg2=ctx.createLinearGradient(c.x-rx,0,c.x+rx,0);lg2.addColorStop(0,cols[0]);lg2.addColorStop(.5,cols[1]);lg2.addColorStop(1,cols[2]);
-        ctx.save();ctx.lineCap='round';ctx.shadowColor=cols[1];ctx.shadowBlur=gl;ctx.strokeStyle=lg2;ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(c.x,c.y,rx,ry,0,Math.PI,Math.PI*2);ctx.stroke();ctx.restore();
-        const nF=Math.round(p.pFacets),fa=seg(u,.6,.78);
-        if(nF>1&&fa>0){
-          ctx.strokeStyle=rgba(lighten(pc,.65),.3*fa);ctx.lineWidth=1.2;
-          for(let i=1;i<nF;i++){const th=Math.PI+i/nF*Math.PI,bx=c.x+rx*Math.cos(th);ctx.beginPath();ctx.moveTo(bx,c.y);ctx.quadraticCurveTo(c.x+(bx-c.x)*.92,c.y-ry*.7,c.x,c.y-ry);ctx.stroke()}
-          [.35,.7].forEach(h=>{const rxh=rx*Math.sqrt(1-h*h);ctx.beginPath();ctx.ellipse(c.x,c.y-ry*h,rxh,rxh*.28,0,0,Math.PI);ctx.stroke()});
-        }
-        const sh=seg(u,.74,.92);
-        if(sh>0&&sh<1&&p.pShimmer>0){
-          ctx.save();ctx.beginPath();ctx.ellipse(c.x,c.y,rx,ry,0,Math.PI,Math.PI*2);ctx.ellipse(c.x,c.y,rx,rz,0,0,Math.PI);ctx.closePath();ctx.clip();
-          const bx=lerp(c.x-rx*1.3,c.x+rx*1.3,eio(sh)),sg=ctx.createLinearGradient(bx-60,0,bx+60,0);sg.addColorStop(0,'rgba(255,255,255,0)');sg.addColorStop(.5,'rgba(255,255,255,'+(.5*Math.sin(Math.PI*sh)*Math.min(1,p.pShimmer))+')');sg.addColorStop(1,'rgba(255,255,255,0)');
-          ctx.fillStyle=sg;ctx.fillRect(c.x-rx,c.y-ry,2*rx,ry+rz);ctx.restore();
-        }
-        const nG=Math.round(p.pGlints),gr=rng(p.seed+21);
-        for(let i=0;i<nG;i++){const an=Math.PI+gr()*Math.PI,rd=Math.sqrt(gr())*.95,ph=gr()*6,sp=2+gr()*3,x=c.x+Math.cos(an)*rx*rd,y=c.y+Math.sin(an)*ry*rd*.9,tw=Math.max(0,Math.sin(t*sp+ph));
-          if(tw>0)star4(ctx,x,y,3+5*tw,i%3===0?'#ffffff':cols[i%3],tw*dp*.9)}
-      }
-      ctx.restore();
-    }
-    // Funken steigen aus dem Kreis auf, solange die Kuppel wächst
-    const nP=Math.round(p.particles*.6),pa=seg(u,.3,.5)*(1-seg(u,.8,.95));
-    if(nP>0&&pa>0){const pr2=rng(p.seed+23);ctx.save();ctx.globalCompositeOperation='lighter';
-      for(let i=0;i<nP;i++){const r1=pr2(),r2=pr2(),r3=pr2(),ph=(r1+t*(.15+.3*r2)/(D/3))%1,an=r2*Math.PI*2,x=c.x+Math.cos(an)*rx*(.4+.55*r3),y=c.y+Math.sin(an)*rz*(.4+.55*r3)-ph*dg.ry*(.6+.6*r3);ctx.fillStyle=rgba(lighten(cols[i%3],.5),Math.sin(Math.PI*ph)*pa*.8);ctx.beginPath();ctx.arc(x,y,1+r3*1.8,0,7);ctx.fill()}ctx.restore()}
-    const fl=p.flash*(seg(u,.4,.44)*(1-seg(u,.44,.54))*.3+seg(u,.9,.93)*(1-seg(u,.93,.99))*.5);
-    if(fl>0){ctx.fillStyle=rgba(lighten(pc,.85),fl*.45);ctx.fillRect(-BIG,-BIG,2*BIG,2*BIG)}
+  /* ---------- Manafluss (Wasser, seit 0.8): blauer Ring mit Achtstern am Boden, Manafunken ziehen spiralförmig zur Mitte und verdichten sich zu einem schwebenden Kristall; Pulse, dann stieben die Funken auseinander ---------- */
+  function fxMana(ctx,p,t,D,u){
+    const col=p.mColor,S=p.size,R=150*S,tilt=.42,Cc={x:C.x,y:C.y+30},gl=p.mGlow,top=-Math.PI/2,Lt=lighten(col,.6);
+    const fin=1-seg(u,.93,1),flick=1-.22*(.5+.5*Math.sin(t*21+Math.sin(t*6)*2)),inten=fin*flick;
+    vignette(ctx,p.dark*.75*eo(seg(u,0,.12))*(1-seg(u,.95,1)),Cc.x,Cc.y);
+    ctx.save();ctx.translate(Cc.x,Cc.y);ctx.scale(1,tilt);   // Boden
+    const fg=ctx.createRadialGradient(0,0,0,0,0,R*1.2);fg.addColorStop(0,rgba(col,.36*seg(u,.08,.45)*inten));fg.addColorStop(1,rgba(col,0));ctx.fillStyle=fg;ctx.beginPath();ctx.arc(0,0,R*1.25,0,7);ctx.fill();
+    for(let i=0;i<Math.round(p.mRings);i++){const rf=[1,.78,.58][i],pr=eio(seg(u,.03+i*.06,.2+i*.06));if(pr>0)glowLine(ctx,col,2.4*(i?.75:1),gl,inten,()=>ctx.arc(0,0,R*rf,top,top+Math.PI*2*pr))}
+    const n=Math.max(5,Math.round(p.mStar)),sp=eio(seg(u,.12,.44)),rs=R*.9;   // Achtstern: jede dritte Ecke verbunden, zeichnet sich der Reihe nach
+    if(sp>0){const tot=n*sp,full=Math.floor(tot),rest=tot-full,v=k=>{const a=top+((k*3)%n)/n*Math.PI*2+t*.12;return[Math.cos(a)*rs,Math.sin(a)*rs]};
+      glowLine(ctx,col,2,gl*.8,inten*.95,()=>{const a0=v(0);ctx.moveTo(a0[0],a0[1]);for(let k=1;k<=full&&k<=n;k++){const q=v(k);ctx.lineTo(q[0],q[1])}if(full<n&&rest>0){const a1=v(full),a2=v(full+1);ctx.lineTo(lerp(a1[0],a2[0],rest),lerp(a1[1],a2[1],rest))}})}
+    for(let i=0;i<12;i++){const a=top+i/12*Math.PI*2,al=seg(u,.16+i/12*.12,.22+i/12*.12);if(al<=0)continue;const x=Math.cos(a)*R*1.1,y=Math.sin(a)*R*1.1,h=R*.05;glowLine(ctx,col,1.6,gl*.5,inten*al,()=>{ctx.moveTo(x,y-h);ctx.lineTo(x+h,y);ctx.lineTo(x,y+h);ctx.lineTo(x-h,y);ctx.closePath()})}   // Rautenrunen am Rand
+    ctx.restore();
+    const nP=Math.round(p.particles),pa=seg(u,.18,.5)*(1-seg(u,.78,.86));   // Manafunken: vom Ring spiralförmig zur Mitte, dabei aufwärts
+    if(nP>0&&pa>0){const pr=rng(p.seed+31);ctx.save();ctx.globalCompositeOperation='lighter';
+      for(let i=0;i<nP;i++){const r1=pr(),r2=pr(),r3=pr(),ph=(r1+t*(.18+.22*r2)/(D/4))%1,rad=R*.95*Math.pow(1-ph,1.2),an=r2*Math.PI*2+ph*5.5*(r3>.5?1:-1),x=Cc.x+Math.cos(an)*rad,y=Cc.y+Math.sin(an)*rad*tilt-ph*95*(.6+.6*r3);
+        puff(ctx,x,y,5+4*r3,col,Math.sin(Math.PI*ph)*pa*.5);ctx.fillStyle=rgba(i%4?Lt:'#ffffff',Math.sin(Math.PI*ph)*pa*.95);ctx.beginPath();ctx.arc(x,y,1.1+r3*1.9,0,7);ctx.fill()}
+      ctx.restore()}
+    const cr=eo(seg(u,.4,.66))*(1-eo(seg(u,.86,.94))),cy=C.y-62+Math.sin(t*2.4)*4*cr;   // Kristall
+    if(cr>0){const h=62*S*p.mCrystal*cr,w=h*.52,sx=Math.cos(t*2.2),fl=.75+.25*Math.sin(t*9);
+      ctx.save();ctx.translate(C.x,cy);
+      puff(ctx,0,0,h*1.7,col,.5*cr*inten);
+      ctx.shadowColor=col;ctx.shadowBlur=gl*1.8;
+      const P=[[0,-h],[w*sx,0],[0,h],[-w*sx,0]];
+      ctx.fillStyle=rgba(mix(col,'#ffffff',.55),.92*cr*flick);ctx.beginPath();P.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]));ctx.closePath();ctx.fill();
+      ctx.shadowBlur=0;ctx.fillStyle=rgba(col,.7*cr);ctx.beginPath();ctx.moveTo(0,-h);ctx.lineTo(w*sx,0);ctx.lineTo(0,h);ctx.closePath();ctx.fill();
+      ctx.strokeStyle=rgba('#ffffff',.85*cr*fl);ctx.lineWidth=1.6;ctx.beginPath();P.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]));ctx.closePath();ctx.stroke();
+      ctx.beginPath();ctx.moveTo(-w*sx,0);ctx.lineTo(w*sx,0);ctx.moveTo(0,-h);ctx.lineTo(0,h);ctx.stroke();
+      ctx.restore();star4(ctx,C.x+w*.2,cy-h*.3,7+5*Math.sin(t*7)**2,'#ffffff',.9*cr)}
+    for(let k=0;k<Math.round(p.mPulse);k++){const q=seg(u,.6+k*.06,.84+k*.06);if(q>0&&q<1){ctx.save();ctx.globalCompositeOperation='lighter';ctx.strokeStyle=rgba(lighten(col,.5),(1-q)*.8*fin);ctx.lineWidth=4*(1-q)+1;const r2=R*(.2+1.1*eo(q));ctx.beginPath();ctx.ellipse(Cc.x,Cc.y,r2,r2*tilt,0,0,7);ctx.stroke();ctx.restore()}}
+    const bs=seg(u,.84,.97);   // Abschluss: der Kristall zerstiebt in Funken
+    if(bs>0&&bs<1){const pr=rng(p.seed+37);ctx.save();ctx.globalCompositeOperation='lighter';
+      for(let i=0;i<26;i++){const a=pr()*Math.PI*2,sp2=60+pr()*150,x=C.x+Math.cos(a)*sp2*eo(bs),y=C.y-62+Math.sin(a)*sp2*.7*eo(bs)+bs*bs*40;ctx.fillStyle=rgba(i%3?Lt:'#ffffff',(1-bs)*.9);ctx.beginPath();ctx.arc(x,y,1.2+pr()*2.2,0,7);ctx.fill()}
+      ctx.restore()}
+    const fl2=p.flash*(seg(u,.4,.44)*(1-seg(u,.44,.54))*.28+seg(u,.86,.9)*(1-seg(u,.9,.97))*.42);
+    if(fl2>0){ctx.fillStyle=rgba(lighten(col,.8),fl2*.42);ctx.fillRect(-BIG,-BIG,2*BIG,2*BIG)}
   }
   function lerpP(a,b,q){return{x:lerp(a.x,b.x,q),y:lerp(a.y,b.y,q)}}
   const cvs = {}, raf = {};
-  function play(kind) {   // 'E' Heilfluss, 'W' Multispiegel
+  function play(kind) {   // 'E' Heilfluss, 'W' Manafluss
     if (FAST || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
     let cv = cvs[kind];
     if (!cv) { cv = cvs[kind] = document.createElement('canvas'); cv.width = SW; cv.height = 800; cv.style.cssText = 'position:absolute;left:0;top:0;width:' + SW + 'px;height:800px;z-index:290;pointer-events:none'; stage.appendChild(cv); }
@@ -131,9 +113,44 @@ const UltFx = (() => {
       const u = t / D, amp = P.shake * (kind === 'E' ? (u > .88 ? 6 * Math.exp(-(u - .88) * D * 6) : 0) : (u > .74 ? 4 * Math.exp(-(u - .74) * D * 6) : 0));
       ctx.setTransform(k, 0, 0, k, SW / 2 - C.x * k, 400 - C.y * k);   // Mitte des Rituals = Bildschirmmitte
       ctx.translate(Math.sin(t * 95) * amp, Math.cos(t * 80) * amp * .7);
-      (kind === 'E' ? fxHeal : fxPrism)(ctx, P, t, D, clamp(u)); raf[kind] = requestAnimationFrame(step);
+      (kind === 'E' ? fxHeal : fxMana)(ctx, P, t, D, clamp(u)); raf[kind] = requestAnimationFrame(step);
     };
     raf[kind] = requestAnimationFrame(step);
   }
   return { play };
+})();
+
+/* ---------- Falle (Blau + Rot, seit 0.8): die verdeckte Karte dreht sich um; trifft die Farbe, fliegt ein Geschoss zum Angreifer ---------- */
+const TrapFx = (() => {
+  const panelOf = pid => pid === ME ? stage.querySelector('.sbody[data-lead]') : stage.querySelector('.sbody:not([data-lead])');
+  const pos = (el, fb) => { if (!el) return fb; const r = el.getBoundingClientRect(), sr = stage.getBoundingClientRect(), k = sr.width / stage.offsetWidth; return { x: (r.left + r.width / 2 - sr.left) / k, y: (r.top + r.height / 2 - sr.top) / k }; };
+  const COL = { F: '#ff7a3d', E: '#93c24f', W: '#52a6f5' };
+  function play(f) {
+    if (FAST || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
+    const tc = stage.querySelector('.trapcard[data-who="' + (f.who === ME ? 's' : 'o') + '"]');
+    const from = pos(tc || panelOf(f.who), { x: SW / 2, y: f.who === ME ? 560 : 240 }), to = pos(panelOf(f.to), { x: SW / 2, y: f.to === ME ? 560 : 240 });
+    const w = 96, h = 134, el = document.createElement('div');
+    el.className = 'trapfx';
+    el.style.cssText = 'left:' + (from.x - w / 2) + 'px;top:' + (from.y - h / 2) + 'px;width:' + w + 'px;height:' + h + 'px;transition:left .35s,top .35s,width .35s,height .35s';
+    el.innerHTML = '<div class="tf"><div class="bk"><img src="' + IMG.back + '"></div><div class="fr"><img src="' + (f.card && IMG[f.card] ? IMG[f.card] : IMG.back) + '"></div></div>';
+    stage.appendChild(el);
+    const mid = { x: SW / 2, y: 400 };
+    requestAnimationFrame(() => { el.style.left = (mid.x - 70) + 'px'; el.style.top = (mid.y - 98) + 'px'; el.style.width = '140px'; el.style.height = '196px'; });
+    setTimeout(() => { el.classList.add('up'); Snd.play('shield_hit'); }, 380);
+    setTimeout(() => {
+      if (f.hit) {
+        el.classList.add('hit'); Snd.play('hit', 0, .9);
+        const o = document.createElement('div'); o.style.cssText = 'position:absolute;z-index:296;pointer-events:none;border-radius:50%;width:26px;height:26px;margin:-13px 0 0 -13px;left:' + mid.x + 'px;top:' + mid.y + 'px;background:radial-gradient(#fff,' + (COL[f.el] || '#ff7a3d') + ' 55%,rgba(0,0,0,0));box-shadow:0 0 22px ' + (COL[f.el] || '#ff7a3d') + ';transition:left .45s ease-in,top .45s ease-in';
+        stage.appendChild(o); requestAnimationFrame(() => { o.style.left = to.x + 'px'; o.style.top = to.y + 'px'; });
+        setTimeout(() => {
+          o.remove();
+          const n = document.createElement('div'); n.textContent = '\u2212' + f.refl; n.style.cssText = 'position:absolute;z-index:297;pointer-events:none;font:700 38px Alegreya,serif;color:#ff6b3d;text-shadow:0 0 4px #000,0 0 10px #000;left:' + (to.x - 20) + 'px;top:' + (to.y - 24) + 'px;transition:top .8s,opacity .8s';
+          stage.appendChild(n); requestAnimationFrame(() => { n.style.top = (to.y - 80) + 'px'; n.style.opacity = '0'; }); setTimeout(() => n.remove(), 900);
+        }, 460);
+      }
+    }, 1050);
+    setTimeout(() => { el.style.transition = 'opacity .45s'; el.style.opacity = '0'; }, f.hit ? 1650 : 1350);
+    setTimeout(() => el.remove(), f.hit ? 2150 : 1850);
+  }
+  return { play, ms: f => (f.hit ? 1650 : 1350) };
 })();

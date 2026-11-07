@@ -1,6 +1,6 @@
 /* Magus – Regelkern (Teil 6): Kampf (Monsterkämpfe und Showdowns).
    Ein Angriffszug: Karten markieren (erste Karte bestimmt das Element), angreifen; die Gegenseite verteidigt.
-   Kombos aus zwei Elementen: Control (F+W), Lähmung (F+E), Lifeflow (E+W); alle drei ergeben eine Ultimate, deren Wirkung die Farbe der ersten Karte bestimmt (seit 0.7: Feuer Todesfluss, Erde Heilfluss, Wasser Prisma). */
+   Kombos aus zwei Elementen: Control (F+W), Lähmung (F+E), Lifeflow (E+W); alle drei ergeben eine Ultimate, deren Wirkung die Farbe der ersten Karte bestimmt (seit 0.7: Feuer Todesfluss, Erde Heilfluss, Wasser Multispiegel; seit 0.8: Wasser Manafluss). */
 
 /* ---------- Kampfberechnung ---------- */
 function comboLevels(tiers, mag, prim) {
@@ -19,16 +19,16 @@ function comboLevels(tiers, mag, prim) {
   if (prim && present.length === 2 && present.includes(prim)) {
     const other = present.find(e => e !== prim), key = ORD_COMBO[prim + other];
     const eff = e => tiers[e].reduce((a, t) => a + Math.min(t, mag[e]), 0);   // je Farbe die Summe der Kartenwerte (höchstens Magiestufe je Karte): mehrere Karten ergeben zusammen die Stufe
-    lv.ord = { key, lvl: Math.max(0, Math.min(3, eff(prim), eff(other))), el: key === 'bm' ? 'F' : key === 'bg' ? 'E' : null };
+    lv.ord = { key, lvl: Math.max(0, Math.min(3, eff(prim), eff(other))) };
   }
   return lv;
 }
-// Rot = Feuer (Lähmung), Blau = Wasser (Defensiv), Grün = Erde (Heilend): ra Flüche, rm Mana-Entzug, bm/bg roter/grüner Spiegel, gh Heilung, gr Marker entfernen + Nachziehen.
-const ORD_COMBO = { FE: 'ra', FW: 'rm', WF: 'bm', WE: 'bg', EW: 'gh', EF: 'gr' };
-// Kombostufen auf die Plätze fw (Spiegel), fe (Flüche), ew (Marker entfernen), rm (Mana-Entzug), gh (Heilung) abgebildet.
+// Rot = Feuer (Lähmung), Blau = Wasser (Defensiv), Grün = Erde (Heilend): ra Flüche, rm Zerrüttung, wt Falle (Blau + Rot), ws Schild (Blau + Grün), gh Heilung, gr Marker entfernen + Nachziehen. Seit 0.8 ersetzen Falle und Schild die Farbspiegel.
+const ORD_COMBO = { FE: 'ra', FW: 'rm', WF: 'wt', WE: 'ws', EW: 'gh', EF: 'gr' };
+// Kombostufen auf die Plätze tr (Falle), sh (Schild), fe (Flüche), ew (Marker entfernen), rm (Zerrüttung), gh (Heilung) abgebildet.
 function levelsFor(ev) {
-  const out = { fw: 0, fe: 0, ew: 0, rm: 0, gh: 0, ulti: ev.levels.ulti }, o = ev.ord;
-  if (o && o.lvl > 0 && !(ev.levels.ulti > 0)) out[{ ra: 'fe', rm: 'rm', bm: 'fw', bg: 'fw', gh: 'gh', gr: 'ew' }[o.key]] = o.lvl;
+  const out = { tr: 0, sh: 0, fe: 0, ew: 0, rm: 0, gh: 0, ulti: ev.levels.ulti }, o = ev.ord;
+  if (o && o.lvl > 0 && !(ev.levels.ulti > 0)) out[{ ra: 'fe', rm: 'rm', wt: 'tr', ws: 'sh', gh: 'gh', gr: 'ew' }[o.key]] = o.lvl;
   return out;
 }
 // Fluchkarten kosten beim Ausspielen je 1 Mana und zählen nicht als Element.

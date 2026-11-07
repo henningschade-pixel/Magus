@@ -1,30 +1,31 @@
 /* ---------- Kampf ---------- */
-const ORD_ROWS = [['ra', 'Lähmung', 'F', 'E'], ['rm', 'Zerrüttung', 'F', 'W'], ['bm', 'Feuerspiegel', 'W', 'F'], ['bg', 'Erdspiegel', 'W', 'E'], ['gh', 'Heilung', 'E', 'W'], ['gr', 'Läuterung', 'E', 'F']];
+const ORD_ROWS = [['ra', 'Lähmung', 'F', 'E'], ['rm', 'Zerrüttung', 'F', 'W'], ['wt', 'Falle', 'W', 'F'], ['ws', 'Schild', 'W', 'E'], ['gh', 'Heilung', 'E', 'W'], ['gr', 'Läuterung', 'E', 'F']];
 // Wirkung der Ultimate nach der Farbe der ersten Karte (seit 0.7)
 function ultiText(el, lv) {
   if (el === 'E') return 'Heilfluss (Erde): Du bekommst ' + lv + ' Heilmarker und heilst ' + lv + ' HP am Ende jeder deiner Angriffsphasen bis Kampfende (höchstens bis zu den max. HP).';
-  if (el === 'W') return 'Multispiegel (Wasser): Du bekommst einen Schild der Stufe ' + lv + ' gegen jede Farbe. Er gleicht fehlende Verteidigung aus oder wirft Überschuss zurück und verliert dabei Stufen wie ein Spiegel, aber erst nach dem Farbspiegel. In der Verteidigung gestellt, gilt er erst nach ihr.';
+  if (el === 'W') return 'Manafluss (Wasser): Du bekommst ' + lv + ' Manamarker und regenerierst ' + lv + ' Mana am Ende jeder deiner Angriffsphasen bis Kampfende (höchstens bis zum maximalen Mana).';
   return 'Todesfluss (Feuer): Der Gegner bekommt ' + lv + ' Todesmarker und verliert ' + lv + ' HP am Ende jeder seiner Angriffsphasen bis Kampfende.';
 }
 // Kurzfassungen für die Kombo-Übersicht (die ausführliche Wirkung steht im Tooltip)
-const ORD_SHORT = { ra: '2·S Flüche auf den Ablagestapel des Gegners', rm: 'Gegner wirft S Handkarten ab', bm: 'Roter Spiegel der Stufe S (dauerhaft)', bg: 'Grüner Spiegel der Stufe S (dauerhaft)', gh: 'Heilt S HP', gr: 'Entfernt S Marker, je Marker 1 Nachziehtoken' };
-const ULTI_SHORT = { F: 'Gegner verliert S HP am Ende jeder seiner Angriffsphasen', E: 'Du heilst S HP am Ende jeder deiner Angriffsphasen', W: 'Schild der Stufe S gegen jede Farbe (verliert Stufen wie ein Spiegel, nach dem Farbspiegel)' };
+const ORD_SHORT = { ra: '2·S Flüche auf den Ablagestapel des Gegners', rm: 'Gegner wirft S Handkarten ab', wt: 'Zieht 3 Karten, eine davon verdeckt als Falle: wirft 2·S unblockbaren Schaden zurück', ws: 'Schild mit S Ladungen: mindert nicht geblockten Schaden', gh: 'Heilt S HP', gr: 'Entfernt S Marker, je Marker 1 Nachziehtoken' };
+const ULTI_SHORT = { F: 'Gegner verliert S HP am Ende jeder seiner Angriffsphasen', E: 'Du heilst S HP am Ende jeder deiner Angriffsphasen', W: 'Du regenerierst S Mana am Ende jeder deiner Angriffsphasen' };
 function ordText(k, lv, short) {
   if (k === 'ra' && lv === 'S') return 'Lege 2·S Fluchkarten (2/4/6) auf den Ablagestapel der Gegenseite; sie kommen beim nächsten Nachziehen des Gegners zuerst auf seine Hand und werden beim darauffolgenden Nachziehen dauerhaft vernichtet';
   if (k === 'ra') return short ? 2 * lv + ' Flüche auf den Ablagestapel der Gegenseite' : 'Lege ' + 2 * lv + ' Flüche auf den Ablagestapel der Gegenseite; sie kommen beim nächsten Nachziehen des Gegners zuerst auf seine Hand und werden beim darauffolgenden Nachziehen dauerhaft vernichtet';
   if (k === 'rm') return 'Der Gegner muss ' + (lv === 'S' ? 'S' : lv) + ' Handkarte' + (lv === 1 ? '' : 'n') + ' seiner Wahl abwerfen';
-  if (k === 'bm' || k === 'bg') return 'Dein ' + (k === 'bm' ? 'roter' : 'grüner') + ' Spiegel steht danach auf Stufe ' + lv + ' (nicht addiert, höchstens Stufe 3 je Farbe). Er ist dauerhaft, gleicht fehlende Verteidigung gegen Angriffe dieser Farbe bis zur Stufe aus und wirft den Überschuss einer zu starken Verteidigung zurück (ebenfalls höchstens bis zur Stufe und höchstens so viel wie der eingehende Schaden). Jeder ausgeglichene oder zurückgeworfene Schaden kostet ihn eine Stufe';
+  if (k === 'wt') return 'Ziehe drei Karten (soweit Handplätze frei sind) und lege eine davon verdeckt vor dich. Sie wird aufgedeckt, sobald Schaden eingeht: Entspricht die Farbe des Schadens ihrer Farbe, wirft sie ' + (lv === 'S' ? '2·S (2/4/6)' : 2 * lv) + ' unblockbaren Schaden auf den Angreifer zurück, vor der Verteidigung (der eingehende Schaden sinkt entsprechend, höchstens um den ganzen Schaden). Danach wird die Karte abgelegt, auch ohne Rückwurf. Sie ist kein Marker';
+  if (k === 'ws') return 'Dein Schild hat danach ' + (lv === 'S' ? 'S' : lv) + ' Ladung' + (lv === 1 ? '' : 'en') + ' (nicht addiert, höchstens 3). Es mindert eingehenden, nicht geblockten Schaden gegen jede Farbe, je Schaden eine Ladung';
   if (k === 'gh') return 'Heile um ' + lv + ' HP';
-  return 'Entferne ' + lv + ' beliebige Marker vom Brett (anklicken, auch eigene, Spiegelmarker und Nachziehtokens, die dann nur zerstört werden) und erhalte für jeden einen Nachziehtoken';
+  return 'Entferne ' + lv + ' beliebige Marker vom Brett (anklicken, auch eigene, Schild- und Manamarker und Nachziehtokens, die dann nur zerstört werden) und erhalte für jeden einen Nachziehtoken';
 }
-// Lifeflow: gewählte Marker (sd/om) als Zähler-Knöpfe
+// Läuterung: gewählte Marker (sd/or/om/oh) als Zähler-Knöpfe
 function lfPicks(cx, lvl) {
   const c = cx.c;
   if (Array.isArray(c.lfp)) return c.lfp.slice(0, lvl);
-  const out = []; let om = cx.theirs.stats.mirror || 0, sd = cx.myStats.death || 0, orb = cx.theirs.stats.rainbow || 0, oh = cx.theirs.stats.heal || 0;
+  const out = []; let om = cx.theirs.stats.manaflow || 0, sd = cx.myStats.death || 0, orb = cx.theirs.stats.rainbow || 0, oh = cx.theirs.stats.heal || 0;
   while (out.length < lvl && sd-- > 0) out.push('sd');
-  while (out.length < lvl && om-- > 0) out.push('om');
   while (out.length < lvl && orb-- > 0) out.push('or');
+  while (out.length < lvl && om-- > 0) out.push('om');
   while (out.length < lvl && oh-- > 0) out.push('oh');
   return out;
 }
@@ -45,23 +46,18 @@ function lfCtx() {
   if (!(lw > 0)) return null;
   return { cx, c, lvl: lw, picks: lfExpand(lfPicks(cx, lw), cx) };
 }
-// Spiegelmarker einer Wahl auf konkrete Farben abbilden (in der Reihenfolge, in der die Engine sie wegnimmt)
-function lfExpand(picks, cx) {
-  const out = [], left = { s: Object.assign({ F: 0, E: 0, W: 0 }, cx.myStats.mirrorEl || {}), o: Object.assign({ F: 0, E: 0, W: 0 }, cx.oppStats.mirrorEl || {}) };
-  picks.forEach(p => { const [k, e] = p.split(':'); if (e && (k === 'sm' || k === 'om')) left[k[0]][e]--; });
-  picks.forEach(p => { const [k, e] = p.split(':'); if ((k === 'sm' || k === 'om') && !e) { const el = M.ELEMENTS.find(x => left[k[0]][x] > 0); if (el) { left[k[0]][el]--; out.push(k + ':' + el); } } else out.push(p); });
-  return out;
-}
+// (Seit 0.8 gibt es keine Farbspiegel mehr: die Wahl gilt unverändert.)
+function lfExpand(picks, cx) { return picks.slice(); }
 function lfHave(cx, k, e) {
   const w = k[0] === 's' ? cx.myStats : cx.oppStats, t = k[1];
-  return t === 'c' ? (w.marks || 0) : t === 'd' ? (w.death || 0) : t === 'h' ? (w.heal || 0) : t === 'r' ? (w.rainbow || 0) : t === 't' ? (w.freeDraws || 0) : (e ? M.mirrorOf(w, e) : (w.mirror || 0));
+  return t === 'c' ? (w.marks || 0) : t === 'd' ? (w.death || 0) : t === 'h' ? (w.heal || 0) : t === 'r' ? (w.rainbow || 0) : t === 't' ? (w.freeDraws || 0) : (w.manaflow || 0);
 }
 function lfSummary(cx, lvl) {
   const L = lfCtx(), picks = L ? L.picks : lfExpand(lfPicks(cx, lvl), cx), cnt = {};
   picks.forEach(p => { cnt[p] = (cnt[p] || 0) + 1; });
-  const nm = { sd: 'eigener Todesmarker', od: 'Todesmarker des Gegners', sc: 'eigener Fluch', oc: 'Fluch des Gegners', sm: 'eigener Spiegel', om: 'Spiegel des Gegners', sh: 'eigener Heilmarker', oh: 'Heilmarker des Gegners', sr: 'eigenes Multispiegel', or: 'Multispiegel des Gegners', st: 'eigener Nachziehtoken', ot: 'Nachziehtoken des Gegners' };
+  const nm = { sd: 'eigener Todesmarker', od: 'Todesmarker des Gegners', sc: 'eigener Fluch', oc: 'Fluch des Gegners', sm: 'eigener Manamarker', om: 'Manamarker des Gegners', sh: 'eigener Heilmarker', oh: 'Heilmarker des Gegners', sr: 'eigene Schildladung', or: 'Schildladung des Gegners', st: 'eigener Nachziehtoken', ot: 'Nachziehtoken des Gegners' };
   const chips = Object.keys(cnt).map(p => { const [k, e] = p.split(':'); return '<span class="lfchip">' + nm[k] + (e ? ' ' + NAMES[e] : '') + (cnt[p] > 1 ? ' ×' + cnt[p] : '') + '</span>'; }).join('');
-  return '<div class="lfsum"><div class="note">Klicke beliebige Marker auf dem Brett (Totenköpfe, Heilmarker, Spiegelsteine und Prismen, auch deine eigenen). Gewählt: <b>' + picks.length + '/' + lvl + '</b></div><div class="lfchips">' + (chips || '<span class="note">kein Marker gewählt (nur Heilung)</span>') + '</div><button class="mini" data-act="lfauto" title="Wieder die automatische Auswahl verwenden">Automatisch</button></div>';
+  return '<div class="lfsum"><div class="note">Klicke beliebige Marker auf dem Brett (Totenköpfe, Heil- und Manamarker, Schilde, auch deine eigenen). Gewählt: <b>' + picks.length + '/' + lvl + '</b></div><div class="lfchips">' + (chips || '<span class="note">kein Marker gewählt (nur Heilung)</span>') + '</div><button class="mini" data-act="lfauto" title="Wieder die automatische Auswahl verwenden">Automatisch</button></div>';
 }
 // Gold, das im Tempel eingesetzt werden müsste, um die nächste Tempelstufe zu erreichen (n Gold ergeben n(n+1)/2 Punkte)
 function goldForNext(pool, level) { const need = M.nextLevelCost(level) - pool; let n = 1; while (M.pointsForGold(n) < need && n < 20) n++; return need <= 0 ? 0 : n; }
@@ -75,6 +71,14 @@ function combatCenter(cx) {
     const tip = 'Eine Kampfrunde ist ein Angriffszug jeder Seite.' + (ex > 0 ? ' Nach je ' + ex + ' Runden steigt die Erschöpfung um 1: Beide Seiten verlieren am Ende ihres Angriffszugs so viele HP, wie die Erschöpfung hoch ist.' : '') + (mr > 0 ? ' Nach ' + mr + ' Runden endet der Kampf unentschieden.' : '');
     return '<div class="note" style="margin-top:-2px" title="' + tip + '">Runde <b>' + (mr > 0 ? Math.min(mr, rd) : rd) + '</b>' + (mr > 0 ? ' von ' + mr : '') + (lv > 0 ? ' · <b style="color:#e0605a">Erschöpfung ' + lv + '</b>' : (ex > 0 ? ' · Erschöpfung ab Runde ' + (ex + 1) : '')) + '</div>';
   })();
+  if (c.forced && c.forced.kind === 'trap') {   // Falle: eine der gezogenen Karten wählen (ich) bzw. warten (Gegner)
+    const vs = c.sides.a.ctrl === c.forced.pid ? c.sides.a : c.sides.b;
+    h += c.forced.pid === ME
+      ? '<div class="preview"><b>Falle:</b> Wähle eine der gezogenen Karten, die du verdeckt vor dich legst. Klicke die Karte an.</div><div class="btnrow"><button class="btn primary" data-act="fd" ' + (fdSel.size === 1 ? '' : 'disabled') + '>Als Falle legen</button></div>'
+      : '<div class="preview"><b>Falle:</b> ' + esc(vs.name) + ' legt eine Karte verdeckt vor sich …</div>';
+    h += '</div>';
+    return '<div class="panel" style="' + box(LAYOUT.combat, 'padding:10px 14px') + '">' + h + '</div>';
+  }
   if (c.forced) {   // Zerrüttung: Abwurf wählen (ich) bzw. warten (Gegner)
     const vs = c.sides.a.ctrl === c.forced.pid ? c.sides.a : c.sides.b, need = Math.min(c.forced.n, vs.deck.hand.filter(Boolean).length);
     h += c.forced.pid === ME
@@ -101,7 +105,7 @@ function combatCenter(cx) {
       const ev = M.evalDefense(cx.myStats, sel, c.color);
       if (!sel.length) prev = '';
       else if (!ev.valid) prev = '<span class="bad">' + esc(ev.reason) + '</span>';
-      else { if (ev.cost > 0) manaPv = ev.cost; prev = ''; canExec = ev.affordable; val = ev.block || 0; if (ev.ord) { const r = ORD_ROWS.find(x => x[0] === ev.ord.key), late = ev.ord.key === 'gh' || ev.ord.key === 'bm' || ev.ord.key === 'bg'; prev += '<div class="note"><b>' + r[1] + '</b> Stufe ' + ev.ord.lvl + (late ? ' nach' : ' vor') + ' der Verteidigung: ' + ordText(r[0], ev.ord.lvl) + '</div>'; if (ev.ord.key === 'gr') prev += lfSummary(cx, ev.ord.lvl); } if (!ev.affordable) prev += '<div class="bad">Zu wenig Mana.</div>'; }
+      else { if (ev.cost > 0) manaPv = ev.cost; prev = ''; canExec = ev.affordable; val = ev.block || 0; if (ev.ord) { const r = ORD_ROWS.find(x => x[0] === ev.ord.key), late = ev.ord.key === 'gh' || ev.ord.key === 'wt' || ev.ord.key === 'ws'; prev += '<div class="note"><b>' + r[1] + '</b> Stufe ' + ev.ord.lvl + (late ? ' nach' : ' vor') + ' der Verteidigung: ' + ordText(r[0], ev.ord.lvl) + '</div>'; if (ev.ord.key === 'gr') prev += lfSummary(cx, ev.ord.lvl); } if (!ev.affordable) prev += '<div class="bad">Zu wenig Mana.</div>'; }
     }
   }
   h += '<div class="preview">' + prev + '</div><div class="btnrow">';
@@ -128,8 +132,8 @@ function comboRef(cx) {
     const o = ev && ev.valid && ev.ord && !(ev.levels.ulti > 0) ? ev.ord : null, uS0 = Math.min(3, mag.F, mag.E, mag.W);
     let fs = 20;   // Schriftgrad der Zeilen: füllt die Höhe des Fensters (seit 0.7.1.1); Texte und Hinweise skalieren mit
     const row = (name, els, lvl, text, on, tip) => '<div' + (tip ? ' title="' + esc(tip) + '"' : '') + ' class="cref p' + els[0] + (on ? ' on' : '') + '" style="padding:1px 8px;margin-bottom:0;font-size:' + fs + 'px;flex:1 1 0;display:flex;flex-direction:column;justify-content:center;gap:0"><div style="line-height:1.15"><b>' + name + '</b> ' + els.map(el).join(' + ') + (lvl ? ' <span class="note" style="font-size:.8em">· Stufe ' + lvl + '</span>' : '') + (text ? '<small style="font-size:' + Math.round(fs * 0.72) + 'px">' + text + '</small>' : '') + '</div></div>';
-    // Die Ultimate (alle drei Farben) steht seit 0.7 unter der Farbe ihrer ersten Karte: Feuer Todesfluss, Wasser Multispiegel, Erde Heilfluss.
-    const ULTI_NAME = { F: 'Todesfluss', W: 'Multispiegel', E: 'Heilfluss' }, ROLE = { F: 'Feuer', W: 'Wasser', E: 'Erde' };
+    // Die Ultimate (alle drei Farben) steht seit 0.7 unter der Farbe ihrer ersten Karte: Feuer Todesfluss, Wasser Manafluss (seit 0.8), Erde Heilfluss.
+    const ULTI_NAME = { F: 'Todesfluss', W: 'Manafluss', E: 'Heilfluss' }, ROLE = { F: 'Feuer', W: 'Wasser', E: 'Erde' };
     const ultiRow = (p, lvl, text, on, tip) => row(ULTI_NAME[p], [p, ...M.ELEMENTS.filter(x => x !== p)], lvl, text, on, tip);
     if (cols.length === 0) {   // noch nichts markiert: alle Kombos nach Farbe der ersten Karte, Wirkung als Tooltip
       fs = 18;

@@ -1,31 +1,21 @@
 /* ---------- Kampf ---------- */
 // Bedrohung je Farbe: Wie wahrscheinlich und wie stark greift der Gegner mit diesem Element an (Karten im Deck, begrenzt durch seine Magie).
-// useOwn: bestehende eigene Spiegel dieser Farbe senken den Wert (so war es, als sich alle Farben 3 Marker teilten).
-function mirrorScores(side, opp, useOwn) {
-  const d = opp.deck, all = [].concat(d.draw, d.discard, d.hand.filter(Boolean)), mag = opp.stats.mag, own = side.stats.mirrorEl || {}, out = {};
+function threatScores(opp) {
+  const d = opp.deck, all = [].concat(d.draw, d.discard, d.hand.filter(Boolean)), mag = opp.stats.mag, out = {};
   for (const e of M.ELEMENTS) {
     let v = 0; for (const c of all) { const p = M.parseCard(c.id); if (!p.curse && p.el === e) v += Math.min(p.tier, mag[e]); }
-    out[e] = v * (1 + 0.15 * mag[e]) / (useOwn ? 1 + 0.5 * (own[e] || 0) : 1);
+    out[e] = v * (1 + 0.15 * mag[e]);
   }
   return out;
 }
-// Farbe neuer Spiegelmarker: das Element, mit dem der Gegner am wahrscheinlichsten (und am stärksten) angreift.
-function pickMirrorEl(side, opp) {
-  const sc = mirrorScores(side, opp, true); let best = null, bv = -1;
-  for (const e of M.ELEMENTS) if (sc[e] > bv) { bv = sc[e]; best = e; }
-  return best;
+// Wert einer Falle der Stufe lvl (Blau + Rot, seit 0.8): Sie wirft 2·S unblockbaren Schaden zurück, wenn der Gegner in ihrer Farbe angreift. Die KI legt die Farbe an, mit der der Gegner nach seinem Deck am ehesten angreift; wq.wTrap gewichtet den erwarteten Rückwurf. Eine schon liegende Falle wird ersetzt, das mindert den Wert.
+function trapWorth(side, opp, Q, lvl) {
+  if (!(lvl > 0)) return 0;
+  const sc = threatScores(opp), tot = sc.F + sc.E + sc.W, top = Math.max(sc.F, sc.E, sc.W), p = tot > 0 ? top / tot : 1 / 3;
+  return lvl * 2 * p * Q.wTrap * (side.stats.trap ? 0.3 : 1);
 }
-// Wert eines Spiegel-Kombos der Stufe lvl in Farbe el. Seit 0.16.1 zählt das Limit von 3 Markern je Farbe (nicht mehr insgesamt) und die Stufen werden
-// nicht addiert: mirMarg 1 wertet nur den Zugewinn gegenüber dem Spiegel, der in dieser Farbe schon liegt. mirGrade 1 gewichtet die Farbe nach ihrem
-// Bedrohungsanteil (mindestens mirMin) statt pauschal mit 0,5 für jede Farbe außer der wahrscheinlichsten.
-function mirrorWorth(side, opp, Q, el, lvl) {
-  if (!(lvl > 0) || !el) return 0;
-  const own = M.mirrorOf(side.stats, el), gain = Q.mirMarg ? Math.max(0, lvl - own) : lvl;
-  let f;
-  if (Q.mirGrade) { const sc = mirrorScores(side, opp, false), top = Math.max(sc.F, sc.E, sc.W); f = top > 0 ? Math.max(Q.mirMin, Math.min(1, sc[el] / top)) : 1; }
-  else f = pickMirrorEl(side, opp) === el ? 1 : 0.5;
-  return gain * Q.wFW * f;
-}
+// Wert eines Schilds der Stufe lvl (Blau + Grün, seit 0.8): Es bringt die Ladungen auf die Stufe, gewertet wird nur der Zugewinn gegenüber den Ladungen, die schon liegen.
+function shieldWorth(side, Q, lvl) { return lvl > 0 ? Math.max(0, lvl - (side.stats.rainbow || 0)) * Q.wFW : 0; }
 // Zerrüttung: Der Gegner wirft S Handkarten seiner Wahl ab, zuerst Fluchkarten. Wert hat nur, was darüber hinaus echte Karten kostet.
 function ruinWorth(opp, n) {
   if (!(n > 0)) return 0;
@@ -36,15 +26,15 @@ function ruinWorth(opp, n) {
 // Läuterung gegen den eigenen Todesfluss (seit 0.7.4): Jeder entfernte eigene Todesmarker erspart einen HP-Verlust je Angriffsphase bis Kampfende; lfDeath ist der Wert je Marker.
 function purgeDeath(side, Q, lvl) { return Q.lfDeath > 0 && lvl > 0 ? Math.min(lvl, side.stats.death || 0) * Q.lfDeath : 0; }
 function ordComboWorth(side, opp, Q, rules, lvs, ev) {
-  const st = side.stats, hurt = st.maxHp - st.hp, oMir = (opp.stats.mirror || 0) + (opp.stats.rainbow || 0) + Q.lfHeal * (opp.stats.heal || 0);
+  const st = side.stats, hurt = st.maxHp - st.hp, oMir = (opp.stats.manaflow || 0) + (opp.stats.rainbow || 0) + Q.lfHeal * (opp.stats.heal || 0);
   const wEw = oMir > 0 ? 1.2 + oMir * Math.max(0.3, Q.lfOppW || 0) : 0.1;
-  return mirrorWorth(side, opp, Q, ev.ord && ev.ord.el, lvs.fw) + lvs.fe * Q.wFE + lvs.ew * wEw + purgeDeath(side, Q, lvs.ew) + ruinWorth(opp, lvs.rm) + Math.min(lvs.gh * (rules.lifeflowHeal || 1), hurt) * Q.wEW + (lvs.gh > 0 && hurt === 0 ? 0.1 : 0);
+  return trapWorth(side, opp, Q, lvs.tr) + shieldWorth(side, Q, lvs.sh) + lvs.fe * Q.wFE + lvs.ew * wEw + purgeDeath(side, Q, lvs.ew) + ruinWorth(opp, lvs.rm) + Math.min(lvs.gh * (rules.lifeflowHeal || 1), hurt) * Q.wEW + (lvs.gh > 0 && hurt === 0 ? 0.1 : 0);
 }
-// Wert einer Ultimate der Stufe lvl nach der Farbe der ersten Karte (seit 0.7): Feuer Todesfluss beim Gegner, Erde Heilfluss und Wasser Multispiegel bei mir selbst. Liegt schon ein Marker gleicher oder höherer Stufe, bringt sie kaum etwas.
+// Wert einer Ultimate der Stufe lvl nach der Farbe der ersten Karte (seit 0.7): Feuer Todesfluss beim Gegner, Erde Heilfluss und Wasser Manafluss bei mir selbst (seit 0.8). Liegt schon ein Marker gleicher oder höherer Stufe, bringt sie kaum etwas.
 function ultiWorth(side, opp, Q, el, lvl) {
   if (!(lvl > 0)) return 0;
   if (el === 'E') return lvl * Q.wEW * Q.uHeal * ((side.stats.heal || 0) >= lvl ? 0.1 : 1) * (side.stats.maxHp > side.stats.hp ? 1 : 0.6);
-  if (el === 'W') return lvl * Q.wFW * Q.uMulti * ((side.stats.rainbow || 0) >= lvl ? 0.1 : 1);
+  if (el === 'W') return lvl * Q.aCost * Q.uMana * ((side.stats.manaflow || 0) >= lvl ? 0.1 : 1) * (side.stats.maxMana > side.stats.mana ? 1 : 0.6);   // Manafluss: +S Mana je eigener Angriffsphase, jedes Mana ist etwa so viel wert wie sein Preis im Angriff
   return lvl * Q.wDeath * (opp.stats.death >= lvl ? 0.1 : 1) * (Q.smart ? Math.max(0.4, Math.min(1.4, opp.stats.hp / 4)) : 1);
 }
 function bestAttack(side, opp, hand, Q, state0, reserve) {
@@ -57,19 +47,19 @@ function bestAttack(side, opp, hand, Q, state0, reserve) {
     for (const ord of orders) {
       const ev = M.evalAttack(stats, ord);
       if (!ev.valid || !ev.affordable) continue;
-      const hurt = stats.maxHp - stats.hp, oMir = (opp.stats.mirror || 0) + (opp.stats.rainbow || 0) + Q.lfHeal * (opp.stats.heal || 0);
-      const w = { fe: Q.wFE, ew: oMir > 0 ? 1.2 + oMir * Math.max(0.3, Q.lfOppW || 0) : 0.1 };   // Läuterung lohnt, wenn der Gegner Spiegelmarker trägt
+      const hurt = stats.maxHp - stats.hp, oMir = (opp.stats.manaflow || 0) + (opp.stats.rainbow || 0) + Q.lfHeal * (opp.stats.heal || 0);
+      const w = { fe: Q.wFE, ew: oMir > 0 ? 1.2 + oMir * Math.max(0.3, Q.lfOppW || 0) : 0.1 };   // Läuterung lohnt, wenn der Gegner Schild- oder Manamarker trägt
       const lvs = M.levelsFor(ev);
       let combo = 0;
       if (ev.levels.ulti > 0) combo = ultiWorth(side, opp, Q, ev.ultiEl || ev.prim, ev.levels.ulti);
-      else combo = mirrorWorth(side, opp, Q, ev.ord && ev.ord.el, lvs.fw) + lvs.fe * w.fe + lvs.ew * w.ew + purgeDeath(side, Q, lvs.ew) + ruinWorth(opp, lvs.rm) + Math.min(lvs.gh * 1, hurt) * Q.wEW + (lvs.gh > 0 && hurt === 0 ? 0.1 : 0);
+      else combo = trapWorth(side, opp, Q, lvs.tr) + shieldWorth(side, Q, lvs.sh) + lvs.fe * w.fe + lvs.ew * w.ew + purgeDeath(side, Q, lvs.ew) + ruinWorth(opp, lvs.rm) + Math.min(lvs.gh * 1, hurt) * Q.wEW + (lvs.gh > 0 && hurt === 0 ? 0.1 : 0);
       const dmg = ev.prim ? ev.damage : 0;
       let value = dmg * Q.aDmg + combo - ev.cost * Q.aCost + ev.curses * Q.aCurse;
       // Mana-Reserve: ohne Mana darf der unterlegene Gegner fliehen. Übersteht er den Angriff nach dem erwarteten Block, zählt der Angriff nicht als sicher tödlich.
       const resHit = reserve && stats.mana - ev.cost <= 0 && (() => { const left = opp.stats.hp - Math.max(0, dmg - reserve.blk); return left > 0 && left <= reserve.hp; })();
       if (dmg >= opp.stats.hp && dmg > 0 && !resHit) value += 100;
       if (resHit) value -= reserve.v;
-      if (dmg > 0 && ev.prim && M.shieldOf(opp.stats, ev.prim) > 0) value -= Math.min(M.shieldOf(opp.stats, ev.prim), dmg) * Q.mirAvoid;   // Spiegel des Gegners: gleicht bis zu seiner Stufe von meinem Schaden aus (zurückgeworfen wird nur Überverteidigung)
+      if (dmg > 0 && (opp.stats.rainbow || 0) > 0) value -= Math.min(opp.stats.rainbow, dmg) * Q.mirAvoid;   // Schild des Gegners: mindert bis zu seinen Ladungen von meinem nicht geblockten Schaden
       if (ord.length > 1 && dmg === 0 && combo === 0 && ev.curses === 0) value -= 5;
       if (!best || value > best.value) best = { value, ord, ev, dmg };
     }
@@ -95,6 +85,11 @@ function keepLocks(state, side, opp, hand, Q) {
 // Zerrüttung: Die KI wirft zuerst Flüche, dann die schwächsten Karten ab (gesperrte Karten möglichst nicht)
 function forcedPick(state, pid) {
   const c = state.combat, v = c.sides.a.ctrl === pid ? c.sides.a : c.sides.b, d = v.deck, mag = v.stats.mag;
+  if (c.forced.kind === 'trap') {   // Falle: die gezogene Karte in der Farbe, mit der der Gegner nach seinem Deck am ehesten angreift
+    const sc = threatScores(c.sides.a.ctrl === pid ? c.sides.b : c.sides.a);
+    const cs = c.forced.slots.filter(sl => d.hand[sl]).map(sl => ({ slot: sl, v: sc[M.parseCard(d.hand[sl].id).el] || 0 })).sort((x, y) => y.v - x.v || x.slot - y.slot);
+    return cs.length ? [cs[0].slot] : [];
+  }
   const cards = d.hand.map((h, slot) => h ? { slot, v: (M.parseCard(h.id).curse ? -5 : M.parseCard(h.id).tier + 0.15 * (mag[M.parseCard(h.id).el] || 0)) + (h.locked ? 4 : 0) } : null).filter(Boolean).sort((x, y) => x.v - y.v || x.slot - y.slot);
   return cards.slice(0, Math.min(c.forced.n, cards.length)).map(x => x.slot);
 }
@@ -163,14 +158,11 @@ function combatPlan(state, pid) {
     if (best && best.value > Q.aThr + lowMana - Q.pasDec * (opp.passed || 0) - Q.stallDec * Math.max(0, Math.floor(((c.turns || 0) - Q.stallFrom) / 2))) {   // Passt der Gegner im Angriffszug, bleibt er ohne Druck: dann lohnt auch ein knapper Angriff (sonst wartet die KI, bis die Anti-Stillstands-Schwelle sinkt)   // lange ohne Angriff: Schwelle sinkt, damit die KI nicht endlos nachzieht
       const acts = best.ord.map(h => A({ type: 'mark', slot: h.slot }));
       const lvB = M.levelsFor(best.ev);
-      if (best.ev.levels.ulti <= 0 && lvB.ew > 0) {   // Läuterung: eigene Todesmarker, dann Spiegel des Gegners, zuletzt dessen Nachziehtokens
+      if (best.ev.levels.ulti <= 0 && lvB.ew > 0) {   // Läuterung: eigene Todesmarker, dann Schild und Manamarker des Gegners, zuletzt dessen Nachziehtokens
         const lvl = lvB.ew, pick = [];
         for (let i = 0; pick.length < lvl && i < (s.death || 0); i++) pick.push('sd');
-        if (Q.lfColor) {   // Spiegel des Gegners nach Farbe: zuerst die Farbe, mit der ich selbst am stärksten angreife (dort würde der Spiegel am meisten ausgleichen)
-          const th = mirrorScores(opp, side, false);
-          for (const e of M.ELEMENTS.slice().sort((x, y) => th[y] - th[x])) for (let i = 0; pick.length < lvl && i < M.mirrorOf(opp.stats, e); i++) pick.push('om:' + e);
-        } else for (let i = 0; pick.length < lvl && i < (opp.stats.mirror || 0); i++) pick.push('om');
         for (let i = 0; pick.length < lvl && i < (opp.stats.rainbow || 0); i++) pick.push('or');
+        for (let i = 0; pick.length < lvl && i < (opp.stats.manaflow || 0); i++) pick.push('om');
         for (let i = 0; pick.length < lvl && i < (opp.stats.heal || 0); i++) pick.push('oh');
         for (let i = 0; pick.length < lvl && i < (opp.stats.freeDraws || 0); i++) pick.push('ot');
         acts.push(A({ type: 'lfp', pick }));
@@ -196,9 +188,9 @@ function combatPlan(state, pid) {
     return [A({ type: 'recover' })];
   }
   // Verteidigung
-  const color = c.color, pend = c.pending, lethal = pend - Math.min(M.shieldOf(s, c.color), pend) >= s.hp;
+  const color = c.color, pend = c.pending, shield = s.rainbow || 0, lethal = pend - Math.min(shield, pend) >= s.hp;
   const cand = hand.filter(h => !h.curse);
-  const abs0 = Math.min(M.shieldOf(s, color), pend);   // ohne Verteidigung gleicht ein Spiegel bis zu seiner Stufe aus
+  const abs0 = Math.min(shield, pend);   // ohne Verteidigung mindert das Schild bis zu seinen Ladungen
   let best = { score: (pend - abs0) * (lethal ? Q.dLeth : Q.dPend) + abs0 * Q.mirKeep, ord: [] };   // Verzicht auf Verteidigung bringt Mana
   const variants = [];
   for (const sub0 of subsets(cand, Math.max(1, s.limit))) {
@@ -208,15 +200,12 @@ function combatPlan(state, pid) {
   for (const sub of variants) {
     const ev = M.evalDefense(s, sub, color);
     if (!ev.valid || ev.affordable === false) continue;
-    const left0 = Math.max(0, pend - (ev.block || 0)), lvM = M.defenseComboPre(s, ev, color).mir, absorbed = Math.min(lvM, left0), left = left0 - absorbed;   // Spiegel gleicht fehlende Verteidigung bis zu seiner Stufe aus; seit 0.4 wirkt ein Spiegel-Kombo der Verteidigung schon gegen diesen Angriff
+    const left0 = Math.max(0, pend - (ev.block || 0)), lvM = M.defenseComboPre(s, ev, color).mir, absorbed = Math.min(lvM, left0), left = left0 - absorbed;   // das Schild mindert den nicht geblockten Schaden bis zu seinen Ladungen (ein Schild-Kombo der Verteidigung wirkt erst danach)
     const nCurse = sub.filter(h => h.curse).length;
     let score = left * (lethal ? Q.dLeth : Q.dPend) + (ev.cost || 0) * Q.dCost + (sub.length - nCurse) * Q.dKeep - nCurse * 0.6;
-    if (lvM > 0) {   // Spiegel: Überschuss der Verteidigung wird bis zur Stufe zurückgeworfen; jeder ausgeglichene oder zurückgeworfene Schaden kostet eine Stufe
-      const opp = c.sides[c.turn === 'a' ? 'b' : 'a'], rel = Math.min(lvM, pend, Math.max(0, (ev.block || 0) - pend));
-      score -= rel * Q.mirW + (rel >= opp.stats.hp ? 60 : 0) - (rel + absorbed) * Q.mirKeep;
-    }
+    if (lvM > 0) score += absorbed * Q.mirKeep;   // jede geminderte Einheit Schaden kostet eine Schildladung
     if (ev.ord) { const o = c.sides[c.turn === 'a' ? 'b' : 'a'], lvD = Object.assign({}, M.levelsFor(ev)); if (left >= s.hp) lvD.gh = 0; score -= ordComboWorth(side, o, Q, state.rules, lvD, ev); }   // tödlicher Restschaden: die Heilung nach dem Schaden verfällt
-    if (Q.dU > 0 && ev.levels && ev.levels.ulti > 0) { const o = c.sides[c.turn === 'a' ? 'b' : 'a']; score -= Q.dU * (ev.ultiEl === 'F' ? ev.levels.ulti * Q.wDeath * (o.stats.death >= ev.levels.ulti ? 0.1 : 1) * Math.max(0.4, Math.min(1.4, o.stats.hp / 4)) : ultiWorth(side, o, Q, ev.ultiEl, ev.levels.ulti)); }   // Ultimate in der Verteidigung: Feuer Todesfluss für den Angreifer, Erde Heilfluss, Wasser Multispiegel
+    if (Q.dU > 0 && ev.levels && ev.levels.ulti > 0) { const o = c.sides[c.turn === 'a' ? 'b' : 'a']; score -= Q.dU * (ev.ultiEl === 'F' ? ev.levels.ulti * Q.wDeath * (o.stats.death >= ev.levels.ulti ? 0.1 : 1) * Math.max(0.4, Math.min(1.4, o.stats.hp / 4)) : ultiWorth(side, o, Q, ev.ultiEl, ev.levels.ulti)); }   // Ultimate in der Verteidigung: Feuer Todesfluss für den Angreifer, Erde Heilfluss, Wasser Manafluss
     if (score < best.score) best = { score, ord: sub };
   }
   if (!best.ord.length) return [A({ type: 'pass' })];

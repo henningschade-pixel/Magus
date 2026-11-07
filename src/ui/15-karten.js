@@ -58,7 +58,7 @@ function place(card, s) {
   if (!held) d.style.transform = rec.final;
   d.style.zIndex = held ? 400 : s.z;
   const wasDown = d.classList.contains('down'), flipped = !isNew && !!s.down !== wasDown && (s.zone === 'hand' || prevZone === 'hand') && !FAST && !reducedMotion();
-  d.classList.toggle('down', !!s.down); d.classList.toggle('marked', !!s.marked); d.classList.toggle('first', !!s.first); d.classList.toggle('fd', !!s.fd); d.classList.toggle('locked', !!s.locked);
+  d.classList.toggle('down', !!s.down); d.classList.toggle('marked', !!s.marked); d.classList.toggle('first', !!s.first); d.classList.toggle('fd', !!s.fd); d.classList.toggle('cand', !!s.cand); d.classList.toggle('locked', !!s.locked);
   d.classList.toggle('myhand', !!s.mine); d.dataset.slot = s.slot === undefined ? '' : s.slot;
   d.style.pointerEvents = s.mine ? 'auto' : 'none';
   if (flipped) { const ms = CardFlip.hand(d.querySelector('.inner'), s.down ? 0 : 180, s.down ? 180 : 0, wait); cardsUntil = Math.max(cardsUntil, Date.now() + ms); }   // Volle Drehung (Kartendreh-Werkstatt); nur Karten, die in die Hand kommen oder sie verlassen (Austeilen, Aufdecken); Mischen und Ablegen drehen ohne Animation
@@ -76,7 +76,7 @@ function layoutDeck(deck, L, mine) {
     if (!c) return;
     if (!forcedMe()) fdSel.clear();
     const fdm = mine && forcedMe() && fdSel.has(i), marked = deck.marks.includes(i) || fdm;
-    place(c, { x: slotX(i, n, L), y: L.y + (marked ? L.raise : 0), sc: L.s, down: !mine, z: 20 + i + (marked ? 30 : 0), marked, fd: fdm, locked: mine && c.locked, mine, slot: i, spawn, zone: 'hand', first: mine && marked && !fdm && isFirstAtk(deck, i)});
+    place(c, { x: slotX(i, n, L), y: L.y + (marked ? L.raise : 0), sc: L.s, down: !mine, z: 20 + i + (marked ? 30 : 0), marked, fd: fdm, cand: mine && forcedMe() && G.combat.forced.kind === 'trap' && G.combat.forced.slots.includes(i), locked: mine && c.locked, mine, slot: i, spawn, zone: 'hand', first: mine && marked && !fdm && isFirstAtk(deck, i)});
   });
 }
 // Nachziehlimit: drei Kreise unter dem Nachziehstapel (beide Spieler), der rot/grüne Marker liegt auf der Stufe des nächsten freien Nachziehens; Stufen über dem Limit sind abgedunkelt, auf der nächsten sitzt der Plus-Knopf (Upgrade-Punkte)
@@ -140,7 +140,7 @@ function renderCards() {
     const lf = lfCtx(), sel = lf ? lf.picks.filter(p => p === 'ot').length : 0, pos = 'left:' + L_OP.draw.x + 'px;top:' + (L_OP.draw.y + CH * L_OP.ps + (G.rules.drawMarker ? 48 : 22)) + 'px', inner = '<img src="' + IMG.gratis + '">' + (cx.oppStats.freeDraws > 1 ? '<b class="mul">×' + cx.oppStats.freeDraws + '</b>' : '') + (sel ? '<i class="lfb">✓' + sel + '</i>' : '');
     ph += lf ? '<button class="freedraw opp lf' + (sel ? ' sel' : '') + '" data-act="lfm" data-k="ot" title="Läuterung: gegnerische Nachziehtokens zerstören (Klick: einen mehr, nach dem Maximum wieder alle weg). Sie werden nicht gutgeschrieben." style="' + pos + '">' + inner + '</button>' : '<div class="freedraw opp" title="Gratis-Nachziehen des Gegners: ' + cx.oppStats.freeDraws + 'x" style="' + pos + '">' + inner + '</div>';
   }
-  if (cx.combat) ph += deathTokens(cx.myStats, 's') + deathTokens(cx.oppStats, 'o') + healTokens(cx.myStats, 's') + healTokens(cx.oppStats, 'o');   // Todesmarker als einzelne Tokens auf dem Tisch
+  if (cx.combat) ph += deathTokens(cx.myStats, 's') + deathTokens(cx.oppStats, 'o') + healTokens(cx.myStats, 's') + healTokens(cx.oppStats, 'o') + manaTokens(cx.myStats, 's') + manaTokens(cx.oppStats, 'o');   // Todesmarker als einzelne Tokens auf dem Tisch
   const pnd = G.players[ME].stats[M.upField(G)], slotC = M.slotStepCost(G, G.players[ME].stats);
   if (!cx.combat && pnd >= slotC && G.players[ME].slots < M.MAX_SLOTS) {
     const canSlot = myTurn();

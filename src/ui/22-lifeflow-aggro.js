@@ -10,6 +10,7 @@ const FlowFx = (() => {
   // Mittelpunkt eines Oberflächenelements in Bühnenkoordinaten
   function at(el) { if (!el) return null; const r = el.getBoundingClientRect(), sr = stage.getBoundingClientRect(), k = sr.width / stage.offsetWidth; return { x: (r.left + r.width / 2 - sr.left) / k, y: (r.top + r.height / 2 - sr.top) / k }; }
   const panelOf = pid => pid === ME ? stage.querySelector('.sbody[data-lead]') : stage.querySelector('.sbody:not([data-lead])');
+  const manaPos = pid => at(panelOf(pid) && panelOf(pid).querySelector('[data-pv="mana"]')) || { x: 1000, y: pid === ME ? 740 : 110 };
   const hpOf = pid => at(panelOf(pid) && panelOf(pid).querySelector('[data-pv="hp"]')) || { x: pid === ME ? 1000 : 1000, y: pid === ME ? 700 : 70 };
   const markOf = pid => { const w = pid === ME ? 's' : 'o', q = deathPos(w, 0); return at(stage.querySelector('.deathtok[data-who="' + w + '"]')) || { x: q.x + 24, y: q.y + 24 }; };
   const drawOf = pid => { const L = pid === ME ? L_MY : L_OP; return pid === ME ? (at(stage.querySelector('.freedraw:not(.opp)')) || { x: L.draw.x + CW * L.ps / 2, y: L.draw.y - 20 }) : { x: L.draw.x + CW * L.ps / 2, y: L.draw.y + CH * L.ps / 2 }; };
@@ -174,11 +175,11 @@ const FlowFx = (() => {
   const healMs = n => curseMs(n);   // gleicher Zeitplan wie beim Todesfluss
   function heal(fx) {
     if (off()) return;
-    const who = fx.who, w = who === ME ? 's' : 'o', toks = [...stage.querySelectorAll('.healtok[data-who="' + w + '"]')], n = Math.max(1, Math.min(fx.marks || fx.n || 1, 4)), hp = hpOf(who), C = '#93c24f', D = '#2f7a2f', Lt = '#e8ffb8';
+    const who = fx.who, w = who === ME ? 's' : 'o', toks = [...stage.querySelectorAll((fx.mana ? '.manatok' : '.healtok:not(.manatok)') + '[data-who="' + w + '"]')], n = Math.max(1, Math.min(fx.marks || fx.n || 1, 4)), hp = fx.mana ? manaPos(who) : hpOf(who), C = fx.mana ? '#52a6f5' : '#93c24f', D = fx.mana ? '#1d4f94' : '#2f7a2f', Lt = fx.mana ? '#d6ecff' : '#e8ffb8';
     const srcs = []; for (let i = 0; i < n; i++) { const q = deathPos(w, i); srcs.push(at(toks[0]) || { x: q.x + 24, y: q.y + 24 }); }
     const life = .75, N = 36, dur = curseStart(n - 1) + CURSE_F + .65;
     const puff = (ctx, x, y, r, a, col) => { if (a <= 0.01) return; const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, rgba(lighten(col, .3), a)); g.addColorStop(.45, rgba(col, a * .65)); g.addColorStop(1, rgba(D, 0)); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); };
-    const plus = (ctx, x, y, s, a) => { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = rgba(Lt, a); ctx.lineWidth = Math.max(1.5, s * .38); ctx.lineCap = 'round'; ctx.shadowColor = C; ctx.shadowBlur = 8; ctx.beginPath(); ctx.moveTo(x - s, y); ctx.lineTo(x + s, y); ctx.moveTo(x, y - s); ctx.lineTo(x, y + s); ctx.stroke(); ctx.restore(); };
+    const plus = (ctx, x, y, s, a) => { if (fx.mana) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = rgba(Lt, a); ctx.shadowColor = C; ctx.shadowBlur = 8; ctx.beginPath(); ctx.moveTo(x, y - s * 1.3); ctx.lineTo(x + s * .8, y); ctx.lineTo(x, y + s * 1.3); ctx.lineTo(x - s * .8, y); ctx.closePath(); ctx.fill(); ctx.restore(); return; } ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = rgba(Lt, a); ctx.lineWidth = Math.max(1.5, s * .38); ctx.lineCap = 'round'; ctx.shadowColor = C; ctx.shadowBlur = 8; ctx.beginPath(); ctx.moveTo(x - s, y); ctx.lineTo(x + s, y); ctx.moveTo(x, y - s); ctx.lineTo(x, y + s); ctx.stroke(); ctx.restore(); };
     run(dur, (ctx, t) => {
       srcs.forEach((sr, i) => {
         const d = curseStart(i), rr = rng(41 + i * 29), cx = (sr.x + hp.x) / 2 + (rr() - .5) * 90, cy = Math.min(sr.y, hp.y) - 60 - rr() * 50;
