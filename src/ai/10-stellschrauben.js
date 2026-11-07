@@ -17,6 +17,7 @@ const DEFAULTS = {
   // über 1, höchstens 6) darunter liegt; sacRes: Gold, das dabei übrig bleiben muss (Vorrang der Verbesserungen)
   sacG: 0, mgGoal: 2, sacRes: 0,
   // sacSur (seit 0.7.7.5): Überschussgold. Kann die KI nichts mehr für Gold verbessern und hat mindestens sacSur Gold, opfert sie es im Tempel für die nächste Magiestufe (auch bei sacG 0 und über mgGoal hinaus); 0 = aus. Vorher blieb die Magie bei Stufe 1 stehen, während sich über 100 Gold ansammelten.
+  sacBatch: 1, sacMaxCost: 99,   // Überschussgold: für wie viele Magiestufen auf einmal geopfert wird (1 = sofort die nächste) und welche Stufe höchstens kosten darf (Upgrade-Punkte)
   sacSur: 1,   // abgestimmt (0.7.7.6): Scan 1 bis 20 gegen den Pool, 1 ist am besten (65 % statt 52 % bei 6)
   // rAtk: Angriffslust auf ein Monster, solange der Marker rot ist (statt nachzuziehen und dem Gegner Gold zu
   // schenken); Nachziehlimit (Upgrade-Punkte): dlMax bis zu welcher Stufe die KI es kauft (0 = nie), dlPos

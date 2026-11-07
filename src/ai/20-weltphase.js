@@ -80,19 +80,23 @@ function ecoStep(state, pid) {
   for (const e of M.ELEMENTS) { const cost = M.magicCost(state, s.mag[e], s); if (s.mag[e] < M.MAX_MAGIC && mgv(state, s) >= cost) { const sc = Q.mBase - cost * Q.mCost + countEl(e) * Q.mCnt + (s.mag[e] === Math.max(s.mag.F, s.mag.E, s.mag.W) ? Q.mTop : 0) + (e === M.SUPERIOR[oppTop] ? Q.mCounter * opp.mag[oppTop] : 0) + (e === planEl ? Q.mPlan : 0) + Q.mCatch * Math.max(0, opp.mag[e] - s.mag[e]); if (!best || sc > best.sc) best = { sc, a: A({ type: 'magic', elem: e }) }; } }
   if (best) return best.a;
   if (sw) {   // swapCosts: Magie kostet Punkte, die nur der Tempel liefert (Gold opfern); Verbesserungen kosten Gold
-    // Gold opfern, bis die Punkte für die nächste Magiestufe reichen (bis zu res Gold bleiben übrig)
-    const sacMagic = res => {
-      let tgt = null;
-      for (const e of M.ELEMENTS) if (s.mag[e] < M.MAX_MAGIC) { const cost = M.magicCost(state, s.mag[e], s), sc = -cost * Q.mCost + countEl(e) * Q.mCnt + (e === planEl ? Q.mPlan : 0) + (e === M.SUPERIOR[oppTop] ? Q.mCounter * opp.mag[oppTop] : 0); if (!tgt || sc > tgt.sc) tgt = { sc, cost }; }
-      if (!tgt) return null;
-      const need = tgt.cost - s.pending;
+    // Gold opfern, bis die Punkte für die nächsten batch Magiestufen reichen (bis zu res Gold bleiben übrig). Ein großes Opfer lohnt mehr als mehrere kleine: n Gold ergeben n(n+1)/2 Punkte, ein geteiltes Opfer verschenkt diesen Zuwachs. Darum wartet die KI mit sacBatch > 1, bis das Gold für mehrere Stufen auf einmal reicht, und kauft nur Stufen, die höchstens maxCost Upgrade-Punkte kosten (sonst lieber sparen).
+    const sacMagic = (res, batch, maxCost) => {
+      let left = 0; for (const e of M.ELEMENTS) left += M.MAX_MAGIC - s.mag[e];
+      let need = -s.pending, k = 0;
+      for (let i = 0; i < Math.min(batch, left); i++) {
+        const c = M.magicCost(state, 0, { buys: { mag: ((s.buys && s.buys.mag) || 0) + i } });
+        if (c > maxCost) break;
+        need += c; k++;
+      }
+      if (!k) return null;
       for (let n = 1; n <= s.gold - res; n++) if (M.previewTemple(p, n).gained >= need) return A({ type: 'temple', amount: n });
       return null;
     };
-    if (Q.sacG && M.magicProgress(p) < Q.mgGoal) { const a = sacMagic(Q.sacRes); if (a) return a; }
+    if (Q.sacG && M.magicProgress(p) < Q.mgGoal) { const a = sacMagic(Q.sacRes, 1, 99); if (a) return a; }
     const a = spendStep();   // Gold geht in Verbesserungen (oder wird fürs Limit gespart)
     if (a) return a;
-    if (Q.sacSur > 0 && s.gold >= Q.sacSur) return sacMagic(0);   // Überschuss: nichts Bezahlbares mehr, das Gold kauft Magie (seit 0.7.7.5)
+    if (Q.sacSur > 0 && s.gold >= Q.sacSur) return sacMagic(0, Q.sacBatch, Q.sacMaxCost);   // Überschuss: nichts Bezahlbares mehr, das Gold kauft Magie (seit 0.7.7.5)
     return null;
   }
   if (s.gold - Q.tKeep >= 2) return A({ type: 'temple', amount: Math.min(s.gold - Q.tKeep, 3) });
