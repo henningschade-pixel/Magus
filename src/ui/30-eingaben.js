@@ -8,6 +8,7 @@ function onAct(d) {
     case 'stopen': statsOpen(true); break;
     case 'sndtoggle': Snd.toggle(); Snd.play('ui_click', 0, .8); if (menuView) { setTimeout(menuView, 350); menuView(); } break;
     case 'menu': showStart(d.p); break;
+    case 'rule': if (d.k === 'all') RULE_OPTS.forEach(o => setGameRule(o.k, 'def')); else setGameRule(d.k, d.d); if (menuView) menuView(); break;
     case 'quit': try { window.close(); } catch (e) {} setTimeout(() => showStart('quit'), 150); break;
     case 'homeset': homeSettings(); break;
     case 'homeback': homeMenuDraw(); break;
@@ -179,7 +180,7 @@ function homeSettings() {
   overlay.innerHTML = '<div class="box start" style="width:420px"><h1 style="font-size:44px">Einstellungen</h1><div class="menulist" style="margin-top:10px">' + settingsHTML() + '<button class="btn" data-act="homeback">Zurück</button></div></div>';
 }
 // Klickton für Menü- und Bedienknöpfe (Aktionen mit eigenem Ton ausgenommen)
-const CLICK_ACTS = new Set(['sacdn', 'sacup', 'deckview', 'home', 'resume', 'restart', 'leave', 'newgame', 'newspec', 'specspeed', 'stend', 'logdl', 'stclose', 'stopen', 'sndtoggle', 'menu', 'quit', 'homeset', 'homeback', 'stfit', 'stwho', 'stser', 'dismiss']);
+const CLICK_ACTS = new Set(['sacdn', 'sacup', 'deckview', 'home', 'resume', 'restart', 'leave', 'newgame', 'newspec', 'specspeed', 'stend', 'logdl', 'stclose', 'stopen', 'sndtoggle', 'rule', 'menu', 'quit', 'homeset', 'homeback', 'stfit', 'stwho', 'stser', 'dismiss']);
 stage.addEventListener('pointerdown', e => { const b = e.target.closest('button'); if (b && (b.id === 'homebtn' || b.id === 'statsbtn' || b.classList.contains('logdl') || CLICK_ACTS.has(b.dataset.act))) Snd.play('ui_click'); }, true);
 const homeBtn = document.createElement('button');
 homeBtn.id = 'homebtn'; homeBtn.title = 'Hauptmenü (die Partie bleibt erhalten)'; homeBtn.textContent = '⌂';

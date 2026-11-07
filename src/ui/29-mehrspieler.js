@@ -57,7 +57,7 @@ function mpStart(seed, first, rules) {
   Intro.start(); mpChip(); pump();
 }
 function mpBegin() {   // Gastgeber: Spiel anlegen
-  const rules = Object.assign({}, M.DEFAULT_RULES);
+  const rules = Object.assign({}, M.DEFAULT_RULES, gameRules());   // Spieleinstellungen des Gastgebers gelten für beide
   mpStart((Math.random() * 2 ** 31) | 0, Math.random() < 0.5 ? 0 : 1, rules);
 }
 function mpPush(a) { MP.log.push(a); mpSave(); mpEmit('act', { i: MP.log.length - 1, a }); }

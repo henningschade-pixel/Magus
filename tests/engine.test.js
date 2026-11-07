@@ -1103,3 +1103,20 @@ test('KI: Tempelopfer nur mit Ergebnis, jedes Opfer wird im selben Zug von einem
   }
   assert.ok(n > 20, 'es wird geopfert (' + n + ')');
 });
+
+test('Spieleinstellungen: exhaustRounds und winLead aus den Regeln gelten (0.8.1)', () => {
+  assert.equal(M.DEFAULT_RULES.exhaustRounds, 10); assert.equal(M.DEFAULT_RULES.winLead, 4);
+  // Erschöpfung nach 3 statt 10 Runden: nach 6 Angriffszügen verlieren beide Seiten 1 HP
+  const { s, c } = combatSetup(11, ['F1']);
+  s.rules.exhaustRounds = 3; c.sides.a.stats.hp = c.sides.a.stats.maxHp = 100; c.sides.b.stats.hp = c.sides.b.stats.maxHp = 100;
+  const pass = () => assert.ok(M.apply(s, { pid: c.sides[c.turn].ctrl, type: 'pass' }).ok);
+  for (let i = 0; i < 6; i++) pass();
+  assert.equal(c.sides.a.stats.hp, 100, 'in den ersten 3 Runden keine Erschöpfung');
+  for (let i = 0; i < 2; i++) pass();
+  assert.ok(c.sides.a.stats.hp < 100 && c.sides.b.stats.hp < 100, 'ab Runde 4 verlieren beide HP');
+  // Erschöpfung aus
+  const t = combatSetup(11, ['F1']); t.s.rules.exhaustRounds = 0; t.c.sides.a.stats.hp = t.c.sides.a.stats.maxHp = 100; t.c.sides.b.stats.hp = t.c.sides.b.stats.maxHp = 100;
+  for (let i = 0; i < 60; i++) assert.ok(M.apply(t.s, { pid: t.c.sides[t.c.turn].ctrl, type: 'pass' }).ok);
+  assert.equal(t.c.sides.a.stats.hp, 100, 'exhaustRounds 0: keine Erschöpfung');
+});
+

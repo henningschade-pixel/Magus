@@ -594,3 +594,6 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 
 - **Falle schwächer:** Der Rückwurf der Falle beträgt **S = 1 / 2 / 3** unblockbaren Schaden (vorher 2·S = 2 / 4 / 6), weiterhin höchstens der eingehende Schaden und vor der Verteidigung. KI-Wert der Falle entsprechend halbiert (`trapWorth`: Stufe statt 2 × Stufe).
 
+## Änderung 0.8.1 (07.11.)
+
+- **Spieleinstellungen:** Neue Seite „Spieleinstellungen“ im Hauptmenü mit zwei Werten: **Runden bis Erschöpfung** (`exhaustRounds`, Standard 10, 0 = keine Erschöpfung) und **Siegpunkt-Vorsprung** für das vorzeitige Spielende nach einem Showdown (`winLead`, Standard 4, 0 = kein vorzeitiges Ende). Die Engine kannte beide Regeln schon; neu ist die Oberfläche (Knöpfe − / +, „Standardwerte“). Die Werte gelten für neue Spiele (Einzelspieler, Zuschauen, Raum erstellen; der Gastgeber legt sie für beide fest) und liegen im Browser (`localStorage`, Schlüssel `magus_rules`). Ein laufendes Spiel behält seine Werte.

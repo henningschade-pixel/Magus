@@ -6,7 +6,7 @@ function newGame(spec) {
   ME = 0; OPP = 1;
   clearTimeout(aiTimer);
   els.forEach(r => r.el.remove()); els.clear();
-  G = M.newGame({ seed: (/[?&]seed=(\d+)/.exec(location.search) || [0, (Math.random() * 2 ** 31) | 0])[1] | 0, names: SPEC ? ['Computer A', 'Computer B'] : ['Du', 'Computer'], ai: [SPEC, true] });
+  G = M.newGame({ seed: (/[?&]seed=(\d+)/.exec(location.search) || [0, (Math.random() * 2 ** 31) | 0])[1] | 0, names: SPEC ? ['Computer A', 'Computer B'] : ['Du', 'Computer'], ai: [SPEC, true], rules: gameRules() });
   M.record(G); G.keepSnap = true;
   seenCombat = null; upSeen = null; endView = null; modal = null; introSeen = -1; hold = 0; started = true;
   overlay.style.display = 'none'; overlay.innerHTML = '';
