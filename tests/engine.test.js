@@ -336,13 +336,45 @@ test('Falle: Die Stufe 2 wirft 4 zurück, gedeckelt durch den Schaden', () => {
   assert.equal(trapFall('F', 2, 'F3').me.stats.hp, 6);   // Schaden 3, Rückwurf min(4, 3) = 3
   assert.equal(trapFall('F', 2, 'F1').me.stats.hp, 8);   // Schaden 1
 });
-test('Falle legen: Blau + Rot zieht bis zu drei Karten, eine davon liegt verdeckt vor mir und ist kein Marker', () => {
-  const { s, me, c } = combatSetup(11, ['W2', 'F2']);
+test('Falle legen: Rot + Blau zieht bis zu drei Karten, eine davon liegt verdeckt vor mir und ist kein Marker', () => {
+  const { s, me, c } = combatSetup(11, ['F2', 'W2']);
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
   assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
   if (c.forced && c.forced.kind === 'trap') { assert.ok(c.forced.slots.length >= 2 && c.forced.slots.length <= 3); assert.ok(M.apply(s, { pid: 0, type: 'fd', slots: [c.forced.slots[0]] }).ok); }
   assert.ok(me.stats.trap, 'Falle liegt'); assert.equal(me.stats.trap.lvl, 2);
   assert.equal(JSON.stringify(me.deck.marks), '[]');
+});
+
+test('Hellsicht (Blau + Rot): zieht S Karten, je Karte Hand, Ablage oder zurück zum Händler', () => {
+  const { s, me, c } = combatSetup(11, ['W2', 'F2']);
+  me.deck.draw = ['E1', 'F1', 'W1', 'E2'].map((id, i) => ({ id, uid: 7000 + i }));   // zuletzt gezogen wird E2
+  const supplyBefore = s.supply ? s.supply.E2 : null, discBefore = me.deck.discard.length;
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
+  assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+  assert.ok(c.forced && c.forced.kind === 'sight' && c.forced.cards.length === 2, 'Stufe 2 zieht 2 Karten');
+  assert.deepEqual(c.forced.cards.map(x => x.id), ['E2', 'W1']);
+  assert.equal(M.apply(s, { pid: 0, type: 'fd', pick: ['t'] }).ok, false, 'je Karte eine Entscheidung');
+  assert.equal(M.apply(s, { pid: 0, type: 'attack' }).ok, false, 'vorher keine andere Aktion');
+  const handBefore = me.deck.hand.filter(Boolean).length;
+  assert.ok(M.apply(s, { pid: 0, type: 'fd', pick: ['d', 't'] }).ok);
+  assert.equal(c.forced, null);
+  assert.equal(me.deck.hand.filter(Boolean).length, handBefore + 1, 'W1 liegt auf der Hand');
+  if (s.supply) assert.equal(s.supply.E2, supplyBefore + 1, 'E2 ging zurück in den Vorrat');
+  assert.ok(!me.deck.discard.some(x => x.uid === 7003) && !me.deck.draw.some(x => x.uid === 7003), 'E2 ist aus dem Deck');
+});
+test('Hellsicht: Auf die Hand nur mit freiem Platz; Ablage legt die Karte auf den Ablagestapel', () => {
+  const { s, me, c } = combatSetup(11, ['W3', 'F3']);
+  me.deck.draw = ['E1', 'F1', 'W1'].map((id, i) => ({ id, uid: 7100 + i }));
+  me.deck.hand.forEach((x, i) => { if (!x) me.deck.hand[i] = { id: 'E1', uid: 7200 + i }; });   // Hand voll, sobald die beiden Kombokarten verbraucht sind
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
+  assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+  assert.equal(c.forced.cards.length, 3);
+  const free = me.deck.hand.filter(x => !x).length;
+  assert.ok(free < 3, 'nicht genug Platz');
+  assert.equal(M.apply(s, { pid: 0, type: 'fd', pick: ['t', 't', 't'] }).ok, false, 'zu viele Karten auf die Hand');
+  const pick = ['a', 'a', 'a'], n0 = me.deck.discard.length;
+  assert.ok(M.apply(s, { pid: 0, type: 'fd', pick }).ok);
+  assert.equal(me.deck.discard.length, n0 + 3);
 });
 
 test('Nachziehmarker Weltphase: Nachziehen bei rotem Marker gibt dem Gegner 1 Gold, jede andere Aktion stellt auf grün zurück', () => {
@@ -570,9 +602,9 @@ test('Steigende Preise (priceRise): jeder Kauf einer Kategorie verteuert die nä
 test('Kombo mit mehreren Karten der zweiten Farbe: F2, W1, W1 ergibt Falle 2 (Kartenstufen derselben Farbe zählen zusammen)', () => {
   const st = { mag: { F: 3, E: 3, W: 3 }, mana: 9 }, ev = ids => M.evalAttack(st, ids.map(id => Object.assign({ id }, M.parseCard(id))));
   assert.deepEqual([ev(['F2', 'W1', 'W1']).ord.key, ev(['F2', 'W1', 'W1']).ord.lvl], ['wt', 2]);
-  assert.equal(ev(['F2', 'W1']).ord.lvl, 1); assert.equal(ev(['F2', 'W1']).ord.key, 'wt', 'Rot + Blau ist ebenfalls die Falle');
-  assert.deepEqual([ev(['W1', 'F2', 'F1']).ord.key, ev(['W1', 'F2', 'F1']).ord.lvl], ['wt', 1]);   // andere erste Farbe: Falle (Blau + Rot), Stufe = Minimum der Farbsummen
-  assert.deepEqual([ev(['W2', 'F1', 'F1']).ord.key, ev(['W2', 'F1', 'F1']).ord.lvl], ['wt', 2]);
+  assert.equal(ev(['F2', 'W1']).ord.lvl, 1); assert.equal(ev(['F2', 'W1']).ord.key, 'wt', 'Rot + Blau ist die Falle');
+  assert.deepEqual([ev(['W1', 'F2', 'F1']).ord.key, ev(['W1', 'F2', 'F1']).ord.lvl], ['hs', 1]);   // andere erste Farbe: Hellsicht (Blau + Rot), Stufe = Minimum der Farbsummen
+  assert.deepEqual([ev(['W2', 'F1', 'F1']).ord.key, ev(['W2', 'F1', 'F1']).ord.lvl], ['hs', 2]);
   assert.deepEqual([ev(['W1', 'E1', 'E1']).ord.key, ev(['W1', 'E1', 'E1']).ord.lvl], ['ws', 1]);   // Blau + Grün: Schild
   assert.equal(ev(['F1', 'F1', 'E2']).ord.lvl, 2); assert.equal(ev(['F1', 'F1', 'E1']).ord.lvl, 1);
 });

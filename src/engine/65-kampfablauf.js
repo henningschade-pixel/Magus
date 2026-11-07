@@ -65,6 +65,7 @@ function evaluateEnd(state) {
 function endCombat(state, end) {
   const c = state.combat, res = { mode: c.mode, reason: end.reason, winner: end.winner, monsterDefeated: false, elem: c.elem, stage: state.stage, turns: c.turns, fled: end.fled || null };   // elem/stage/turns: für die Balance-Auswertung
   if (state.keepSnap) res.snap = JSON.parse(JSON.stringify(c));   // Oberfläche: Endstand des Kampfes (vor Zurücksetzen und Rückkehr in die Weltphase)
+  if (c.forced && c.forced.kind === 'sight') { const fs = c.sides.a.ctrl === c.forced.pid ? c.sides.a : c.sides.b; if (fs.kind === 'player') c.forced.cards.forEach(cd => fs.deck.discard.push(cd)); c.forced = null; }   // unentschiedene Hellsicht-Karten kehren in den Ablagestapel zurück
   state.players.forEach(p => { if (p.stats.trap) p.deck.discard.push(p.stats.trap.card); p.stats.freeDraws = 0; p.deck.marks = []; ['death', 'deathPhase', 'heal', 'healPhase', 'manaflow', 'manaPhase', 'rainbow', 'trap'].forEach(k => { delete p.stats[k]; }); });   // die Fallenkarte kehrt in den Ablagestapel zurück (wird gleich mit gemischt)
   state.players.forEach(p => stripCurseCards(state, p.deck));
   ['healPhase', 'death', 'deathPhase', 'heal', 'manaflow', 'manaPhase', 'rainbow', 'trap'].forEach(k => { delete c.sides.b.stats[k]; });
@@ -218,7 +219,29 @@ function passAttackTurn(state) {
 
 // HP nach einer Heilung um lvl: höchstens bis zu den maximalen HP, nie weniger als vorher
 function healedHp(stats, hp, lvl) { return lvl > 0 ? Math.max(hp, Math.min(stats.maxHp, hp + lvl)) : hp; }
-// Falle (Blau + Rot, seit 0.8): Die Seite zieht drei Karten (soweit Handplätze frei sind) und legt eine davon verdeckt vor sich (stats.trap = { card, el, tier, lvl }; kein Marker, die Läuterung erreicht sie nicht). Welche, wählt der Spieler (c.forced mit kind 'trap'; ohne Wahlmöglichkeit gleich). Fluchkarten kommen nicht in Frage.
+// Hellsicht (Blau + Rot, seit 0.8.0.2): Die Seite zieht S Karten vom Zugstapel (der Ablagestapel wird bei Bedarf gemischt) und entscheidet für jede, ob sie auf die Hand kommt (sofern Platz ist), auf den Ablagestapel oder zurück zum Händler (aus dem Deck, die Karte kehrt in den Vorrat zurück; Fluchkarten verschwinden einfach). c.forced = { pid, kind: 'sight', cards, lvl }; die Entscheidung kommt als Aktion fd mit pick = ['t'|'a'|'d', ...] je Karte.
+function sightDraw(state, side, lvl) {
+  const d = side.deck, cards = [];
+  for (let i = 0; i < lvl; i++) {
+    if (!d.draw.length && d.discard.length) { d.draw = d.discard.splice(0); state.rng.shuffle(d.draw); }
+    if (!d.draw.length) break;
+    cards.push(d.draw.pop());
+  }
+  if (cards.length) state.combat.forced = { pid: side.ctrl, n: cards.length, kind: 'sight', cards, lvl };
+  return cards.length;
+}
+function sightResolve(state, side, cards, pick) {
+  const d = side.deck, out = { t: 0, a: 0, d: 0 };
+  cards.forEach((cd, i) => {
+    const k = pick[i];
+    if (k === 't') { const sl = d.hand.findIndex(x => !x); d.hand[sl] = cd; cd.locked = false; }
+    else if (k === 'a') d.discard.push(cd);
+    else if (side.kind === 'player' && state.supply && !parseCard(cd.id).curse && state.supply[cd.id] !== undefined) state.supply[cd.id]++;   // zurück zum Händler
+    out[k]++;
+  });
+  return out;
+}
+// Falle (Rot + Blau, seit 0.8.0.1; vorher Blau + Rot, seit 0.8): Die Seite zieht drei Karten (soweit Handplätze frei sind) und legt eine davon verdeckt vor sich (stats.trap = { card, el, tier, lvl }; kein Marker, die Läuterung erreicht sie nicht). Welche, wählt der Spieler (c.forced mit kind 'trap'; ohne Wahlmöglichkeit gleich). Fluchkarten kommen nicht in Frage.
 function trapDraw(state, side, lvl) {
   const d = side.deck, free = [];
   for (let i = 0; i < d.hand.length && free.length < 3; i++) if (!d.hand[i]) free.push(i);
@@ -254,6 +277,11 @@ function applyComboPlan(state, side, opp, plan, ev, texts, fxs) {
   const c = state.combat;
   for (const [k, lvl] of plan) {
     if (k === 'sh') { shieldAdd(side.stats, lvl); fxs.push({ kind: 'shieldcast', who: side.ctrl, to: opp.ctrl, n: lvl }); texts.push('Schild ' + lvl + ' (' + side.stats.rainbow + ' Ladung' + (side.stats.rainbow === 1 ? '' : 'en') + ')'); }
+    if (k === 'hs') {
+      const n = sightDraw(state, side, lvl);
+      fxs.push({ kind: 'sightcast', who: side.ctrl, to: opp.ctrl, n: lvl });
+      texts.push('Hellsicht ' + lvl + ': ' + (n ? 'zieht ' + n + ' Karte' + (n === 1 ? '' : 'n') + ' und entscheidet über jede' : 'keine Karte zum Ziehen'));
+    }
     if (k === 'tr') {
       if (side.stats.trap) { side.deck.discard.push(side.stats.trap.card); delete side.stats.trap; }
       const r = trapDraw(state, side, lvl);
@@ -291,7 +319,7 @@ function execAttack(state) {
   if (!ev.affordable) return fail('Zu wenig Mana (' + ev.cost + ' nötig).');
   side.passed = 0;   // ein Angriff beendet die Serie der Passen-Züge
   const lvs = levelsFor(ev), death = ev.levels.ulti > 0, plan = [];
-  if (!death) for (const k of ['tr', 'sh', 'fe', 'ew', 'gh']) if (lvs[k] > 0) plan.push([k, lvs[k]]);
+  if (!death) for (const k of ['hs', 'tr', 'sh', 'fe', 'ew', 'gh']) if (lvs[k] > 0) plan.push([k, lvs[k]]);
   side.stats.mana -= ev.cost;
   consumeSelection(d, sel);
   const texts = [], fxs = [];
@@ -367,7 +395,7 @@ function execDefense(state, passOnly) {
   let healLvl = 0;
   if (defEv && defEv.ord) {
     const lvs = levelsFor(defEv), plan = [], texts = [], fxs = [];
-    for (const k of ['fe', 'ew']) if (lvs[k] > 0) plan.push([k, lvs[k]]);
+    for (const k of ['hs', 'fe', 'ew']) if (lvs[k] > 0) plan.push([k, lvs[k]]);
     lateShield = lvs.sh || 0; lateTrap = lvs.tr || 0;   // Heilung (gh), Schild und Falle wirken erst nach dem Schaden, Zerrüttung und die übrigen Kombos davor
     healLvl = lvs.gh || 0;
     applyComboPlan(state, side, attacker, plan, defEv, texts, fxs);
@@ -412,7 +440,7 @@ function execDefense(state, passOnly) {
 
 function applyCombat(state, a) {
   const c = state.combat, pid = a.pid;
-  if (c.forced) {   // Zerrüttung: Der Betroffene wählt die Karten, die er abwerfen muss; vorher ist keine andere Aktion möglich
+  if (c.forced) {   // Falle oder Hellsicht: Der Betroffene entscheidet zuerst; vorher ist keine andere Aktion möglich
     const trapPick = c.forced.kind === 'trap';
     if (a.type !== 'fd') return fail(c.forced.pid === pid ? (trapPick ? 'Falle: Wähle zuerst die Karte, die du verdeckt vor dich legst.' : 'Zerrüttung: Wähle zuerst ' + c.forced.n + ' Handkarte' + (c.forced.n === 1 ? '' : 'n') + ' zum Abwerfen.') : (trapPick ? 'Der Gegner wählt gerade seine Falle.' : 'Der Gegner wählt gerade seine Abwurfkarten.'));
     if (c.forced.pid !== pid) return fail(trapPick ? 'Der Gegner wählt gerade seine Falle.' : 'Der Gegner wählt gerade seine Abwurfkarten.');
@@ -424,13 +452,12 @@ function applyCombat(state, a) {
       log(state, v.name + ' legt eine Karte verdeckt als Falle vor sich.', pid);
       return { ok: true };
     }
-    const v = c.sides.a.ctrl === pid ? c.sides.a : c.sides.b, dd = v.deck, slots = [...new Set((Array.isArray(a.slots) ? a.slots : []).map(Number))].filter(i => Number.isInteger(i) && dd.hand[i]);
-    const need = Math.min(c.forced.n, dd.hand.filter(Boolean).length);
-    if (slots.length !== need) return fail('Wähle genau ' + need + ' Handkarte' + (need === 1 ? '' : 'n') + ' zum Abwerfen.');
-    slots.forEach(i => { const cd = dd.hand[i]; cd.locked = false; dd.discard.push(cd); dd.hand[i] = null; });
-    dd.marks = [];
+    const v = c.sides.a.ctrl === pid ? c.sides.a : c.sides.b, pick = Array.isArray(a.pick) ? a.pick : [], cards = c.forced.cards;   // Hellsicht: je Karte Hand (t), Ablage (a) oder Händler (d)
+    if (pick.length !== cards.length || pick.some(k => k !== 't' && k !== 'a' && k !== 'd')) return fail('Hellsicht: Entscheide für jede gezogene Karte (Hand, Ablage oder Händler).');
+    if (pick.filter(k => k === 't').length > v.deck.hand.filter(x => !x).length) return fail('Hellsicht: Nicht genug freie Handplätze.');
+    const r = sightResolve(state, v, cards, pick);
     c.forced = null;
-    log(state, v.name + ' wirft ' + slots.length + ' Handkarte' + (slots.length === 1 ? '' : 'n') + ' ab (Zerrüttung).', pid);
+    log(state, v.name + ' entscheidet über die Hellsicht: ' + r.t + ' auf die Hand, ' + r.a + ' auf den Ablagestapel, ' + r.d + ' zurück zum Händler.', pid);
     return { ok: true };
   }
   const side = c.sides[c.turn], opp = c.sides[c.turn === 'a' ? 'b' : 'a'];

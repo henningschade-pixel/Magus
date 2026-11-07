@@ -74,7 +74,7 @@ function layoutDeck(deck, L, mine) {
   const n = deck.hand.length;
   deck.hand.forEach((c, i) => {
     if (!c) return;
-    if (!forcedMe()) fdSel.clear();
+    if (!forcedMe()) { fdSel.clear(); sightSel = []; }
     const fdm = mine && forcedMe() && fdSel.has(i), marked = deck.marks.includes(i) || fdm;
     place(c, { x: slotX(i, n, L), y: L.y + (marked ? L.raise : 0), sc: L.s, down: !mine, z: 20 + i + (marked ? 30 : 0), marked, fd: fdm, cand: mine && forcedMe() && G.combat.forced.kind === 'trap' && G.combat.forced.slots.includes(i), locked: mine && c.locked, mine, slot: i, spawn, zone: 'hand', first: mine && marked && !fdm && isFirstAtk(deck, i)});
   });

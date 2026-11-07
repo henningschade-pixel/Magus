@@ -22,7 +22,7 @@ function purgeDeath(side, Q, lvl) { return Q.lfDeath > 0 && lvl > 0 ? Math.min(l
 function ordComboWorth(side, opp, Q, rules, lvs, ev) {
   const st = side.stats, hurt = st.maxHp - st.hp, oMir = (opp.stats.manaflow || 0) + (opp.stats.rainbow || 0) + Q.lfHeal * (opp.stats.heal || 0);
   const wEw = oMir > 0 ? 1.2 + oMir * Math.max(0.3, Q.lfOppW || 0) : 0.1;
-  return trapWorth(side, opp, Q, lvs.tr) + shieldWorth(side, Q, lvs.sh) + lvs.fe * Q.wFE + lvs.ew * wEw + purgeDeath(side, Q, lvs.ew) + Math.min(lvs.gh * (rules.lifeflowHeal || 1), hurt) * Q.wEW + (lvs.gh > 0 && hurt === 0 ? 0.1 : 0);
+  return lvs.hs * 0.5 + trapWorth(side, opp, Q, lvs.tr) + shieldWorth(side, Q, lvs.sh) + lvs.fe * Q.wFE + lvs.ew * wEw + purgeDeath(side, Q, lvs.ew) + Math.min(lvs.gh * (rules.lifeflowHeal || 1), hurt) * Q.wEW + (lvs.gh > 0 && hurt === 0 ? 0.1 : 0);
 }
 // Wert einer Ultimate der Stufe lvl nach der Farbe der ersten Karte (seit 0.7): Feuer Todesfluss beim Gegner, Erde Heilfluss und Wasser Manafluss bei mir selbst (seit 0.8). Liegt schon ein Marker gleicher oder höherer Stufe, bringt sie kaum etwas.
 function ultiWorth(side, opp, Q, el, lvl) {
@@ -46,7 +46,7 @@ function bestAttack(side, opp, hand, Q, state0, reserve) {
       const lvs = M.levelsFor(ev);
       let combo = 0;
       if (ev.levels.ulti > 0) combo = ultiWorth(side, opp, Q, ev.ultiEl || ev.prim, ev.levels.ulti);
-      else combo = trapWorth(side, opp, Q, lvs.tr) + shieldWorth(side, Q, lvs.sh) + lvs.fe * w.fe + lvs.ew * w.ew + purgeDeath(side, Q, lvs.ew) + Math.min(lvs.gh * 1, hurt) * Q.wEW + (lvs.gh > 0 && hurt === 0 ? 0.1 : 0);
+      else combo = lvs.hs * 0.5 + trapWorth(side, opp, Q, lvs.tr) + shieldWorth(side, Q, lvs.sh) + lvs.fe * w.fe + lvs.ew * w.ew + purgeDeath(side, Q, lvs.ew) + Math.min(lvs.gh * 1, hurt) * Q.wEW + (lvs.gh > 0 && hurt === 0 ? 0.1 : 0);
       const dmg = ev.prim ? ev.damage : 0;
       let value = dmg * Q.aDmg + combo - ev.cost * Q.aCost + ev.curses * Q.aCurse;
       // Mana-Reserve: ohne Mana darf der unterlegene Gegner fliehen. Übersteht er den Angriff nach dem erwarteten Block, zählt der Angriff nicht als sicher tödlich.
@@ -77,6 +77,13 @@ function keepLocks(state, side, opp, hand, Q) {
   return bestS.map(h => h.slot);
 }
 // Zerrüttung: Die KI wirft zuerst Flüche, dann die schwächsten Karten ab (gesperrte Karten möglichst nicht)
+// Hellsicht: Fluchkarten gehen zurück zum Händler, echte Karten auf die Hand, solange Platz ist, sonst auf den Ablagestapel
+function sightPick(state, pid) {
+  const c = state.combat, v = c.sides.a.ctrl === pid ? c.sides.a : c.sides.b;
+  let free = v.deck.hand.filter(x => !x).length;
+  return c.forced.cards.map(cd => { if (M.parseCard(cd.id).curse) return 'd'; if (free > 0) { free--; return 't'; } return 'a'; });
+}
+function forcedAct(state, pid) { return state.combat.forced.kind === 'sight' ? { pid, type: 'fd', pick: sightPick(state, pid) } : { pid, type: 'fd', slots: forcedPick(state, pid) }; }
 function forcedPick(state, pid) {
   const c = state.combat, v = c.sides.a.ctrl === pid ? c.sides.a : c.sides.b, d = v.deck, mag = v.stats.mag;
   if (c.forced.kind === 'trap') {   // Falle: die gezogene Karte in der Farbe, mit der der Gegner nach seinem Deck am ehesten angreift
@@ -88,7 +95,7 @@ function forcedPick(state, pid) {
   return cards.slice(0, Math.min(c.forced.n, cards.length)).map(x => x.slot);
 }
 function combatPlan(state, pid) {
-  if (state.combat.forced && state.combat.forced.pid === pid) return [{ pid, type: 'fd', slots: forcedPick(state, pid) }];
+  if (state.combat.forced && state.combat.forced.pid === pid) return [forcedAct(state, pid)];
   const c = state.combat, side = c.sides[c.turn], opp = c.sides[c.turn === 'a' ? 'b' : 'a'];
   const d = side.deck, hand = handList(d), A = a => Object.assign({ pid }, a);
   const s = side.stats, Q = P(pid);
@@ -217,7 +224,7 @@ function fallback(state, pid) {
   const A = a => Object.assign({ pid }, a);
   if (state.phase === 'combat') {
     const c = state.combat;
-    if (c.forced) return [A({ type: 'fd', slots: forcedPick(state, pid) })];
+    if (c.forced) return [A(forcedAct(state, pid))];
     return c.action === 'defense' ? [A({ type: 'pass' })] : [A({ type: 'recover' }), A({ type: 'draw' }), A({ type: 'pass' })];
   }
   return [A({ type: 'draw' })];

@@ -23,12 +23,12 @@ function comboLevels(tiers, mag, prim) {
   }
   return lv;
 }
-// Rot = Feuer (Lähmung), Blau = Wasser (Defensiv), Grün = Erde (Heilend): ra Flüche, wt Falle (Rot + Blau und Blau + Rot; seit 0.8.0.1 ersetzt sie die Zerrüttung), ws Schild (Blau + Grün), gh Heilung, gr Marker entfernen + Nachziehen. Seit 0.8 ersetzen Falle und Schild die Farbspiegel.
-const ORD_COMBO = { FE: 'ra', FW: 'wt', WF: 'wt', WE: 'ws', EW: 'gh', EF: 'gr' };
-// Kombostufen auf die Plätze tr (Falle), sh (Schild), fe (Flüche), ew (Marker entfernen), gh (Heilung) abgebildet.
+// Rot = Feuer (Lähmung), Blau = Wasser (Defensiv), Grün = Erde (Heilend): ra Flüche, wt Falle (Rot + Blau, seit 0.8.0.1 statt der Zerrüttung), hs Hellsicht (Blau + Rot, seit 0.8.0.2), ws Schild (Blau + Grün), gh Heilung, gr Marker entfernen + Nachziehen. Seit 0.8 ersetzen Falle und Schild die Farbspiegel.
+const ORD_COMBO = { FE: 'ra', FW: 'wt', WF: 'hs', WE: 'ws', EW: 'gh', EF: 'gr' };
+// Kombostufen auf die Plätze hs (Hellsicht), tr (Falle), sh (Schild), fe (Flüche), ew (Marker entfernen), gh (Heilung) abgebildet.
 function levelsFor(ev) {
-  const out = { tr: 0, sh: 0, fe: 0, ew: 0, gh: 0, ulti: ev.levels.ulti }, o = ev.ord;
-  if (o && o.lvl > 0 && !(ev.levels.ulti > 0)) out[{ ra: 'fe', wt: 'tr', ws: 'sh', gh: 'gh', gr: 'ew' }[o.key]] = o.lvl;
+  const out = { hs: 0, tr: 0, sh: 0, fe: 0, ew: 0, gh: 0, ulti: ev.levels.ulti }, o = ev.ord;
+  if (o && o.lvl > 0 && !(ev.levels.ulti > 0)) out[{ ra: 'fe', wt: 'tr', hs: 'hs', ws: 'sh', gh: 'gh', gr: 'ew' }[o.key]] = o.lvl;
   return out;
 }
 // Fluchkarten kosten beim Ausspielen je 1 Mana und zählen nicht als Element.

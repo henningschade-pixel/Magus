@@ -37,6 +37,8 @@ function onAct(d) {
     case 'magic': act({ type: 'magic', elem: d.e }); break;
     case 'drawlimit': act({ type: 'drawlimit' }); break;
     case 'fd': act({ type: 'fd', slots: [...fdSel] }); fdSel.clear(); break;
+    case 'sight': if (G.combat && G.combat.forced && G.combat.forced.kind === 'sight') { sightSel[+d.i] = d.v; render(); } break;
+    case 'sightok': { const pk = sightSel.slice(); sightSel = []; act({ type: 'fd', pick: pk }); break; }
     case 'draw': if (canDrawNow()) { if (drawPenaltyNow() > 0 && !drawAsk) { drawAsk = true; render(); } else { drawAsk = false; act({ type: 'draw' }); } } else if (myTurn()) toast(G.phase === 'combat' && G.combat.action === 'attack' && drawNeedsMana() ? 'Roter Nachziehmarker: Nachziehen kostet ' + M.drawManaCost(G, ME) + ' Mana, du hast nicht genug.' : 'Jetzt ist kein Nachziehen möglich.'); break;
     case 'drawyes': drawAsk = false; if (canDrawNow()) act({ type: 'draw' }); else render(); break;
     case 'drawno': drawAsk = false; render(); break;
@@ -69,6 +71,7 @@ stage.addEventListener('click', e => {
   if (c) {
     if (G.phase === 'combat' && G.combat.forced) {   // Zerrüttung: Abwurfkarten wählen statt markieren
       const fo = G.combat.forced, trap = fo.kind === 'trap';
+      if (fo.kind === 'sight') { toast(forcedMe() ? 'Hellsicht: Entscheide über die gezogenen Karten im Kampffeld.' : 'Der Gegner entscheidet gerade über seine Hellsicht.'); return; }
       if (!forcedMe()) { toast(trap ? 'Der Gegner wählt gerade seine Falle.' : 'Der Gegner wählt gerade seine Abwurfkarten.'); return; }
       if (trap && !fo.slots.includes(+c.dataset.slot)) { toast('Wähle eine der gerade gezogenen Karten.'); return; }
       const sl = +c.dataset.slot, need = trap ? 1 : Math.min(fo.n, G.players[ME].deck.hand.filter(Boolean).length);

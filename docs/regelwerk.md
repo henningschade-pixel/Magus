@@ -84,7 +84,8 @@ Die Farbe der ersten markierten Karte bestimmt die Rolle (Feuer aggressiv, Wasse
 | Kombo | Farben | Wirkung bei Stufe S |
 |---|---|---|
 | Lähmung | Feuer + Erde | **2·S Fluchkarten** (2 / 4 / 6) auf den Ablagestapel der Gegenseite |
-| Falle | Wasser + Feuer oder Feuer + Wasser | ziehe bis zu drei Karten und lege eine davon verdeckt vor dich (Stufe S, kein Marker) |
+| Hellsicht | Wasser + Feuer | ziehe S Karten; für jede entscheiden: auf die Hand (sofern Platz), auf den Ablagestapel oder zurück zum Händler (aus dem Deck) |
+| Falle | Feuer + Wasser | ziehe bis zu drei Karten und lege eine davon verdeckt vor dich (Stufe S, kein Marker) |
 | Schild | Wasser + Erde | Schild mit S Ladungen (nicht addiert, höchstens 3) |
 | Heilung | Erde + Wasser | S HP heilen |
 | Läuterung | Erde + Feuer | S beliebige Marker vom Brett entfernen, je entferntem Marker ein Nachziehtoken |
@@ -92,7 +93,9 @@ Die Farbe der ersten markierten Karte bestimmt die Rolle (Feuer aggressiv, Wasse
 
 **Fluchkarten:** Sie kommen erst in den Zugstapel, wenn der Ablagestapel gemischt wird. Auf der Hand belegen sie einen Platz und wirken nicht. Beim Nachziehen werden sie dauerhaft verworfen, am Kampfende verschwinden alle.
 
-**Falle (Blau + Rot oder Rot + Blau; seit 0.8, Rot + Blau seit 0.8.0.1 statt der Zerrüttung):** Die Seite zieht bis zu drei Karten (soweit Handplätze frei sind) und legt eine davon verdeckt vor sich; Fluchkarten kommen nicht in Frage, bei mehreren Kandidaten wählt der Spieler, bei einem gilt sie sofort. Die Karte ist kein Marker (die Läuterung erreicht sie nicht). Sobald Schaden eingeht, wird sie aufgedeckt, **vor der Verteidigung**: Entspricht der Schaden in seiner Farbe der Karte, werden **2 / 4 / 6** (Stufe 1 / 2 / 3) **unblockbarer Schaden** auf den Angreifer zurückgeworfen, höchstens in Höhe des eingehenden Schadens; der eingehende Schaden sinkt entsprechend. Danach kommt die Karte auf den Ablagestapel, auch wenn nichts reflektiert wurde. Am Kampfende kehrt eine noch liegende Karte in den Ablagestapel zurück. Eine neue Falle ersetzt die alte. In der Verteidigung gestellt, wirkt sie erst nach ihr.
+**Hellsicht (Blau + Rot, seit 0.8.0.2):** Die Seite zieht S Karten vom Zugstapel (bei Bedarf wird der Ablagestapel gemischt) und entscheidet für jede einzeln: auf die **Hand** (nur soweit Handplätze frei sind), auf den **Ablagestapel** oder **abwerfen** (zurück zum Händler: die Karte verlässt das Deck und kehrt in den Kartenvorrat zurück; Fluchkarten verschwinden einfach). Vorher ist keine andere Aktion möglich; unentschiedene Karten kehren bei Kampfende in den Ablagestapel zurück.
+
+**Falle (Rot + Blau, seit 0.8.0.1 statt der Zerrüttung; vorher Blau + Rot, seit 0.8):** Die Seite zieht bis zu drei Karten (soweit Handplätze frei sind) und legt eine davon verdeckt vor sich; Fluchkarten kommen nicht in Frage, bei mehreren Kandidaten wählt der Spieler, bei einem gilt sie sofort. Die Karte ist kein Marker (die Läuterung erreicht sie nicht). Sobald Schaden eingeht, wird sie aufgedeckt, **vor der Verteidigung**: Entspricht der Schaden in seiner Farbe der Karte, werden **2 / 4 / 6** (Stufe 1 / 2 / 3) **unblockbarer Schaden** auf den Angreifer zurückgeworfen, höchstens in Höhe des eingehenden Schadens; der eingehende Schaden sinkt entsprechend. Danach kommt die Karte auf den Ablagestapel, auch wenn nichts reflektiert wurde. Am Kampfende kehrt eine noch liegende Karte in den Ablagestapel zurück. Eine neue Falle ersetzt die alte. In der Verteidigung gestellt, wirkt sie erst nach ihr.
 
 **Schild (Blau + Grün, seit 0.8):** Es mindert eingehenden, nicht geblockten Schaden gegen **jede** Farbe um bis zu seine Ladungen (1 / 2 / 3) und verliert je geminderten Schaden eine Ladung. Ein neues Schild bringt die Ladungen auf die Stufe (nicht addiert, höchstens 3). Ein Rückwurf findet nicht mehr statt. In der Verteidigung gestellt, wirkt es erst nach ihr. Die Grafik ist die des früheren Multischilds, ohne dessen Anfangsanimation.
 
@@ -560,3 +563,8 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Falle ersetzt die Zerrüttung:** Die Kombo Rot + Blau (erste Karte Feuer, zweite Wasser) legt jetzt ebenfalls die Falle; die Zerrüttung (Gegner wirft S Handkarten seiner Wahl ab) entfällt samt KI-Bewertung, Anzeige und Tabellenzeile. Die Falle gilt damit für beide Reihenfolgen (Blau + Rot und Rot + Blau), Stufe S wie bei allen geordneten Kombos aus der Summe der Kartenwerte je Farbe (kleinere Summe, höchstens 3). Rot + Blau schlägt in Feuer zu, Blau + Rot in Wasser.
 - Der Abwurf-Ablauf der Zerrüttung (`fd`) bleibt nur noch für die Fallenwahl in Gebrauch; der Ton `ruin` und die Animation `FlowFx.ruin` sind ungenutzt.
 - Tests: Zerrüttungs-Tests auf die Falle umgestellt.
+
+## Änderung 0.8.0.2 (07.11.)
+
+- **Hellsicht (Blau + Rot):** Neue Kombo anstelle der Falle in dieser Reihenfolge (die Falle bleibt bei Rot + Blau). Zieht S Karten, je Karte Hand, Ablage oder Händler (siehe „Kombos“). Engine: `sightDraw`, `sightResolve`, Aktion `fd` mit `pick`; Oberfläche: Panel mit Karte und drei Knöpfen je Karte, Bestätigen; KI: Fluchkarten zum Händler, echte Karten auf die Hand, solange Platz ist, sonst Ablage (Wert 0,5 je Stufe).
+- Tests: Hellsicht-Tests, Falle auf Rot + Blau umgestellt.
