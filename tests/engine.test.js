@@ -901,7 +901,7 @@ test('Opfern im Tempel ist kein Zug: der Spieler bleibt am Zug, der Nachziehmark
 });
 
 test('Kampfrunden: nach 20 Runden (je ein Angriffszug jeder Seite) endet der Kampf unentschieden (0.7.6.5)', () => {
-  const { s, c } = combatSetup(11, ['F1']);
+  const { s, c } = combatSetup(11, ['F1']); s.rules.maxRounds = 20; s.rules.exhaustRounds = 0;   // Rundenlimit optional (Standard seit 0.7.7.2: aus)
   const ctrl = k => c.sides[k].ctrl;
   for (let i = 1; i <= 39; i++) {
     const r = M.apply(s, { pid: ctrl(c.turn), type: 'pass' });
@@ -917,7 +917,7 @@ test('Kampfrunden: nach 20 Runden (je ein Angriffszug jeder Seite) endet der Kam
 });
 
 test('Kampfrunden: ein Angriff im letzten Angriffszug wird erst verteidigt, dann endet der Kampf; fällt jemand auf 0 HP, entscheidet das (0.7.6.5)', () => {
-  const { s, c, me, op } = combatSetup(11, ['F1', 'F1']);
+  const { s, c, me, op } = combatSetup(11, ['F1', 'F1']); s.rules.maxRounds = 20; s.rules.exhaustRounds = 0;
   c.atkTurns = 39; c.turn = 'a'; c.action = 'attack';
   M.apply(s, { pid: 0, type: 'mark', slot: 0 });
   assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
@@ -925,17 +925,42 @@ test('Kampfrunden: ein Angriff im letzten Angriffszug wird erst verteidigt, dann
   assert.ok(M.apply(s, { pid: c.sides[c.turn].ctrl, type: 'pass' }).ok);
   assert.equal(s.combat, null); assert.equal(s.lastCombat.reason, 'rounds');
   // Variante: der letzte Angriff tötet
-  const t = combatSetup(11, ['F3', 'F3']);
+  const t = combatSetup(11, ['F3', 'F3']); t.s.rules.maxRounds = 20; t.s.rules.exhaustRounds = 0;
   t.c.atkTurns = 39; t.op.stats.hp = 1; M.apply(t.s, { pid: 0, type: 'mark', slot: 0 });
   assert.ok(M.apply(t.s, { pid: 0, type: 'attack' }).ok); assert.ok(M.apply(t.s, { pid: t.c.sides[t.c.turn].ctrl, type: 'pass' }).ok);
   assert.equal(t.s.lastCombat.reason, 'hp'); assert.equal(t.s.lastCombat.winner, 'a');
 });
 
-test('Kampfrunden: maxRounds 0 schaltet die Begrenzung ab (0.7.6.5)', () => {
-  const s = M.newGame({ seed: 11, ai: [false, false], first: 0, rules: { maxRounds: 0 } });
+test('Kampfrunden: maxRounds 0 (Standard seit 0.7.7.2) schaltet die Begrenzung ab (0.7.6.5)', () => {
+  const s = M.newGame({ seed: 11, ai: [false, false], first: 0, rules: { maxRounds: 0, exhaustRounds: 0 } });
   M.apply(s, { pid: 0, type: 'combat', elem: 'F' }); const c = s.combat;
   for (let i = 0; i < 30; i++) assert.ok(M.apply(s, { pid: c.sides[c.turn].ctrl, type: 'pass' }).ok);
   assert.ok(s.combat, 'Kampf läuft weiter');
+});
+
+test('Erschöpfung: nach je 10 Kampfrunden steigt sie um 1, beide Seiten verlieren am Ende ihres Angriffszugs entsprechend HP (0.7.7.2)', () => {
+  const { s, c } = combatSetup(11, ['F1']);
+  assert.equal(s.rules.maxRounds, 0, 'kein Rundenlimit mehr'); assert.equal(s.rules.exhaustRounds, 10);
+  c.sides.a.stats.hp = c.sides.a.stats.maxHp = 100; c.sides.b.stats.hp = c.sides.b.stats.maxHp = 100;
+  const pass = () => assert.ok(M.apply(s, { pid: c.sides[c.turn].ctrl, type: 'pass' }).ok && true);
+  for (let i = 0; i < 20; i++) pass();   // Runde 1–10
+  assert.equal(c.sides.a.stats.hp, 100); assert.equal(c.sides.b.stats.hp, 100, 'bis Runde 10 keine Erschöpfung');
+  pass(); assert.equal(c.sides.a.stats.hp, 99, 'Runde 11: Seite a verliert 1 HP'); assert.equal(c.sides.b.stats.hp, 100);
+  pass(); assert.equal(c.sides.b.stats.hp, 99, 'Runde 11: Seite b verliert 1 HP');
+  assert.ok(s.log.some(l => /Erschöpfung 1: .* verliert 1 HP/.test(l.txt)));
+  for (let i = 0; i < 18; i++) pass();   // bis einschließlich Runde 20
+  assert.equal(c.sides.a.stats.hp, 90); assert.equal(c.sides.b.stats.hp, 90);
+  pass(); assert.equal(c.sides.a.stats.hp, 88, 'Runde 21: Erschöpfung 2');
+  pass(); assert.equal(c.sides.b.stats.hp, 88);
+});
+
+test('Erschöpfung: sie beendet einen festgefahrenen Kampf; fällt eine Seite auf 0 HP, verliert sie (0.7.7.2)', () => {
+  const { s, c } = combatSetup(11, ['F1']);
+  c.sides.a.stats.hp = 3; c.sides.a.stats.maxHp = 3; c.sides.b.stats.hp = 100; c.sides.b.stats.maxHp = 100;
+  let n = 0;
+  while (s.combat && n < 400) { assert.ok(M.apply(s, { pid: s.combat.sides[s.combat.turn].ctrl, type: 'pass' }).ok); n++; }
+  assert.equal(s.combat, null, 'Kampf endet'); assert.equal(s.lastCombat.reason, 'hp'); assert.equal(s.lastCombat.winner, 'b');
+  assert.ok(n < 200, 'in endlich vielen Zügen');
 });
 
 test('Vorzeitiges Ende: wer nach einem Showdown mit mindestens 4 Siegpunkten führt, gewinnt sofort (0.7.6.6)', () => {

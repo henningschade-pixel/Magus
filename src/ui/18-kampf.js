@@ -70,7 +70,11 @@ let manaPv = 0;   // Manakosten der markierten Karten, als rote Vorschau am Mana
 function combatCenter(cx) {
   manaPv = 0;
   const c = cx.c, my = myTurn(), atk = c.action === 'attack';
-  let h = '<div class="combatcenter"><div class="sc" style="font-size:22px;color:var(--gold)">' + (c.mode === 'showdown' ? 'Showdown' : 'Kampf gegen ' + esc(c.sides.b.name)) + '</div>' + (G.rules.maxRounds > 0 ? '<div class="note" style="margin-top:-2px" title="Eine Kampfrunde ist ein Angriffszug jeder Seite. Nach ' + G.rules.maxRounds + ' Runden endet der Kampf unentschieden, wenn bis dahin keiner auf 0 HP gefallen ist.">Runde <b>' + Math.min(G.rules.maxRounds, Math.floor((c.atkTurns || 0) / 2) + 1) + '</b> von ' + G.rules.maxRounds + '</div>' : '');
+  let h = '<div class="combatcenter"><div class="sc" style="font-size:22px;color:var(--gold)">' + (c.mode === 'showdown' ? 'Showdown' : 'Kampf gegen ' + esc(c.sides.b.name)) + '</div>' + (function () {   // Rundenzähler; mit Erschöpfung (seit 0.7.7.2) und optionalem Rundenlimit maxRounds (Standard aus)
+    const rd = Math.floor((c.atkTurns || 0) / 2) + 1, mr = G.rules.maxRounds, ex = G.rules.exhaustRounds || 0, lv = ex > 0 ? Math.floor((rd - 1) / ex) : 0;
+    const tip = 'Eine Kampfrunde ist ein Angriffszug jeder Seite.' + (ex > 0 ? ' Nach je ' + ex + ' Runden steigt die Erschöpfung um 1: Beide Seiten verlieren am Ende ihres Angriffszugs so viele HP, wie die Erschöpfung hoch ist.' : '') + (mr > 0 ? ' Nach ' + mr + ' Runden endet der Kampf unentschieden.' : '');
+    return '<div class="note" style="margin-top:-2px" title="' + tip + '">Runde <b>' + (mr > 0 ? Math.min(mr, rd) : rd) + '</b>' + (mr > 0 ? ' von ' + mr : '') + (lv > 0 ? ' · <b style="color:#e0605a">Erschöpfung ' + lv + '</b>' : (ex > 0 ? ' · Erschöpfung ab Runde ' + (ex + 1) : '')) + '</div>';
+  })();
   if (c.forced) {   // Zerrüttung: Abwurf wählen (ich) bzw. warten (Gegner)
     const vs = c.sides.a.ctrl === c.forced.pid ? c.sides.a : c.sides.b, need = Math.min(c.forced.n, vs.deck.hand.filter(Boolean).length);
     h += c.forced.pid === ME

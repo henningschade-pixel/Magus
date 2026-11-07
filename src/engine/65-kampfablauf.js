@@ -181,9 +181,14 @@ function lifeflowPicks(state, side, opp, lvl) {
   while (out.length < lvl && oh > 0) { out.push('oh'); oh--; }
   return out;
 }
+// Stufe der Erschöpfung für den Angriffszug Nr. done (1-basiert): je 2 * exhaustRounds Angriffszüge eine Stufe mehr
+function exhaustionLevel(state, done) {
+  const n = state.rules.exhaustRounds || 0;
+  return n > 0 && done > 0 ? Math.floor((done - 1) / (2 * n)) : 0;
+}
 // Todesfluss: Am Ende der eigenen Angriffsphase (nach Angriff und Verteidigung der Gegenseite) verliert die Seite so viele HP, wie sie Todesmarker trägt.
 // Ist der Kampf schon entschieden (eine Seite auf 0 HP), wirkt er nicht mehr.
-function deathTick(state, side) {
+function deathTick(state, side, done) {   // done: Nummer des Angriffszugs (1, 2, 3 …), der gerade endet; für die Erschöpfung
   const c = state.combat;
   // Ein Fluch, der erst in dieser Angriffsphase (durch die Ultimate der Verteidigung) gesprochen wurde, wirkt noch nicht: deathPhase merkt die Stufe zu Beginn der Phase.
   const dmg = Math.min(side.stats.death || 0, side.stats.deathPhase === undefined ? Infinity : side.stats.deathPhase); delete side.stats.deathPhase;
@@ -191,6 +196,13 @@ function deathTick(state, side) {
   if (dmg > 0) {
     side.stats.hp = Math.max(0, side.stats.hp - dmg);
     log(state, 'Todesfluss: ' + side.name + ' verliert ' + dmg + ' HP am Ende der Angriffsphase.', side.ctrl);
+  }
+  // Erschöpfung (seit 0.7.7.2): Nach je exhaustRounds Kampfrunden (Standard 10, 0 = aus) steigt sie um 1; beide Seiten (auch das Monster) verlieren am Ende ihrer Angriffsphase so viele HP, wie die Erschöpfung hoch ist. Runde 1–10: 0, Runde 11–20: 1, Runde 21–30: 2 …
+  const exLvl = exhaustionLevel(state, done);
+  if (exLvl > 0 && side.stats.hp > 0) {
+    side.stats.hp = Math.max(0, side.stats.hp - exLvl);
+    log(state, 'Erschöpfung ' + exLvl + ': ' + side.name + ' verliert ' + exLvl + ' HP am Ende der Angriffsphase.', side.ctrl);
+    if (side.stats.hp <= 0) return;
   }
   // Heilfluss (Erd-Ultimate): am Ende der eigenen Angriffsphase +1 HP je Heilmarker (nur Marker, die schon zu Beginn der Phase lagen: healPhase wie deathPhase), höchstens bis zu den maximalen HP; nur wer noch steht
   const hl = Math.min(side.stats.heal || 0, side.stats.healPhase === undefined ? Infinity : side.stats.healPhase); delete side.stats.healPhase;
@@ -209,7 +221,7 @@ function castUltimate(side, opp, el, lvl) {
 }
 function passAttackTurn(state) {
   const c = state.combat;
-  deathTick(state, c.sides[c.turn]);
+  deathTick(state, c.sides[c.turn], (c.atkTurns || 0) + 1);
   c.turn = c.turn === 'a' ? 'b' : 'a'; c.action = 'attack'; c.color = null; c.pending = 0; c.lfp = null;
   c.atkTurns = (c.atkTurns || 0) + 1;   // ein Angriffszug ist vorbei (Angriff ohne Schaden, Passen, Erholen, Nachziehen)
 }
@@ -387,7 +399,7 @@ function execDefense(state, passOnly) {
   side.stats.hp = Math.max(0, side.stats.hp);
   const attSide = attacker;   // wer gerade angegriffen hat: seine Angriffsphase endet mit dieser Verteidigung
   c.action = 'attack'; c.color = null; c.pending = 0; c.lfp = null;
-  deathTick(state, attSide);
+  deathTick(state, attSide, c.atkTurns || 0);   // atkTurns zählt den Angriff dieser Phase schon mit
   const res = finishStep(state, { k: 'V', who: side.key === 'a' ? 0 : 1, v: block, b: c0pending, left: leftover });
   return { ok: true, combatEnd: res };
 }
