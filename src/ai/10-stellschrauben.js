@@ -16,6 +16,8 @@ const DEFAULTS = {
   // Punkte für die nächste Magiestufe nicht reichen; mgGoal: nur solange der Magiefortschritt (Summe der Stufen
   // über 1, höchstens 6) darunter liegt; sacRes: Gold, das dabei übrig bleiben muss (Vorrang der Verbesserungen)
   sacG: 0, mgGoal: 2, sacRes: 0,
+  // sacSur (seit 0.7.7.5): Überschussgold. Kann die KI nichts mehr für Gold verbessern und hat mindestens sacSur Gold, opfert sie es im Tempel für die nächste Magiestufe (auch bei sacG 0 und über mgGoal hinaus); 0 = aus. Vorher blieb die Magie bei Stufe 1 stehen, während sich über 100 Gold ansammelten.
+  sacSur: 6,
   // rAtk: Angriffslust auf ein Monster, solange der Marker rot ist (statt nachzuziehen und dem Gegner Gold zu
   // schenken); Nachziehlimit (Upgrade-Punkte): dlMax bis zu welcher Stufe die KI es kauft (0 = nie), dlPos
   // Stelle in der Ausbaureihenfolge von pickSpend (0 = vor allem anderen, 4 = nach den A-Zielen, 9 = zuletzt);

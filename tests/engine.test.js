@@ -1024,3 +1024,15 @@ test('Versionsnummer: eine Konstante (MAGUS_VERSION) speist Menü-Link und Über
   const doc = fs.readFileSync(path.join(__dirname, '..', 'docs', 'regelwerk.md'), 'utf8');
   assert.ok(doc.includes('## Änderung ' + v + ' '), 'Regelwerk-Eintrag für ' + v);
 });
+
+test('KI: Überschussgold fließt in Magie, es sammelt sich nicht über 100 Gold an (0.7.7.5)', () => {
+  let maxGold = 0, mag = 0, n = 0;
+  for (let seed = 21; seed < 41; seed++) {
+    const s = M.newGame({ seed, ai: [true, true], first: seed & 1 });
+    let steps = 0; while (!s.over && steps++ < 30000) if (!AI.runTurn(s, M.actor(s)).ok) break;
+    assert.ok(s.over);
+    s.players.forEach(p => { maxGold = Math.max(maxGold, p.stats.gold); mag += M.magicProgress(p); n++; });
+  }
+  assert.ok(maxGold < 60, 'Endgold bleibt klein, höchstens ' + maxGold);
+  assert.ok(mag / n > 1, 'die KI kauft Magie, im Mittel Fortschritt ' + (mag / n).toFixed(2));
+});

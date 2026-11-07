@@ -523,3 +523,9 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 ## Änderung 0.7.7.4 (07.11.)
 
 - **Versionsanzeige:** Der Link im Hauptmenü („Neu in Version …“) stand noch auf 0.7.6.8, während die Über-Seite schon die neue Nummer zeigte. Beide lesen die Nummer jetzt aus einer Konstante (`MAGUS_VERSION` in `src/ui/26a-darstellung.js`); ein Test prüft, dass keine Nummer mehr fest eingetragen ist und dass das Regelwerk einen Eintrag zur aktuellen Version hat.
+
+## Änderung 0.7.7.5 (07.11.)
+
+- **KI setzt Überschussgold für Magie ein (neue Stellschraube `sacSur`, Standard 6, 0 = aus):** Ein Spiellog (Seed 578637422, KI gegen KI) endete mit 162 und 175 Gold. Beide KIs standen in Abschnitt 3 noch auf Magie 1/1/1 mit Tempelstufe 0, weil `sacG` 0 das Opfern von Gold für Magie abschaltet und alle Verbesserungen für Gold schon gekauft waren. Das Gold stammte vor allem aus dem Nachziehen bei rotem Marker (104 Strafzüge à 3 Gold in Abschnitt 3, 312 Gold) und hatte keinen Verwendungszweck. Jetzt gilt: Findet `pickSpend` nichts mehr zu kaufen und hat die KI mindestens `sacSur` Gold, opfert sie im Tempel so viel, wie für die nächste Magiestufe nötig ist (auch bei `sacG` 0, auch über `mgGoal` hinaus).
+- **Messung (300 KI-Partien, vorher | nachher):** Magie im Mittel 0,03 | 1,9; Endgold 41,6 | 3,8; Spiellänge Median 376 | 344 Aktionen, Maximum 1474 | 582; Beginner siegt 41,7 % | 53,0 %. Beim Höchstgold von 60 Partien: 278 | 20 Gold.
+- **Offen:** Die Goldstrafe beim Nachziehen mit rotem Marker (Weltphase) schafft weiterhin Gold aus dem Nichts: Der Nachziehende zahlt nichts, der Gegner erhält `drawPenaltyGold` × Abschnitt. Das ist eine Regelfrage und bleibt unverändert, bis über eine Änderung entschieden ist (Vorschläge: der Nachziehende zahlt selbst, oder die Strafe entfällt).
