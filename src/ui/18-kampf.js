@@ -81,16 +81,8 @@ function combatCenter(cx) {
   }
   if (c.forced && c.forced.kind === 'sight') {   // Hellsicht: je gezogener Karte Hand, Ablage oder Händler wählen (ich) bzw. warten (Gegner)
     const vs = c.sides.a.ctrl === c.forced.pid ? c.sides.a : c.sides.b, cards = c.forced.cards, free = vs.deck.hand.filter(x => !x).length;
-    if (c.forced.pid === ME) {
-      if (sightSel.length !== cards.length) sightSel = cards.map(() => '');
-      const taken = sightSel.filter(k => k === 't').length, done = sightSel.every(k => k);
-      h += '<div class="preview"><b>Hellsicht:</b> Entscheide für jede Karte (freie Handplätze: ' + Math.max(0, free - taken) + ').</div><div class="sightrow">';
-      cards.forEach((cd, i) => {
-        const full = free - taken <= 0 && sightSel[i] !== 't', btn = (k, t) => '<button class="btn' + (sightSel[i] === k ? ' primary' : '') + '" data-act="sight" data-i="' + i + '" data-v="' + k + '"' + (k === 't' && full ? ' disabled' : '') + '>' + t + '</button>';
-        h += '<div class="sightcard"><img src="' + (IMG[cd.id] || IMG.back) + '">' + btn('t', 'Hand') + btn('a', 'Ablage') + btn('d', 'Händler') + '</div>';
-      });
-      h += '</div><div class="btnrow"><button class="btn primary" data-act="sightok" ' + (done ? '' : 'disabled') + '>Bestätigen</button></div>';
-    } else h += '<div class="preview"><b>Hellsicht:</b> ' + esc(vs.name) + ' entscheidet über ' + cards.length + ' gezogene Karte' + (cards.length === 1 ? '' : 'n') + ' …</div>';
+    if (c.forced.pid === ME) h += '<div class="preview"><b>Hellsicht:</b> Entscheide für jede gezogene Karte (die Karten liegen im Vordergrund).</div>';
+    else h += '<div class="preview"><b>Hellsicht:</b> ' + esc(vs.name) + ' entscheidet über ' + cards.length + ' gezogene Karte' + (cards.length === 1 ? '' : 'n') + ' …</div>';
     h += '</div>';
     return '<div class="panel" style="' + box(LAYOUT.combat, 'padding:10px 14px') + '">' + h + '</div>';
   }
@@ -162,4 +154,18 @@ function comboRef(cx) {
     }
     return '<div class="panel" style="' + box(LAYOUT.oppInfo, 'overflow:hidden;padding:8px 12px;display:flex;flex-direction:column') + '">' + h + '</div>';
   }
+}
+
+// Hellsicht: Die gezogenen Karten liegen im Vordergrund, unter jeder die drei Möglichkeiten (Hand, Ablage, Händler)
+function sightOverlayHTML() {
+  const c = G && G.phase === 'combat' && G.combat; if (!c || !c.forced || c.forced.kind !== 'sight' || c.forced.pid !== ME) { sightSel = []; return ''; }
+  const vs = c.sides.a.ctrl === ME ? c.sides.a : c.sides.b, cards = c.forced.cards, free = vs.deck.hand.filter(x => !x).length;
+  if (sightSel.length !== cards.length) sightSel = cards.map(() => '');
+  const taken = sightSel.filter(k => k === 't').length, done = sightSel.every(k => k);
+  let h = '<div class="sighttitle">Hellsicht</div><div class="sightsub">Freie Handplätze: ' + Math.max(0, free - taken) + '</div><div class="sightfront">';
+  cards.forEach((cd, i) => {
+    const full = free - taken <= 0 && sightSel[i] !== 't', btn = (k, t, tip) => '<button class="btn' + (sightSel[i] === k ? ' primary' : '') + '" title="' + tip + '" data-act="sight" data-i="' + i + '" data-v="' + k + '"' + (k === 't' && full ? ' disabled' : '') + '>' + t + '</button>';
+    h += '<div class="sightbig" style="animation-delay:' + i * 0.12 + 's"><img src="' + (IMG[cd.id] || IMG.back) + '">' + btn('t', 'Auf die Hand', 'Die Karte kommt auf einen freien Handplatz') + btn('a', 'Ablegen', 'Die Karte kommt auf den Ablagestapel') + btn('d', 'Abwerfen', 'Zurück zum Händler: die Karte verlässt dein Deck') + '</div>';
+  });
+  return h + '</div><button class="btn primary sightok" data-act="sightok" ' + (done ? '' : 'disabled') + '>Bestätigen</button>';
 }

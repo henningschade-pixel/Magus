@@ -379,3 +379,9 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .trapfx.miss{transition:opacity .5s}
 
 .sightrow{display:flex;gap:10px;justify-content:center;margin:6px 0}.sightcard{display:flex;flex-direction:column;gap:2px;align-items:stretch;width:62px}.sightcard img{width:100%;border-radius:5px;box-shadow:0 0 0 1.5px #1b140d}.sightcard .btn{padding:1px 2px;font-size:12px;line-height:1.25}.sightrow{margin:2px 0}
+#sightov{position:absolute;inset:0;z-index:320;background:rgba(0,0,0,.78);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
+#sightov .sighttitle{font:700 34px Cinzel,Georgia,serif;color:#e7c46a;text-shadow:0 0 8px #000}#sightov .sightsub{color:#d9cdb4;font-size:18px}
+#sightov .sightfront{display:flex;gap:26px;justify-content:center}
+#sightov .sightbig{display:flex;flex-direction:column;gap:6px;width:150px;animation:sightin .45s ease-out both}#sightov .sightbig img{width:100%;border-radius:10px;box-shadow:0 0 0 2px #1b140d,0 6px 22px rgba(0,0,0,.8)}
+#sightov .sightbig .btn{padding:6px 8px;font-size:16px}#sightov .sightok{margin-top:6px;font-size:20px;padding:8px 26px}
+@keyframes sightin{from{opacity:0;transform:translateY(60px) scale(.6)}to{opacity:1;transform:none}}

@@ -568,3 +568,8 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 
 - **Hellsicht (Blau + Rot):** Neue Kombo anstelle der Falle in dieser Reihenfolge (die Falle bleibt bei Rot + Blau). Zieht S Karten, je Karte Hand, Ablage oder Händler (siehe „Kombos“). Engine: `sightDraw`, `sightResolve`, Aktion `fd` mit `pick`; Oberfläche: Panel mit Karte und drei Knöpfen je Karte, Bestätigen; KI: Fluchkarten zum Händler, echte Karten auf die Hand, solange Platz ist, sonst Ablage (Wert 0,5 je Stufe).
 - Tests: Hellsicht-Tests, Falle auf Rot + Blau umgestellt.
+
+## Änderung 0.8.0.3 (07.11.)
+
+- **Hellsicht im Vordergrund:** Die gezogenen Karten liegen groß über dem Kampffeld (abgedunkelter Hintergrund, Einblend-Animation), unter jeder stehen die drei Möglichkeiten „Auf die Hand“, „Ablegen“ und „Abwerfen“ (zurück zum Händler); mit „Bestätigen“ gilt die Wahl. Keine Regeländerung. Der Gegner sieht die Karten nicht, nur den Hinweis im Kampffeld.
+
