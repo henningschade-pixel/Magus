@@ -1120,3 +1120,37 @@ test('Spieleinstellungen: exhaustRounds und winLead aus den Regeln gelten (0.8.1
   assert.equal(t.c.sides.a.stats.hp, 100, 'exhaustRounds 0: keine Erschöpfung');
 });
 
+
+// Reihenfolge der Niederlagenprüfung (0.8.3.1): 1) reflektierter Schaden, 2) Schaden nach der Verteidigung, 3) Flusseffekte
+test('Niederlagenprüfung 1: Der Rückwurf der Falle entscheidet vor der Verteidigung (Verteidiger gewinnt, bleibt unverletzt, Flüsse wirken nicht)', () => {
+  const { s, me, op } = combatSetup(11, ['F3']);
+  me.stats.hp = 1; me.stats.maxHp = 9; op.stats.hp = op.stats.maxHp = 9;
+  me.stats.heal = 5; me.stats.healPhase = 5;   // ein Heilfluss darf den Angreifer nicht mehr retten
+  op.stats.trap = { card: { id: 'F1', uid: 9001 }, el: 'F', tier: 1, lvl: 1 };
+  s.keepSnap = true; M.apply(s, { pid: 0, type: 'mark', slot: 0 });
+  const r = M.apply(s, { pid: 0, type: 'attack' });
+  assert.ok(r.ok && r.combatEnd, 'der Kampf endet sofort');
+  assert.equal(r.combatEnd.reason, 'hp'); assert.equal(r.combatEnd.winner, 'b', 'der Angreifer fällt durch den Rückwurf');
+  assert.equal(r.combatEnd.snap.sides.b.stats.hp, 9, 'der Verteidiger hat keinen Schaden genommen');
+});
+test('Niederlagenprüfung 2: Fällt der Verteidiger durch den Schaden nach der Verteidigung auf 0 HP, wirkt kein Fluss mehr (auch kein tödlicher Todesfluss des Angreifers)', () => {
+  const { s, me, op } = combatSetup(11, ['F3']);
+  me.stats.hp = 2; me.stats.maxHp = 9; me.stats.death = 5; me.stats.deathPhase = 5;   // der Todesfluss würde den Angreifer am Phasenende töten
+  op.stats.hp = 1; op.stats.maxHp = 9; op.stats.mana = 0;
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+  const r = M.apply(s, { pid: op.ctrl, type: 'pass' });
+  assert.ok(r.ok && r.combatEnd);
+  assert.equal(r.combatEnd.winner, 'a', 'Stufe 2 entscheidet vor Stufe 3: kein Unentschieden');
+  assert.equal(me.stats.hp, 2, 'der Todesfluss hat nicht mehr getickt');
+});
+test('Niederlagenprüfung 3: Der Todesfluss am Phasenende besiegt den Angreifer; der Heilfluss kommt danach und belebt nicht wieder', () => {
+  const { s, me, op } = combatSetup(11, ['F1']);
+  me.stats.hp = 2; me.stats.maxHp = 9; me.stats.death = 2; me.stats.deathPhase = 2; me.stats.heal = 3; me.stats.healPhase = 3;
+  op.stats.hp = op.stats.maxHp = 9;
+  op.stats.rainbow = 3;   // das Schild schluckt den ganzen Schaden: der Verteidiger bleibt unversehrt
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+  const r = M.apply(s, { pid: op.ctrl, type: 'pass' });
+  assert.ok(r.ok && r.combatEnd);
+  assert.equal(r.combatEnd.winner, 'b', 'der Angreifer fällt durch den Todesfluss');
+  assert.equal(me.stats.hp, 0, 'der Heilfluss hat ihn nicht wieder aufgerichtet');
+});
