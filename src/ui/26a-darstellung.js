@@ -1,5 +1,5 @@
 // Aktuelle Versionsnummer: einzige Stelle, an der sie gesetzt wird (Menü-Link und Über-Seite lesen sie von hier; bei jedem Schritt hochzählen)
-const MAGUS_VERSION = '0.8.4';
+const MAGUS_VERSION = '0.8.5';
 /* ---------- Darstellung: Kampfeffekt-Ton, Cursor, render, Menüs, Start- und Ergebnis-Bildschirm ---------- */
 let leadPrev = null;
 let sightSel = [];   // Hellsicht: meine Entscheidungen je gezogener Karte ('t' Hand, 'a' Ablage, 'd' Händler)

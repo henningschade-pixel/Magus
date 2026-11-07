@@ -614,3 +614,9 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 
 - **Einstellungen aufgeräumt:** Jede Gruppe (Ton, Spiel) hat eine Kopfzeile; rechts steht der Ton-Schalter beziehungsweise „Standardwerte“ für die Spielwerte. Die beiden Spielwerte stehen mit kompakten −/+-Knöpfen je in einer Zeile; die Seite ist breiter und passt in das Fenster (vorher ragte „Zurück“ heraus). Nur Oberfläche.
 
+
+## Änderung 0.8.5 (07.11.)
+
+- **KI auf die neuen blauen Kombos abgestimmt, keine Änderung nötig:** `PARAMS=wFW,wTrap,uMana,uHeal,mirKeep,mirAvoid,wDeath,wEW,wFE,wDraw,lfDeath,lfHeal,keepB node tools/balance/opt2.js 3 600` (Pool: Champion plus drei früh angreifende Gegner). Runde 1: bester Kandidat `wDeath` 8 mit +0,9 Punkten, `wFW` 0,6 mit +0,7; Runde 2: `uMana` 0,7 mit +0,6. Alle liegen unter der Übernahmeschwelle (1,5 Standardfehler, etwa ±2 Punkte), nichts wurde übernommen; die Standardwerte der KI bleiben. Die Gewichte für Falle (`wTrap`), Schild (`wFW`), Manafluss (`uMana`) und Hellsicht liegen damit nahe am Optimum. Runde 3 entfiel, weil Runde 2 nichts übernahm.
+- `wTrap` und `mirKeep` sind jetzt in der Schrittweitentabelle von `tools/balance/opt.js` und damit für `opt2.js` abstimmbar.
+- Keine Regel- und keine KI-Änderung; `tests/golden.json` bleibt unverändert.
