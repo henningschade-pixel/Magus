@@ -686,6 +686,11 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Tests:** Drei Tests angepasst (Nachziehmarker Weltphase, Nachziehlimit Kauf, Nachziehlimit Weltphase; der Marker-Reset läuft jetzt über den Händler), neuer Test „Magie kaufen und Upgrades sind keine Aktion mehr“. `tests/golden.json` ist neu erzeugt (absichtliche Regeländerung).
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
 
+## Änderung 0.9.4.1 (08.11.)
+
+- **Echo-Effekt schmaler (keine Regeländerung):** Die in der Echo-Werkstatt angepassten Werte sind in `EchoWave.DEFAULTS` (`src/ui/12a-echo-welle.js`) übernommen. Einzige Abweichung von 0.9.4: `span` 100° statt 130°, der Effekt deckt also einen kleineren Ausschnitt der Schlange ab. Alle anderen Werte sind gleich geblieben. Die Echo-Werkstatt ist neu gebaut.
+- Die Versionsbeschreibung im Spiel nennt die Änderung; Engine, KI und `tests/golden.json` sind unverändert.
+
 ## Änderung 0.9.4 (08.11.)
 
 - **Echo digital als Schlangen-Effekt statt als Marker (keine Regeländerung):** Der Echo-Marker bleibt dem analogen Spiel vorbehalten. Digital entfallen `echoToken`, `placeEchoTokens` und `.echotok`. Stattdessen **leuchtet auf dem Magie-Brett die Schlange der Echo-Farbe pulsierend und sendet Wellen nach außen** (Feuer oben, Erde rechts unten, Wasser links unten, wie die Magie-Knöpfe). Das gilt für das eigene Brett und das des Gegners; ohne Echo bleibt das Brett unverändert. Der Tooltip des Bretts nennt Echo-Farbe und Wirkung.
