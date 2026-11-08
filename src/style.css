@@ -467,6 +467,6 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 #sightov .sightbig{display:flex;flex-direction:column;gap:6px;width:150px;animation:sightin .45s ease-out both}#sightov .sightbig img{width:100%;border-radius:10px;box-shadow:0 0 0 2px #1b140d,0 6px 22px rgba(0,0,0,.8)}
 #sightov .sightbig .btn{padding:6px 8px;font-size:16px}#sightov .sightok{margin-top:6px;font-size:20px;padding:8px 26px}
 @keyframes sightin{from{opacity:0;transform:translateY(60px) scale(.6)}to{opacity:1;transform:none}}
-/* Echo-Marker (0.9): links und rechts neben der Kombo-Übersicht */
+/* Echo-Marker (0.9): farblos, mittig auf der Trennlinie vor dem Statusfeld der jeweiligen Seite */
 .echotok{position:absolute;z-index:61;width:38px;height:38px;cursor:help;filter:drop-shadow(1px 1px 0 #2b2117) drop-shadow(2px 3px 1px rgba(0,0,0,.65))}.echotok svg{width:100%;height:100%;display:block}.echotok:not(.on){opacity:.55}.echotok.on{animation:echopulse 2.4s ease-in-out infinite}
 @keyframes echopulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
