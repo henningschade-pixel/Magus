@@ -142,7 +142,7 @@ const TrapFx = (() => {
     el.innerHTML = '<div class="tf"><div class="bk"><img src="' + IMG.back + '"></div><div class="fr"><img src="' + front + '"></div></div>';
     stage.appendChild(el);
     requestAnimationFrame(() => { el.style.left = (rest.x - w / 2) + 'px'; el.style.top = (rest.y - h / 2) + 'px'; el.style.width = w + 'px'; el.style.height = h + 'px'; });
-    setTimeout(() => { el.classList.add('up'); Snd.play('shield_hit'); }, 420);
+    setTimeout(() => { el.classList.add('flipped'); Snd.play('shield_hit'); }, 420);
     setTimeout(() => {
       if (f.hit) {   // die Farbe passt: ein Teil des Angriffs löst sich von den Geschossen in der Mitte und fliegt zum Angreifer zurück
         el.classList.add('hit'); Snd.play('hit', 0, .9);

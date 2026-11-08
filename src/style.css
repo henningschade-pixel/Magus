@@ -456,7 +456,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .trapfx .tf>div{position:absolute;inset:0;backface-visibility:hidden;border-radius:6px;overflow:hidden;box-shadow:0 0 0 2px #1b140d,0 0 18px rgba(82,166,245,.8)}
 .trapfx .tf img{width:100%;height:100%;object-fit:cover;display:block}
 .trapfx .tf .bk{transform:rotateY(0deg)}.trapfx .tf .fr{transform:rotateY(180deg)}
-.trapfx.up .tf{transform:rotateY(180deg)}
+.trapfx.flipped .tf{transform:rotateY(180deg)}
 .trapfx.hit .tf>div{box-shadow:0 0 0 3px #ff6b3d,0 0 30px rgba(255,107,61,.9)}
 .trapfx.miss{transition:opacity .5s}
 .trapfx.broke{animation:trapcrack .2s linear}.trapfx .sh{position:absolute;inset:0;background-size:cover;background-position:center;border-radius:6px;transition:transform .8s cubic-bezier(.3,.1,.6,1),opacity .8s ease-in;filter:drop-shadow(0 0 6px rgba(82,166,245,.9))}

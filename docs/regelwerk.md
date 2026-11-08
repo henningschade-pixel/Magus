@@ -686,6 +686,11 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Tests:** Drei Tests angepasst (Nachziehmarker Weltphase, Nachziehlimit Kauf, Nachziehlimit Weltphase; der Marker-Reset läuft jetzt über den Händler), neuer Test „Magie kaufen und Upgrades sind keine Aktion mehr“. `tests/golden.json` ist neu erzeugt (absichtliche Regeländerung).
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
 
+## Änderung 0.9.5.1 (08.11.)
+
+- **Falle zeigt kein Upgrade-Symbol mehr (Fehlerbehebung, nur Darstellung):** Die Fallenkarte bekam beim Umdrehen die Klasse `up`, die zugleich für den Upgrade-Knopf (Plus-Symbol als Hintergrund) gilt. Beim Zerbrechen der Karte war dieses Symbol groß sichtbar, beim erfolgreichen Rückwurf lag es hinter der Kartenfläche. Die Klasse heißt jetzt `flipped` (`src/ui/20a-ultimates.js`, `src/style.css`). Regeln, KI und `tests/golden.json` sind unverändert.
+- Die Versionsbeschreibung im Spiel nennt die Änderung.
+
 ## Änderung 0.9.5 (08.11.)
 
 - **Falle löst nach dem Angriff aus (keine Regeländerung, nur Darstellung):** Bisher lief die Falle gleichzeitig mit dem Angriff. Jetzt erscheint zuerst der volle Angriff in der Mitte (auch der Teil, den die Falle zurückwirft). Danach fliegt die verdeckte Falle auf die Seite ihres Besitzers neben die Geschosse und dreht sich um. Passt die Farbe, lösen sich so viele Geschosse, wie die Falle zurückwirft (Stufe S, höchstens der eingehende Schaden), und fliegen als unblockbarer Schaden zum Angreifer; die HP des Angreifers sinken erst beim Einschlag. Passt die Farbe nicht, zerbricht die Karte in Splitter und der Angriff bleibt unverändert. Die Verteidigung beginnt erst nach der Falle. Wirft die Falle den ganzen Angriff zurück, gibt es keine Verteidigung, der Angriff verschwindet nach dem Rückwurf.
