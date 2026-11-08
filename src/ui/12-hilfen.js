@@ -71,26 +71,7 @@ function manaTokens(s, who) {
   return L ? '<button class="healtok manatok lf' + (sel ? ' sel' : '') + '" data-who="' + who + '" data-act="lfm" data-k="' + who + 'm" title="Läuterung: Manamarker wählen (Klick: einen mehr, nach dem Maximum wieder alle weg). ' + sel + ' von ' + N + ' gewählt." style="' + pos + '">' + img + mul + (sel ? '<i class="lfb">✓' + sel + '</i>' : '') + '</button>'
     : '<div class="healtok manatok" data-who="' + who + '" title="' + tip + '" style="' + pos + '">' + img + mul + '</div>';
 }
-// Echo (seit 0.9): Jeder Kombo hinterlässt ein Echo in der Farbe der ersten Karte; der nächste Kombo erneuert es. Enthält der nächste Kombo eine Sekundärkarte in dieser Farbe, steigt seine Stufe um 1 (höchstens 3). Kein Marker im Sinne der Läuterung (nicht läuterbar); dargestellt links (eigenes Echo) und rechts (Echo des Gegners) neben der Kombo-Übersicht.
-// Echo-Marker (seit 0.9): neutrales Symbol (Stein mit hellen Ringen) ohne Hinweis auf die Farbe; die Farbe ergibt sich aus der Lage: Der Marker liegt mittig neben dem Farbbereich der Kombo-Übersicht, zu dem das Echo gehört (placeEchoTokens), das eigene links, das des Gegners rechts und etwas kleiner. Ohne Echo gibt es keinen Marker.
-function echoToken(s, mine, R) {
-  const e = s && s.echo; if (!e) return '';
-  const sz = mine ? 38 : 28, tip = (mine ? 'Dein' : 'Das') + ' Echo (' + NAMES[e] + '): Der nächste Kombo ' + (mine ? 'von dir' : 'dieser Seite') + ', der eine Sekundärkarte in ' + NAMES[e] + ' enthält, steigt um 1 Stufe (höchstens 3). Jeder neue Kombo erneuert das Echo (Farbe der ersten Karte). Nicht läuterbar.';
-  const ln = '#cfc6b0', svg = '<svg viewBox="0 0 56 56"><circle cx="28" cy="28" r="25" fill="#26211b" stroke="' + ln + '" stroke-width="2.5"/><circle cx="28" cy="28" r="20" fill="none" stroke="' + ln + '" stroke-width="3" opacity=".35"/><circle cx="28" cy="28" r="14" fill="none" stroke="' + ln + '" stroke-width="3" opacity=".65"/><circle cx="28" cy="28" r="7" fill="' + ln + '"/><circle cx="25.5" cy="25.5" r="2.4" fill="#fff" opacity=".55"/></svg>';
-  return '<div class="echotok on" data-el="' + e + '" data-who="' + (mine ? 's' : 'o') + '" title="' + esc(tip) + '" style="width:' + sz + 'px;height:' + sz + 'px;left:' + (mine ? R.left - sz / 2 : R.left + R.w - sz / 2) + 'px;top:' + (R.top + Math.round((R.h - sz) / 2)) + 'px">' + svg + '</div>';
-}
-// Setzt die Echo-Marker senkrecht auf die Mitte des Farbbereichs (alle Zeilen der Echo-Farbe) der Kombo-Übersicht. Die Lage wird im Zustand „nichts markiert“ gemessen (dort sind alle drei Bereiche sichtbar) und für die übrigen Zustände behalten, damit die Marker nicht springen.
-const echoGroupY = {};
-function placeEchoTokens() {
-  const pn = panels.querySelector('.comboref'); if (!pn) return;
-  const top0 = parseFloat(pn.style.top) || 0;
-  panels.querySelectorAll('.echotok').forEach(t => {
-    const rows = pn.querySelectorAll('.cref.p' + t.dataset.el);
-    if (rows.length >= 3) { const a = rows[0], z = rows[rows.length - 1]; echoGroupY[t.dataset.el] = (a.offsetTop + z.offsetTop + z.offsetHeight) / 2; }
-    const y = echoGroupY[t.dataset.el];
-    if (y !== undefined) t.style.top = Math.round(top0 + y - t.offsetHeight / 2) + 'px';
-  });
-}
+// Echo (seit 0.9): Jeder Kombo hinterlässt ein Echo in der Farbe der ersten Karte; der nächste Kombo erneuert es. Enthält der nächste Kombo eine Sekundärkarte in dieser Farbe, steigt seine Stufe um 1 (höchstens 3). Kein Marker im Sinne der Läuterung (nicht läuterbar). Der Echo-Marker gehört zum analogen Spiel; digital leuchtet seit 0.9.4 die Schlange der Echo-Farbe auf dem Magie-Board und sendet Wellen aus (EchoWave in 12a-echo-welle.js, aufgerufen in boardHTML).
 function deathTokens(s, who) {   // seit 0.7.2.11 ein Token mit Zähler statt mehrerer Tokens
   const N = s.death || 0; if (N <= 0) return '';
   const L = lfCtx(), sel = L ? L.picks.filter(p => p === who + 'd').length : 0, mul = N > 1 ? '<b class="mul">×' + N + '</b>' : '';

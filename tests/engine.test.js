@@ -1123,6 +1123,25 @@ test('Vorzeitiges Ende: bei 4 : 1 (Vorsprung 3) geht es weiter, bei 5 : 1 und 4 
 });
 
 
+test('Echo digital: kein Marker mehr, die Schlange der Echo-Farbe bekommt Wellen (EchoWave, 0.9.4)', () => {
+  const fs = require('fs'), path = require('path');
+  const src = fs.readFileSync(path.join(__dirname, '..', 'src', 'ui', '12a-echo-welle.js'), 'utf8');
+  const kit = src.slice(src.indexOf('/* ECHOWAVE BEGIN */'), src.indexOf('/* ECHOWAVE END */'));
+  const EW = new Function(kit + '; return EchoWave;')();   // ohne document: inject() ist dann ein Nullbefehl
+  assert.equal(EW.html(null, 120), '', 'ohne Echo keine Ebene');
+  for (const e of ['F', 'E', 'W']) {
+    const h = EW.html(e, 120, {}, 0);
+    assert.ok(h.includes('class="echow" data-el="' + e + '"'), 'Ebene für ' + e);
+    assert.equal((h.match(/class="ewv"/g) || []).length, EW.DEFAULTS.waves * 2, 'Wellen mit hellem Kern');
+  }
+  assert.equal(EW.html('F', 120, { on: false }), '', 'abschaltbar');
+  assert.equal((EW.html('E', 120, { waves: 0 }, 0).match(/class="ewv"/g) || []).length, 0, '0 Wellen: nur Leuchten');
+  assert.notEqual(EW.html('F', 120, {}, 0), EW.html('E', 120, {}, 0), 'Ausschnitt und Farbe je Schlange');
+  const ui = ['12-hilfen.js', '16-seitenleisten.js', '18-kampf.js', '26a-darstellung.js'].map(f => fs.readFileSync(path.join(__dirname, '..', 'src', 'ui', f), 'utf8')).join('\n');
+  assert.ok(!/echoToken|placeEchoTokens|echotok/.test(ui), 'der Echo-Marker ist digital entfernt');
+  assert.ok(/EchoWave\.html\(echo, size\)/.test(ui), 'boardHTML ruft die Echo-Ebene auf');
+});
+
 test('Versionsnummer: eine Konstante (MAGUS_VERSION) speist Menü-Link und Über-Seite, das Regelwerk hat einen Eintrag dazu (0.7.7.4)', () => {
   const fs = require('fs'), path = require('path');
   const src = fs.readFileSync(path.join(__dirname, '..', 'src', 'ui', '26a-darstellung.js'), 'utf8');

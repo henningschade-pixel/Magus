@@ -155,8 +155,8 @@ function comboRef(cx) {
       h += ultiRow(prim, lv.ulti, ultiText(prim, lv.ulti || 'S') + ' Die Kombos entfallen.', lv.ulti > 0);
       if (lv.echo) h += '<div class="note" style="margin-top:2px;font-size:13px">Echo ' + el(cx.myStats.echo) + ': +1 Stufe</div>';
     }
-    const R = LAYOUT.oppInfo;   // Echo-Marker (seit 0.9): mittig neben dem zugehörigen Farbbereich, eigener links, des Gegners rechts und kleiner (Lage: placeEchoTokens)
-    return '<div class="panel comboref" style="' + box(R, 'overflow:hidden;padding:8px 12px;display:flex;flex-direction:column') + '">' + h + '</div>' + echoToken(cx.myStats, true, R) + echoToken(cx.oppStats, false, R);
+    const R = LAYOUT.oppInfo;   // Echo (seit 0.9.4): kein Marker mehr, die Schlange der Echo-Farbe auf dem Magie-Brett pulsiert (boardHTML)
+    return '<div class="panel comboref" style="' + box(R, 'overflow:hidden;padding:8px 12px;display:flex;flex-direction:column') + '">' + h + '</div>';
   }
 }
 
