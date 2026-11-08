@@ -155,8 +155,8 @@ function comboRef(cx) {
       h += ultiRow(prim, lv.ulti, ultiText(prim, lv.ulti || 'S') + ' Die Kombos entfallen.', lv.ulti > 0);
       if (lv.echo) h += '<div class="note" style="margin-top:2px;font-size:13px">Echo ' + el(cx.myStats.echo) + ': +1 Stufe</div>';
     }
-    const R = LAYOUT.oppInfo, Po = LAYOUT.oppPanel, Pm = LAYOUT.mePanel, Z = LAYOUT.zoneLines;   // Echo-Marker (seit 0.9): farblos, mittig vor dem zugehörigen Bereich, auf der Trennlinie über dem eigenen Statusfeld (unten) und unter dem Gegnerfeld (oben)
-    return '<div class="panel" style="' + box(R, 'overflow:hidden;padding:8px 12px;display:flex;flex-direction:column') + '">' + h + '</div>' + echoToken(cx.myStats, true, { left: Pm.left + Math.round(Pm.w / 2) - 19, top: Z[1] - 19 }) + echoToken(cx.oppStats, false, { left: Po.left + Math.round(Po.w / 2) - 19, top: Z[0] - 19 });
+    const R = LAYOUT.oppInfo;   // Echo-Marker (seit 0.9): mittig neben dem zugehörigen Farbbereich, eigener links, des Gegners rechts und kleiner (Lage: placeEchoTokens)
+    return '<div class="panel comboref" style="' + box(R, 'overflow:hidden;padding:8px 12px;display:flex;flex-direction:column') + '">' + h + '</div>' + echoToken(cx.myStats, true, R) + echoToken(cx.oppStats, false, R);
   }
 }
 

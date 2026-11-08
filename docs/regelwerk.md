@@ -91,7 +91,7 @@ Die Farbe der ersten markierten Karte bestimmt die Rolle (Feuer aggressiv, Wasse
 | Läuterung | Erde + Feuer | S beliebige Marker vom Brett entfernen, je entferntem Marker ein Nachziehtoken |
 | Ultimate | alle drei | je nach Farbe der ersten Karte: **Feuer** Todesfluss, **Erde** Heilfluss, **Wasser** Manafluss (Stufe S) |
 
-**Echo (seit 0.9):** Jeder Kombo (die sechs Zwei-Farben-Kombos und die Ultimate, im Angriff wie in der Verteidigung) hinterlässt bei der Seite, die ihn wirkt, ein **Echo in der Farbe der ersten Karte (Primärmagie)**. Jeder neue Kombo **erneuert** das Echo (neue Farbe), ein Angriff ohne Kombo lässt es stehen. Enthält der **nächste Kombo** eine **Sekundärkarte in der Farbe des Echos**, steigt seine Stufe um **1 (höchstens 3)**; das gilt auch, wenn er das Echo gleichzeitig durch seine eigene Primärfarbe erneuert. Bei der Ultimate sind beide Farben außer der ersten Sekundärfarben. Das Echo ist **kein Marker im Sinne der Läuterung** (nicht läuterbar), gilt nur bis Kampfende und steht als farbloser Marker (Farbe als Buchstabe F/E/W) mittig vor dem Statusfeld der jeweiligen Seite (eigenes Echo unten, Echo des Gegners oben).
+**Echo (seit 0.9):** Jeder Kombo (die sechs Zwei-Farben-Kombos und die Ultimate, im Angriff wie in der Verteidigung) hinterlässt bei der Seite, die ihn wirkt, ein **Echo in der Farbe der ersten Karte (Primärmagie)**. Jeder neue Kombo **erneuert** das Echo (neue Farbe), ein Angriff ohne Kombo lässt es stehen. Enthält der **nächste Kombo** eine **Sekundärkarte in der Farbe des Echos**, steigt seine Stufe um **1 (höchstens 3)**; das gilt auch, wenn er das Echo gleichzeitig durch seine eigene Primärfarbe erneuert. Bei der Ultimate sind beide Farben außer der ersten Sekundärfarben. Das Echo ist **kein Marker im Sinne der Läuterung** (nicht läuterbar), gilt nur bis Kampfende und steht als neutraler Marker (ohne Farbe) mittig neben dem Farbbereich der Kombo-Übersicht, zu dem das Echo gehört (eigenes Echo links, Echo des Gegners rechts und etwas kleiner; ohne Echo kein Marker).
 
 **Fluchkarten:** Sie kommen erst in den Zugstapel, wenn der Ablagestapel gemischt wird. Auf der Hand belegen sie einen Platz und wirken nicht. Beim Nachziehen werden sie dauerhaft verworfen, am Kampfende verschwinden alle.
 
@@ -671,7 +671,13 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Tests:** Die Flucht-Tests schalten `fleeAllowed` ein; neuer Test „Fliehen ist standardmäßig abgeschaltet“.
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
 
+## Änderung 0.9.1.2 (08.11.)
+
+- **Echo-Marker neu gestaltet und platziert (keine Regeländerung):** Der Marker ist wieder das Echo-Symbol (Stein mit konzentrischen Ringen), aber neutral und ohne Hinweis auf die Farbe (kein Buchstabe, keine Farbe). Die Farbe zeigt seine Lage: Er liegt senkrecht mittig neben dem Farbbereich der Kombo-Übersicht, zu dem das Echo gehört (die drei Zeilen Rot, Blau oder Grün). Das eigene Echo liegt links am Rand der Übersicht, das des Gegners rechts und etwas kleiner (28 statt 38 Pixel). Ohne Echo wird kein Marker gezeigt. Die Lage wird in `placeEchoTokens` (`src/ui/12-hilfen.js`) im Zustand „nichts markiert“ gemessen und für die anderen Zustände der Übersicht (eine Kombo oder Ultimate gewählt) beibehalten, damit der Marker nicht springt.
+- **Hellsicht ohne Umrandung:** Offen vor die Seite gelegte Hellsichtkarten haben keine goldene Umrandung mehr (`.card.sightopen` entfernt); sie liegen weiterhin in der eigenen, kleineren Reihe über der Hand.
+- Die Versionsbeschreibung im Spiel nennt die Änderung; `tests/golden.json` bleibt unverändert.
+
 ## Änderung 0.9.1.1 (08.11.)
 
-- **Echo-Marker farblos und neu platziert (keine Regeländerung):** Der Marker hat keine Farbe mehr: ein Stein mit hellen Ringen, die Farbe des Echos steht als Buchstabe (F, E, W) darin und im Tooltip. Er liegt mittig vor dem Statusfeld der jeweiligen Seite, auf der Trennlinie: das eigene Echo oben am eigenen Statusfeld (unten rechts), das des Gegners unter dem Gegnerfeld (oben rechts). Vorher saß er links und rechts am Rand der Kombo-Übersicht, der rechte teilweise außerhalb der Bühne.
+- **Echo-Marker farblos und neu platziert (keine Regeländerung; mit 0.9.1.2 überholt):** Der Marker hat keine Farbe mehr: ein Stein mit hellen Ringen, die Farbe des Echos steht als Buchstabe (F, E, W) darin und im Tooltip. Er liegt mittig vor dem Statusfeld der jeweiligen Seite, auf der Trennlinie: das eigene Echo oben am eigenen Statusfeld (unten rechts), das des Gegners unter dem Gegnerfeld (oben rechts). Vorher saß er links und rechts am Rand der Kombo-Übersicht, der rechte teilweise außerhalb der Bühne.
 - Die Versionsbeschreibung im Spiel nennt die Änderung; `tests/golden.json` bleibt unverändert.
