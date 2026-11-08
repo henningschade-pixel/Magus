@@ -1060,7 +1060,7 @@ test('Kampfrunden: maxRounds 0 (Standard seit 0.7.7.2) schaltet die Begrenzung a
 
 test('Erschöpfung: nach je 10 Kampfrunden steigt sie um 1, beide Seiten verlieren am Ende ihres Angriffszugs entsprechend HP (0.7.7.2)', () => {
   const { s, c } = combatSetup(11, ['F1']);
-  assert.equal(s.rules.maxRounds, 0, 'kein Rundenlimit mehr'); assert.equal(s.rules.exhaustRounds, 10);
+  assert.equal(s.rules.maxRounds, 0, 'kein Rundenlimit mehr'); assert.equal(s.rules.exhaustRounds, 8, 'Standard seit 0.9.7: 8'); s.rules.exhaustRounds = 10;   // dieser Test rechnet mit 10 Runden
   c.sides.a.stats.hp = c.sides.a.stats.maxHp = 100; c.sides.b.stats.hp = c.sides.b.stats.maxHp = 100;
   const pass = () => assert.ok(M.apply(s, { pid: c.sides[c.turn].ctrl, type: 'pass' }).ok && true);
   for (let i = 0; i < 20; i++) pass();   // Runde 1–10
@@ -1180,7 +1180,7 @@ test('KI: Tempelopfer nur mit Ergebnis, jedes Opfer wird im selben Zug von einem
 });
 
 test('Spieleinstellungen: exhaustRounds und winLead aus den Regeln gelten (0.8.1)', () => {
-  assert.equal(M.DEFAULT_RULES.exhaustRounds, 10); assert.equal(M.DEFAULT_RULES.winLead, 4);
+  assert.equal(M.DEFAULT_RULES.exhaustRounds, 8); assert.equal(M.DEFAULT_RULES.winLead, 4);
   // Erschöpfung nach 3 statt 10 Runden: nach 6 Angriffszügen verlieren beide Seiten 1 HP
   const { s, c } = combatSetup(11, ['F1']);
   s.rules.exhaustRounds = 3; c.sides.a.stats.hp = c.sides.a.stats.maxHp = 100; c.sides.b.stats.hp = c.sides.b.stats.maxHp = 100;
@@ -1363,4 +1363,26 @@ test('Echo: Eine Verteidigung ohne Kombo hinterlässt ein Echo, Passen lässt es
   assert.ok(M.apply(s, { pid: op.ctrl, type: 'mark', slot: 0 }).ok);
   assert.ok(M.apply(s, { pid: op.ctrl, type: 'defend' }).ok);
   assert.equal(op.stats.echo, 'W', 'Verteidigung mit einer Wasserkarte hinterlässt ein Wasser-Echo');
+});
+
+test('Zermürbung: Rundenzähler der Weltphase, ab Runde exhaustRounds + 1 schenkt jeder Zug ohne Monsterangriff dem Gegner Gold in Höhe der Spielstufe (0.9.7)', () => {
+  const s = M.newGame({ seed: 11, ai: [false, false], first: 0, rules: { exhaustRounds: 2 } });
+  assert.equal(M.worldRound(s), 1); assert.equal(M.worldWear(s), false);
+  const gold = () => [s.players[0].stats.gold, s.players[1].stats.gold];
+  const draw = () => { const pid = s.turn; s.players[pid].drawRed = false; s.players[pid].drawN = 0; assert.ok(M.apply(s, { pid, type: 'draw' }).ok); };
+  const g0 = gold();
+  for (let i = 0; i < 4; i++) draw();   // Runde 1 und 2: keine Zermürbung
+  assert.deepEqual(gold(), g0, 'bis Runde 2 kein Gold'); assert.equal(M.worldRound(s), 3); assert.equal(M.worldWear(s), true);
+  s.stage = 2; const mover = s.turn; draw();
+  assert.equal(s.players[1 - mover].stats.gold, g0[1 - mover] + 2, 'Gegner erhält Gold in Höhe der Spielstufe (2)'); assert.equal(s.players[mover].stats.gold, g0[mover]);
+  assert.ok(s.log.some(l => /^Zermürbung \(Runde 3\)/.test(l.txt)));
+  // ein Monsterangriff beendet den Zug ohne Gold und setzt den Zähler nach dem Kampf zurück
+  const before = gold(); const att = s.turn;
+  assert.ok(M.apply(s, { pid: att, type: 'combat', elem: 'F' }).ok); assert.deepEqual(gold(), before, 'Angriff: kein Gold');
+  let n = 0; while (s.combat && n < 400) { assert.ok(M.apply(s, { pid: s.combat.sides[s.combat.turn].ctrl, type: 'pass' }).ok); n++; }
+  assert.equal(M.worldRound(s), 1, 'Zähler nach dem Monsterkampf zurückgesetzt'); assert.equal(M.worldWear(s), false);
+  // aus: exhaustRounds 0
+  const t = M.newGame({ seed: 11, ai: [false, false], first: 0, rules: { exhaustRounds: 0 } });
+  for (let i = 0; i < 30; i++) { const pid = t.turn; t.players[pid].drawRed = false; t.players[pid].drawN = 0; assert.ok(M.apply(t, { pid, type: 'draw' }).ok); }
+  assert.equal(M.worldWear(t), false); assert.ok(!t.log.some(l => /Zermürbung/.test(l.txt)));
 });

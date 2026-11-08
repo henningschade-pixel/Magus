@@ -480,3 +480,10 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .exhbanner small{display:block;margin-top:6px;font:600 20px Alegreya,Georgia,serif;letter-spacing:.02em;color:#f2c9c4;text-shadow:0 0 10px #3a0a0a,0 1px 2px #000}
 @keyframes exhban{0%{opacity:0;transform:scale(1.25)}14%{opacity:1;transform:scale(1)}78%{opacity:1}100%{opacity:0;transform:scale(.98)}}
 @media (prefers-reduced-motion:reduce){.exhbanner{animation:none;opacity:1}#stage{transition:none}}
+
+/* Rundenzähler und Zermürbung der Weltphase (seit 0.9.7): wie die Erschöpfung im Kampf, aber bernsteinfarben (das Gold geht an den Gegner) */
+.worldround{position:absolute;white-space:nowrap;text-align:center;z-index:5;color:var(--mute);font-size:15px;line-height:1.25;pointer-events:auto}
+.worldround .zermtx{color:#e8a23a}
+#stage[data-zerm="1"]{box-shadow:inset 0 0 0 2000px rgba(12,6,0,.36),inset 0 0 240px 20px rgba(150,90,10,.38)}
+.exhbanner.zerm{color:#e8a23a;text-shadow:0 0 18px #7a4a0f,0 0 40px #3a2a0a,0 2px 3px #000}
+.exhbanner.zerm small{color:#f2dfc4;text-shadow:0 0 10px #3a2a0a,0 1px 2px #000}
