@@ -1118,3 +1118,161 @@ test('KI: Tempelopfer nur mit Ergebnis, jedes Opfer wird im selben Zug von einem
   }
   assert.ok(n > 20, 'es wird geopfert (' + n + ')');
 });
+
+test('Spieleinstellungen: exhaustRounds und winLead aus den Regeln gelten (0.8.1)', () => {
+  assert.equal(M.DEFAULT_RULES.exhaustRounds, 10); assert.equal(M.DEFAULT_RULES.winLead, 4);
+  // Erschöpfung nach 3 statt 10 Runden: nach 6 Angriffszügen verlieren beide Seiten 1 HP
+  const { s, c } = combatSetup(11, ['F1']);
+  s.rules.exhaustRounds = 3; c.sides.a.stats.hp = c.sides.a.stats.maxHp = 100; c.sides.b.stats.hp = c.sides.b.stats.maxHp = 100;
+  const pass = () => assert.ok(M.apply(s, { pid: c.sides[c.turn].ctrl, type: 'pass' }).ok);
+  for (let i = 0; i < 6; i++) pass();
+  assert.equal(c.sides.a.stats.hp, 100, 'in den ersten 3 Runden keine Erschöpfung');
+  for (let i = 0; i < 2; i++) pass();
+  assert.ok(c.sides.a.stats.hp < 100 && c.sides.b.stats.hp < 100, 'ab Runde 4 verlieren beide HP');
+  // Erschöpfung aus
+  const t = combatSetup(11, ['F1']); t.s.rules.exhaustRounds = 0; t.c.sides.a.stats.hp = t.c.sides.a.stats.maxHp = 100; t.c.sides.b.stats.hp = t.c.sides.b.stats.maxHp = 100;
+  for (let i = 0; i < 60; i++) assert.ok(M.apply(t.s, { pid: t.c.sides[t.c.turn].ctrl, type: 'pass' }).ok);
+  assert.equal(t.c.sides.a.stats.hp, 100, 'exhaustRounds 0: keine Erschöpfung');
+});
+
+
+// Reihenfolge der Niederlagenprüfung (0.8.3.1): 1) reflektierter Schaden, 2) Schaden nach der Verteidigung, 3) Flusseffekte
+test('Niederlagenprüfung 1: Der Rückwurf der Falle entscheidet vor der Verteidigung (Verteidiger gewinnt, bleibt unverletzt, Flüsse wirken nicht)', () => {
+  const { s, me, op } = combatSetup(11, ['F3']);
+  me.stats.hp = 1; me.stats.maxHp = 9; op.stats.hp = op.stats.maxHp = 9;
+  me.stats.heal = 5; me.stats.healPhase = 5;   // ein Heilfluss darf den Angreifer nicht mehr retten
+  op.stats.trap = { card: { id: 'F1', uid: 9001 }, el: 'F', tier: 1, lvl: 1 };
+  s.keepSnap = true; M.apply(s, { pid: 0, type: 'mark', slot: 0 });
+  const r = M.apply(s, { pid: 0, type: 'attack' });
+  assert.ok(r.ok && r.combatEnd, 'der Kampf endet sofort');
+  assert.equal(r.combatEnd.reason, 'hp'); assert.equal(r.combatEnd.winner, 'b', 'der Angreifer fällt durch den Rückwurf');
+  assert.equal(r.combatEnd.snap.sides.b.stats.hp, 9, 'der Verteidiger hat keinen Schaden genommen');
+});
+test('Niederlagenprüfung 2: Fällt der Verteidiger durch den Schaden nach der Verteidigung auf 0 HP, wirkt kein Fluss mehr (auch kein tödlicher Todesfluss des Angreifers)', () => {
+  const { s, me, op } = combatSetup(11, ['F3']);
+  me.stats.hp = 2; me.stats.maxHp = 9; me.stats.death = 5; me.stats.deathPhase = 5;   // der Todesfluss würde den Angreifer am Phasenende töten
+  op.stats.hp = 1; op.stats.maxHp = 9; op.stats.mana = 0;
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+  const r = M.apply(s, { pid: op.ctrl, type: 'pass' });
+  assert.ok(r.ok && r.combatEnd);
+  assert.equal(r.combatEnd.winner, 'a', 'Stufe 2 entscheidet vor Stufe 3: kein Unentschieden');
+  assert.equal(me.stats.hp, 2, 'der Todesfluss hat nicht mehr getickt');
+});
+test('Niederlagenprüfung 3: Der Todesfluss am Phasenende besiegt den Angreifer; der Heilfluss kommt danach und belebt nicht wieder', () => {
+  const { s, me, op } = combatSetup(11, ['F1']);
+  me.stats.hp = 2; me.stats.maxHp = 9; me.stats.death = 2; me.stats.deathPhase = 2; me.stats.heal = 3; me.stats.healPhase = 3;
+  op.stats.hp = op.stats.maxHp = 9;
+  op.stats.rainbow = 3;   // das Schild schluckt den ganzen Schaden: der Verteidiger bleibt unversehrt
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+  const r = M.apply(s, { pid: op.ctrl, type: 'pass' });
+  assert.ok(r.ok && r.combatEnd);
+  assert.equal(r.combatEnd.winner, 'b', 'der Angreifer fällt durch den Todesfluss');
+  assert.equal(me.stats.hp, 0, 'der Heilfluss hat ihn nicht wieder aufgerichtet');
+});
+
+// Schild vor jeder Schadensquelle (0.8.3.2)
+test('Schild mindert den Rückwurf der Falle (und verliert je geminderten Schaden eine Ladung); der eingehende Schaden sinkt trotzdem um den vollen Rückwurf', () => {
+  const { s, me, op } = combatSetup(11, ['F3']);
+  me.stats.hp = me.stats.maxHp = 9; op.stats.hp = op.stats.maxHp = 9; me.stats.rainbow = 3;
+  op.stats.trap = { card: { id: 'F1', uid: 9001 }, el: 'F', tier: 1, lvl: 2 };
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+  assert.equal(me.stats.hp, 9, 'der Rückwurf von 2 wurde vom Schild geschluckt');
+  assert.equal(me.stats.rainbow, 1, 'zwei Ladungen verbraucht');
+  assert.equal(s.combat.pending, 1, 'Schaden 3 minus Rückwurf 2');
+});
+test('Schild mindert nur so viel des Rückwurfs, wie es Ladungen hat; der Rest geht auf die HP', () => {
+  const { s, me, op } = combatSetup(11, ['F3']);
+  me.stats.hp = me.stats.maxHp = 9; op.stats.hp = op.stats.maxHp = 9; me.stats.rainbow = 1;
+  op.stats.trap = { card: { id: 'F1', uid: 9001 }, el: 'F', tier: 1, lvl: 3 };
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+  assert.equal(me.stats.hp, 7); assert.equal(me.stats.rainbow, undefined);
+});
+test('Schild mindert auch den Todesfluss am Ende der Angriffsphase', () => {
+  const { s, me, op } = combatSetup(11, ['F1']);
+  me.stats.hp = me.stats.maxHp = 9; me.stats.death = 2; me.stats.deathPhase = 2; me.stats.rainbow = 2;
+  op.stats.hp = op.stats.maxHp = 9; op.stats.rainbow = 3;
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+  assert.ok(M.apply(s, { pid: op.ctrl, type: 'pass' }).ok);
+  assert.equal(me.stats.hp, 9, 'der Todesfluss von 2 wurde geschluckt'); assert.equal(me.stats.rainbow, undefined);
+});
+
+test('Falle: Wird der gesamte Schaden zurückgeworfen, entfällt die Verteidigung; der Verteidiger greift direkt an (0.8.7.3)', () => {
+  const full = trapFall('F', 3, 'F1');   // Schaden 1, Rückwurf 1: nichts bleibt übrig
+  assert.equal(full.s.combat.action, 'attack', 'keine Verteidigungsphase');
+  assert.equal(full.s.combat.pending, 0);
+  assert.equal(full.s.combat.sides[full.s.combat.turn].ctrl, 1, 'der Verteidiger ist jetzt im Angriffszug');
+  const part = trapFall('F', 1, 'F3');   // Schaden 3, Rückwurf 1: Rest 2
+  assert.equal(part.s.combat.action, 'defense', 'bei Restschaden bleibt die Verteidigung');
+  assert.equal(part.s.combat.pending, 2);
+});
+
+/* ---------- Echo der Kombos (0.9) ---------- */
+test('Echo: Eine Sekundärkarte in der Farbe des Echos erhöht die Kombostufe um 1, höchstens auf 3 (0.9)', () => {
+  const lv = (echo, ids, mag) => M.evalAttack(STATS({ echo, mag: mag || { F: 3, E: 3, W: 3 } }), cards(ids));
+  assert.equal(lv(undefined, ['F1', 'W1']).ord.lvl, 1, 'ohne Echo Stufe 1');
+  const e = lv('W', ['F1', 'W1']);
+  assert.equal(e.ord.lvl, 2, 'Echo Wasser, Sekundärkarte Wasser: Stufe 2');
+  assert.equal(e.levels.echo, true);
+  assert.equal(lv('E', ['F1', 'W1']).ord.lvl, 1, 'Echo in einer anderen Farbe: keine Wirkung');
+  assert.equal(lv('F', ['F1', 'W1']).ord.lvl, 1, 'Das Echo der Primärfarbe zählt nicht (die Karte ist keine Sekundärkarte)');
+  const cap = lv('W', ['F3', 'W3']);
+  assert.equal(cap.ord.lvl, 3, 'höchstens Stufe 3');
+  assert.ok(!cap.levels.echo, 'bei Stufe 3 steigt nichts, also kein Echo-Hinweis');
+});
+
+test('Echo: Die Ultimate wird durch ein Echo einer ihrer Sekundärfarben um 1 Stufe erhöht, das Echo der Primärfarbe wirkt nicht (0.9)', () => {
+  const u = (echo) => M.evalAttack(STATS({ echo }), cards(['F1', 'E1', 'W1'])).levels;
+  assert.equal(u(undefined).ulti, 1);
+  assert.equal(u('E').ulti, 2, 'Erde ist Sekundärfarbe');
+  assert.equal(u('W').ulti, 2, 'Wasser ist Sekundärfarbe');
+  assert.equal(u('F').ulti, 1, 'Feuer ist die erste Karte');
+});
+
+test('Echo: Auch in der Verteidigung verstärkt das Echo einen Kombo (0.9)', () => {
+  const d = (echo) => M.evalDefense(STATS({ echo }), cards(['F1', 'W1']), 'F');
+  assert.equal(d(undefined).ord.lvl, 1);
+  assert.equal(d('W').ord.lvl, 2);
+  assert.equal(d('E').ord.lvl, 1);
+});
+
+test('Echo: Ein Kombo hinterlässt das Echo seiner ersten Farbe, der nächste Kombo erneuert es und nutzt das alte (0.9)', () => {
+  const { s, c, me, op } = combatSetup(11, ['E1', 'W1', 'F1', 'E1']);
+  const curses = () => op.deck.discard.filter(cd => M.parseCard(cd.id).curse).length;
+  assert.equal(me.stats.echo, undefined, 'zu Kampfbeginn kein Echo');
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });   // Erde + Wasser: Heilung
+  assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+  assert.equal(me.stats.echo, 'E', 'Echo in der Farbe der ersten Karte');
+  assert.ok(M.apply(s, { pid: 1, type: 'pass' }).ok);
+  c.turn = 'a'; c.action = 'attack';
+  const before = curses();
+  M.apply(s, { pid: 0, type: 'mark', slot: 2 }); M.apply(s, { pid: 0, type: 'mark', slot: 3 });   // Feuer + Erde: Lähmung, Sekundärfarbe Erde = Echo
+  assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+  assert.equal(curses() - before, 4, 'Lähmung Stufe 2 (4 Fluchkarten) statt Stufe 1');
+  assert.equal(me.stats.echo, 'F', 'das Echo wurde erneuert');
+  assert.ok(s.log.some(e => /Echo \(Erde\)/.test(e.txt)), 'Protokoll nennt das Echo');
+});
+
+test('Echo: Ein Kombo ohne passende Sekundärfarbe verstärkt nicht, erneuert das Echo aber trotzdem; am Kampfende verschwindet es (0.9)', () => {
+  const { s, c, me, op } = combatSetup(11, ['F1', 'E1']);
+  me.stats.echo = 'W';
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
+  const before = op.deck.discard.filter(cd => M.parseCard(cd.id).curse).length;
+  assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+  assert.equal(op.deck.discard.filter(cd => M.parseCard(cd.id).curse).length - before, 2, 'Stufe 1: 2 Fluchkarten');
+  assert.equal(me.stats.echo, 'F');
+  assert.ok(M.apply(s, { pid: 1, type: 'pass' }).ok);
+  c.turn = 'a'; c.action = 'attack'; op.stats.mana = 0;
+  const r = M.apply(s, { pid: 0, type: 'flee' });
+  assert.ok(r.ok, 'Kampf endet');
+  assert.equal(s.players[0].stats.echo, undefined, 'Echo verschwindet mit dem Kampf');
+});
+
+test('Echo: Die Läuterung erreicht das Echo nicht (0.9)', () => {
+  const { s, me } = combatSetup(11, ['E1', 'F1']);
+  me.stats.echo = 'F';
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
+  M.apply(s, { pid: 0, type: 'lfp', pick: ['se', 'echo', 'e', 'F'] });
+  assert.deepEqual(s.combat.lfp, [], 'Echo ist keine wählbare Markerart');
+  assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);   // Erde + Feuer: Läuterung (Sekundärfarbe Feuer = Echo, Stufe 2)
+  assert.equal(me.stats.echo, 'E', 'nur der neue Kombo erneuert das Echo');
+});

@@ -4,7 +4,7 @@ Dies ist die maßgebliche Fassung der Regeln. Sie ersetzt das Claude-Docs-Dokume
 
 ## Spielidee und Ablauf
 
-Duellspiel für zwei Personen: Deck und Magie ausbauen, Monster besiegen und in bis zu drei Showdowns Siegpunkte holen. Nach dem dritten Showdown entscheidet, wer mehr hat (bei Gleichstand das Gold, danach die Tempelstufe, danach unentschieden).
+Duellspiel für zwei Personen: Deck und Magie ausbauen, Monster besiegen und in bis zu drei Showdowns Siegpunkte holen. Nach dem dritten Showdown entscheidet, wer mehr hat (bei Gleichstand die Tempelstufe, danach das Gold, danach unentschieden; seit 0.8.6.1).
 
 **Siegpunkte im Überblick (seit v8):** Monsterkampf: besiegt der Angreifer das Monster, erhält er +1; verliert der Angreifer, verliert er 1 (nie unter 0); der Monsterführer gewinnt und verliert dabei nie Siegpunkte. Flucht und Unentschieden zählen nicht. Showdown: Sieger +1, Verlierer −1 (nie unter 0), Unentschieden und Flucht 0/0, kein Trostpreis. Je Abschnitt sind damit höchstens 4 Siegpunkte möglich (drei Monsterkämpfe und der Showdown), nach zwei Abschnitten 8 (`showdownSp`).
 
@@ -47,7 +47,7 @@ Im eigenen Zug genau eine Aktion, danach wechselt der Spieler: Nachziehen, in de
 
 Die bezahlten Karten werden aus dem Deck entfernt, nur die gekaufte kommt auf den Ablagestapel.
 
-**Tempel:** n Gold opfern ergibt n·(n+1)/2 Tempelpunkte; die nächste Tempelstufe kostet (aktuelle Stufe + 1) Punkte, jede erreichte Stufe gibt einen Upgrade-Punkt. Die Tempelstufe ist die Zahl der durch Opfer erlangten Upgrades (kostet die nächste Stufe 4 Punkte, hat man Stufe 3) und zählt als drittes Kriterium der Siegbedingung (nach Siegpunkten und Gold). Die Vorschau (Gold, Punkte, Bruch) zeigt sich schon beim Einstellen mit den Pfeilen.
+**Tempel:** n Gold opfern ergibt n·(n+1)/2 Tempelpunkte; die nächste Tempelstufe kostet (aktuelle Stufe + 1) Punkte, jede erreichte Stufe gibt einen Upgrade-Punkt. Die Tempelstufe ist die Zahl der durch Opfer erlangten Upgrades (kostet die nächste Stufe 4 Punkte, hat man Stufe 3) und zählt als zweites Kriterium der Siegbedingung (nach Siegpunkten, vor dem Gold; seit 0.8.6.1). Die Vorschau (Gold, Punkte, Bruch) zeigt sich schon beim Einstellen mit den Pfeilen.
 
 **Magie kaufen:** Stufe 2 kostet 1, Stufe 3 kostet 3 **Upgrade-Punkte** (seit 0.3, vorher Gold; siehe „Getauschte Kosten“).
 
@@ -68,7 +68,7 @@ Der aktive Spieler wählt ein lebendes Monster und greift an, der Mitspieler fü
 **Erholen:** Wer den Angriff auslässt, erhält **Mana in Höhe des Abschnitts** (1 / 2 / 3). In der Verteidigung gibt es **kein Erholen**: Wer dort passt, führt keine Verteidigung aus und nimmt den Schaden hin (ein Spiegel dieser Farbe gleicht bis zu seiner Stufe aus und verliert dafür Stufen), erhält aber kein Mana. Nachziehen, Erholen und Passen beenden den Zug.
 
 **Kampfende:**
-- Fällt eine Seite auf 0 HP, hat die andere gewonnen; fallen beide gleichzeitig, gibt es keinen Sieger.
+- Fällt eine Seite auf 0 HP, hat die andere gewonnen; fallen beide gleichzeitig, gibt es keinen Sieger. Geprüft wird in fester Reihenfolge (seit 0.8.3.1): 1) reflektierter Schaden (Falle), 2) Schaden nach der Verteidigung (samt Heilung), 3) Flusseffekte am Ende der Angriffsphase (Todesfluss, Erschöpfung, Heil- und Manafluss). Die erste Stufe, in der eine Seite auf 0 HP fällt, entscheidet; spätere Stufen wirken dann nicht mehr.
 - Haben beide 0 Mana, endet der Kampf **nicht mehr automatisch** ohne Sieger. Er geht weiter: Erholen im Angriffszug bringt Mana, der Todesfluss zehrt am Ende der Angriffsphasen. Beenden lässt er sich durch **Fliehen** (möglich, wenn der Gegner 0 Mana hat). Als technische Sicherung endet ein Kampf nach 400 Schritten ohne Sieger.
 - Siegt der Spieler gegen das Monster, gibt es **keine Beute** (`monsterLoot` 0; ohne die Regel gälte das Gold des Monsters 1/2/3, auch für den Monsterführer mit `lootBoth`). Der Angreifer erhält 1 Siegpunkt (`monsterSp`); der Monsterführer verliert nichts. Siegt das Monster, gibt es keine Beute, und das Monster **zieht sich zurück**: Es verlässt das Brett, gilt als besiegt und bringt keine Beute (sonst ließe sich die Hilfe durch absichtliche Niederlagen farmen, die HP stiegen ohne Ende); der Angreifer verliert 1 Siegpunkt (nie unter 0), der Monsterführer gewinnt und verliert dabei nie Siegpunkte. **Ausgleich (seit 0.4, vorher „Hilfe“ für beide):** Gewinnt das Monster, erhält nur der Verlierer (der Angreifer) Gold: 1 / 2 / 3 je Abschnitt (`lossHelp` 1, `lossGold` [0,1,2,3], `lossPoints` 0, `lossBoth` 0; mit `lossBoth` 1 bekämen beide den Ausgleich), ohne Begrenzung. Ohne Sieger (Flucht, beide fallen) gibt es weder Beute noch Siegpunkte, das Monster bleibt am Leben.
 - In Monsterkämpfen bleiben HP und Mana erhalten und regenerieren in der Weltphase; vor und nach einem Showdown sind sie voll.
@@ -90,6 +90,8 @@ Die Farbe der ersten markierten Karte bestimmt die Rolle (Feuer aggressiv, Wasse
 | Heilung | Erde + Wasser | S HP heilen |
 | Läuterung | Erde + Feuer | S beliebige Marker vom Brett entfernen, je entferntem Marker ein Nachziehtoken |
 | Ultimate | alle drei | je nach Farbe der ersten Karte: **Feuer** Todesfluss, **Erde** Heilfluss, **Wasser** Manafluss (Stufe S) |
+
+**Echo (seit 0.9):** Jeder Kombo (die sechs Zwei-Farben-Kombos und die Ultimate, im Angriff wie in der Verteidigung) hinterlässt bei der Seite, die ihn wirkt, ein **Echo in der Farbe der ersten Karte (Primärmagie)**. Jeder neue Kombo **erneuert** das Echo (neue Farbe), ein Angriff ohne Kombo lässt es stehen. Enthält der **nächste Kombo** eine **Sekundärkarte in der Farbe des Echos**, steigt seine Stufe um **1 (höchstens 3)**; das gilt auch, wenn er das Echo gleichzeitig durch seine eigene Primärfarbe erneuert. Bei der Ultimate sind beide Farben außer der ersten Sekundärfarben. Das Echo ist **kein Marker im Sinne der Läuterung** (nicht läuterbar), gilt nur bis Kampfende und steht als Marker links (eigenes Echo) und rechts (Echo des Gegners) neben der Kombo-Übersicht.
 
 **Fluchkarten:** Sie kommen erst in den Zugstapel, wenn der Ablagestapel gemischt wird. Auf der Hand belegen sie einen Platz und wirken nicht. Beim Nachziehen werden sie dauerhaft verworfen, am Kampfende verschwinden alle.
 
@@ -199,7 +201,7 @@ Nur die **Bezahlung** ist vertauscht, nicht was man wann bekommt. Gold und Upgra
 | Nachziehlimit | 1 Upgrade-Punkt je Schritt | 1 Gold je Schritt |
 
 Die Knöpfe tauschen mit: Die goldene Münz-Scheibe sitzt jetzt an den Verbesserungen (HP, Mana, Limit, Handplatz, Nachziehlimit), das grüne Plus der Upgrade-Punkte rund um das Magiebrett. `swapCosts` 0 stellt die alte Zuordnung wieder her.
-Folge: Der Tempel ist jetzt der Weg zur Magie (Gold opfern, Punkte sammeln), Gold kauft die Werte im Kampf direkt. Die Siegbedingung ändert sich nicht (Gold bleibt das zweite, die Tempelstufe das dritte Kriterium).
+Folge: Der Tempel ist jetzt der Weg zur Magie (Gold opfern, Punkte sammeln), Gold kauft die Werte im Kampf direkt. Die Siegbedingung ändert sich dadurch nicht (zu dieser Zeit: Gold das zweite, die Tempelstufe das dritte Kriterium; seit 0.8.6.1 umgekehrt).
 KI: Auf 0.3 nachtrainiert (siehe `tools/balance/README.md`): Eröffnung mit zwei Farben auf Stufe 2, Gold in max. HP und Handplätze, kein Opfern für Magie (Magie kommt aus den Abschnittsboni und der Hilfe); 64,6 % Siegquote gegen die KI vor dem Nachtraining.
 
 ## Startsiegpunkte (Version 0.3, Schalter `startSp`, Standard 2)
@@ -594,7 +596,67 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 
 - **Falle schwächer:** Der Rückwurf der Falle beträgt **S = 1 / 2 / 3** unblockbaren Schaden (vorher 2·S = 2 / 4 / 6), weiterhin höchstens der eingehende Schaden und vor der Verteidigung. KI-Wert der Falle entsprechend halbiert (`trapWorth`: Stufe statt 2 × Stufe).
 
-## Änderung 0.8.0.9 (08.11.)
+## Änderung 0.8.1 (07.11.)
+
+- **Spieleinstellungen:** Neue Seite „Spieleinstellungen“ im Hauptmenü mit zwei Werten: **Runden bis Erschöpfung** (`exhaustRounds`, Standard 10, 0 = keine Erschöpfung) und **Siegpunkt-Vorsprung** für das vorzeitige Spielende nach einem Showdown (`winLead`, Standard 4, 0 = kein vorzeitiges Ende). Die Engine kannte beide Regeln schon; neu ist die Oberfläche (Knöpfe − / +, „Standardwerte“). Die Werte gelten für neue Spiele (Einzelspieler, Zuschauen, Raum erstellen; der Gastgeber legt sie für beide fest) und liegen im Browser (`localStorage`, Schlüssel `magus_rules`). Ein laufendes Spiel behält seine Werte.
+
+## Änderung 0.8.1.1 (07.11.)
+
+- **Spieleinstellungen in den Einstellungen:** Die Seite „Spieleinstellungen“ entfällt als eigener Menüpunkt. Die Einstellungen (Hauptmenü und Spielmenü) haben jetzt zwei Abschnitte: **Ton** (Schalter, Regler Effekte und Musik) und **Spiel** (Runden bis Erschöpfung, Siegpunkt-Vorsprung, Standardwerte). Nur Oberfläche.
+
+## Änderung 0.8.2.1 (07.11.)
+
+- **Neuer Endbildschirm (nur Oberfläche, keine Regeländerung):** Testspieler fanden das Spielende abrupt. Der Endbildschirm hebt jetzt das Ergebnis hervor: beim **Sieg** goldenes Siegel, Strahlen und aufsteigende Funken, bei der **Niederlage** ein zerbrochenes Siegel, rote Tönung und fallende Asche, bei Unentschieden eine schlichte Variante. Danach folgt ein **Rückblick auf die Höhepunkte** (aus dem Kampfverlauf `G.hist`/`trace`): letzter Hieb, mächtigster Angriff, stärkste Abwehr, knappster Sieg, makelloser Sieg, Blitzsieg bzw. zähes Ringen und die Aufholjagd (Siegpunkt-Rückstand, der noch gedreht wurde). Der **Verlierer** sieht dieselben eigenen Glanzmomente, bei knapper Führung die „fast geschafft“-Karte und zusätzlich den **Wendepunkt** (den Treffer des Gegners, der die Partie entschied). Dazu kommen der Siegpunktverlauf, eine Bilanz (Monster besiegt, Showdowns, Schaden ausgeteilt und geblockt) und die bisherigen Knöpfe. Die Karten erscheinen nacheinander; ein Klick überspringt die Animation, ein Klick auf eine Karte zeigt den Kampfverlauf (der Weg zurück führt über die Statistik wieder zum Endbildschirm). Bei zwei Computern wird der Rückblick für den Sieger gezeigt. Neue Datei `src/ui/26b-endbildschirm.js`.
+
+## Änderung 0.8.3.1 (07.11.)
+
+- **Reihenfolge der Niederlagenprüfung (0 HP):** Die Engine prüft jetzt ausdrücklich in drei Stufen, und die erste Stufe mit einer Seite auf 0 HP entscheidet den Kampf: **1) reflektierter Schaden** (Rückwurf der Falle, vor der Verteidigung: der Angreifer ist besiegt, ohne dass der Verteidiger noch verteidigt oder Schaden nimmt), **2) Schaden nach der Verteidigung** (Restschaden nach Block und Schild, danach die Heilung), **3) Flusseffekte** am Ende der Angriffsphase (Todesfluss, Erschöpfung, danach Heil- und Manafluss). Folgen: Ein Todesfluss kann den Angreifer nicht mehr zusammen mit dem Verteidiger auf 0 bringen (kein Unentschieden), und ein Heil- oder Manafluss belebt niemanden wieder. Engine: neue Hilfsfunktion `hpDecided` in `65-kampfablauf.js` als Tor vor den Stufen 2 und 3; drei neue Tests („Niederlagenprüfung 1–3“). Die bisherigen Ergebnisse (Golden-Datei) bleiben unverändert.
+
+## Änderung 0.8.4 (07.11.)
+
+- **Einstellungen aufgeräumt:** Jede Gruppe (Ton, Spiel) hat eine Kopfzeile; rechts steht der Ton-Schalter beziehungsweise „Standardwerte“ für die Spielwerte. Die beiden Spielwerte stehen mit kompakten −/+-Knöpfen je in einer Zeile; die Seite ist breiter und passt in das Fenster (vorher ragte „Zurück“ heraus). Nur Oberfläche.
+
+## Änderung 0.8.4.1 (07.11.)
+
+- **Schild vor jeder Schadensquelle (Regeländerung):** Das Schild (`stats.rainbow`) mindert nicht mehr nur den Angriffsschaden, sondern **jeden** HP-Verlust: auch den **Rückwurf der Falle** (der Angreifer verliert nur den Rest über seinen Ladungen), den **Todesfluss** und die **Erschöpfung**. Je gemindertem Schaden geht eine Ladung verloren (Engine: `shieldHit`). Der eingehende Angriffsschaden sinkt durch die Falle weiterhin um den vollen Rückwurf. Passt zur Reihenfolge von 0.8.3.1: Das Schild wirkt in jeder Stufe vor dem Abzug der HP. Golden-Datei neu erzeugt (absichtliche Regeländerung); drei neue Tests.
+
+## Änderung 0.8.5 (07.11.)
+
+- **KI auf die neuen blauen Kombos abgestimmt, keine Änderung nötig:** `PARAMS=wFW,wTrap,uMana,uHeal,mirKeep,mirAvoid,wDeath,wEW,wFE,wDraw,lfDeath,lfHeal,keepB node tools/balance/opt2.js 3 600` (Pool: Champion plus drei früh angreifende Gegner). Runde 1: bester Kandidat `wDeath` 8 mit +0,9 Punkten, `wFW` 0,6 mit +0,7; Runde 2: `uMana` 0,7 mit +0,6. Alle liegen unter der Übernahmeschwelle (1,5 Standardfehler, etwa ±2 Punkte), nichts wurde übernommen; die Standardwerte der KI bleiben. Die Gewichte für Falle (`wTrap`), Schild (`wFW`), Manafluss (`uMana`) und Hellsicht liegen damit nahe am Optimum. Runde 3 entfiel, weil Runde 2 nichts übernahm. Gemessen wurde auf dem Regelstand 0.8.4 (vor der Änderung 0.8.4.1, die das Schild vor jeder Schadensquelle wirken lässt); `wFW` (Schild) ist danach nicht neu gemessen.
+- `wTrap` und `mirKeep` sind jetzt in der Schrittweitentabelle von `tools/balance/opt.js` und damit für `opt2.js` abstimmbar.
+- Keine Regel- und keine KI-Änderung; `tests/golden.json` bleibt unverändert.
+
+## Änderung 0.8.6 (07.11.)
+
+- **Spielanleitung als Präsentation (keine Regel- und keine KI-Änderung):** Zu Magus gibt es eine Anleitung im Stil eines analogen Spiels (Regelheft mit Pergamentfarben, Kartenrahmen und Elementfarben), 20 Seiten: Idee, Ablauf einer Partie, Material, Elementkreis, Startwerte, Karten, Zug der Weltphase, Nachziehen und Marker, Bibliothek und Tempel, Kauf von Magie und Upgrades, Angriff und Verteidigung, Aktionen statt Angriff, Kampfende, Monster, Monsterwürfel, Kombos, Ultimates, Showdown, Siegpunkte und Spielende. Grundlage ist der Regelstand 0.8.5. Die Präsentation liegt als Claude-Folienartefakt im claude.ai-Projekt „Magus“, nicht im Repository.
+- Die Versionsbeschreibung im Spiel nennt die Anleitung; `tests/golden.json` bleibt unverändert.
+
+## Änderung 0.8.6.1 (07.11.)
+
+- **Siegbedingung: Siegpunkte > Tempelstufe > Gold (Regeländerung):** Bei Gleichstand an Siegpunkten nach dem dritten Showdown entscheidet zuerst die Tempelstufe, danach das Gold (vorher umgekehrt). Engine: `65-kampfablauf.js` (Spielende), Endbildschirm: „bei gleicher Tempelstufe das meiste Gold“ bzw. „bei Punktgleichstand die höhere Tempelstufe“. Die Spielanleitung (Präsentation, Seiten 2 und 20) nennt die neue Reihenfolge. Gemeint ist die Tempelstufe, wie bisher als Kriterium verwendet, nicht der Punktestand im Tempel.
+
+## Änderung 0.8.7.1 (08.11.)
+
+- **Karten unter den Bildschirmen (keine Regel- und keine KI-Änderung):** Karten, die zum Stapel zurückfliegen oder verbrennen, sowie gekaufte Karten, die noch auf ihren Platz warten, hatten die Ebene 400 und lagen damit über dem Endbildschirm (ebenfalls Ebene 400) und den Menü- und Startbildschirmen (Ebene 300). Sie liegen jetzt auf Ebene 280, unter allen Bildschirmen, aber weiter über dem Spielfeld. Änderung in `src/ui/15-karten.js` und `src/style.css` (`.card.fadeout`).
+- Die Versionsbeschreibung im Spiel nennt die Änderung; `tests/golden.json` bleibt unverändert.
+
+## Änderung 0.8.7.2 (08.11.)
+
+- **Sinnlose Knöpfe inaktiv (keine Regel- und keine KI-Änderung):** Im Kampfpanel ist **Erholen** ausgegraut, wenn das eigene Mana schon voll ist, und **Nachziehen**, wenn bei rotem Nachziehmarker das Mana für die Kosten nicht reicht (der Knopf zeigt den Grund als Tooltip). Nur die Oberfläche (`src/ui/18-kampf.js`); die Engine lässt Erholen bei vollem Mana weiterhin zu, damit die KI und gespeicherte Spiellogs unverändert laufen.
+- Die Versionsbeschreibung im Spiel nennt die Änderung; `tests/golden.json` bleibt unverändert.
+
+## Änderung 0.8.7.3 (08.11.)
+
+- **Verteidigung bei vollem Rückwurf (keine Regeländerung):** Wirft die Falle den gesamten eingehenden Schaden zurück, entfällt die Verteidigungsphase wie beim Angriff ohne Schaden: Der Verteidiger ist sofort im Angriffszug, die Angriffsphase des Angreifers endet mit ihren Flusseffekten. Das war schon so (`execAttack` in `65-kampfablauf.js`); neu ist nur ein Test dazu in `tests/engine.test.js`.
+
+## Änderung 0.9 (08.11.)
+
+- **Echo der Kombos (Regeländerung):** Jeder Kombo hinterlässt ein Echo in der Farbe seiner ersten Karte (Primärmagie); der nächste Kombo erneuert es. Enthält der nächste Kombo eine Sekundärkarte in der Farbe des Echos, wird er um eine Stufe erhöht (höchstens 3). Beispiel: Erde + Wasser (Heilung) hinterlässt ein Erde-Echo; Feuer + Erde (Lähmung) hat Erde als Sekundärfarbe und wirkt deshalb als Stufe 2 statt 1 und erneuert das Echo auf Feuer. Gilt für alle Kombos und die Ultimate (dort zählen beide nicht-ersten Farben als Sekundärfarben), im Angriff und in der Verteidigung, für Spieler, Gegner und Monster. Das Echo ist nicht läuterbar und endet mit dem Kampf. Ein Echo, das die Stufe nicht erhöht (Stufe schon 3 oder falsche Farbe), wird im Protokoll nicht genannt.
+- **Umsetzung:** `echoBoost` und `evalAttack`/`evalDefense` in `src/engine/60-kampfberechnung.js` (Vorschau und KI sehen die erhöhte Stufe, `levels.echo` bzw. `ord.echo` melden die Erhöhung), `stats.echo` wird in `execAttack` und `execDefense` (`src/engine/65-kampfablauf.js`) gesetzt und am Kampfende gelöscht. Darstellung: `echoToken` (`src/ui/12-hilfen.js`) links und rechts neben der Kombo-Übersicht (`comboRef`, `src/ui/18-kampf.js`), Hinweiszeile „Echo (Farbe): Kombo +1 Stufe“ in der Vorschau und im Protokoll. Tests: sechs Tests „Echo: …“ in `tests/engine.test.js`.
+- **KI:** nicht eigens abgestimmt; sie sieht die erhöhte Stufe über `evalAttack` und wählt Kombos danach, plant das Echo aber nicht voraus. Die Referenzpartien (`tests/golden.json`) sind neu erzeugt.
+- Die Versionsbeschreibung im Spiel nennt die Änderung.
+
+## Änderung 0.9.0.1 (08.11.; als Zweig 0.8.0.9 begonnen)
 
 - **Hellsicht neu gefasst:** Statt je Karte Hand/Ablage/Händler zu entscheiden, werden drei Karten gezogen; davon werden S Karten offen vor die Seite gelegt, die übrigen abgelegt. Offene Karten sind wie Handkarten nutzbar, kosten aber kein Mana und werden danach abgelegt (unbenutzte am Kampfende). Das Abwerfen zum Händler entfällt.
 - **Technik:** Offene Karten sind angehängte Handplätze (`deck.extra`, Karten mit `free`); `baseLen`, `addSight`, `trimSight`, `dropSight` in `src/engine/10-karten.js`. Aktion `fd` mit `pick` = `'k'`/`'a'` je Karte (genau S mal `'k'`, keine Flüche). KI behält die S höchsten Nicht-Fluchkarten.

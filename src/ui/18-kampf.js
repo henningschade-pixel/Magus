@@ -97,6 +97,7 @@ function combatCenter(cx) {
         prev = '';
         canExec = ev.valid && ev.affordable; val = ev.valid && ev.prim ? ev.damage : 0;
         const lvC = ev.valid ? M.levelsFor(ev) : ev.levels;
+        if (ev.valid && ev.levels.echo) prev += '<div class="note">Echo (' + NAMES[cx.myStats.echo] + '): Kombo +1 Stufe</div>';
         if (ev.valid && lvC.ew > 0 && !(ev.levels.ulti > 0)) prev += lfSummary(cx, lvC.ew);
         if (!ev.affordable) prev += '<div class="bad">Zu wenig Mana.</div>';
       }
@@ -108,9 +109,9 @@ function combatCenter(cx) {
     }
   }
   h += '<div class="preview">' + prev + '</div><div class="btnrow">';
-  const canFlee = my && M.canFlee(G, ME), rg = M.recoverGain(G);
+  const canFlee = my && M.canFlee(G, ME), rg = M.recoverGain(G), manaFull = cx.myStats.mana >= cx.myStats.maxMana, drawNoMana = cx.myStats.mana < M.drawManaCost(G, ME);   // Erholen bei vollem Mana und Nachziehen ohne das Mana für den roten Marker sind sinnlos: Knöpfe inaktiv
   if (!canFlee) fleeAsk = false;
-  if (atk) h += '<button class="btn danger" data-act="attack" ' + (my && canExec ? '' : 'disabled') + ' title="Angriff ausführen: Schaden der markierten Karten">Angriff (' + val + ')</button><button class="btn blue" data-act="recover" ' + (my ? '' : 'disabled') + ' title="Nur du erhältst +' + rg + ' Mana">Erholen (+' + rg + ')</button><button class="btn" data-act="draw" ' + (my ? '' : 'disabled') + ' title="Hand tauschen, ersetzt den Angriff">Nachziehen</button><button class="btn" data-act="pass" ' + (my ? '' : 'disabled') + '>Passen</button>' + '<button class="btn" data-act="fleeask" ' + (canFlee ? '' : 'disabled') + ' title="Den Kampf abbrechen: kein Sieger, keine Siegpunkte. Geht nur im eigenen Angriffszug, wenn der Gegner kein Mana mehr hat und du nicht unter einem Todesfluss stehst.">Fliehen</button>';
+  if (atk) h += '<button class="btn danger" data-act="attack" ' + (my && canExec ? '' : 'disabled') + ' title="Angriff ausführen: Schaden der markierten Karten">Angriff (' + val + ')</button><button class="btn blue" data-act="recover" ' + (my && !manaFull ? '' : 'disabled') + ' title="' + (my && manaFull ? 'Dein Mana ist bereits voll' : 'Nur du erhältst +' + rg + ' Mana') + '">Erholen (+' + rg + ')</button><button class="btn" data-act="draw" ' + (my && !drawNoMana ? '' : 'disabled') + ' title="' + (my && drawNoMana ? 'Zu wenig Mana: Bei rotem Nachziehmarker kostet Nachziehen Mana' : 'Hand tauschen, ersetzt den Angriff') + '">Nachziehen</button><button class="btn" data-act="pass" ' + (my ? '' : 'disabled') + '>Passen</button>' + '<button class="btn" data-act="fleeask" ' + (canFlee ? '' : 'disabled') + ' title="Den Kampf abbrechen: kein Sieger, keine Siegpunkte. Geht nur im eigenen Angriffszug, wenn der Gegner kein Mana mehr hat und du nicht unter einem Todesfluss stehst.">Fliehen</button>';
   else if (my) h += '<button class="btn primary" data-act="defend" ' + (canExec ? '' : 'disabled') + ' title="Verteidigung ausführen: Block der markierten Karten">Verteidigen (' + val + ')</button><button class="btn" data-act="pass" title="Passen: keine Verteidigung, den Schaden hinnehmen (kein Mana)">Passen</button>';   // Verteidigung ist rein reaktiv: nur bei eingehendem Schaden, nur Verteidigen und Passen
   h += '</div>';
   if (fleeAsk && canFlee) {   // Warnung: Fliehen muss bestätigt werden
@@ -148,11 +149,14 @@ function comboRef(cx) {
     } else if (cols.length === 2 && o) {   // zwei Farben: genau eine Kombo, mit erreichter Stufe
       const r = ORD_ROWS.find(x => x[0] === o.key);
       h += row(r[1], [r[2], r[3]], o.lvl, ordText(r[0], o.lvl), true);
+      if (o.echo) h += '<div class="note" style="margin-top:2px;font-size:13px">Echo ' + el(o.other) + ': +1 Stufe</div>';
       h += '<div class="note" style="margin-top:4px;font-size:12px">Stufe = die kleinere der beiden Kartensummen (je Karte höchstens deine Magiestufe), höchstens 3. Mehrere Karten einer Farbe zählen zusammen. Mit ' + el(M.ELEMENTS.find(x => !cols.includes(x))) + ' als dritter Farbe wird daraus die Ultimate ' + ULTI_NAME[prim] + '.</div>';
     } else {   // alle drei Farben: Ultimate
       h += ultiRow(prim, lv.ulti, ultiText(prim, lv.ulti || 'S') + ' Die Kombos entfallen.', lv.ulti > 0);
+      if (lv.echo) h += '<div class="note" style="margin-top:2px;font-size:13px">Echo ' + el(cx.myStats.echo) + ': +1 Stufe</div>';
     }
-    return '<div class="panel" style="' + box(LAYOUT.oppInfo, 'overflow:hidden;padding:8px 12px;display:flex;flex-direction:column') + '">' + h + '</div>';
+    const R = LAYOUT.oppInfo, ty = R.top + Math.round(R.h / 2) - 19;   // Echo-Marker (seit 0.9) links (eigenes Echo) und rechts (Echo des Gegners) neben der Kombo-Übersicht, auf halber Höhe, halb über dem Rand
+    return '<div class="panel" style="' + box(R, 'overflow:hidden;padding:8px 12px;display:flex;flex-direction:column') + '">' + h + '</div>' + echoToken(cx.myStats, true, { left: R.left - 20, top: ty }) + echoToken(cx.oppStats, false, { left: R.left + R.w - 18, top: ty });
   }
 }
 

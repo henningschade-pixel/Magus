@@ -56,7 +56,7 @@ function place(card, s) {
   }
   const held = rec.hold && Date.now() < rec.hold;   // gekaufte Karte wartet noch auf den Rückflug der bezahlten Karten (oder auf ihren Platz in der Zugreihenfolge)
   if (!held) d.style.transform = rec.final;
-  d.style.zIndex = held ? 400 : s.z;
+  d.style.zIndex = held ? 280 : s.z;
   const wasDown = d.classList.contains('down'), flipped = !isNew && !!s.down !== wasDown && (s.zone === 'hand' || prevZone === 'hand') && !FAST && !reducedMotion();
   d.classList.toggle('down', !!s.down); d.classList.toggle('marked', !!s.marked); d.classList.toggle('first', !!s.first); d.classList.toggle('fd', !!s.fd); d.classList.toggle('cand', !!s.cand); d.classList.toggle('locked', !!s.locked); d.classList.toggle('sightopen', !!s.free);
   d.classList.toggle('myhand', !!s.mine); d.dataset.slot = s.slot === undefined ? '' : s.slot;
@@ -110,7 +110,7 @@ function renderCards() {
   layoutDeck(cx.oppDeck, L_OP, false);
   for (const [uid, rec] of els) if (rec.frame !== frame) {
     els.delete(uid); const d = rec.el, back = !M.parseCard(rec.id).curse && stockSpot(rec.id);   // nur Flüche werden zerstört; alle anderen Karten gehen verkleinert zurück auf ihren Stapel in der Bibliothek
-    if (back) { d.style.pointerEvents = 'none'; d.style.zIndex = 400; d.style.transform = 'translate(' + back.x + 'px,' + back.y + 'px) scale(' + back.sc + ')'; cardsUntil = Math.max(cardsUntil, Date.now() + 520); setTimeout(() => d.remove(), 520); }
+    if (back) { d.style.pointerEvents = 'none'; d.style.zIndex = 280; d.style.transform = 'translate(' + back.x + 'px,' + back.y + 'px) scale(' + back.sc + ')'; cardsUntil = Math.max(cardsUntil, Date.now() + 520); setTimeout(() => d.remove(), 520); }
     else { d.classList.add('fadeout'); cardsUntil = Math.max(cardsUntil, Date.now() + 1200); setTimeout(() => d.remove(), 1200); }
   }
   flushSound(quiet || Intro.on);

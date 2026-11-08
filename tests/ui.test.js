@@ -401,3 +401,64 @@ test('Unter der Magiegrafik steht der Preis der nächsten Magiestufe; Opfern im 
     assert.deepEqual(errs, []);
   } finally { await b.close(); }
 });
+
+test('Spieleinstellungen (in den Einstellungen, Abschnitt Spiel): Runden bis Erschöpfung und Siegpunkt-Vorsprung lassen sich einstellen, gelten für neue Spiele und bleiben gespeichert (0.8.1)', { skip: !chromium && 'Playwright nicht installiert', timeout: 60000 }, async () => {
+  const b = await chromium.launch({ executablePath: exe });
+  try {
+    const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
+    p.on('pageerror', e => errs.push(e.message));
+    await p.goto(url); await p.waitForTimeout(500);
+    const txt = () => p.evaluate(() => document.getElementById('overlay').innerText);
+    await p.click('text=Einstellungen'); let t = await txt();
+    assert.ok(/ton/i.test(t) && /spiel/i.test(t), 'Abschnitte Ton und Spiel');
+    assert.ok(t.includes('Runden bis Erschöpfung') && t.includes('Siegpunkt-Vorsprung'), 'beide Einstellungen sichtbar');
+    const out = () => p.locator('.rulerow output').allInnerTexts();
+    assert.deepEqual(await out(), ['10', '4'], 'Standardwerte');
+    await p.locator('[data-k="exhaustRounds"][data-d="-1"]').click(); await p.locator('[data-k="winLead"][data-d="1"]').click();
+    assert.deepEqual(await out(), ['9', '5']);
+    await p.click('text=Zurück'); await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(600);
+    assert.deepEqual(await p.evaluate(() => JSON.parse(localStorage.getItem('magus_rules'))), { exhaustRounds: 9, winLead: 5 });
+    await p.reload(); await p.waitForTimeout(500); await p.click('text=Einstellungen');
+    assert.deepEqual(await out(), ['9', '5'], 'bleibt nach dem Neuladen erhalten');
+    await p.click('text=Standardwerte'); assert.deepEqual(await out(), ['10', '4']);
+    assert.deepEqual(errs, []);
+  } finally { await b.close(); }
+});
+
+test('Endbildschirm: Sieg und Niederlage zeigen Rückblick, Klick überspringt, Kampfverlauf führt zurück', { skip: !chromium && 'Playwright nicht installiert', timeout: 90000 }, async () => {
+  const b = await chromium.launch({ executablePath: exe });
+  try {
+    const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
+    p.on('pageerror', e => errs.push(e.message));
+    await p.goto(url); await p.waitForTimeout(500);
+    await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(500);
+    // KI-Partie simulieren, in der der Computer gewinnt, und als Endstand übernehmen (Du verlierst)
+    const seed = await p.evaluate(() => {
+      const M = window.Magus, AI = window.MagusAI, G = window.__magus.state;
+      for (let seed = 1; seed < 80; seed++) {
+        const s = M.newGame({ seed, ai: [true, true], names: ['Du', 'Computer'] });
+        let n = 0; while (!s.over && n < 20000) { if (!AI.runTurn(s, M.actor(s)).ok) break; n++; }
+        if (s.over && s.winner === 1 && s.hist.length > 60) { Object.assign(G, s); window.__magus.pump(); return seed; }
+      }
+      return 0;
+    });
+    assert.ok(seed > 0, 'Partie mit Computersieg gefunden');
+    await p.waitForSelector('.box.finale.lose', { timeout: 5000 });
+    assert.match(await p.textContent('.box.finale .ftitle'), /Niederlage/);
+    await p.waitForFunction(() => document.querySelectorAll('.box.finale .fcard').length >= 3, null, { timeout: 5000 });
+    assert.match(await p.textContent('.box.finale .fhl'), /Höhepunkte/);
+    assert.ok(await p.$('.box.finale [data-act="stend"]') && await p.$('.box.finale [data-act="logdl"]') && await p.$('.box.finale [data-act="newgame"]'), 'Knöpfe vorhanden');
+    await p.click('.box.finale .ftitle');   // Klick überspringt die Animation
+    await p.waitForSelector('.box.finale.skip');
+    // Karte anklicken: Kampfverlauf, zurück über die Statistik, Schließen -> Endbildschirm ohne erneute Animation
+    await p.click('.box.finale .fcard[data-act="finfight"]'); await p.waitForSelector('[data-act="stfightback"]', { timeout: 5000 });
+    await p.click('[data-act="stfightback"]'); await p.click('[data-act="stclose"]');
+    await p.waitForSelector('.box.finale.seen', { timeout: 5000 });
+    // dieselbe Partie als Sieg
+    await p.evaluate(() => { const G = window.__magus.state; G.winner = 0; window.__magus.pump(); });
+    await p.waitForSelector('.box.finale.win', { timeout: 5000 });
+    assert.match(await p.textContent('.box.finale .ftitle'), /Sieg/);
+    assert.doesNotMatch(await p.textContent('.box.finale .freason'), /Du hat /);
+    assert.deepEqual(errs, []);
+  } finally { await b.close(); }
+});

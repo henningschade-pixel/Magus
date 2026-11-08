@@ -48,6 +48,14 @@ function startShowdown(state) {
   state.phase = 'combat'; traceStep(state);
   log(state, 'Showdown ' + (state.showdown + 1) + ': ' + state.players[att].name + ' greift zuerst an (liegt zurück oder Zufall).', att);
 }
+// Reihenfolge der Niederlagenprüfung (0 HP, seit 0.8.3.1 ausdrücklich festgelegt): Jede Stufe wird vollständig abgehandelt und geprüft, bevor die nächste beginnt; die erste Stufe, in der eine Seite auf 0 HP fällt, entscheidet den Kampf (spätere Stufen wirken dann nicht mehr und können weder ein Unentschieden noch eine Wiederbelebung bringen):
+//   1) reflektierter Schaden (Rückwurf der Falle, in execAttack, vor der Verteidigung),
+//   2) Schaden nach der Verteidigung (Restschaden nach Block und Schild, danach Heilung, in execDefense),
+//   3) Flusseffekte am Ende der Angriffsphase (Todesfluss, Erschöpfung, dann Heil- und Manafluss, in deathTick).
+function hpDecided(state) {
+  const c = state.combat;
+  return c.sides.a.stats.hp <= 0 || c.sides.b.stats.hp <= 0;
+}
 function evaluateEnd(state) {
   const c = state.combat, a = c.sides.a.stats, b = c.sides.b.stats;
   const ah = Math.max(0, a.hp), bh = Math.max(0, b.hp);
@@ -66,10 +74,10 @@ function endCombat(state, end) {
   const c = state.combat, res = { mode: c.mode, reason: end.reason, winner: end.winner, monsterDefeated: false, elem: c.elem, stage: state.stage, turns: c.turns, fled: end.fled || null };   // elem/stage/turns: für die Balance-Auswertung
   if (state.keepSnap) res.snap = JSON.parse(JSON.stringify(c));   // Oberfläche: Endstand des Kampfes (vor Zurücksetzen und Rückkehr in die Weltphase)
   if (c.forced && c.forced.cards) { const fs = c.sides.a.ctrl === c.forced.pid ? c.sides.a : c.sides.b; if (fs.kind === 'player') c.forced.cards.forEach(cd => fs.deck.discard.push(cd)); c.forced = null; }
-  [c.sides.a, c.sides.b].forEach(sd => { if (sd.deck) dropSight(sd.deck); });   // übrige offene Hellsichtkarten auf den Ablagestapel   // unentschiedene Hellsicht- und Fallen-Karten kehren in den Ablagestapel zurück
-  state.players.forEach(p => { if (p.stats.trap) p.deck.discard.push(p.stats.trap.card); p.stats.freeDraws = 0; p.deck.marks = []; ['death', 'deathPhase', 'heal', 'healPhase', 'manaflow', 'manaPhase', 'rainbow', 'trap'].forEach(k => { delete p.stats[k]; }); });   // die Fallenkarte kehrt in den Ablagestapel zurück (wird gleich mit gemischt)
+  [c.sides.a, c.sides.b].forEach(sd => { if (sd.deck) dropSight(sd.deck); });   // übrige offene Hellsichtkarten auf den Ablagestapel
+  state.players.forEach(p => { if (p.stats.trap) p.deck.discard.push(p.stats.trap.card); p.stats.freeDraws = 0; p.deck.marks = []; ['death', 'deathPhase', 'heal', 'healPhase', 'manaflow', 'manaPhase', 'rainbow', 'trap', 'echo'].forEach(k => { delete p.stats[k]; }); });   // die Fallenkarte kehrt in den Ablagestapel zurück (wird gleich mit gemischt)
   state.players.forEach(p => stripCurseCards(state, p.deck));
-  ['healPhase', 'death', 'deathPhase', 'heal', 'manaflow', 'manaPhase', 'rainbow', 'trap'].forEach(k => { delete c.sides.b.stats[k]; });
+  ['healPhase', 'death', 'deathPhase', 'heal', 'manaflow', 'manaPhase', 'rainbow', 'trap', 'echo'].forEach(k => { delete c.sides.b.stats[k]; });
   const A = state.players[c.att], B = state.players[c.def];
   if (c.mode === 'monster') {
     const m = c.sides.b.monster;
@@ -121,10 +129,10 @@ function endCombat(state, end) {
       state.over = true; state.phase = 'over';
       const s0 = state.players[0].sp, s1 = state.players[1].sp;
       state.winner = s0 > s1 ? 0 : s1 > s0 ? 1 : null;
-      if (state.winner === null) {   // Gleichstand bei den Siegpunkten: zuerst das Gold, dann die Tempelstufe (Upgrades durch Opfer)
+      if (state.winner === null) {   // Gleichstand bei den Siegpunkten: zuerst die Tempelstufe (Upgrades durch Opfer), dann das Gold (seit 0.8.6.1: sp > tp > g)
         const g0 = state.players[0].stats.gold, g1 = state.players[1].stats.gold, l0 = state.players[0].temple.level, l1 = state.players[1].temple.level;
-        if (g0 !== g1) { state.winner = g0 > g1 ? 0 : 1; state.goldWin = true; log(state, 'Gleichstand bei den Siegpunkten: Das Gold entscheidet (' + g0 + ' : ' + g1 + ').'); }
-        else if (l0 !== l1) { state.winner = l0 > l1 ? 0 : 1; state.templeWin = true; log(state, 'Gleichstand bei Siegpunkten und Gold: Die Tempelstufe entscheidet (' + l0 + ' : ' + l1 + ').'); }
+        if (l0 !== l1) { state.winner = l0 > l1 ? 0 : 1; state.templeWin = true; log(state, 'Gleichstand bei den Siegpunkten: Die Tempelstufe entscheidet (' + l0 + ' : ' + l1 + ').'); }
+        else if (g0 !== g1) { state.winner = g0 > g1 ? 0 : 1; state.goldWin = true; log(state, 'Gleichstand bei Siegpunkten und Tempelstufe: Das Gold entscheidet (' + g0 + ' : ' + g1 + ').'); }
       }
       log(state, state.winner === null ? 'Spielende: Gleichstand, kein Sieger.' : 'Spielende: ' + state.players[state.winner].name + (goal && state.showdown < 3 ? ' führt mit ' + state.rules.winLead + ' oder mehr Siegpunkten Vorsprung und' : '') + ' gewinnt.');
     } else {
@@ -155,6 +163,12 @@ function finishStep(state, info) {
 // Angriffszug endet ohne Schaden: die Gegenseite greift an (Verteidigung entfällt).
 const MAX_LVL = 3;   // höchste Kombostufe und Höchstzahl der Schildladungen
 // Schild (Blau + Grün, seit 0.8; stats.rainbow, Grafik des früheren Multischilds): Ladungen 1/2/3. Er mindert eingehenden, nicht geblockten Schaden gegen jede Farbe und verliert je gemindertem Schaden eine Ladung. Ein neues Schild bringt die Ladungen auf die Stufe (nicht addiert, höchstens 3).
+// Das Schild wirkt vor jeder Schadensquelle (seit 0.8.3.2): auch gegen den Rückwurf der Falle, den Todesfluss und die Erschöpfung. Es mindert den Schaden um höchstens seine Ladungen und verliert je gemindertem Schaden eine Ladung. Gibt den tatsächlich verlorenen Schaden zurück; absorbed (optional) meldet die Minderung.
+function shieldHit(stats, dmg) {
+  const ab = Math.min(stats.rainbow || 0, Math.max(0, dmg));
+  if (ab > 0) { stats.rainbow -= ab; if (!stats.rainbow) delete stats.rainbow; }
+  return { hit: dmg - ab, absorbed: ab };
+}
 function shieldAdd(stats, n) { stats.rainbow = Math.max(stats.rainbow || 0, Math.min(n, MAX_LVL)); }
 // Ultimates (seit 0.7 nach der Farbe der ersten Karte): Feuer = Todesfluss (stats.death, Marker beim Gegner), Erde = Heilfluss (stats.heal, +1 HP je Marker am Ende der eigenen Angriffsphase), Wasser = Manafluss (seit 0.8, stats.manaflow: +1 Mana je Marker am Ende der eigenen Angriffsphase). Alle drei Marker entfernt nur die Läuterung.
 // Läuterung: gewählte Marker (sm/om Manamarker, sd/od Todesmarker, sh/oh Heilmarker, sr/or Schildmarker, st/ot Nachziehtokens), höchstens S; ohne Wahl automatisch eigene Todesmarker, dann Schild-, Mana- und Heilmarker des Gegners.
@@ -173,21 +187,23 @@ function exhaustionLevel(state, done) {
   return n > 0 && done > 0 ? Math.floor((done - 1) / (2 * n)) : 0;
 }
 // Todesfluss: Am Ende der eigenen Angriffsphase (nach Angriff und Verteidigung der Gegenseite) verliert die Seite so viele HP, wie sie Todesmarker trägt.
-// Ist der Kampf schon entschieden (eine Seite auf 0 HP), wirkt er nicht mehr.
+// Ist der Kampf schon entschieden (eine Seite auf 0 HP), wirkt er nicht mehr (Stufe 3 der Niederlagenprüfung, siehe hpDecided).
 function deathTick(state, side, done) {   // done: Nummer des Angriffszugs (1, 2, 3 …), der gerade endet; für die Erschöpfung
   const c = state.combat;
   // Ein Fluch, der erst in dieser Angriffsphase (durch die Ultimate der Verteidigung) gesprochen wurde, wirkt noch nicht: deathPhase merkt die Stufe zu Beginn der Phase.
   const dmg = Math.min(side.stats.death || 0, side.stats.deathPhase === undefined ? Infinity : side.stats.deathPhase); delete side.stats.deathPhase;
-  if (c.sides.a.stats.hp <= 0 || c.sides.b.stats.hp <= 0) return;
+  if (hpDecided(state)) return;   // Stufe 3 (Flusseffekte) kommt nach Stufe 1 (Rückwurf) und 2 (Schaden nach der Verteidigung): ist dort schon eine Seite auf 0 HP gefallen, wirkt kein Fluss mehr
   if (dmg > 0) {
-    side.stats.hp = Math.max(0, side.stats.hp - dmg);
-    log(state, 'Todesfluss: ' + side.name + ' verliert ' + dmg + ' HP am Ende der Angriffsphase.', side.ctrl);
+    const sh = shieldHit(side.stats, dmg);   // das Schild mindert auch den Todesfluss
+    side.stats.hp = Math.max(0, side.stats.hp - sh.hit);
+    log(state, 'Todesfluss: ' + side.name + ' verliert ' + sh.hit + ' HP am Ende der Angriffsphase' + (sh.absorbed ? ' (Schild mindert um ' + sh.absorbed + ')' : '') + '.', side.ctrl);
   }
   // Erschöpfung (seit 0.7.7.2): Nach je exhaustRounds Kampfrunden (Standard 10, 0 = aus) steigt sie um 1; beide Seiten (auch das Monster) verlieren am Ende ihrer Angriffsphase so viele HP, wie die Erschöpfung hoch ist. Runde 1–10: 0, Runde 11–20: 1, Runde 21–30: 2 …
   const exLvl = exhaustionLevel(state, done);
   if (exLvl > 0 && side.stats.hp > 0) {
-    side.stats.hp = Math.max(0, side.stats.hp - exLvl);
-    log(state, 'Erschöpfung ' + exLvl + ': ' + side.name + ' verliert ' + exLvl + ' HP am Ende der Angriffsphase.', side.ctrl);
+    const sh = shieldHit(side.stats, exLvl);   // das Schild mindert auch die Erschöpfung
+    side.stats.hp = Math.max(0, side.stats.hp - sh.hit);
+    log(state, 'Erschöpfung ' + exLvl + ': ' + side.name + ' verliert ' + sh.hit + ' HP am Ende der Angriffsphase' + (sh.absorbed ? ' (Schild mindert um ' + sh.absorbed + ')' : '') + '.', side.ctrl);
     if (side.stats.hp <= 0) return;
   }
   // Heilfluss (Erd-Ultimate): am Ende der eigenen Angriffsphase +1 HP je Heilmarker (nur Marker, die schon zu Beginn der Phase lagen: healPhase wie deathPhase), höchstens bis zu den maximalen HP; nur wer noch steht
@@ -264,9 +280,10 @@ function springTrap(state, owner, att, color, dmg, fxs, texts) {
   const t = owner.stats.trap; if (!t) return 0;
   delete owner.stats.trap; owner.deck.discard.push(t.card);
   const hit = t.el === color, refl = hit ? Math.min(t.lvl, dmg) : 0;
-  if (refl > 0) att.stats.hp = Math.max(0, att.stats.hp - refl);
-  texts.push('Falle von ' + owner.name + ' (' + NAMES[t.el] + (hit ? ') trifft: ' + refl + ' unblockbarer Schaden zurück' : '), Angriff in ' + NAMES[color] + ': keine Wirkung'));
-  fxs.push({ kind: 'trap', who: owner.ctrl, to: att.ctrl, el: t.el, card: t.card.id, attElem: color, hit, refl, lvl: t.lvl });
+  const sh = refl > 0 ? shieldHit(att.stats, refl) : { hit: 0, absorbed: 0 };   // das Schild des Angreifers mindert auch den Rückwurf (er bleibt unblockbar, das Schild ist aber kein Block)
+  if (sh.hit > 0) att.stats.hp = Math.max(0, att.stats.hp - sh.hit);
+  texts.push('Falle von ' + owner.name + ' (' + NAMES[t.el] + (hit ? ') trifft: ' + refl + ' unblockbarer Schaden zurück' + (sh.absorbed ? ', Schild von ' + att.name + ' mindert um ' + sh.absorbed : '') : '), Angriff in ' + NAMES[color] + ': keine Wirkung'));
+  fxs.push({ kind: 'trap', who: owner.ctrl, to: att.ctrl, el: t.el, card: t.card.id, attElem: color, hit, refl, abs: sh.absorbed, lvl: t.lvl });
   return refl;
 }
 // Wirkung der Kombos (Angriff und nach der Verteidigung): plan = [[Schlüssel, Stufe], ...]
@@ -320,6 +337,9 @@ function execAttack(state) {
   side.stats.mana -= ev.cost;
   consumeSelection(d, sel);
   const texts = [], fxs = [];
+  const echoOld = side.stats.echo, echoUsed = !!ev.levels.echo, isCombo = death || !!(ev.ord && ev.ord.lvl > 0);   // Echo (seit 0.9): der Kombo wird durch das Echo der Seite verstärkt und hinterlässt selbst ein neues
+  if (isCombo) side.stats.echo = ev.ultiEl || ev.prim;
+  if (echoUsed) texts.push('Echo (' + NAMES[echoOld] + '): Kombo +1 Stufe');
   applyComboPlan(state, side, opp, plan, ev, texts, fxs);
   if (death && (ev.ultiEl || ev.prim) === 'E' && side.stats.healPhase === undefined) side.stats.healPhase = side.stats.heal || 0;   // wie beim Todesfluss: ein in dieser Angriffsphase gelegter Heilmarker heilt erst am Ende der nächsten eigenen Angriffsphase
   if (death && (ev.ultiEl || ev.prim) === 'W' && side.stats.manaPhase === undefined) side.stats.manaPhase = side.stats.manaflow || 0;   // ebenso der Manamarker
@@ -330,7 +350,8 @@ function execAttack(state) {
   if (dmg0 > 0 && opp.stats.trap) dmg = dmg0 - springTrap(state, opp, side, ev.prim, dmg0, fxs, texts);   // die Falle wird aufgedeckt, sobald Schaden eingeht, vor der Verteidigung
   if (dmg > 0) fxs.push({ kind: 'attack', who: side.ctrl, to: opp.ctrl, elem: ev.prim, n: dmg });
   log(state, side.name + ' greift an' + (ev.prim ? ' (' + NAMES[ev.prim] + ', Schaden ' + dmg0 + ')' : ' (nur Flüche)') + (texts.length ? ' – ' + texts.join(', ') : '') + '.', side.ctrl, fxs.length ? fxs : undefined);
-  if (dmg > 0) { c.color = ev.prim; c.pending = dmg; c.turn = c.turn === 'a' ? 'b' : 'a'; c.action = 'defense'; c.atkTurns = (c.atkTurns || 0) + 1; }
+  if (hpDecided(state)) { c.turn = c.turn === 'a' ? 'b' : 'a'; c.action = 'attack'; c.color = null; c.pending = 0; c.atkTurns = (c.atkTurns || 0) + 1; }   // Stufe 1: Der Rückwurf der Falle hat den Angreifer auf 0 HP gebracht. Er ist besiegt, noch bevor der Verteidiger verteidigt oder Schaden nimmt; kein Fluss wirkt mehr
+  else if (dmg > 0) { c.color = ev.prim; c.pending = dmg; c.turn = c.turn === 'a' ? 'b' : 'a'; c.action = 'defense'; c.atkTurns = (c.atkTurns || 0) + 1; }
   else passAttackTurn(state);
   const res = finishStep(state, { k: 'A', who: side.key === 'a' ? 0 : 1, v: dmg0 });
   return { ok: true, combatEnd: res };
@@ -381,6 +402,8 @@ function execDefense(state, passOnly) {
   // Passen in der Verteidigung bringt kein Mana (nur im Angriffszug gibt es Erholen)
   if (sel.length) consumeSelection(d, sel); else d.marks = [];
   const attacker = c.sides[c.turn === 'a' ? 'b' : 'a'];
+  const defCombo = !!(defEv && ((defEv.ord && defEv.ord.lvl > 0) || (defEv.levels && defEv.levels.ulti > 0))), defEchoOld = side.stats.echo, defEchoUsed = !!(defCombo && defEv.levels && defEv.levels.echo);   // Echo (seit 0.9), wie im Angriff
+  if (defCombo) side.stats.echo = defEv.ultiEl || defEv.el;
   // Seit 0.4 wirkt der Kombo zuerst, danach die Verteidigung: Ein Spiegel dieser Farbe wirkte früher schon gegen den Angriff, auf den verteidigt wird; seit 0.7.2.23 stellt ihn die Verteidigung erst nach dem Schaden. Seit 0.5.4 gilt das nicht mehr für die Heilung: Sie wirkt wieder nach Angriff und Verteidigung (Zerrüttung und die übrigen Kombos bleiben davor).
   let lateShield = 0, lateTrap = 0;   // Schild und Falle, die in dieser Verteidigung gestellt werden, wirken erst nach ihr
   if (defEv && defEv.levels && defEv.levels.ulti > 0) {   // Ultimate in der Verteidigung: je nach Farbe der ersten Karte Todesfluss für den Angreifer (Feuer), Heilfluss (Erde) oder Manafluss (Wasser) für den Verteidiger
@@ -395,6 +418,7 @@ function execDefense(state, passOnly) {
     for (const k of ['hs', 'fe', 'ew']) if (lvs[k] > 0) plan.push([k, lvs[k]]);
     lateShield = lvs.sh || 0; lateTrap = lvs.tr || 0;   // Heilung (gh), Schild und Falle wirken erst nach dem Schaden, Zerrüttung und die übrigen Kombos davor
     healLvl = lvs.gh || 0;
+    if (defEchoUsed) texts.push('Echo (' + NAMES[defEchoOld] + '): Kombo +1 Stufe');
     applyComboPlan(state, side, attacker, plan, defEv, texts, fxs);
     c.lfp = null;
     fxs.forEach(f => { f.first = true; });   // Oberfläche: Kombo-Animation läuft vor der Verteidigungsanimation
@@ -430,7 +454,7 @@ function execDefense(state, passOnly) {
   side.stats.hp = Math.max(0, side.stats.hp);
   const attSide = attacker;   // wer gerade angegriffen hat: seine Angriffsphase endet mit dieser Verteidigung
   c.action = 'attack'; c.color = null; c.pending = 0; c.lfp = null;
-  deathTick(state, attSide, c.atkTurns || 0);   // atkTurns zählt den Angriff dieser Phase schon mit
+  if (!hpDecided(state)) deathTick(state, attSide, c.atkTurns || 0);   // Stufe 2 (Schaden nach der Verteidigung, samt Heilung) ist abgeschlossen; erst wenn dabei niemand auf 0 HP fiel, folgen als Stufe 3 die Flusseffekte (atkTurns zählt den Angriff dieser Phase schon mit)
   const res = finishStep(state, { k: 'V', who: side.key === 'a' ? 0 : 1, v: block, b: c0pending, left: leftover });
   return { ok: true, combatEnd: res };
 }
