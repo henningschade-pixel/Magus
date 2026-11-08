@@ -337,8 +337,8 @@ function execAttack(state) {
   side.stats.mana -= ev.cost;
   consumeSelection(d, sel);
   const texts = [], fxs = [];
-  const echoOld = side.stats.echo, echoUsed = !!ev.levels.echo, isCombo = death || !!(ev.ord && ev.ord.lvl > 0);   // Echo (seit 0.9): der Kombo wird durch das Echo der Seite verstärkt und hinterlässt selbst ein neues
-  if (isCombo) side.stats.echo = ev.ultiEl || ev.prim;
+  const echoOld = side.stats.echo, echoUsed = !!ev.levels.echo;   // Echo (seit 0.9): der Kombo wird durch das Echo der Seite verstärkt; seit 0.9.6 hinterlässt jede Nutzung von Primärmagie ein neues Echo (auch ohne Kombo)
+  if (ev.prim) side.stats.echo = ev.ultiEl || ev.prim;
   if (echoUsed) texts.push('Echo (' + NAMES[echoOld] + '): Kombo +1 Stufe');
   applyComboPlan(state, side, opp, plan, ev, texts, fxs);
   if (death && (ev.ultiEl || ev.prim) === 'E' && side.stats.healPhase === undefined) side.stats.healPhase = side.stats.heal || 0;   // wie beim Todesfluss: ein in dieser Angriffsphase gelegter Heilmarker heilt erst am Ende der nächsten eigenen Angriffsphase
@@ -403,8 +403,8 @@ function execDefense(state, passOnly) {
   // Passen in der Verteidigung bringt kein Mana (nur im Angriffszug gibt es Erholen)
   if (sel.length) consumeSelection(d, sel); else d.marks = [];
   const attacker = c.sides[c.turn === 'a' ? 'b' : 'a'];
-  const defCombo = !!(defEv && ((defEv.ord && defEv.ord.lvl > 0) || (defEv.levels && defEv.levels.ulti > 0))), defEchoOld = side.stats.echo, defEchoUsed = !!(defCombo && defEv.levels && defEv.levels.echo);   // Echo (seit 0.9), wie im Angriff
-  if (defCombo) side.stats.echo = defEv.ultiEl || defEv.el;
+  const defEchoOld = side.stats.echo, defEchoUsed = !!(defEv && defEv.levels && defEv.levels.echo);   // Echo (seit 0.9), wie im Angriff; seit 0.9.6 hinterlässt auch eine Verteidigung ohne Kombo ein Echo in der Farbe ihrer ersten Karte
+  if (defEv && defEv.el) side.stats.echo = defEv.ultiEl || defEv.el;
   // Seit 0.4 wirkt der Kombo zuerst, danach die Verteidigung: Ein Spiegel dieser Farbe wirkte früher schon gegen den Angriff, auf den verteidigt wird; seit 0.7.2.23 stellt ihn die Verteidigung erst nach dem Schaden. Seit 0.5.4 gilt das nicht mehr für die Heilung: Sie wirkt wieder nach Angriff und Verteidigung (Zerrüttung und die übrigen Kombos bleiben davor).
   let lateShield = 0, lateTrap = 0;   // Schild und Falle, die in dieser Verteidigung gestellt werden, wirken erst nach ihr
   if (defEv && defEv.levels && defEv.levels.ulti > 0) {   // Ultimate in der Verteidigung: je nach Farbe der ersten Karte Todesfluss für den Angreifer (Feuer), Heilfluss (Erde) oder Manafluss (Wasser) für den Verteidiger

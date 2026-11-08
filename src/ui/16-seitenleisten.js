@@ -11,7 +11,7 @@ const BOARD_GEMS = { F: [[627.6, 349.1], [628.7, 269.9], [627.3, 185.3]], E: [[8
 const BOARD_PX = 1254, BOARD_GEM_R = 36;
 function boardHTML(mag, size, sp, echo) {
   const k = size / BOARD_PX, dr = BOARD_GEM_R * k;
-  let h = '<div class="bd" style="width:' + size + 'px;height:' + size + 'px" title="Magie: Feuer oben, Erde rechts unten, Wasser links unten' + (echo ? '. Echo (' + NAMES[echo] + '): Die leuchtende Schlange zeigt das Echo. Der nächste Kombo mit einer Sekundärkarte in ' + NAMES[echo] + ' steigt um 1 Stufe (höchstens 3); jeder neue Kombo erneuert das Echo.' : '') + '"><img src="' + IMG.board + '">' + (echo ? EchoWave.html(echo, size) : '');   // Echo (seit 0.9.4): Welle der Schlange in der Echo-Farbe
+  let h = '<div class="bd" style="width:' + size + 'px;height:' + size + 'px" title="Magie: Feuer oben, Erde rechts unten, Wasser links unten' + (echo ? '. Echo (' + NAMES[echo] + '): Die leuchtende Schlange zeigt das Echo. Der nächste Kombo mit einer Sekundärkarte in ' + NAMES[echo] + ' steigt um 1 Stufe (höchstens 3); jede Nutzung von Primärmagie erneuert das Echo (auch ohne Kombo).' : '') + '"><img src="' + IMG.board + '">' + (echo ? EchoWave.html(echo, size) : '');   // Echo (seit 0.9.4): Welle der Schlange in der Echo-Farbe
   for (const e of ['F', 'E', 'W']) BOARD_GEMS[e].forEach(([gx, gy], i) => {
     const lv = i + 1;
     h += '<i class="rg ' + (lv <= mag[e] ? 'on' : 'off') + '" data-e="' + e + '" data-lv="' + lv + '" style="left:' + (gx * k - dr).toFixed(1) + 'px;top:' + (gy * k - dr).toFixed(1) + 'px;width:' + (2 * dr).toFixed(1) + 'px;height:' + (2 * dr).toFixed(1) + 'px"></i>';

@@ -31,7 +31,7 @@ function levelsFor(ev) {
   if (o && o.lvl > 0 && !(ev.levels.ulti > 0)) out[{ ra: 'fe', wt: 'tr', hs: 'hs', ws: 'sh', gh: 'gh', gr: 'ew' }[o.key]] = o.lvl;
   return out;
 }
-// Echo (seit 0.9): Jeder Kombo (auch die Ultimate) hinterlässt bei seiner Seite ein Echo in der Farbe der ersten Karte (stats.echo, kein Marker, nicht läuterbar; der nächste Kombo erneuert es). Enthält der nächste Kombo eine Sekundärkarte in der Farbe des Echos, steigt seine Stufe um 1 (höchstens 3).
+// Echo (seit 0.9): Seit 0.9.6 hinterlässt jede Nutzung von Primärmagie (Kombo, Ultimate, aber auch Angriff und Verteidigung ohne Kombo) bei ihrer Seite ein Echo in der Farbe der ersten Karte (stats.echo, kein Marker, nicht läuterbar; die nächste Nutzung erneuert es). Enthält der nächste Kombo eine Sekundärkarte in der Farbe des Echos, steigt seine Stufe um 1 (höchstens 3).
 function echoBoost(stats, lv, ord, ultiEl) {
   const e = stats && stats.echo; if (!e) return;
   if (lv.ulti > 0) { if (ultiEl && e !== ultiEl && lv.ulti < MAX_LVL_ECHO) { lv.ulti++; lv.echo = true; } }   // Ultimate: beide übrigen Farben sind Sekundärkarten

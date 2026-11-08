@@ -1337,3 +1337,30 @@ test('Echo: Die Läuterung erreicht das Echo nicht (0.9)', () => {
   assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);   // Erde + Feuer: Läuterung (Sekundärfarbe Feuer = Echo, Stufe 2)
   assert.equal(me.stats.echo, 'E', 'nur der neue Kombo erneuert das Echo');
 });
+
+test('Echo: Auch Angriff und Verteidigung ohne Kombo hinterlassen ein Echo der Primärmagie; Kombos wirken weiter über die Sekundärkarte (0.9.6)', () => {
+  const { s, c, me, op } = combatSetup(11, ['W1', 'F1', 'W1']);
+  assert.equal(me.stats.echo, undefined, 'zu Kampfbeginn kein Echo');
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 });   // einfacher Wasserangriff, kein Kombo
+  assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+  assert.equal(me.stats.echo, 'W', 'Angriff ohne Kombo hinterlässt ein Echo in der Farbe der ersten Karte');
+  assert.ok(M.apply(s, { pid: 1, type: 'pass' }).ok);
+  c.turn = 'a'; c.action = 'attack';
+  const before = op.deck.discard.filter(cd => M.parseCard(cd.id).curse).length;
+  M.apply(s, { pid: 0, type: 'mark', slot: 1 }); M.apply(s, { pid: 0, type: 'mark', slot: 2 });   // Feuer + Wasser: Sekundärfarbe Wasser = Echo
+  assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+  assert.ok(s.log.some(e => /Echo \(Wasser\)/.test(e.txt)), 'das Echo aus dem einfachen Angriff verstärkt den Kombo über die Sekundärkarte');
+  assert.equal(me.stats.echo, 'F', 'der Kombo erneuert das Echo');
+});
+
+test('Echo: Eine Verteidigung ohne Kombo hinterlässt ein Echo, Passen lässt es stehen (0.9.6)', () => {
+  const { s, c, op } = combatSetup(11, ['W1']);
+  op.deck.hand[0] = Object.assign({}, op.deck.hand[0], { id: 'W1' });
+  op.stats.echo = 'E'; op.stats.mana = 9;
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 });
+  assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+  assert.equal(c.action, 'defense');
+  assert.ok(M.apply(s, { pid: op.ctrl, type: 'mark', slot: 0 }).ok);
+  assert.ok(M.apply(s, { pid: op.ctrl, type: 'defend' }).ok);
+  assert.equal(op.stats.echo, 'W', 'Verteidigung mit einer Wasserkarte hinterlässt ein Wasser-Echo');
+});
