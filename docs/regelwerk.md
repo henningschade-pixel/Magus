@@ -84,7 +84,7 @@ Die Farbe der ersten markierten Karte bestimmt die Rolle (Feuer aggressiv, Wasse
 | Kombo | Farben | Wirkung bei Stufe S |
 |---|---|---|
 | Lähmung | Feuer + Erde | **2·S Fluchkarten** (2 / 4 / 6) auf den Ablagestapel der Gegenseite |
-| Hellsicht | Wasser + Feuer | ziehe S Karten; für jede entscheiden: auf die Hand (sofern Platz), auf den Ablagestapel oder zurück zum Händler (aus dem Deck) |
+| Hellsicht | Wasser + Feuer | ziehe 3 Karten, wähle S davon aus und lege sie offen vor dich (ohne Manakosten nutzbar, danach abgelegt); die übrigen kommen auf den Ablagestapel |
 | Falle | Feuer + Wasser | ziehe drei Karten vom Stapel, lege eine davon verdeckt vor dich, die übrigen kommen auf den Ablagestapel (Stufe S, kein Marker) |
 | Schild | Wasser + Erde | Schild mit S Ladungen (nicht addiert, höchstens 3) |
 | Heilung | Erde + Wasser | S HP heilen |
@@ -93,7 +93,7 @@ Die Farbe der ersten markierten Karte bestimmt die Rolle (Feuer aggressiv, Wasse
 
 **Fluchkarten:** Sie kommen erst in den Zugstapel, wenn der Ablagestapel gemischt wird. Auf der Hand belegen sie einen Platz und wirken nicht. Beim Nachziehen werden sie dauerhaft verworfen, am Kampfende verschwinden alle.
 
-**Hellsicht (Blau + Rot, seit 0.8.0.2):** Die Seite zieht S Karten vom Zugstapel (bei Bedarf wird der Ablagestapel gemischt) und entscheidet für jede einzeln: auf die **Hand** (nur soweit Handplätze frei sind), auf den **Ablagestapel** oder **abwerfen** (zurück zum Händler: die Karte verlässt das Deck und kehrt in den Kartenvorrat zurück; Fluchkarten verschwinden einfach). Vorher ist keine andere Aktion möglich; unentschiedene Karten kehren bei Kampfende in den Ablagestapel zurück.
+**Hellsicht (Blau + Rot, seit 0.8.0.9 in dieser Form):** Die Seite zieht drei Karten vom Zugstapel (bei Bedarf wird der Ablagestapel gemischt) und wählt davon S aus (höchstens so viele, wie nicht verfluchte Karten gezogen wurden; Fluchkarten kommen immer auf den Ablagestapel). Die gewählten Karten liegen **offen vor ihr**: Sie hängen als zusätzliche Kartenplätze hinten an die Hand an (belegen keine Handplätze, werden nicht nachgezogen) und lassen sich wie Handkarten markieren und ausspielen, **kosten aber kein Mana**. Nach dem Ausspielen kommen sie auf den Ablagestapel; zum Kampfende werden unbenutzte offene Karten ebenfalls abgelegt. Bleibt keine Wahl (alle brauchbaren Karten sind zu nehmen), entscheidet das Spiel selbst. Vorher ist keine andere Aktion möglich.
 
 **Falle (Rot + Blau, seit 0.8.0.1 statt der Zerrüttung; vorher Blau + Rot, seit 0.8):** Die Seite zieht drei Karten vom Zugstapel (bei Bedarf wird der Ablagestapel gemischt; seit 0.8.0.5 ersetzen sie keine Handkarten), legt eine davon verdeckt vor sich und die übrigen auf den Ablagestapel; Fluchkarten kommen nicht in Frage, bei mehreren Kandidaten wählt der Spieler, bei einem gilt sie sofort. Die Karte ist kein Marker (die Läuterung erreicht sie nicht). Sobald Schaden eingeht, wird sie aufgedeckt, **vor der Verteidigung**: Entspricht der Schaden in seiner Farbe der Karte, werden **1 / 2 / 3** (Stufe 1 / 2 / 3, seit 0.8.0.8; vorher 2 / 4 / 6) **unblockbarer Schaden** auf den Angreifer zurückgeworfen, höchstens in Höhe des eingehenden Schadens; der eingehende Schaden sinkt entsprechend. Danach kommt die Karte auf den Ablagestapel, auch wenn nichts reflektiert wurde. Am Kampfende kehrt eine noch liegende Karte in den Ablagestapel zurück. Eine neue Falle ersetzt die alte. In der Verteidigung gestellt, wirkt sie erst nach ihr.
 
@@ -594,3 +594,9 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 
 - **Falle schwächer:** Der Rückwurf der Falle beträgt **S = 1 / 2 / 3** unblockbaren Schaden (vorher 2·S = 2 / 4 / 6), weiterhin höchstens der eingehende Schaden und vor der Verteidigung. KI-Wert der Falle entsprechend halbiert (`trapWorth`: Stufe statt 2 × Stufe).
 
+## Änderung 0.8.0.9 (08.11.)
+
+- **Hellsicht neu gefasst:** Statt je Karte Hand/Ablage/Händler zu entscheiden, werden drei Karten gezogen; davon werden S Karten offen vor die Seite gelegt, die übrigen abgelegt. Offene Karten sind wie Handkarten nutzbar, kosten aber kein Mana und werden danach abgelegt (unbenutzte am Kampfende). Das Abwerfen zum Händler entfällt.
+- **Technik:** Offene Karten sind angehängte Handplätze (`deck.extra`, Karten mit `free`); `baseLen`, `addSight`, `trimSight`, `dropSight` in `src/engine/10-karten.js`. Aktion `fd` mit `pick` = `'k'`/`'a'` je Karte (genau S mal `'k'`, keine Flüche). KI behält die S höchsten Nicht-Fluchkarten.
+- **Darstellung:** Auswahl im Vordergrund mit „Offen vor mich legen“ / „Ablegen“; offene Karten liegen in einer kleineren Reihe über der Hand mit goldenem Rand (`.card.sightopen`).
+- **Tests:** Hellsicht-Tests neu (3 aus 3 Karten, Kosten, Auto-Entscheidung, Auswahlprüfung); Mischtest auf 3 gezogene Karten angepasst.

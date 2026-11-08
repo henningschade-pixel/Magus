@@ -77,11 +77,10 @@ function keepLocks(state, side, opp, hand, Q) {
   return bestS.map(h => h.slot);
 }
 // Zerrüttung: Die KI wirft zuerst Flüche, dann die schwächsten Karten ab (gesperrte Karten möglichst nicht)
-// Hellsicht: Fluchkarten gehen zurück zum Händler, echte Karten auf die Hand, solange Platz ist, sonst auf den Ablagestapel
+// Hellsicht: die n höchsten Nicht-Fluchkarten bleiben offen liegen, der Rest wird abgelegt
 function sightPick(state, pid) {
-  const c = state.combat, v = c.sides.a.ctrl === pid ? c.sides.a : c.sides.b;
-  let free = v.deck.hand.filter(x => !x).length;
-  return c.forced.cards.map(cd => { if (M.parseCard(cd.id).curse) return 'd'; if (free > 0) { free--; return 't'; } return 'a'; });
+  const c = state.combat, cs = c.forced.cards, idx = cs.map((cd, i) => ({ i, t: M.parseCard(cd.id).curse ? -1 : M.parseCard(cd.id).tier })).filter(x => x.t >= 0).sort((x, y) => y.t - x.t || x.i - y.i).slice(0, c.forced.n).map(x => x.i);
+  return cs.map((cd, i) => idx.includes(i) ? 'k' : 'a');
 }
 function forcedAct(state, pid) { return state.combat.forced.kind === 'sight' ? { pid, type: 'fd', pick: sightPick(state, pid) } : { pid, type: 'fd', slots: forcedPick(state, pid) }; }
 function forcedPick(state, pid) {

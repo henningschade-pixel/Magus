@@ -394,6 +394,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 #sightov .sightbig{display:flex;flex-direction:column;gap:6px;width:150px;animation:sightin .45s ease-out both}#sightov .sightbig img{width:100%;border-radius:10px;box-shadow:0 0 0 2px #1b140d,0 6px 22px rgba(0,0,0,.8)}
 #sightov .sightbig .btn{padding:6px 8px;font-size:16px}#sightov .sightok{margin-top:6px;font-size:20px;padding:8px 26px}
 @keyframes sightin{from{opacity:0;transform:translateY(60px) scale(.6)}to{opacity:1;transform:none}}
+.card.sightopen{box-shadow:0 0 0 2px #e7c46a,0 0 14px 3px rgba(231,196,106,.65)}
 
 </style>
 </head>
@@ -463,8 +464,19 @@ function newDeck(state, ids, slots) {
   fillHand(state, d);
   return d;
 }
+// Hellsichtkarten (seit 0.8.0.9) liegen offen vor dem Spieler: Sie hängen als zusätzliche Plätze hinten an der Hand (d.extra Stück), werden nicht nachgefüllt und kosten beim Ausspielen kein Mana (c.free).
+function baseLen(d) { return d.hand.length - (d.extra || 0); }
+function addSight(d, cards) { cards.forEach(c => { c.locked = false; c.free = true; d.hand.push(c); }); d.extra = (d.extra || 0) + cards.length; }
+function trimSight(d) {   // leere Hellsichtplätze hinten entfernen (nur ohne Markierungen aufrufen)
+  while ((d.extra || 0) > 0 && !d.hand[d.hand.length - 1]) { d.hand.pop(); d.extra--; }
+  for (let i = d.hand.length - 1; i >= baseLen(d); i--) if (!d.hand[i]) { d.hand.splice(i, 1); d.extra--; }
+}
+function dropSight(d) {   // übrige Hellsichtkarten auf den Ablagestapel (Kampfende)
+  for (let i = baseLen(d); i < d.hand.length; i++) if (d.hand[i]) { d.hand[i].free = false; d.discard.push(d.hand[i]); }
+  d.hand.length = baseLen(d); d.extra = 0;
+}
 function fillHand(state, d) {
-  for (let i = 0; i < d.hand.length; i++) {
+  for (let i = 0; i < baseLen(d); i++) {
     if (d.hand[i]) continue;
     if (!d.draw.length && d.discard.length) { d.draw = d.discard.splice(0); state.rng.shuffle(d.draw); }
     if (!d.draw.length) break;
@@ -475,7 +487,8 @@ function fillHand(state, d) {
 function dealFresh(state, d, slots) {
   const all = [...d.draw, ...d.hand.filter(Boolean), ...d.discard];
   all.forEach(c => { c.locked = false; });
-  d.draw = all; d.discard = []; d.hand = Array(slots).fill(null); d.marks = [];
+  all.forEach(c => { c.free = false; });
+  d.draw = all; d.discard = []; d.hand = Array(slots).fill(null); d.extra = 0; d.marks = [];
   state.rng.shuffle(d.draw);
   fillHand(state, d);
 }
@@ -484,14 +497,14 @@ function dealFresh(state, d, slots) {
 function drawPhase(state, d) {
   d.marks = [];
   const old = [];   // Fluchkarten, die schon vor dem Nachziehen auf der Hand lagen: sie werden dauerhaft verworfen
-  for (let i = 0; i < d.hand.length; i++) {
+  for (let i = 0; i < baseLen(d); i++) {
     const c = d.hand[i];
     if (!c) continue;
     if (parseCard(c.id).curse) { c.locked = false; old.push(c); d.hand[i] = null; }
     else if (!c.locked) { d.discard.push(c); d.hand[i] = null; }
   }
   // Fluchkarten liegen zunächst auf dem Ablagestapel der Gegenseite. Sie kommen erst auf die Hand, wenn der Zugstapel leer ist und der Ablagestapel in den Zugstapel gemischt wird (fillHand).
-  const replaced = d.hand.some(c => !c);
+  const replaced = d.hand.slice(0, baseLen(d)).some(c => !c);
   if (replaced) fillHand(state, d);   // frisch gezogene Fluchkarten bleiben auf der Hand und belegen einen Platz
   // die alten Fluchkarten sind damit endgültig aus dem Spiel (nicht auf dem Ablagestapel)
   return replaced || old.length > 0;
@@ -507,11 +520,11 @@ function removeFromHand(d, idx) { const c = d.hand[idx]; d.hand[idx] = null; d.m
 
 /* ---------- Auswahl (markierte Handkarten) ---------- */
 function selection(d) {
-  return d.marks.filter(i => d.hand[i]).map(i => Object.assign({ slot: i, card: d.hand[i] }, parseCard(d.hand[i].id)));
+  return d.marks.filter(i => d.hand[i]).map(i => Object.assign({ slot: i, card: d.hand[i], free: !!d.hand[i].free }, parseCard(d.hand[i].id)));
 }
 function consumeSelection(d, sel) {
-  sel.forEach(s => { const c = d.hand[s.slot]; if (c) c.locked = false; d.discard.push(c); d.hand[s.slot] = null; });   // eine gespielte Karte verliert ihre Sperre
-  d.marks = [];
+  sel.forEach(s => { const c = d.hand[s.slot]; if (c) { c.locked = false; c.free = false; } d.discard.push(c); d.hand[s.slot] = null; });   // eine gespielte Karte verliert ihre Sperre (und die Gratis-Markierung der Hellsicht)
+  d.marks = []; trimSight(d);
 }
 // Markieren ist durch das Ausspiellimit begrenzt (bei Limit 1 ersetzt die neue Markierung die alte).
 function toggleMark(d, slot, limit) {
@@ -810,13 +823,13 @@ function levelsFor(ev) {
   if (o && o.lvl > 0 && !(ev.levels.ulti > 0)) out[{ ra: 'fe', wt: 'tr', hs: 'hs', ws: 'sh', gh: 'gh', gr: 'ew' }[o.key]] = o.lvl;
   return out;
 }
-// Fluchkarten kosten beim Ausspielen je 1 Mana und zählen nicht als Element.
+// Fluchkarten kosten beim Ausspielen je 1 Mana und zählen nicht als Element. Offen liegende Hellsichtkarten (c.free) kosten kein Mana.
 function evalAttack(stats, cards) {
   if (!cards.length) return { valid: false, reason: 'Keine Karte gewählt.' };
   const curses = cards.filter(c => c.curse), normals = cards.filter(c => !c.curse);
   const prim = normals.length ? normals[0].el : null;
   const same = prim ? normals.filter(c => c.el === prim) : [];
-  const cost = normals.length + curses.reduce((n, c) => n + c.tier, 0);
+  const cost = normals.filter(c => !c.free).length + curses.reduce((n, c) => n + c.tier, 0);
   let damage = 0; same.forEach(c => { damage += Math.min(c.tier, stats.mag[prim]); });
   const tiers = { F: [], E: [], W: [] }; normals.forEach(c => tiers[c.el].push(c.tier));
   const levels = comboLevels(tiers, stats.mag, prim);
@@ -831,7 +844,7 @@ function evalDefense(stats, cards, color) {
   const same = normals.filter(c => c.el === el), other = normals.filter(c => c.el !== el);
   const ulti = other.length && new Set(other.map(c => c.el)).size > 1;   // alle drei Farben: Ultimate auch in der Verteidigung
   if (el && el !== color && el !== SUPERIOR[color]) return { valid: false, reason: NAMES[el] + ' kann nicht gegen ' + NAMES[color] + ' verteidigen.' };
-  const cost = curses.reduce((n, c) => n + c.tier, 0) + (el === color ? same.length : 0) + other.length;   // Verteidigung in der überlegenen Farbe ist gratis, Kombokarten kosten 1 Mana
+  const cost = curses.reduce((n, c) => n + c.tier, 0) + (el === color ? same.filter(c => !c.free).length : 0) + other.filter(c => !c.free).length;   // Verteidigung in der überlegenen Farbe ist gratis, Kombokarten kosten 1 Mana
   let block = 0; same.forEach(c => { block += Math.min(c.tier, stats.mag[el]); });
   const out = { valid: true, el, cost, block, affordable: stats.mana >= cost, levels: { fw: 0, fe: 0, ew: 0, ulti: 0 }, ord: null, ultiEl: null };
   if (other.length) { const tiers = { F: [], E: [], W: [] }; normals.forEach(c => tiers[c.el].push(c.tier)); const lv = comboLevels(tiers, stats.mag, el); out.ord = !ulti && lv.ord && lv.ord.lvl > 0 ? lv.ord : null; if (ulti) { out.levels.ulti = lv.ulti; if (lv.ulti > 0) out.ultiEl = el; } }
@@ -905,7 +918,8 @@ function evaluateEnd(state) {
 function endCombat(state, end) {
   const c = state.combat, res = { mode: c.mode, reason: end.reason, winner: end.winner, monsterDefeated: false, elem: c.elem, stage: state.stage, turns: c.turns, fled: end.fled || null };   // elem/stage/turns: für die Balance-Auswertung
   if (state.keepSnap) res.snap = JSON.parse(JSON.stringify(c));   // Oberfläche: Endstand des Kampfes (vor Zurücksetzen und Rückkehr in die Weltphase)
-  if (c.forced && c.forced.cards) { const fs = c.sides.a.ctrl === c.forced.pid ? c.sides.a : c.sides.b; if (fs.kind === 'player') c.forced.cards.forEach(cd => fs.deck.discard.push(cd)); c.forced = null; }   // unentschiedene Hellsicht- und Fallen-Karten kehren in den Ablagestapel zurück
+  if (c.forced && c.forced.cards) { const fs = c.sides.a.ctrl === c.forced.pid ? c.sides.a : c.sides.b; if (fs.kind === 'player') c.forced.cards.forEach(cd => fs.deck.discard.push(cd)); c.forced = null; }
+  [c.sides.a, c.sides.b].forEach(sd => { if (sd.deck) dropSight(sd.deck); });   // übrige offene Hellsichtkarten auf den Ablagestapel   // unentschiedene Hellsicht- und Fallen-Karten kehren in den Ablagestapel zurück
   state.players.forEach(p => { if (p.stats.trap) p.deck.discard.push(p.stats.trap.card); p.stats.freeDraws = 0; p.deck.marks = []; ['death', 'deathPhase', 'heal', 'healPhase', 'manaflow', 'manaPhase', 'rainbow', 'trap'].forEach(k => { delete p.stats[k]; }); });   // die Fallenkarte kehrt in den Ablagestapel zurück (wird gleich mit gemischt)
   state.players.forEach(p => stripCurseCards(state, p.deck));
   ['healPhase', 'death', 'deathPhase', 'heal', 'manaflow', 'manaPhase', 'rainbow', 'trap'].forEach(k => { delete c.sides.b.stats[k]; });
@@ -1059,27 +1073,24 @@ function passAttackTurn(state) {
 
 // HP nach einer Heilung um lvl: höchstens bis zu den maximalen HP, nie weniger als vorher
 function healedHp(stats, hp, lvl) { return lvl > 0 ? Math.max(hp, Math.min(stats.maxHp, hp + lvl)) : hp; }
-// Hellsicht (Blau + Rot, seit 0.8.0.2): Die Seite zieht S Karten vom Zugstapel (der Ablagestapel wird bei Bedarf gemischt) und entscheidet für jede, ob sie auf die Hand kommt (sofern Platz ist), auf den Ablagestapel oder zurück zum Händler (aus dem Deck, die Karte kehrt in den Vorrat zurück; Fluchkarten verschwinden einfach). c.forced = { pid, kind: 'sight', cards, lvl }; die Entscheidung kommt als Aktion fd mit pick = ['t'|'a'|'d', ...] je Karte.
+// Hellsicht (Blau + Rot, seit 0.8.0.9): Die Seite zieht drei Karten vom Zugstapel (der Ablagestapel wird bei Bedarf gemischt), wählt S davon aus und legt sie offen vor sich; die übrigen kommen auf den Ablagestapel. Die offenen Karten lassen sich wie Handkarten ausspielen, kosten aber kein Mana, und werden danach abgelegt (unbenutzte am Kampfende). Sie belegen keine Handplätze (hinten angehängt, siehe addSight). c.forced = { pid, kind: 'sight', cards, n, lvl }; die Entscheidung kommt als Aktion fd mit pick = ['k'|'a', ...] je Karte (k = offen vor mich legen, a = ablegen); genau n Karten mit k, keine Fluchkarten.
 function sightDraw(state, side, lvl) {
   const d = side.deck, cards = [];
-  for (let i = 0; i < lvl; i++) {
+  for (let i = 0; i < 3; i++) {
     if (!d.draw.length && d.discard.length) { d.draw = d.discard.splice(0); state.rng.shuffle(d.draw); }
     if (!d.draw.length) break;
     cards.push(d.draw.pop());
   }
-  if (cards.length) state.combat.forced = { pid: side.ctrl, n: cards.length, kind: 'sight', cards, lvl };
-  return cards.length;
+  const ok = cards.filter(cd => !parseCard(cd.id).curse).length, n = Math.min(lvl, ok);
+  if (n > 0 && n < ok) state.combat.forced = { pid: side.ctrl, n, kind: 'sight', cards, lvl };
+  else sightResolve(state, side, cards, cards.map(cd => (n > 0 && !parseCard(cd.id).curse ? 'k' : 'a')));   // keine Wahl: alle brauchbaren Karten bleiben liegen, der Rest geht auf den Ablagestapel
+  return { drawn: cards.length, choose: n > 0 && n < ok, n };
 }
 function sightResolve(state, side, cards, pick) {
-  const d = side.deck, out = { t: 0, a: 0, d: 0 };
-  cards.forEach((cd, i) => {
-    const k = pick[i];
-    if (k === 't') { const sl = d.hand.findIndex(x => !x); d.hand[sl] = cd; cd.locked = false; }
-    else if (k === 'a') d.discard.push(cd);
-    else if (side.kind === 'player' && state.supply && !parseCard(cd.id).curse && state.supply[cd.id] !== undefined) state.supply[cd.id]++;   // zurück zum Händler
-    out[k]++;
-  });
-  return out;
+  const d = side.deck, keep = cards.filter((cd, i) => pick[i] === 'k');
+  cards.forEach((cd, i) => { if (pick[i] !== 'k') d.discard.push(cd); });
+  addSight(d, keep);
+  return { k: keep.length, a: cards.length - keep.length };
 }
 // Falle (Rot + Blau, seit 0.8.0.1; vorher Blau + Rot, seit 0.8): Die Seite zieht drei Karten vom Zugstapel (seit 0.8.0.5 nicht mehr in die Hand) und legt eine davon verdeckt vor sich; die übrigen kommen auf den Ablagestapel (stats.trap = { card, el, tier, lvl }; kein Marker, die Läuterung erreicht sie nicht). Welche, wählt der Spieler (c.forced mit kind 'trap'; ohne Wahlmöglichkeit gleich). Fluchkarten kommen nicht in Frage.
 function trapDraw(state, side, lvl) {
@@ -1117,9 +1128,9 @@ function applyComboPlan(state, side, opp, plan, ev, texts, fxs) {
   for (const [k, lvl] of plan) {
     if (k === 'sh') { shieldAdd(side.stats, lvl); fxs.push({ kind: 'shieldcast', who: side.ctrl, to: opp.ctrl, n: lvl }); texts.push('Schild ' + lvl + ' (' + side.stats.rainbow + ' Ladung' + (side.stats.rainbow === 1 ? '' : 'en') + ')'); }
     if (k === 'hs') {
-      const n = sightDraw(state, side, lvl);
+      const r = sightDraw(state, side, lvl);
       fxs.push({ kind: 'sightcast', who: side.ctrl, to: opp.ctrl, n: lvl });
-      texts.push('Hellsicht ' + lvl + ': ' + (n ? 'zieht ' + n + ' Karte' + (n === 1 ? '' : 'n') + ' und entscheidet über jede' : 'keine Karte zum Ziehen'));
+      texts.push('Hellsicht ' + lvl + ': ' + (r.drawn ? 'zieht ' + r.drawn + ' Karte' + (r.drawn === 1 ? '' : 'n') + (r.choose ? ' und wählt ' + r.n + ' davon' : r.n ? ', ' + r.n + ' bleibt offen liegen' : ', keine brauchbar') : 'keine Karte zum Ziehen'));
     }
     if (k === 'tr') {
       if (side.stats.trap) { side.deck.discard.push(side.stats.trap.card); delete side.stats.trap; }
@@ -1292,12 +1303,13 @@ function applyCombat(state, a) {
       log(state, v.name + ' legt eine Karte verdeckt als Falle vor sich, ' + (cards.length - 1) + ' auf den Ablagestapel.', pid);
       return { ok: true };
     }
-    const v = c.sides.a.ctrl === pid ? c.sides.a : c.sides.b, pick = Array.isArray(a.pick) ? a.pick : [], cards = c.forced.cards;   // Hellsicht: je Karte Hand (t), Ablage (a) oder Händler (d)
-    if (pick.length !== cards.length || pick.some(k => k !== 't' && k !== 'a' && k !== 'd')) return fail('Hellsicht: Entscheide für jede gezogene Karte (Hand, Ablage oder Händler).');
-    if (pick.filter(k => k === 't').length > v.deck.hand.filter(x => !x).length) return fail('Hellsicht: Nicht genug freie Handplätze.');
+    const v = c.sides.a.ctrl === pid ? c.sides.a : c.sides.b, pick = Array.isArray(a.pick) ? a.pick : [], cards = c.forced.cards;   // Hellsicht: je Karte offen vor mich legen (k) oder ablegen (a)
+    if (pick.length !== cards.length || pick.some(k => k !== 'k' && k !== 'a')) return fail('Hellsicht: Entscheide für jede gezogene Karte (offen vor dich legen oder ablegen).');
+    if (pick.filter(k => k === 'k').length !== c.forced.n) return fail('Hellsicht: Wähle genau ' + c.forced.n + ' Karte' + (c.forced.n === 1 ? '' : 'n') + ' aus.');
+    if (pick.some((k, i) => k === 'k' && parseCard(cards[i].id).curse)) return fail('Hellsicht: Fluchkarten lassen sich nicht auswählen.');
     const r = sightResolve(state, v, cards, pick);
     c.forced = null;
-    log(state, v.name + ' entscheidet über die Hellsicht: ' + r.t + ' auf die Hand, ' + r.a + ' auf den Ablagestapel, ' + r.d + ' zurück zum Händler.', pid);
+    log(state, v.name + ' legt ' + r.k + ' Karte' + (r.k === 1 ? '' : 'n') + ' der Hellsicht offen vor sich (ohne Manakosten), ' + r.a + ' auf den Ablagestapel.', pid);
     return { ok: true };
   }
   const side = c.sides[c.turn], opp = c.sides[c.turn === 'a' ? 'b' : 'a'];
@@ -1600,7 +1612,7 @@ function actor(state) {
 function handCounts(d) { const c = {}; d.hand.forEach(x => { if (x) c[x.id] = (c[x.id] || 0) + 1; }); return c; }
 
 return { ELEMENTS, SUPERIOR, NAMES, START_DECK, MAX_MAGIC, MAX_SLOTS, MIN_SLOTS, MAX_LIMIT, MAX_DRAW_LIMIT, MAX_UPGRADES, MONSTER_MAX_LIMIT, DEFAULT_RULES, MONSTER,
-  makeRng, parseCard, selection, newGame, apply, record, prim, actor, other, regen, handCounts,
+  makeRng, parseCard, selection, baseLen, dropSight, newGame, apply, record, prim, actor, other, regen, handCounts,
   vendorOffers, vendorPlans, previewTemple, pointsForGold, nextLevelCost, maxed, limitStepCost, manaStepCost, hpStepCost, slotStepCost, magicCost, drawLimitCost, upField, magicField, payTxt,
   evalAttack, evalDefense, canFlee, stockOf, recoverGain, regenGain, comboLevels, levelsFor,
   drawPenaltyAmount, monsterAlive, monsterHand, markerOf, drawManaCost, drawGoldPenalty, previewDefense, defenseComboPre, allMonstersDead, magicProgress, spawnMonsters, spawnForGame };
@@ -1716,7 +1728,7 @@ const PARAMS = {};
 function setParams(pid, obj) { if (obj) PARAMS[pid] = Object.assign({}, DEFAULTS, obj); else delete PARAMS[pid]; }
 function P(pid) { return PARAMS[pid] || DEFAULTS; }
 
-function handList(d) { const out = []; d.hand.forEach((card, slot) => { if (card) out.push(Object.assign({ slot, card }, M.parseCard(card.id))); }); return out; }
+function handList(d) { const out = []; d.hand.forEach((card, slot) => { if (card) out.push(Object.assign({ slot, card, free: !!card.free }, M.parseCard(card.id))); }); return out; }
 function subsets(arr, maxSize) {
   const res = [];
   const n = arr.length;
@@ -2029,11 +2041,10 @@ function keepLocks(state, side, opp, hand, Q) {
   return bestS.map(h => h.slot);
 }
 // Zerrüttung: Die KI wirft zuerst Flüche, dann die schwächsten Karten ab (gesperrte Karten möglichst nicht)
-// Hellsicht: Fluchkarten gehen zurück zum Händler, echte Karten auf die Hand, solange Platz ist, sonst auf den Ablagestapel
+// Hellsicht: die n höchsten Nicht-Fluchkarten bleiben offen liegen, der Rest wird abgelegt
 function sightPick(state, pid) {
-  const c = state.combat, v = c.sides.a.ctrl === pid ? c.sides.a : c.sides.b;
-  let free = v.deck.hand.filter(x => !x).length;
-  return c.forced.cards.map(cd => { if (M.parseCard(cd.id).curse) return 'd'; if (free > 0) { free--; return 't'; } return 'a'; });
+  const c = state.combat, cs = c.forced.cards, idx = cs.map((cd, i) => ({ i, t: M.parseCard(cd.id).curse ? -1 : M.parseCard(cd.id).tier })).filter(x => x.t >= 0).sort((x, y) => y.t - x.t || x.i - y.i).slice(0, c.forced.n).map(x => x.i);
+  return cs.map((cd, i) => idx.includes(i) ? 'k' : 'a');
 }
 function forcedAct(state, pid) { return state.combat.forced.kind === 'sight' ? { pid, type: 'fd', pick: sightPick(state, pid) } : { pid, type: 'fd', slots: forcedPick(state, pid) }; }
 function forcedPick(state, pid) {
@@ -2598,7 +2609,7 @@ function place(card, s) {
   if (!held) d.style.transform = rec.final;
   d.style.zIndex = held ? 400 : s.z;
   const wasDown = d.classList.contains('down'), flipped = !isNew && !!s.down !== wasDown && (s.zone === 'hand' || prevZone === 'hand') && !FAST && !reducedMotion();
-  d.classList.toggle('down', !!s.down); d.classList.toggle('marked', !!s.marked); d.classList.toggle('first', !!s.first); d.classList.toggle('fd', !!s.fd); d.classList.toggle('cand', !!s.cand); d.classList.toggle('locked', !!s.locked);
+  d.classList.toggle('down', !!s.down); d.classList.toggle('marked', !!s.marked); d.classList.toggle('first', !!s.first); d.classList.toggle('fd', !!s.fd); d.classList.toggle('cand', !!s.cand); d.classList.toggle('locked', !!s.locked); d.classList.toggle('sightopen', !!s.free);
   d.classList.toggle('myhand', !!s.mine); d.dataset.slot = s.slot === undefined ? '' : s.slot;
   d.style.pointerEvents = s.mine ? 'auto' : 'none';
   if (flipped) { const ms = CardFlip.hand(d.querySelector('.inner'), s.down ? 0 : 180, s.down ? 180 : 0, wait); cardsUntil = Math.max(cardsUntil, Date.now() + ms); }   // Volle Drehung (Kartendreh-Werkstatt); nur Karten, die in die Hand kommen oder sie verlassen (Austeilen, Aufdecken); Mischen und Ablegen drehen ohne Animation
@@ -2611,12 +2622,13 @@ function layoutDeck(deck, L, mine) {
   const spawn = { x: L.draw.x, y: L.draw.y };
   deck.draw.forEach((c, i) => place(c, { x: L.draw.x + Math.min(i, 5) * 0.8, y: L.draw.y - Math.min(i, 5) * 0.8, sc: L.ps, down: true, z: 1 + i, spawn, zone: 'draw' }));
   deck.discard.forEach((c, i) => place(c, { x: L.disc.x + jit(c.uid, 4), y: L.disc.y + jit(c.uid + 7, 3), rot: jit(c.uid + 3, 6), sc: L.ps, down: false, z: 1 + i, spawn, zone: 'disc' }));
-  const n = deck.hand.length;
+  const n = deck.hand.length, nb = M.baseLen(deck);   // Hellsichtkarten (Plätze ab nb) liegen offen in einer eigenen Reihe über der Hand
   deck.hand.forEach((c, i) => {
     if (!c) return;
     if (!forcedMe()) { fdSel.clear(); sightSel = []; }
     const fdm = mine && forcedMe() && fdSel.has(i), marked = deck.marks.includes(i) || fdm;
-    place(c, { x: slotX(i, n, L), y: L.y + (marked ? L.raise : 0), sc: L.s, down: !mine, z: 20 + i + (marked ? 30 : 0), marked, fd: fdm, locked: mine && c.locked, mine, slot: i, spawn, zone: 'hand', first: mine && marked && !fdm && isFirstAtk(deck, i)});
+    const open = i >= nb, ne = n - nb, os = mine ? 0.6 : 0.7, ox = open ? slotX(i - nb, ne, Object.assign({}, L, { s: L.s * os, gap: L.gap * 0.62, span: L.span * 0.7 })) : 0;
+    place(c, open ? { x: ox, y: (mine ? 490 : 112) + (marked ? (mine ? -24 : 16) : 0), sc: L.s * os, down: false, z: 60 + i + (marked ? 30 : 0), marked, free: true, mine, slot: i, spawn, zone: 'hand', first: mine && marked && isFirstAtk(deck, i) } : { x: slotX(i, nb, L), y: L.y + (marked ? L.raise : 0), sc: L.s, down: !mine, z: 20 + i + (marked ? 30 : 0), marked, fd: fdm, locked: mine && c.locked, mine, slot: i, spawn, zone: 'hand', first: mine && marked && !fdm && isFirstAtk(deck, i)});
   });
 }
 // Nachziehlimit: drei Kreise unter dem Nachziehstapel (beide Spieler), der rot/grüne Marker liegt auf der Stufe des nächsten freien Nachziehens; Stufen über dem Limit sind abgedunkelt, auf der nächsten sitzt der Plus-Knopf (Upgrade-Punkte)
@@ -2655,7 +2667,7 @@ function renderCards() {
   flushSound(quiet || Intro.on);
   // Platzhalter, Stapel-Beschriftungen, Klickflächen
   let ph = '';
-  const n = cx.myDeck.hand.length;
+  const n = M.baseLen(cx.myDeck);
   for (let i = 0; i < n; i++) if (!cx.myDeck.hand[i]) ph += '<div class="slot-ph" style="left:' + slotX(i, n, L_MY) + 'px;top:' + L_MY.y + 'px"></div>';
   const lab = (L, d, mine) => {
     const w = CW * L.ps, y = L.draw.y + CH * L.ps + 3;
@@ -2690,7 +2702,7 @@ function renderCards() {
   }
   if (cx.combat) {
     ph += mirrorStack(cx.myStats, slotX(n - 1, n, L_MY) + CW * L_MY.s + 10, L_MY.y + 20, 's');
-    const no = cx.oppDeck.hand.length;
+    const no = M.baseLen(cx.oppDeck);
     ph += mirrorStack(cx.oppStats, slotX(no - 1, no, L_OP) + CW * L_OP.s + 10, L_OP.y + 6, 'o');
   }
   layerPh.innerHTML = ph;
@@ -2970,12 +2982,12 @@ function ultiText(el, lv) {
   return 'Todesfluss (Feuer): Der Gegner bekommt ' + lv + ' Todesmarker und verliert ' + lv + ' HP am Ende jeder seiner Angriffsphasen bis Kampfende.';
 }
 // Kurzfassungen für die Kombo-Übersicht (die ausführliche Wirkung steht im Tooltip)
-const ORD_SHORT = { hs: 'Zieht S Karten: je Karte Hand, Ablage oder zurück zum Händler', ra: '2·S Flüche auf den Ablagestapel des Gegners', wt: 'Zieht 3 Karten vom Stapel, eine davon verdeckt als Falle (Rest auf den Ablagestapel): wirft S (1/2/3) unblockbaren Schaden zurück', ws: 'Schild mit S Ladungen: mindert nicht geblockten Schaden', gh: 'Heilt S HP', gr: 'Entfernt S Marker, je Marker 1 Nachziehtoken' };
+const ORD_SHORT = { hs: 'Zieht 3 Karten: S davon liegen offen vor dir und sind ohne Manakosten nutzbar (danach abgelegt), der Rest wird abgelegt', ra: '2·S Flüche auf den Ablagestapel des Gegners', wt: 'Zieht 3 Karten vom Stapel, eine davon verdeckt als Falle (Rest auf den Ablagestapel): wirft S (1/2/3) unblockbaren Schaden zurück', ws: 'Schild mit S Ladungen: mindert nicht geblockten Schaden', gh: 'Heilt S HP', gr: 'Entfernt S Marker, je Marker 1 Nachziehtoken' };
 const ULTI_SHORT = { F: 'Gegner verliert S HP am Ende jeder seiner Angriffsphasen', E: 'Du heilst S HP am Ende jeder deiner Angriffsphasen', W: 'Du regenerierst S Mana am Ende jeder deiner Angriffsphasen' };
 function ordText(k, lv, short) {
   if (k === 'ra' && lv === 'S') return 'Lege 2·S Fluchkarten (2/4/6) auf den Ablagestapel der Gegenseite; sie kommen beim nächsten Nachziehen des Gegners zuerst auf seine Hand und werden beim darauffolgenden Nachziehen dauerhaft vernichtet';
   if (k === 'ra') return short ? 2 * lv + ' Flüche auf den Ablagestapel der Gegenseite' : 'Lege ' + 2 * lv + ' Flüche auf den Ablagestapel der Gegenseite; sie kommen beim nächsten Nachziehen des Gegners zuerst auf seine Hand und werden beim darauffolgenden Nachziehen dauerhaft vernichtet';
-  if (k === 'hs') return 'Ziehe ' + (lv === 'S' ? 'S' : lv) + ' Karte' + (lv === 1 ? '' : 'n') + ' vom Zugstapel und entscheide für jede einzeln: auf die Hand nehmen (sofern Platz ist), auf den Ablagestapel legen oder abwerfen (zurück zum Händler, dauerhaft aus deinem Deck)';
+  if (k === 'hs') return 'Ziehe drei Karten vom Stapel und wähle ' + (lv === 'S' ? 'S (1/2/3)' : lv) + ' davon aus: Sie liegen offen vor dir (zusätzliche Kartenplätze) und können ohne Manakosten wie normale Handkarten genutzt werden; danach werden sie abgelegt. Die übrigen kommen sofort auf den Ablagestapel. Am Ende des Kampfes verfallen nicht genutzte offene Karten (Ablage)'
   if (k === 'wt') return 'Ziehe drei Karten vom Stapel (sie ersetzen keine Handkarten), lege eine davon verdeckt vor dich; die übrigen kommen auf den Ablagestapel. Sie wird aufgedeckt, sobald Schaden eingeht: Entspricht die Farbe des Schadens ihrer Farbe, wirft sie ' + (lv === 'S' ? 'S (1/2/3)' : lv) + ' unblockbaren Schaden auf den Angreifer zurück, vor der Verteidigung (der eingehende Schaden sinkt entsprechend, höchstens um den ganzen Schaden). Danach wird die Karte abgelegt, auch ohne Rückwurf. Sie ist kein Marker';
   if (k === 'ws') return 'Dein Schild hat danach ' + (lv === 'S' ? 'S' : lv) + ' Ladung' + (lv === 1 ? '' : 'en') + ' (nicht addiert, höchstens 3). Es mindert eingehenden, nicht geblockten Schaden gegen jede Farbe, je Schaden eine Ladung';
   if (k === 'gh') return 'Heile um ' + lv + ' HP';
@@ -3043,9 +3055,9 @@ function combatCenter(cx) {
     return '<div class="panel" style="' + box(LAYOUT.combat, 'padding:10px 14px') + '">' + h + '</div>';
   }
   if (c.forced && c.forced.kind === 'sight') {   // Hellsicht: je gezogener Karte Hand, Ablage oder Händler wählen (ich) bzw. warten (Gegner)
-    const vs = c.sides.a.ctrl === c.forced.pid ? c.sides.a : c.sides.b, cards = c.forced.cards, free = vs.deck.hand.filter(x => !x).length;
-    if (c.forced.pid === ME) h += '<div class="preview"><b>Hellsicht:</b> Entscheide für jede gezogene Karte (die Karten liegen im Vordergrund).</div>';
-    else h += '<div class="preview"><b>Hellsicht:</b> ' + esc(vs.name) + ' entscheidet über ' + cards.length + ' gezogene Karte' + (cards.length === 1 ? '' : 'n') + ' …</div>';
+    const vs = c.sides.a.ctrl === c.forced.pid ? c.sides.a : c.sides.b, cards = c.forced.cards;
+    if (c.forced.pid === ME) h += '<div class="preview"><b>Hellsicht:</b> Wähle ' + c.forced.n + ' Karte' + (c.forced.n === 1 ? '' : 'n') + ', die du offen vor dich legst (die Karten liegen im Vordergrund).</div>';
+    else h += '<div class="preview"><b>Hellsicht:</b> ' + esc(vs.name) + ' wählt ' + c.forced.n + ' von ' + cards.length + ' gezogenen Karten …</div>';
     h += '</div>';
     return '<div class="panel" style="' + box(LAYOUT.combat, 'padding:10px 14px') + '">' + h + '</div>';
   }
@@ -3127,15 +3139,15 @@ function sightOverlayHTML() {
     c.forced.cards.forEach((cd, i) => { const cu = M.parseCard(cd.id).curse; t += '<div class="sightbig" style="animation-delay:' + i * 0.12 + 's"><img src="' + (IMG[cd.id] || IMG.back) + '"><button class="btn primary" data-act="trapok" data-i="' + i + '"' + (cu ? ' disabled' : '') + '>Als Falle legen</button></div>'; });
     return t + '</div>';
   }
-  const vs = c.sides.a.ctrl === ME ? c.sides.a : c.sides.b, cards = c.forced.cards, free = vs.deck.hand.filter(x => !x).length;
-  if (sightSel.length !== cards.length) sightSel = cards.map(() => '');
-  const taken = sightSel.filter(k => k === 't').length, done = sightSel.every(k => k);
-  let h = '<div class="sighttitle">Hellsicht</div><div class="sightsub">Freie Handplätze: ' + Math.max(0, free - taken) + '</div><div class="sightfront">';
+  const cards = c.forced.cards, n = c.forced.n;
+  if (sightSel.length !== cards.length) sightSel = cards.map(() => 'a');
+  const kept = sightSel.filter(k => k === 'k').length;
+  let h = '<div class="sighttitle">Hellsicht</div><div class="sightsub">Wähle ' + n + ' Karte' + (n === 1 ? '' : 'n') + ' zum offenen Ausspielen (gewählt: ' + kept + '/' + n + ')</div><div class="sightfront">';
   cards.forEach((cd, i) => {
-    const full = free - taken <= 0 && sightSel[i] !== 't', btn = (k, t, tip) => '<button class="btn' + (sightSel[i] === k ? ' primary' : '') + '" title="' + tip + '" data-act="sight" data-i="' + i + '" data-v="' + k + '"' + (k === 't' && full ? ' disabled' : '') + '>' + t + '</button>';
-    h += '<div class="sightbig" style="animation-delay:' + i * 0.12 + 's"><img src="' + (IMG[cd.id] || IMG.back) + '">' + btn('t', 'Auf die Hand', 'Die Karte kommt auf einen freien Handplatz') + btn('a', 'Ablegen', 'Die Karte kommt auf den Ablagestapel') + btn('d', 'Abwerfen', 'Zurück zum Händler: die Karte verlässt dein Deck') + '</div>';
+    const cu = M.parseCard(cd.id).curse, full = kept >= n && sightSel[i] !== 'k', btn = (k, t, tip, dis) => '<button class="btn' + (sightSel[i] === k ? ' primary' : '') + '" title="' + tip + '" data-act="sight" data-i="' + i + '" data-v="' + k + '"' + (dis ? ' disabled' : '') + '>' + t + '</button>';
+    h += '<div class="sightbig" style="animation-delay:' + i * 0.12 + 's"><img src="' + (IMG[cd.id] || IMG.back) + '">' + btn('k', 'Offen vor mich legen', 'Die Karte liegt offen vor dir, ohne Manakosten nutzbar', cu || full) + btn('a', 'Ablegen', 'Die Karte kommt auf den Ablagestapel', false) + '</div>';
   });
-  return h + '</div><button class="btn primary sightok" data-act="sightok" ' + (done ? '' : 'disabled') + '>Bestätigen</button>';
+  return h + '</div><button class="btn primary sightok" data-act="sightok" ' + (kept === n ? '' : 'disabled') + '>Bestätigen</button>';
 }
 /* ---------- Gesamtdarstellung ---------- */
 /* Cursor: Mensch (cursor_human_normal / _pressed) bzw. Monster (cursor_monster_normal / _pressed).
@@ -4281,10 +4293,10 @@ function earthFormRaw(ctx, x, by, seed, i, t, tCrack, tRise, endAt, ending) {
   return { attack, defense, reset() { queue = []; endEx(); }, busy() { return queue.length > 0 || !!(ex && (ex.def || performance.now() - ex.t0 < ex.tAe * 1000 + 50)); }, remaining() { if (!ex || !ex.def) return 0; return Math.max(0, ex.def.T.end - (performance.now() - ex.t0) / 1000); } };
 })();
 // Aktuelle Versionsnummer: einzige Stelle, an der sie gesetzt wird (Menü-Link und Über-Seite lesen sie von hier; bei jedem Schritt hochzählen)
-const MAGUS_VERSION = '0.8.0.8';
+const MAGUS_VERSION = '0.8.0.9';
 /* ---------- Darstellung: Kampfeffekt-Ton, Cursor, render, Menüs, Start- und Ergebnis-Bildschirm ---------- */
 let leadPrev = null;
-let sightSel = [];   // Hellsicht: meine Entscheidungen je gezogener Karte ('t' Hand, 'a' Ablage, 'd' Händler)
+let sightSel = [];   // Hellsicht: meine Entscheidungen je gezogener Karte ('k' offen vor mich legen, 'a' Ablage)
 const fdSel = new Set();   // Zerrüttung: von mir gewählte Abwurfkarten (Handplätze)
 const forcedMe = () => !!(G && G.phase === 'combat' && G.combat && G.combat.forced && G.combat.forced.pid === ME);
 let curKey = null, curDown = false, mkSeen = null, dthSeen = null, hlSeen = null, rbSeen = null, fxFor = null, fxLast = 0;
@@ -4511,7 +4523,7 @@ function showStart(pg) {
   } else if (pg === 'settings') {
     h += '<h2>Einstellungen</h2><div class="menulist">' + settingsHTML() + back + '</div>';
   } else if (pg === 'about') {
-    h += '<p class="note intro" style="margin-top:-2px"><b>Danke, dass du Magus testest!</b> <b>Neu in Version ' + MAGUS_VERSION + ':</b> <b>Falle schwächer:</b> Sie wirft jetzt 1/2/3 statt 2/4/6 unblockbaren Schaden zurück. <b>Version 0.8.0.7:</b> <b>Fallenkarte schlichter:</b> Ohne blauen Rahmen, mit Stufenzähler; für den Gegner umgedreht. <b>Version 0.8.0.6:</b> <b>Mischen bei Falle und Hellsicht:</b> Reicht der Zugstapel nicht, wird der Ablagestapel gemischt und weitergezogen (Test ergänzt). <b>Version 0.8.0.5:</b> <b>Falle in der Mitte:</b> Die Falle zieht drei Karten vom Stapel (ohne die Hand zu ersetzen) und zeigt sie im Vordergrund; die nicht gewählten gehen auf den Ablagestapel. <b>Version 0.8.0.4:</b> <b>Hellsicht-Auswahl ruhiger:</b> Beim Wählen färben sich nur die Knöpfe ein, die Karten blenden nicht mehr neu ein. <b>Version 0.8.0.3:</b> <b>Hellsicht im Vordergrund:</b> Die gezogenen Karten liegen groß über dem Kampffeld, unter jeder stehen die drei Möglichkeiten. <b>Version 0.8.0.2:</b> <b>Hellsicht:</b> Blau + Rot zieht so viele Karten wie die Kombostufe; für jede entscheidest du, ob sie auf die Hand kommt (sofern Platz ist), auf den Ablagestapel oder zurück zum Händler. <b>Version 0.8.0.1:</b> <b>Falle statt Zerrüttung:</b> Auch Rot + Blau legt jetzt die Falle; die Zerrüttung entfällt. <b>Version 0.8:</b> <b>Blaue Kombos überarbeitet:</b> Blau + Rot legt eine <b>Falle</b> (drei Karten ziehen, eine verdeckt vor dich legen; bei Schaden aufgedeckt: passt die Farbe, werden 2/4/6 unblockbar vor der Verteidigung zurückgeworfen). Blau + Grün ist ein <b>Schild</b> (mindert nicht geblockten Schaden um 1/2/3 Ladungen). Blau + Rot + Grün ist der <b>Manafluss</b> (1/2/3 Mana am Ende deines Angriffszugs, mit neuer Animation). <b>Version 0.7.7.8:</b> <b>KI opfert nur mit Ergebnis:</b> Der Computergegner opfert im Tempel nur noch Gold, wenn die Punkte für eine Magiestufe wirklich herauskommen. Das galt für sein Überschussgold schon (alle 504 Opfer in 200 Partien endeten direkt in einem Magiekauf); jetzt gilt es auch in der Eröffnung. <b>Version 0.7.7.7:</b> <b>KI-Tempelopfer geprüft:</b> Die KI kann ihr Überschussgold jetzt auch gesammelt für mehrere Magiestufen auf einmal opfern (ein großes Opfer ergibt mehr Punkte als mehrere kleine). Die Messung zeigt, dass das Warten schlechter abschneidet als das sofortige Opfern; der Standard bleibt deshalb unverändert. <b>Version 0.7.7.6:</b> <b>KI nachtrainiert:</b> Der Computergegner opfert überschüssiges Gold jetzt sofort für Magie (Standard 1 statt 6) und baut seine HP etwas höher aus (7 statt 6). Gegen den Pool aus früh angreifenden Gegnern gewinnt er damit deutlich häufiger. <b>Version 0.7.7.5:</b> <b>KI setzt Überschussgold ein:</b> Kann der Computergegner nichts mehr für Gold verbessern, opfert er sein Gold im Tempel für die nächste Magiestufe. Vorher blieb seine Magie auf Stufe 1, und er sammelte über 100 Gold an. <b>Version 0.7.7.4:</b> Versionsnummer im Hauptmenü korrigiert. <b>Version 0.7.7.3:</b> <b>Vorzeitiges Spielende korrigiert:</b> Das Spiel endet nach einem Showdown, wenn ein Spieler mindestens <b>4 Siegpunkte Vorsprung</b> hat (4 : 0, 5 : 1). Bei 4 : 1 geht es weiter. <b>Version 0.7.7.2:</b> Die <b>Kampfrunden</b> sind nicht mehr begrenzt. Stattdessen gibt es die <b>Erschöpfung</b>: Nach je 10 Kampfrunden steigt sie um 1, und beide Seiten verlieren am Ende ihres Angriffszugs entsprechend viele HP (Runde 11–20: 1 HP, Runde 21–30: 2 HP …). <b>Version 0.7.6.8:</b> Die Farben des <b>Multischilds</b> sind kräftiger (Rot, Gelb, Grün, Blau, Violett). <b>Version 0.7.6.7:</b> Lösen <b>zwei Schilde</b> gleichzeitig aus (Farbspiegel und Multispiegel), laufen beide Schild-Effekte nebeneinander ab statt nur einer. <b>Version 0.7.6.6:</b> <b>Vorzeitiges Spielende:</b> Wer nach einem Showdown mit 4 oder mehr Siegpunkten führt, gewinnt das Spiel sofort; bei Gleichstand geht es weiter. <b>Version 0.7.6.5:</b> Die <b>Kampfrunden</b> werden gezählt (im Kampffenster: „Runde 3 von 10“) und sind auf 10 begrenzt. Eine Runde ist ein Angriffszug jeder Seite. Ist nach der 10. Runde keiner auf 0 HP gefallen, endet der Kampf unentschieden (Monster behält seine Verletzungen, im Showdown gibt es keine Siegpunkte). Die KI greift dafür früher an. <b>Version 0.7.6.4:</b> Das <b>Opfern von Gold im Tempel</b> ist kein Zug mehr: Du bleibst am Zug, kannst mehrmals opfern und danach in derselben Runde Magie kaufen; der Nachziehmarker bleibt dabei unverändert. Unter der Magiegrafik steht jetzt, was die <b>nächste Magiestufe</b> kostet. Die KI opfert und kauft entsprechend im selben Zug. <b>Version 0.7.6.3:</b> Das <b>Abwerfen nach einer Zerrüttung</b> ist kein Zug: Es zählt nicht für den Zugzähler und lässt den Nachziehmarker unverändert. <b>Version 0.7.6.2:</b> Die <b>Heilung</b> wirkt nach dem Schaden nur noch, wenn der Verteidiger ihn überlebt: Fällt er durch den Schaden auf 0 HP, ist er besiegt und die Heilung verfällt. <b>Version 0.7.6.1:</b> Die <b>Läuterung</b> lässt sich jetzt auch in der Verteidigung wählen: Eigene Nachziehtokens und Schilde (und alle anderen Marker) sind anklickbar, und die Vorschau sagt, dass die Läuterung <i>vor</i> der Verteidigung wirkt. <b>Version 0.7.5.1:</b> Der <b>Computergegner</b> wurde an die neuen Regeln angepasst: Er opfert kein Gold mehr für Magie, bewertet Heilfluss und Multispiegel neu, entfernt mit der Läuterung gezielt eigene Todesmarker und gegnerische Heilmarker und wartet mit der Eröffnung auf den ersten besiegten Monsterkampf statt auf zufälliges Gold; Angriffs- und Schadensgewichte sind neu abgestimmt. Die Regeln bleiben gleich. <b>Version 0.7.3.3:</b> Der Siegpunktestand sitzt mittig im innersten Ring des Magie-Boards. <b>Version 0.7.3.2:</b> Versatz am Magie-Board korrigiert: Die Leucht- und Abdunkelmarken der Stufen sitzen jetzt genau auf den Edelsteinen der neuen Grafik. <b>Version 0.7.3.1:</b> Das Magie-Board (unten rechts) hat eine neue Grafik: der dreifache Ouroboros mit roten, grünen und blauen Edelsteinen. <b>Version 0.7.2.24:</b> Jeder Spieler beginnt mit 3 statt 2 Siegpunkten. <b>Version 0.7.2.23:</b> Schilde (Farbspiegel und Multispiegel), die in der Verteidigung gestellt werden, wirken erst nach ihr, wie die Heilung: nicht mehr gegen den laufenden Angriff, aber ab dem nächsten. <b>Version 0.7.2.22:</b> Die Versionsliste zeigt nur noch die Updates der aktuellen Hauptversion 0.7 (ältere Einträge entfallen). <b>Version 0.7.2.21:</b> Der Innenschatten des Multispiegels ist etwas weicher. <b>Version 0.7.2.20:</b> Der Innenschatten am Rand des Multispiegels ist kleiner und härter. <b>Version 0.7.2.19:</b> Die Teilung des Multispiegels hat keine Trennlinie, nur die schattierte rechte Hälfte. <b>Version 0.7.2.18:</b> Der Multispiegel ist mittig von oben nach unten geteilt, die rechte Hälfte ist schattiert (wie bei den anderen Schildern). <b>Version 0.7.2.17:</b> Der Multispiegel wirft vom Rand einen Schatten nach innen. <b>Version 0.7.2.16:</b> Der Schatten der Marker liegt noch dichter am Marker. <b>Version 0.7.2.15:</b> Der Multispiegel ist dunkler und passt zu den übrigen Schildern. <b>Version 0.7.2.14:</b> Die Markerreihe liegt so, dass weder markierte Handkarten noch Zähler verdeckt werden. <b>Version 0.7.2.12:</b> Todes- und Heilmarker erscheinen nur noch als ein Token mit Zähler (×N), statt mehrfach abgebildet zu werden; der Multispiegel hatte den Zähler schon. <b>Version 0.7.2.11:</b> Alle Marker (Todes-, Heil- und Schildmarker) liegen in einer lockeren Reihe mittig direkt vor den Handkarten ihres Spielers und verdecken keine Anzeigen. <b>Version 0.7.2.10:</b> Der Schatten der Marker ist näher und härter; Schildmarker sind jetzt ebenfalls Pappmarker. <b>Version 0.7.2.9:</b> Todes- und Heilmarker haben eine dezente Tiefe und wirken wie ausgestanzte Pappmarker. <b>Version 0.7.2.8:</b> Der <b>Heilfluss</b> wirkt wie der Todesfluss erst am Ende der <b>nächsten</b> eigenen Angriffsphase, nicht schon in der Phase, in der die Ultimate gelegt wurde. <b>Version 0.7.2.7:</b> Das <b>Multischild</b> heißt jetzt <b>Multispiegel</b>. <b>Version 0.7.2.6:</b> Todes- und Heilmarker liegen als Haufen mittig vor dem Stapel ihres Spielers, leicht verdreht und versetzt (Todesmarker vorn, Heilmarker in einer zweiten Reihe); der Heilmarker ist kleiner und dezenter. <b>Version 0.7.2.5:</b> Das Ritual von <b>Heilfluss</b> und <b>Multischild</b> erscheint jetzt bei jedem Wirken der Ultimate, auch wenn die Stufe nicht steigt (vorher nur bei steigender Stufe). <b>Version 0.7.2.4:</b> Das <b>Prisma</b> heißt jetzt <b>Multischild</b>. Sein Ritual beginnt mit einem Kreis, aus dem die Schildkuppel wächst; Kristall und Lichtstrahl entfallen. <b>Version 0.7.2.3:</b> Der <b>Heilfluss</b> hat jetzt auch am Ende der Angriffsphase einen Effekt: Aus jedem Heilmarker steigt eine grüne Wolke zur Lebensanzeige und heilt dort (wie die Wolke des Todesfluss). <b>Version 0.7.2.2:</b> Die Ultimates <b>Heilfluss</b> und <b>Prisma</b> haben jetzt ein eigenes Ritual auf dem Bildschirm (wie das Pentagramm des Todesfluss). Die <b>Stufen des Prisma verfallen</b> wie die eines Farbspiegels, verbraucht wird aber immer zuerst der Farbspiegel. <b>Version 0.7.2.1:</b> Keine Spieländerung: Die neue <b>Ultimate-Werkstatt</b> (Effektwerkstatt für die Kombos aus allen drei Elementen) zeigt Todesfluss, Prisma und Heilfluss als Ritual mit Markern und Wirkung; sie liegt im Projekt unter <b>werkstatt/</b>. <b>Version 0.7.1.2:</b> Umbenennung in den Kombos: Das Wasser-Ultimate heißt jetzt <b>Prisma</b> (vorher Regenbogenschild), die beiden Spiegel-Kombos heißen <b>Feuerspiegel</b> und <b>Erdspiegel</b>. <b>Version 0.7.1.1:</b> In der Kombo-Übersicht ist die Schrift größer und füllt das Fenster; die Farbgruppen (Feuer, Wasser, Erde) sind getönt und durch Abstand getrennt. <b>Version 0.7.0.3:</b> Die Kombo-Übersicht nutzt die volle Höhe ihres Fensters. <b>Version 0.7.0.2:</b> In der Kombo-Übersicht entfallen die Farbüberschriften und der Zusatz „(Ultimate)“; die Reihenfolge nach Farbe bleibt. <b>Version 0.7.0.1:</b> Die <b>Kombo-Übersicht</b> ordnet alle Kombos nach Farbe der ersten Karte; die Ultimate steht unter ihrer Farbe (Feuer <b>Todesfluss</b>, Wasser Regenbogenschild, Erde Heilfluss) und alles ist ohne Scrollen sichtbar. Der Todes-Fluch heißt jetzt Todesfluss. <b>Version 0.7:</b> <b>Ultimates nach Farbe der ersten Karte:</b> Feuer wirkt wie bisher als Todesfluss, Erde legt einen <b>Heilfluss</b> (grüne Marker mit Plus heilen dich am Ende jeder deiner Angriffsphasen), Wasser einen <b>Regenbogenschild</b> (wirkt gegen jede Farbe wie ein Spiegel, verbraucht sich aber nicht). Alle drei Marker entfernt nur die Läuterung. <b>Gold opfern</b> geht ohne Obergrenze. <b>Karten</b> lassen sich unabhängig von der entwickelten Magie kaufen. Die <b>Strafe des roten Nachziehmarkers</b> (Mana und Gold) wächst mit dem Abschnitt (1/2/3); vor dem Nachziehen warnt eine Abfrage. Der Hinweistext zur Schildwirkung entfällt.</p><div class="menulist">' + back + '</div>';
+    h += '<p class="note intro" style="margin-top:-2px"><b>Danke, dass du Magus testest!</b> <b>Neu in Version ' + MAGUS_VERSION + ':</b> <b>Hellsicht neu:</b> Du ziehst drei Karten und wählst S davon aus; sie liegen offen vor dir, sind wie Handkarten ohne Manakosten nutzbar und werden danach abgelegt. Die übrigen kommen auf den Ablagestapel. <b>Version 0.8.0.8:</b> <b>Falle schwächer:</b> Sie wirft jetzt 1/2/3 statt 2/4/6 unblockbaren Schaden zurück. <b>Version 0.8.0.7:</b> <b>Fallenkarte schlichter:</b> Ohne blauen Rahmen, mit Stufenzähler; für den Gegner umgedreht. <b>Version 0.8.0.6:</b> <b>Mischen bei Falle und Hellsicht:</b> Reicht der Zugstapel nicht, wird der Ablagestapel gemischt und weitergezogen (Test ergänzt). <b>Version 0.8.0.5:</b> <b>Falle in der Mitte:</b> Die Falle zieht drei Karten vom Stapel (ohne die Hand zu ersetzen) und zeigt sie im Vordergrund; die nicht gewählten gehen auf den Ablagestapel. <b>Version 0.8.0.4:</b> <b>Hellsicht-Auswahl ruhiger:</b> Beim Wählen färben sich nur die Knöpfe ein, die Karten blenden nicht mehr neu ein. <b>Version 0.8.0.3:</b> <b>Hellsicht im Vordergrund:</b> Die gezogenen Karten liegen groß über dem Kampffeld, unter jeder stehen die drei Möglichkeiten. <b>Version 0.8.0.2:</b> <b>Hellsicht:</b> Blau + Rot zieht so viele Karten wie die Kombostufe; für jede entscheidest du, ob sie auf die Hand kommt (sofern Platz ist), auf den Ablagestapel oder zurück zum Händler. <b>Version 0.8.0.1:</b> <b>Falle statt Zerrüttung:</b> Auch Rot + Blau legt jetzt die Falle; die Zerrüttung entfällt. <b>Version 0.8:</b> <b>Blaue Kombos überarbeitet:</b> Blau + Rot legt eine <b>Falle</b> (drei Karten ziehen, eine verdeckt vor dich legen; bei Schaden aufgedeckt: passt die Farbe, werden 2/4/6 unblockbar vor der Verteidigung zurückgeworfen). Blau + Grün ist ein <b>Schild</b> (mindert nicht geblockten Schaden um 1/2/3 Ladungen). Blau + Rot + Grün ist der <b>Manafluss</b> (1/2/3 Mana am Ende deines Angriffszugs, mit neuer Animation). <b>Version 0.7.7.8:</b> <b>KI opfert nur mit Ergebnis:</b> Der Computergegner opfert im Tempel nur noch Gold, wenn die Punkte für eine Magiestufe wirklich herauskommen. Das galt für sein Überschussgold schon (alle 504 Opfer in 200 Partien endeten direkt in einem Magiekauf); jetzt gilt es auch in der Eröffnung. <b>Version 0.7.7.7:</b> <b>KI-Tempelopfer geprüft:</b> Die KI kann ihr Überschussgold jetzt auch gesammelt für mehrere Magiestufen auf einmal opfern (ein großes Opfer ergibt mehr Punkte als mehrere kleine). Die Messung zeigt, dass das Warten schlechter abschneidet als das sofortige Opfern; der Standard bleibt deshalb unverändert. <b>Version 0.7.7.6:</b> <b>KI nachtrainiert:</b> Der Computergegner opfert überschüssiges Gold jetzt sofort für Magie (Standard 1 statt 6) und baut seine HP etwas höher aus (7 statt 6). Gegen den Pool aus früh angreifenden Gegnern gewinnt er damit deutlich häufiger. <b>Version 0.7.7.5:</b> <b>KI setzt Überschussgold ein:</b> Kann der Computergegner nichts mehr für Gold verbessern, opfert er sein Gold im Tempel für die nächste Magiestufe. Vorher blieb seine Magie auf Stufe 1, und er sammelte über 100 Gold an. <b>Version 0.7.7.4:</b> Versionsnummer im Hauptmenü korrigiert. <b>Version 0.7.7.3:</b> <b>Vorzeitiges Spielende korrigiert:</b> Das Spiel endet nach einem Showdown, wenn ein Spieler mindestens <b>4 Siegpunkte Vorsprung</b> hat (4 : 0, 5 : 1). Bei 4 : 1 geht es weiter. <b>Version 0.7.7.2:</b> Die <b>Kampfrunden</b> sind nicht mehr begrenzt. Stattdessen gibt es die <b>Erschöpfung</b>: Nach je 10 Kampfrunden steigt sie um 1, und beide Seiten verlieren am Ende ihres Angriffszugs entsprechend viele HP (Runde 11–20: 1 HP, Runde 21–30: 2 HP …). <b>Version 0.7.6.8:</b> Die Farben des <b>Multischilds</b> sind kräftiger (Rot, Gelb, Grün, Blau, Violett). <b>Version 0.7.6.7:</b> Lösen <b>zwei Schilde</b> gleichzeitig aus (Farbspiegel und Multispiegel), laufen beide Schild-Effekte nebeneinander ab statt nur einer. <b>Version 0.7.6.6:</b> <b>Vorzeitiges Spielende:</b> Wer nach einem Showdown mit 4 oder mehr Siegpunkten führt, gewinnt das Spiel sofort; bei Gleichstand geht es weiter. <b>Version 0.7.6.5:</b> Die <b>Kampfrunden</b> werden gezählt (im Kampffenster: „Runde 3 von 10“) und sind auf 10 begrenzt. Eine Runde ist ein Angriffszug jeder Seite. Ist nach der 10. Runde keiner auf 0 HP gefallen, endet der Kampf unentschieden (Monster behält seine Verletzungen, im Showdown gibt es keine Siegpunkte). Die KI greift dafür früher an. <b>Version 0.7.6.4:</b> Das <b>Opfern von Gold im Tempel</b> ist kein Zug mehr: Du bleibst am Zug, kannst mehrmals opfern und danach in derselben Runde Magie kaufen; der Nachziehmarker bleibt dabei unverändert. Unter der Magiegrafik steht jetzt, was die <b>nächste Magiestufe</b> kostet. Die KI opfert und kauft entsprechend im selben Zug. <b>Version 0.7.6.3:</b> Das <b>Abwerfen nach einer Zerrüttung</b> ist kein Zug: Es zählt nicht für den Zugzähler und lässt den Nachziehmarker unverändert. <b>Version 0.7.6.2:</b> Die <b>Heilung</b> wirkt nach dem Schaden nur noch, wenn der Verteidiger ihn überlebt: Fällt er durch den Schaden auf 0 HP, ist er besiegt und die Heilung verfällt. <b>Version 0.7.6.1:</b> Die <b>Läuterung</b> lässt sich jetzt auch in der Verteidigung wählen: Eigene Nachziehtokens und Schilde (und alle anderen Marker) sind anklickbar, und die Vorschau sagt, dass die Läuterung <i>vor</i> der Verteidigung wirkt. <b>Version 0.7.5.1:</b> Der <b>Computergegner</b> wurde an die neuen Regeln angepasst: Er opfert kein Gold mehr für Magie, bewertet Heilfluss und Multispiegel neu, entfernt mit der Läuterung gezielt eigene Todesmarker und gegnerische Heilmarker und wartet mit der Eröffnung auf den ersten besiegten Monsterkampf statt auf zufälliges Gold; Angriffs- und Schadensgewichte sind neu abgestimmt. Die Regeln bleiben gleich. <b>Version 0.7.3.3:</b> Der Siegpunktestand sitzt mittig im innersten Ring des Magie-Boards. <b>Version 0.7.3.2:</b> Versatz am Magie-Board korrigiert: Die Leucht- und Abdunkelmarken der Stufen sitzen jetzt genau auf den Edelsteinen der neuen Grafik. <b>Version 0.7.3.1:</b> Das Magie-Board (unten rechts) hat eine neue Grafik: der dreifache Ouroboros mit roten, grünen und blauen Edelsteinen. <b>Version 0.7.2.24:</b> Jeder Spieler beginnt mit 3 statt 2 Siegpunkten. <b>Version 0.7.2.23:</b> Schilde (Farbspiegel und Multispiegel), die in der Verteidigung gestellt werden, wirken erst nach ihr, wie die Heilung: nicht mehr gegen den laufenden Angriff, aber ab dem nächsten. <b>Version 0.7.2.22:</b> Die Versionsliste zeigt nur noch die Updates der aktuellen Hauptversion 0.7 (ältere Einträge entfallen). <b>Version 0.7.2.21:</b> Der Innenschatten des Multispiegels ist etwas weicher. <b>Version 0.7.2.20:</b> Der Innenschatten am Rand des Multispiegels ist kleiner und härter. <b>Version 0.7.2.19:</b> Die Teilung des Multispiegels hat keine Trennlinie, nur die schattierte rechte Hälfte. <b>Version 0.7.2.18:</b> Der Multispiegel ist mittig von oben nach unten geteilt, die rechte Hälfte ist schattiert (wie bei den anderen Schildern). <b>Version 0.7.2.17:</b> Der Multispiegel wirft vom Rand einen Schatten nach innen. <b>Version 0.7.2.16:</b> Der Schatten der Marker liegt noch dichter am Marker. <b>Version 0.7.2.15:</b> Der Multispiegel ist dunkler und passt zu den übrigen Schildern. <b>Version 0.7.2.14:</b> Die Markerreihe liegt so, dass weder markierte Handkarten noch Zähler verdeckt werden. <b>Version 0.7.2.12:</b> Todes- und Heilmarker erscheinen nur noch als ein Token mit Zähler (×N), statt mehrfach abgebildet zu werden; der Multispiegel hatte den Zähler schon. <b>Version 0.7.2.11:</b> Alle Marker (Todes-, Heil- und Schildmarker) liegen in einer lockeren Reihe mittig direkt vor den Handkarten ihres Spielers und verdecken keine Anzeigen. <b>Version 0.7.2.10:</b> Der Schatten der Marker ist näher und härter; Schildmarker sind jetzt ebenfalls Pappmarker. <b>Version 0.7.2.9:</b> Todes- und Heilmarker haben eine dezente Tiefe und wirken wie ausgestanzte Pappmarker. <b>Version 0.7.2.8:</b> Der <b>Heilfluss</b> wirkt wie der Todesfluss erst am Ende der <b>nächsten</b> eigenen Angriffsphase, nicht schon in der Phase, in der die Ultimate gelegt wurde. <b>Version 0.7.2.7:</b> Das <b>Multischild</b> heißt jetzt <b>Multispiegel</b>. <b>Version 0.7.2.6:</b> Todes- und Heilmarker liegen als Haufen mittig vor dem Stapel ihres Spielers, leicht verdreht und versetzt (Todesmarker vorn, Heilmarker in einer zweiten Reihe); der Heilmarker ist kleiner und dezenter. <b>Version 0.7.2.5:</b> Das Ritual von <b>Heilfluss</b> und <b>Multischild</b> erscheint jetzt bei jedem Wirken der Ultimate, auch wenn die Stufe nicht steigt (vorher nur bei steigender Stufe). <b>Version 0.7.2.4:</b> Das <b>Prisma</b> heißt jetzt <b>Multischild</b>. Sein Ritual beginnt mit einem Kreis, aus dem die Schildkuppel wächst; Kristall und Lichtstrahl entfallen. <b>Version 0.7.2.3:</b> Der <b>Heilfluss</b> hat jetzt auch am Ende der Angriffsphase einen Effekt: Aus jedem Heilmarker steigt eine grüne Wolke zur Lebensanzeige und heilt dort (wie die Wolke des Todesfluss). <b>Version 0.7.2.2:</b> Die Ultimates <b>Heilfluss</b> und <b>Prisma</b> haben jetzt ein eigenes Ritual auf dem Bildschirm (wie das Pentagramm des Todesfluss). Die <b>Stufen des Prisma verfallen</b> wie die eines Farbspiegels, verbraucht wird aber immer zuerst der Farbspiegel. <b>Version 0.7.2.1:</b> Keine Spieländerung: Die neue <b>Ultimate-Werkstatt</b> (Effektwerkstatt für die Kombos aus allen drei Elementen) zeigt Todesfluss, Prisma und Heilfluss als Ritual mit Markern und Wirkung; sie liegt im Projekt unter <b>werkstatt/</b>. <b>Version 0.7.1.2:</b> Umbenennung in den Kombos: Das Wasser-Ultimate heißt jetzt <b>Prisma</b> (vorher Regenbogenschild), die beiden Spiegel-Kombos heißen <b>Feuerspiegel</b> und <b>Erdspiegel</b>. <b>Version 0.7.1.1:</b> In der Kombo-Übersicht ist die Schrift größer und füllt das Fenster; die Farbgruppen (Feuer, Wasser, Erde) sind getönt und durch Abstand getrennt. <b>Version 0.7.0.3:</b> Die Kombo-Übersicht nutzt die volle Höhe ihres Fensters. <b>Version 0.7.0.2:</b> In der Kombo-Übersicht entfallen die Farbüberschriften und der Zusatz „(Ultimate)“; die Reihenfolge nach Farbe bleibt. <b>Version 0.7.0.1:</b> Die <b>Kombo-Übersicht</b> ordnet alle Kombos nach Farbe der ersten Karte; die Ultimate steht unter ihrer Farbe (Feuer <b>Todesfluss</b>, Wasser Regenbogenschild, Erde Heilfluss) und alles ist ohne Scrollen sichtbar. Der Todes-Fluch heißt jetzt Todesfluss. <b>Version 0.7:</b> <b>Ultimates nach Farbe der ersten Karte:</b> Feuer wirkt wie bisher als Todesfluss, Erde legt einen <b>Heilfluss</b> (grüne Marker mit Plus heilen dich am Ende jeder deiner Angriffsphasen), Wasser einen <b>Regenbogenschild</b> (wirkt gegen jede Farbe wie ein Spiegel, verbraucht sich aber nicht). Alle drei Marker entfernt nur die Läuterung. <b>Gold opfern</b> geht ohne Obergrenze. <b>Karten</b> lassen sich unabhängig von der entwickelten Magie kaufen. Die <b>Strafe des roten Nachziehmarkers</b> (Mana und Gold) wächst mit dem Abschnitt (1/2/3); vor dem Nachziehen warnt eine Abfrage. Der Hinweistext zur Schildwirkung entfällt.</p><div class="menulist">' + back + '</div>';
   } else if (pg === 'quit') {
     h += '<p class="note" style="text-align:center;font-size:19px">Danke fürs Spielen!<br>Ein Browser-Tab lässt sich vom Spiel aus nicht immer schließen. Schließe diesen Tab oder dieses Fenster einfach selbst.</p><div class="menulist">' + back + '</div>';
   }

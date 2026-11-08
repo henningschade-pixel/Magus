@@ -102,7 +102,7 @@ const PARAMS = {};
 function setParams(pid, obj) { if (obj) PARAMS[pid] = Object.assign({}, DEFAULTS, obj); else delete PARAMS[pid]; }
 function P(pid) { return PARAMS[pid] || DEFAULTS; }
 
-function handList(d) { const out = []; d.hand.forEach((card, slot) => { if (card) out.push(Object.assign({ slot, card }, M.parseCard(card.id))); }); return out; }
+function handList(d) { const out = []; d.hand.forEach((card, slot) => { if (card) out.push(Object.assign({ slot, card, free: !!card.free }, M.parseCard(card.id))); }); return out; }
 function subsets(arr, maxSize) {
   const res = [];
   const n = arr.length;

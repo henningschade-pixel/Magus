@@ -49,8 +49,19 @@ function newDeck(state, ids, slots) {
   fillHand(state, d);
   return d;
 }
+// Hellsichtkarten (seit 0.8.0.9) liegen offen vor dem Spieler: Sie hängen als zusätzliche Plätze hinten an der Hand (d.extra Stück), werden nicht nachgefüllt und kosten beim Ausspielen kein Mana (c.free).
+function baseLen(d) { return d.hand.length - (d.extra || 0); }
+function addSight(d, cards) { cards.forEach(c => { c.locked = false; c.free = true; d.hand.push(c); }); d.extra = (d.extra || 0) + cards.length; }
+function trimSight(d) {   // leere Hellsichtplätze hinten entfernen (nur ohne Markierungen aufrufen)
+  while ((d.extra || 0) > 0 && !d.hand[d.hand.length - 1]) { d.hand.pop(); d.extra--; }
+  for (let i = d.hand.length - 1; i >= baseLen(d); i--) if (!d.hand[i]) { d.hand.splice(i, 1); d.extra--; }
+}
+function dropSight(d) {   // übrige Hellsichtkarten auf den Ablagestapel (Kampfende)
+  for (let i = baseLen(d); i < d.hand.length; i++) if (d.hand[i]) { d.hand[i].free = false; d.discard.push(d.hand[i]); }
+  d.hand.length = baseLen(d); d.extra = 0;
+}
 function fillHand(state, d) {
-  for (let i = 0; i < d.hand.length; i++) {
+  for (let i = 0; i < baseLen(d); i++) {
     if (d.hand[i]) continue;
     if (!d.draw.length && d.discard.length) { d.draw = d.discard.splice(0); state.rng.shuffle(d.draw); }
     if (!d.draw.length) break;
@@ -61,7 +72,8 @@ function fillHand(state, d) {
 function dealFresh(state, d, slots) {
   const all = [...d.draw, ...d.hand.filter(Boolean), ...d.discard];
   all.forEach(c => { c.locked = false; });
-  d.draw = all; d.discard = []; d.hand = Array(slots).fill(null); d.marks = [];
+  all.forEach(c => { c.free = false; });
+  d.draw = all; d.discard = []; d.hand = Array(slots).fill(null); d.extra = 0; d.marks = [];
   state.rng.shuffle(d.draw);
   fillHand(state, d);
 }
@@ -70,14 +82,14 @@ function dealFresh(state, d, slots) {
 function drawPhase(state, d) {
   d.marks = [];
   const old = [];   // Fluchkarten, die schon vor dem Nachziehen auf der Hand lagen: sie werden dauerhaft verworfen
-  for (let i = 0; i < d.hand.length; i++) {
+  for (let i = 0; i < baseLen(d); i++) {
     const c = d.hand[i];
     if (!c) continue;
     if (parseCard(c.id).curse) { c.locked = false; old.push(c); d.hand[i] = null; }
     else if (!c.locked) { d.discard.push(c); d.hand[i] = null; }
   }
   // Fluchkarten liegen zunächst auf dem Ablagestapel der Gegenseite. Sie kommen erst auf die Hand, wenn der Zugstapel leer ist und der Ablagestapel in den Zugstapel gemischt wird (fillHand).
-  const replaced = d.hand.some(c => !c);
+  const replaced = d.hand.slice(0, baseLen(d)).some(c => !c);
   if (replaced) fillHand(state, d);   // frisch gezogene Fluchkarten bleiben auf der Hand und belegen einen Platz
   // die alten Fluchkarten sind damit endgültig aus dem Spiel (nicht auf dem Ablagestapel)
   return replaced || old.length > 0;
@@ -93,11 +105,11 @@ function removeFromHand(d, idx) { const c = d.hand[idx]; d.hand[idx] = null; d.m
 
 /* ---------- Auswahl (markierte Handkarten) ---------- */
 function selection(d) {
-  return d.marks.filter(i => d.hand[i]).map(i => Object.assign({ slot: i, card: d.hand[i] }, parseCard(d.hand[i].id)));
+  return d.marks.filter(i => d.hand[i]).map(i => Object.assign({ slot: i, card: d.hand[i], free: !!d.hand[i].free }, parseCard(d.hand[i].id)));
 }
 function consumeSelection(d, sel) {
-  sel.forEach(s => { const c = d.hand[s.slot]; if (c) c.locked = false; d.discard.push(c); d.hand[s.slot] = null; });   // eine gespielte Karte verliert ihre Sperre
-  d.marks = [];
+  sel.forEach(s => { const c = d.hand[s.slot]; if (c) { c.locked = false; c.free = false; } d.discard.push(c); d.hand[s.slot] = null; });   // eine gespielte Karte verliert ihre Sperre (und die Gratis-Markierung der Hellsicht)
+  d.marks = []; trimSight(d);
 }
 // Markieren ist durch das Ausspiellimit begrenzt (bei Limit 1 ersetzt die neue Markierung die alte).
 function toggleMark(d, slot, limit) {

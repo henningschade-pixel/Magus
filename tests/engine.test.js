@@ -355,7 +355,7 @@ test('Falle legen: Rot + Blau zieht drei Karten vom Stapel (nicht in die Hand), 
 });
 
 test('Falle und Hellsicht: Reicht der Zugstapel nicht, wird der Ablagestapel gemischt und weitergezogen', () => {
-  for (const [hand, kind, n] of [[['F2', 'W2'], 'trap', 3], [['W2', 'F2'], 'sight', 2]]) {
+  for (const [hand, kind, n] of [[['F2', 'W2'], 'trap', 3], [['W2', 'F2'], 'sight', 3]]) {
     const { s, me, c } = combatSetup(11, hand);
     me.deck.draw = [{ id: 'E1', uid: 1 }]; me.deck.discard = ['F1', 'W1', 'E2', 'F2'].map((id, i) => ({ id, uid: 10 + i }));
     hand.forEach((_, i) => M.apply(s, { pid: 0, type: 'mark', slot: i }));
@@ -372,37 +372,52 @@ test('Falle und Hellsicht: Reicht der Zugstapel nicht, wird der Ablagestapel gem
   assert.equal(c.forced.cards.length, 3, 'E1 plus die zwei gespielten Karten');
 });
 
-test('Hellsicht (Blau + Rot): zieht S Karten, je Karte Hand, Ablage oder zurück zum Händler', () => {
+test('Hellsicht (Blau + Rot): zieht 3 Karten, S davon liegen offen vor dir, der Rest wird abgelegt', () => {
   const { s, me, c } = combatSetup(11, ['W2', 'F2']);
   me.deck.draw = ['E1', 'F1', 'W1', 'E2'].map((id, i) => ({ id, uid: 7000 + i }));   // zuletzt gezogen wird E2
-  const supplyBefore = s.supply ? s.supply.E2 : null, discBefore = me.deck.discard.length;
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
   assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
-  assert.ok(c.forced && c.forced.kind === 'sight' && c.forced.cards.length === 2, 'Stufe 2 zieht 2 Karten');
-  assert.deepEqual(c.forced.cards.map(x => x.id), ['E2', 'W1']);
-  assert.equal(M.apply(s, { pid: 0, type: 'fd', pick: ['t'] }).ok, false, 'je Karte eine Entscheidung');
+  assert.ok(c.forced && c.forced.kind === 'sight' && c.forced.cards.length === 3 && c.forced.n === 2, 'Stufe 2: 3 Karten, 2 wählen');
+  assert.deepEqual(c.forced.cards.map(x => x.id), ['E2', 'W1', 'F1']);
+  assert.equal(M.apply(s, { pid: 0, type: 'fd', pick: ['k', 'a', 'a'] }).ok, false, 'genau n Karten offen');
+  assert.equal(M.apply(s, { pid: 0, type: 'fd', pick: ['k', 'k', 'k'] }).ok, false, 'nicht mehr als n');
   assert.equal(M.apply(s, { pid: 0, type: 'attack' }).ok, false, 'vorher keine andere Aktion');
-  const handBefore = me.deck.hand.filter(Boolean).length;
-  assert.ok(M.apply(s, { pid: 0, type: 'fd', pick: ['d', 't'] }).ok);
+  const bl = M.baseLen(me.deck), disc0 = me.deck.discard.length;
+  assert.ok(M.apply(s, { pid: 0, type: 'fd', pick: ['k', 'a', 'k'] }).ok);
   assert.equal(c.forced, null);
-  assert.equal(me.deck.hand.filter(Boolean).length, handBefore + 1, 'W1 liegt auf der Hand');
-  if (s.supply) assert.equal(s.supply.E2, supplyBefore + 1, 'E2 ging zurück in den Vorrat');
-  assert.ok(!me.deck.discard.some(x => x.uid === 7003) && !me.deck.draw.some(x => x.uid === 7003), 'E2 ist aus dem Deck');
+  assert.equal(me.deck.extra, 2); assert.equal(me.deck.hand.length, bl + 2, 'offene Karten hängen hinten an, keine Handplätze belegt');
+  assert.deepEqual(me.deck.hand.slice(bl).map(x => [x.id, x.free]), [['E2', true], ['F1', true]]);
+  assert.equal(me.deck.discard.length, disc0 + 1); assert.equal(me.deck.discard[disc0].id, 'W1', 'abgelegte Karte');
 });
-test('Hellsicht: Auf die Hand nur mit freiem Platz; Ablage legt die Karte auf den Ablagestapel', () => {
+test('Hellsicht: offene Karten kosten kein Mana und werden nach dem Ausspielen abgelegt; Rest verfällt am Kampfende', () => {
+  const { s, me, c } = combatSetup(11, ['W2', 'F2']);
+  me.deck.draw = ['E1', 'F1', 'W1', 'E2'].map((id, i) => ({ id, uid: 7000 + i }));
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
+  M.apply(s, { pid: 0, type: 'attack' }); M.apply(s, { pid: 0, type: 'fd', pick: ['k', 'a', 'k'] });
+  const bl = M.baseLen(me.deck), ex = me.deck.hand[bl];
+  const free = M.evalAttack(me.stats, [M.parseCard(ex.id)].map(x => Object.assign({}, x, { free: true })));
+  const paid = M.evalAttack(me.stats, [M.parseCard(ex.id)]);
+  assert.ok(free.valid && paid.valid);
+  assert.equal(free.cost, paid.cost - 1, 'offene Karte kostet 0 statt 1 Mana');
+  M.dropSight(me.deck);
+  assert.equal(me.deck.extra, 0); assert.equal(me.deck.hand.length, bl); assert.equal(me.deck.discard.length, 2 + 1 + 2, 'Kombokarten, abgelegte und beide offenen Karten im Ablagestapel');
+});
+test('Hellsicht: Sind höchstens S Karten brauchbar, entfällt die Wahl; Flüche bleiben nie offen', () => {
   const { s, me, c } = combatSetup(11, ['W3', 'F3']);
   me.deck.draw = ['E1', 'F1', 'W1'].map((id, i) => ({ id, uid: 7100 + i }));
-  me.deck.hand.forEach((x, i) => { if (!x) me.deck.hand[i] = { id: 'E1', uid: 7200 + i }; });   // Hand voll, sobald die beiden Kombokarten verbraucht sind
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
   assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
-  assert.equal(c.forced.cards.length, 3);
-  const free = me.deck.hand.filter(x => !x).length;
-  assert.ok(free < 3, 'nicht genug Platz');
-  assert.equal(M.apply(s, { pid: 0, type: 'fd', pick: ['t', 't', 't'] }).ok, false, 'zu viele Karten auf die Hand');
-  const pick = ['a', 'a', 'a'], n0 = me.deck.discard.length;
-  assert.ok(M.apply(s, { pid: 0, type: 'fd', pick }).ok);
-  assert.equal(me.deck.discard.length, n0 + 3);
+  assert.ok(!c.forced, 'Stufe 3 bei 3 Karten: keine Wahl');
+  assert.equal(me.deck.extra, 3);
+  const u = combatSetup(11, ['W2', 'F2']);
+  u.me.deck.draw = [{ id: 'E1', uid: 1 }, { id: 'F1', uid: 2 }, { id: 'W1', uid: 3 }];
+  u.me.deck.draw.push({ id: 'E2', uid: 4 });
+  M.apply(u.s, { pid: 0, type: 'mark', slot: 0 }); M.apply(u.s, { pid: 0, type: 'mark', slot: 1 });
+  M.apply(u.s, { pid: 0, type: 'attack' });
+  assert.equal(u.c.forced.n, 2);
+  assert.equal(M.apply(u.s, { pid: 0, type: 'fd', pick: ['k', 'k'] }).ok, false, 'je Karte eine Entscheidung');
 });
+
 
 test('Nachziehmarker Weltphase: Nachziehen bei rotem Marker gibt dem Gegner 1 Gold, jede andere Aktion stellt auf grün zurück', () => {
   const s = M.newGame({ seed: 5, ai: [false, false], first: 0 }), g1 = () => s.players[1].stats.gold;

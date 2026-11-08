@@ -7,12 +7,12 @@ function ultiText(el, lv) {
   return 'Todesfluss (Feuer): Der Gegner bekommt ' + lv + ' Todesmarker und verliert ' + lv + ' HP am Ende jeder seiner Angriffsphasen bis Kampfende.';
 }
 // Kurzfassungen für die Kombo-Übersicht (die ausführliche Wirkung steht im Tooltip)
-const ORD_SHORT = { hs: 'Zieht S Karten: je Karte Hand, Ablage oder zurück zum Händler', ra: '2·S Flüche auf den Ablagestapel des Gegners', wt: 'Zieht 3 Karten vom Stapel, eine davon verdeckt als Falle (Rest auf den Ablagestapel): wirft S (1/2/3) unblockbaren Schaden zurück', ws: 'Schild mit S Ladungen: mindert nicht geblockten Schaden', gh: 'Heilt S HP', gr: 'Entfernt S Marker, je Marker 1 Nachziehtoken' };
+const ORD_SHORT = { hs: 'Zieht 3 Karten: S davon liegen offen vor dir und sind ohne Manakosten nutzbar (danach abgelegt), der Rest wird abgelegt', ra: '2·S Flüche auf den Ablagestapel des Gegners', wt: 'Zieht 3 Karten vom Stapel, eine davon verdeckt als Falle (Rest auf den Ablagestapel): wirft S (1/2/3) unblockbaren Schaden zurück', ws: 'Schild mit S Ladungen: mindert nicht geblockten Schaden', gh: 'Heilt S HP', gr: 'Entfernt S Marker, je Marker 1 Nachziehtoken' };
 const ULTI_SHORT = { F: 'Gegner verliert S HP am Ende jeder seiner Angriffsphasen', E: 'Du heilst S HP am Ende jeder deiner Angriffsphasen', W: 'Du regenerierst S Mana am Ende jeder deiner Angriffsphasen' };
 function ordText(k, lv, short) {
   if (k === 'ra' && lv === 'S') return 'Lege 2·S Fluchkarten (2/4/6) auf den Ablagestapel der Gegenseite; sie kommen beim nächsten Nachziehen des Gegners zuerst auf seine Hand und werden beim darauffolgenden Nachziehen dauerhaft vernichtet';
   if (k === 'ra') return short ? 2 * lv + ' Flüche auf den Ablagestapel der Gegenseite' : 'Lege ' + 2 * lv + ' Flüche auf den Ablagestapel der Gegenseite; sie kommen beim nächsten Nachziehen des Gegners zuerst auf seine Hand und werden beim darauffolgenden Nachziehen dauerhaft vernichtet';
-  if (k === 'hs') return 'Ziehe ' + (lv === 'S' ? 'S' : lv) + ' Karte' + (lv === 1 ? '' : 'n') + ' vom Zugstapel und entscheide für jede einzeln: auf die Hand nehmen (sofern Platz ist), auf den Ablagestapel legen oder abwerfen (zurück zum Händler, dauerhaft aus deinem Deck)';
+  if (k === 'hs') return 'Ziehe drei Karten vom Stapel und wähle ' + (lv === 'S' ? 'S (1/2/3)' : lv) + ' davon aus: Sie liegen offen vor dir (zusätzliche Kartenplätze) und können ohne Manakosten wie normale Handkarten genutzt werden; danach werden sie abgelegt. Die übrigen kommen sofort auf den Ablagestapel. Am Ende des Kampfes verfallen nicht genutzte offene Karten (Ablage)'
   if (k === 'wt') return 'Ziehe drei Karten vom Stapel (sie ersetzen keine Handkarten), lege eine davon verdeckt vor dich; die übrigen kommen auf den Ablagestapel. Sie wird aufgedeckt, sobald Schaden eingeht: Entspricht die Farbe des Schadens ihrer Farbe, wirft sie ' + (lv === 'S' ? 'S (1/2/3)' : lv) + ' unblockbaren Schaden auf den Angreifer zurück, vor der Verteidigung (der eingehende Schaden sinkt entsprechend, höchstens um den ganzen Schaden). Danach wird die Karte abgelegt, auch ohne Rückwurf. Sie ist kein Marker';
   if (k === 'ws') return 'Dein Schild hat danach ' + (lv === 'S' ? 'S' : lv) + ' Ladung' + (lv === 1 ? '' : 'en') + ' (nicht addiert, höchstens 3). Es mindert eingehenden, nicht geblockten Schaden gegen jede Farbe, je Schaden eine Ladung';
   if (k === 'gh') return 'Heile um ' + lv + ' HP';
@@ -80,9 +80,9 @@ function combatCenter(cx) {
     return '<div class="panel" style="' + box(LAYOUT.combat, 'padding:10px 14px') + '">' + h + '</div>';
   }
   if (c.forced && c.forced.kind === 'sight') {   // Hellsicht: je gezogener Karte Hand, Ablage oder Händler wählen (ich) bzw. warten (Gegner)
-    const vs = c.sides.a.ctrl === c.forced.pid ? c.sides.a : c.sides.b, cards = c.forced.cards, free = vs.deck.hand.filter(x => !x).length;
-    if (c.forced.pid === ME) h += '<div class="preview"><b>Hellsicht:</b> Entscheide für jede gezogene Karte (die Karten liegen im Vordergrund).</div>';
-    else h += '<div class="preview"><b>Hellsicht:</b> ' + esc(vs.name) + ' entscheidet über ' + cards.length + ' gezogene Karte' + (cards.length === 1 ? '' : 'n') + ' …</div>';
+    const vs = c.sides.a.ctrl === c.forced.pid ? c.sides.a : c.sides.b, cards = c.forced.cards;
+    if (c.forced.pid === ME) h += '<div class="preview"><b>Hellsicht:</b> Wähle ' + c.forced.n + ' Karte' + (c.forced.n === 1 ? '' : 'n') + ', die du offen vor dich legst (die Karten liegen im Vordergrund).</div>';
+    else h += '<div class="preview"><b>Hellsicht:</b> ' + esc(vs.name) + ' wählt ' + c.forced.n + ' von ' + cards.length + ' gezogenen Karten …</div>';
     h += '</div>';
     return '<div class="panel" style="' + box(LAYOUT.combat, 'padding:10px 14px') + '">' + h + '</div>';
   }
@@ -164,13 +164,13 @@ function sightOverlayHTML() {
     c.forced.cards.forEach((cd, i) => { const cu = M.parseCard(cd.id).curse; t += '<div class="sightbig" style="animation-delay:' + i * 0.12 + 's"><img src="' + (IMG[cd.id] || IMG.back) + '"><button class="btn primary" data-act="trapok" data-i="' + i + '"' + (cu ? ' disabled' : '') + '>Als Falle legen</button></div>'; });
     return t + '</div>';
   }
-  const vs = c.sides.a.ctrl === ME ? c.sides.a : c.sides.b, cards = c.forced.cards, free = vs.deck.hand.filter(x => !x).length;
-  if (sightSel.length !== cards.length) sightSel = cards.map(() => '');
-  const taken = sightSel.filter(k => k === 't').length, done = sightSel.every(k => k);
-  let h = '<div class="sighttitle">Hellsicht</div><div class="sightsub">Freie Handplätze: ' + Math.max(0, free - taken) + '</div><div class="sightfront">';
+  const cards = c.forced.cards, n = c.forced.n;
+  if (sightSel.length !== cards.length) sightSel = cards.map(() => 'a');
+  const kept = sightSel.filter(k => k === 'k').length;
+  let h = '<div class="sighttitle">Hellsicht</div><div class="sightsub">Wähle ' + n + ' Karte' + (n === 1 ? '' : 'n') + ' zum offenen Ausspielen (gewählt: ' + kept + '/' + n + ')</div><div class="sightfront">';
   cards.forEach((cd, i) => {
-    const full = free - taken <= 0 && sightSel[i] !== 't', btn = (k, t, tip) => '<button class="btn' + (sightSel[i] === k ? ' primary' : '') + '" title="' + tip + '" data-act="sight" data-i="' + i + '" data-v="' + k + '"' + (k === 't' && full ? ' disabled' : '') + '>' + t + '</button>';
-    h += '<div class="sightbig" style="animation-delay:' + i * 0.12 + 's"><img src="' + (IMG[cd.id] || IMG.back) + '">' + btn('t', 'Auf die Hand', 'Die Karte kommt auf einen freien Handplatz') + btn('a', 'Ablegen', 'Die Karte kommt auf den Ablagestapel') + btn('d', 'Abwerfen', 'Zurück zum Händler: die Karte verlässt dein Deck') + '</div>';
+    const cu = M.parseCard(cd.id).curse, full = kept >= n && sightSel[i] !== 'k', btn = (k, t, tip, dis) => '<button class="btn' + (sightSel[i] === k ? ' primary' : '') + '" title="' + tip + '" data-act="sight" data-i="' + i + '" data-v="' + k + '"' + (dis ? ' disabled' : '') + '>' + t + '</button>';
+    h += '<div class="sightbig" style="animation-delay:' + i * 0.12 + 's"><img src="' + (IMG[cd.id] || IMG.back) + '">' + btn('k', 'Offen vor mich legen', 'Die Karte liegt offen vor dir, ohne Manakosten nutzbar', cu || full) + btn('a', 'Ablegen', 'Die Karte kommt auf den Ablagestapel', false) + '</div>';
   });
-  return h + '</div><button class="btn primary sightok" data-act="sightok" ' + (done ? '' : 'disabled') + '>Bestätigen</button>';
+  return h + '</div><button class="btn primary sightok" data-act="sightok" ' + (kept === n ? '' : 'disabled') + '>Bestätigen</button>';
 }
