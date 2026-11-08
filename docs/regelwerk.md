@@ -686,6 +686,14 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Tests:** Drei Tests angepasst (Nachziehmarker Weltphase, Nachziehlimit Kauf, Nachziehlimit Weltphase; der Marker-Reset läuft jetzt über den Händler), neuer Test „Magie kaufen und Upgrades sind keine Aktion mehr“. `tests/golden.json` ist neu erzeugt (absichtliche Regeländerung).
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
 
+## Änderung 0.9.6.1 (08.11.)
+
+- **Erschöpfung deutlicher dargestellt (keine Regeländerung):** Geprüft wurde zuerst die Engine: Nach `exhaustRounds` Kampfrunden (Standard 10) verlieren beide Seiten am Ende ihres Angriffszugs je Stufe 1 HP (Stufe 1 ab Angriffszug 21, Stufe 2 ab Angriffszug 41 …). Das gilt im Pfad Angriff mit Schaden und Verteidigung ebenso wie beim Passen, Erholen und Nachziehen; eine Simulation über 30 Angriffszüge bestätigt die Abzüge. Der Abzug war nur kaum sichtbar (eine Zeile im Kampflog, die HP sprangen).
+- **Hintergrund:** Ab Runde `exhaustRounds + 1` dunkelt der Hintergrund ab (`stage.dataset.exh` = 1 bis 3, `#stage[data-exh]` in `src/style.css`, weiche Überblendung); je Stufe stärker und röter. Beim Eintritt und bei jedem Anstieg erscheint kurz der Schriftzug „Erschöpfung setzt ein“ bzw. „Erschöpfung N“ (`exhaustBanner` in `src/ui/26a-darstellung.js`, Sound `ruin`).
+- **HP-Abzug animiert:** `showFx` erkennt die Logzeile „Erschöpfung N: … verliert X HP“ und startet `FlowFx.exhaust` (`src/ui/22-lifeflow-aggro.js`): kurzes rotes Abdunkeln des Bildes, Schwaden von der Rundenanzeige zur Lebensanzeige der betroffenen Seite, Einschlag mit Ring und Zahl „−X HP“. Die HP zeigen bis zum Einschlag den alten Stand (`holdHp`). Folgt auf einen Todesfluss derselben Seite, läuft die Erschöpfung erst nach ihm ab (`tickEnd`). Ohne Animationen (Schnellmodus, reduzierte Bewegung) bleibt es bei der Textzeile.
+- **Tests:** neuer Browser-Test in `tests/ui.test.js`; Engine, KI und `tests/golden.json` sind unverändert.
+- Die Versionsbeschreibung im Spiel nennt die Änderung.
+
 ## Änderung 0.9.6 (08.11.)
 
 - **Echo bei jeder Nutzung von Primärmagie (Regeländerung):** Jede Nutzung hinterlässt ein Echo der Primärmagie, also auch Angriffe und Verteidigungen ohne Kombo. Das Echo hat die Farbe der ersten (farbigen) Karte und ersetzt das bisherige Echo der Seite. Passen, Erholen und Züge nur mit Fluchkarten lassen es unverändert. Der **Effekt auf die Kombos bleibt gleich** und läuft weiter über die Sekundärkarte: Enthält ein Kombo eine Sekundärkarte in der Farbe des Echos, steigt seine Stufe um 1 (höchstens 3); die Primärfarbe eines Kombos zählt dafür nicht. Beispiel: Ein einfacher Wasserangriff hinterlässt ein Wasser-Echo; ein folgender Kombo Feuer + Wasser (Falle) wirkt dann als Stufe 2 statt 1 und erneuert das Echo auf Feuer.

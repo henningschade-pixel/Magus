@@ -171,6 +171,40 @@ const FlowFx = (() => {
     });
   }
 
+  /* Erschöpfung zehrt (seit 0.9.6.1): Der Bildschirm dunkelt kurz rot ab, aus der Mitte (Rundenanzeige) ziehen dunkelrote Schwaden zur Lebensanzeige der betroffenen Seite und schlagen dort ein; am Einschlag steht der Abzug („−N HP“). Die HP zeigen bis zum Einschlag noch den alten Stand (holdHp in showFx). */
+  function exhaust(fx) {
+    if (off()) return;
+    const who = fx.who, total = Math.max(1, fx.n || 1), n = Math.max(1, Math.min(total, 4)), hp = hpOf(who), src = at(stage.querySelector('.combatcenter .note')) || { x: SW / 2, y: 300 }, C = '#e0605a', D = '#3a0a0a';
+    const life = .75, N = 30, dur = curseStart(n - 1) + CURSE_F + .85;
+    const puff = (ctx, x, y, r, a, col) => { if (a <= 0.01) return; const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, rgba(lighten(col, .25), a)); g.addColorStop(.45, rgba(col, a * .65)); g.addColorStop(1, rgba(D, 0)); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); };
+    run(dur, (ctx, t) => {
+      const vg = seg(t, 0, .2) * (1 - seg(t, .2, .9));   // kurzes Abdunkeln des ganzen Bildes, dunkelrot zu den Rändern
+      if (vg > 0) { const v = ctx.createRadialGradient(SW / 2, 400, 120, SW / 2, 400, SW * .62); v.addColorStop(0, 'rgba(40,0,0,0)'); v.addColorStop(1, 'rgba(40,0,0,' + (.5 * vg) + ')'); ctx.fillStyle = v; ctx.fillRect(0, 0, SW, 800); }
+      const g0 = seg(t, 0, .18) * (1 - seg(t, .18, .5));   // die Rundenanzeige glimmt auf, wenn die Schwaden aufsteigen
+      if (g0 > 0) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; puff(ctx, src.x, src.y, 50, g0 * .7, C); ctx.restore(); }
+      for (let i = 0; i < n; i++) {
+        const d = curseStart(i), rr = rng(53 + i * 31), cx = (src.x + hp.x) / 2 + (rr() - .5) * 120, cy = Math.min(src.y, hp.y) - 50 - rr() * 60;
+        const bez = q => { const e = eio(clamp(q)); return [(1 - e) * (1 - e) * src.x + 2 * (1 - e) * e * cx + e * e * hp.x, (1 - e) * (1 - e) * src.y + 2 * (1 - e) * e * cy + e * e * hp.y]; };
+        for (let k = 0; k < N; k++) {   // Schweif aus Schwaden entlang der Bahn
+          const r = rng(700 + i * 89 + k * 7), ts = d + k / N * CURSE_F * .95, age = (t - ts) / life; if (age <= 0 || age >= 1) continue;
+          const [bx, by] = bez((ts - d) / CURSE_F), x = bx + (r() - .5) * 24 + Math.sin(k * 1.9 + age * 5) * 6 * age, y = by + (r() - .5) * 16 - 24 * age;
+          const rad = (9 + 22 * Math.pow(age, .7)) * (.75 + .6 * r()), al = Math.pow(1 - age, 1.4) * .6 * seg(age, 0, .08);
+          puff(ctx, x, y, rad, al, k % 3 === 0 ? D : C);
+        }
+        const tau = (t - d) / CURSE_F;
+        if (tau > 0 && tau < 1) { const [hx, hy] = bez(tau); ctx.save(); ctx.globalCompositeOperation = 'lighter'; puff(ctx, hx, hy, 20, .85, C); orb(ctx, hx, hy, 5, C, '#ffd0c8'); ctx.restore(); }
+        const im = seg(t, d + CURSE_F, d + CURSE_F + .55);   // Einschlag an der Lebensanzeige
+        if (im > 0 && im < 1) {
+          ctx.save(); ctx.globalCompositeOperation = 'lighter';
+          puff(ctx, hp.x, hp.y, 20 + 44 * eo(im), (1 - im) * .85, C);
+          ctx.strokeStyle = rgba(lighten(C, .5), (1 - im) * .9); ctx.lineWidth = 4 * (1 - im) + 1; ctx.shadowColor = C; ctx.shadowBlur = 12; ctx.beginPath(); ctx.ellipse(hp.x, hp.y, 14 + im * 58, 8 + im * 22, 0, 0, 7); ctx.stroke(); ctx.restore();
+        }
+      }
+      const tl = curseStart(n - 1) + CURSE_F, tu = seg(t, tl, tl + .2) * (1 - seg(t, tl + .55, tl + .85));   // Abzug als Zahl über der Lebensanzeige
+      if (tu > 0) { ctx.save(); ctx.font = '700 26px Alegreya, serif'; ctx.textAlign = 'center'; ctx.fillStyle = rgba('#ff8a80', tu); ctx.shadowColor = '#7a0f0f'; ctx.shadowBlur = 10; ctx.fillText('−' + total + ' HP', hp.x, hp.y - 30 - 18 * seg(t, tl, tl + .85)); ctx.restore(); }
+    });
+  }
+
   /* Heilfluss heilt (seit 0.7.2.3): aus jedem Heilmarker steigt eine grüne Wolke mit Lichtpunkten und kleinen Pluszeichen auf, zieht in weichem Bogen zur Lebensanzeige und heilt dort (kein Text); wie beim Todesfluss zeigen die HP bis zum Einschlag noch den alten Stand */
   const healMs = n => curseMs(n);   // gleicher Zeitplan wie beim Todesfluss
   function heal(fx) {
@@ -207,6 +241,6 @@ const FlowFx = (() => {
     });
   }
   const attack = fx => KampfFx.attack(fx), defense = fx => KampfFx.defense(fx), resetEx = () => KampfFx.reset();
-  return { lifeflow, aggro, drain, ruin, curse, curseMs, heal, healMs, attack, defense, resetEx, wait: () => KampfFx.remaining(), busy: () => KampfFx.busy(), hp: pid => hpOf(pid) };
+  return { lifeflow, aggro, drain, ruin, curse, curseMs, exhaust, heal, healMs, attack, defense, resetEx, wait: () => KampfFx.remaining(), busy: () => KampfFx.busy(), hp: pid => hpOf(pid) };
 })();
 

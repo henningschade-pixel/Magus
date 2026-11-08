@@ -462,3 +462,31 @@ test('Endbildschirm: Sieg und Niederlage zeigen Rückblick, Klick überspringt, 
     assert.deepEqual(errs, []);
   } finally { await b.close(); }
 });
+
+test('Erschöpfung: Hintergrund dunkelt ab, Ankündigung erscheint, der HP-Abzug läuft als Animation und die HP zeigen bis zum Einschlag den alten Stand (0.9.6.1)', { skip: !chromium && 'Playwright nicht installiert', timeout: 90000 }, async () => {
+  const b = await chromium.launch({ executablePath: exe });
+  try {
+    const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
+    p.on('pageerror', e => errs.push(e.message));
+    await p.goto(url); await p.waitForTimeout(500);
+    await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
+    await p.evaluate(() => {
+      const G = window.__magus.state, M = window.Magus; G.rules.exhaustRounds = 1;
+      M.apply(G, { pid: 0, type: 'combat', elem: 'F' });
+      const c = G.combat; c.sides.a.stats.hp = c.sides.a.stats.maxHp = 50; c.sides.b.stats.hp = c.sides.b.stats.maxHp = 50; window.__magus.pump();
+    });
+    const pass = () => p.evaluate(() => { const G = window.__magus.state, c = G.combat; window.Magus.apply(G, { pid: c.sides[c.turn].ctrl, type: 'pass' }); window.__magus.pump(); });
+    assert.equal(await p.evaluate(() => document.getElementById('stage').dataset.exh), '', 'Runde 1: kein Abdunkeln');
+    await pass(); await pass();   // Runde 2: Erschöpfung 1
+    await p.waitForTimeout(600);
+    assert.equal(await p.evaluate(() => document.getElementById('stage').dataset.exh), '1', 'Hintergrund dunkelt ab');
+    assert.equal(await p.locator('.exhbanner').count(), 1, 'Ankündigung erscheint');
+    await p.waitForSelector('.exhbanner', { state: 'detached', timeout: 6000 });
+    await pass();   // Ende meines Angriffszugs: Abzug
+    await p.waitForTimeout(400);
+    assert.ok(await p.locator('#stage canvas').count() > 0, 'Abzug als Animation');
+    assert.equal(await p.evaluate(() => document.querySelector('.sbody[data-lead] [data-pv="hp"]').textContent.trim()), '50/50', 'HP zeigen bis zum Einschlag den alten Stand');
+    await p.waitForFunction(() => document.querySelector('.sbody[data-lead] [data-pv="hp"]').textContent.trim() !== '50/50', null, { timeout: 8000 });
+    assert.deepEqual(errs, []);
+  } finally { await b.close(); }
+});
