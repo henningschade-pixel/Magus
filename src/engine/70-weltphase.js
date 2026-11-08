@@ -12,8 +12,8 @@ function deckAvg(p) {
 function sample(state, ev) {
   state.hist.push({ ev: ev || null, p: state.players.map(p => Object.assign(deckAvg(p), { sp: p.sp, up: p.stats.upGot, lvl: p.temple.level, F: p.stats.mag.F, E: p.stats.mag.E, W: p.stats.mag.W, slots: p.slots, limit: p.stats.limit, dl: p.stats.drawLimit, hp: p.stats.maxHp, mana: p.stats.maxMana })) });
 }
-// Zermürbung (seit 0.9.7): Die Weltphase hat denselben Rundenzähler wie der Kampf (eine Runde = ein Zug jedes Spielers; state.worldTurns zählt die Züge seit dem letzten Kampf und beginnt nach jedem Monsterkampf wieder bei 0). Ist der kritische Wert (exhaustRounds, 0 = aus) erreicht, also ab Runde exhaustRounds + 1, bekommt der Gegner am Ende jedes Zuges, in dem kein Monster angegriffen wurde, Gold in Höhe der Spielstufe (Abschnitt 1/2/3).
-function worldRound(state) { return Math.floor((state.worldTurns || 0) / 2) + 1; }
+// Zermürbung (seit 0.9.7): Die Weltphase hat denselben Rundenzähler wie der Kampf (eine Runde = ein Zug jedes Spielers). Seit 0.9.7.1 zählt ihn state.wearTurns: alle Züge der Weltphase, ein Monsterkampf setzt ihn NICHT zurück (nur ein Showdown, mit dem ein neuer Abschnitt beginnt); state.worldTurns (Züge seit dem letzten Kampf) dient weiter der Monstererholung und der KI. Ist der kritische Wert (exhaustRounds, 0 = aus) erreicht, also ab Runde exhaustRounds + 1, bekommt der Gegner am Ende jedes Zuges, in dem kein Monster angegriffen wurde, Gold in Höhe der Spielstufe (Abschnitt 1/2/3).
+function worldRound(state) { return Math.floor((state.wearTurns || 0) / 2) + 1; }
 function worldWear(state) { const ex = state.rules.exhaustRounds || 0; return ex > 0 && state.phase === 'world' && worldRound(state) > ex; }
 function worldWearGold(state) { return Math.max(1, Math.min(3, state.stage || 1)); }
 function endTurn(state, pid, kind) {
@@ -24,6 +24,7 @@ function endTurn(state, pid, kind) {
     log(state, 'Zermürbung (Runde ' + worldRound(state) + '): ' + state.players[pid].name + ' greift kein Monster an, ' + q.name + ' erhält ' + g + ' Gold.', nx);
   }
   regen(state.players[nx].stats, regenGain(state));
+  state.wearTurns = (state.wearTurns || 0) + 1;
   state.turn = nx; state.worldTurns++; state.idleTurns++;
   sample(state);
   if (state.worldTurns % 2 === 0) regenMonsters(state);   // Monster erholen sich am Ende jeder Runde (nach den Zügen beider Spieler)

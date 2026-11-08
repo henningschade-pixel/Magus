@@ -1060,7 +1060,7 @@ test('Kampfrunden: maxRounds 0 (Standard seit 0.7.7.2) schaltet die Begrenzung a
 
 test('Erschöpfung: nach je 10 Kampfrunden steigt sie um 1, beide Seiten verlieren am Ende ihres Angriffszugs entsprechend HP (0.7.7.2)', () => {
   const { s, c } = combatSetup(11, ['F1']);
-  assert.equal(s.rules.maxRounds, 0, 'kein Rundenlimit mehr'); assert.equal(s.rules.exhaustRounds, 8, 'Standard seit 0.9.7: 8'); s.rules.exhaustRounds = 10;   // dieser Test rechnet mit 10 Runden
+  assert.equal(s.rules.maxRounds, 0, 'kein Rundenlimit mehr'); assert.equal(s.rules.exhaustRounds, 10, 'Standard 10 (0.9.7.1)');
   c.sides.a.stats.hp = c.sides.a.stats.maxHp = 100; c.sides.b.stats.hp = c.sides.b.stats.maxHp = 100;
   const pass = () => assert.ok(M.apply(s, { pid: c.sides[c.turn].ctrl, type: 'pass' }).ok && true);
   for (let i = 0; i < 20; i++) pass();   // Runde 1–10
@@ -1180,7 +1180,7 @@ test('KI: Tempelopfer nur mit Ergebnis, jedes Opfer wird im selben Zug von einem
 });
 
 test('Spieleinstellungen: exhaustRounds und winLead aus den Regeln gelten (0.8.1)', () => {
-  assert.equal(M.DEFAULT_RULES.exhaustRounds, 8); assert.equal(M.DEFAULT_RULES.winLead, 4);
+  assert.equal(M.DEFAULT_RULES.exhaustRounds, 10); assert.equal(M.DEFAULT_RULES.winLead, 4);
   // Erschöpfung nach 3 statt 10 Runden: nach 6 Angriffszügen verlieren beide Seiten 1 HP
   const { s, c } = combatSetup(11, ['F1']);
   s.rules.exhaustRounds = 3; c.sides.a.stats.hp = c.sides.a.stats.maxHp = 100; c.sides.b.stats.hp = c.sides.b.stats.maxHp = 100;
@@ -1380,7 +1380,8 @@ test('Zermürbung: Rundenzähler der Weltphase, ab Runde exhaustRounds + 1 schen
   const before = gold(); const att = s.turn;
   assert.ok(M.apply(s, { pid: att, type: 'combat', elem: 'F' }).ok); assert.deepEqual(gold(), before, 'Angriff: kein Gold');
   let n = 0; while (s.combat && n < 400) { assert.ok(M.apply(s, { pid: s.combat.sides[s.combat.turn].ctrl, type: 'pass' }).ok); n++; }
-  assert.equal(M.worldRound(s), 1, 'Zähler nach dem Monsterkampf zurückgesetzt'); assert.equal(M.worldWear(s), false);
+  assert.equal(s.worldTurns, 0, 'worldTurns (Monstererholung, KI) wird weiter zurückgesetzt');
+  assert.equal(M.worldRound(s), 3, 'Zähler der Weltphase läuft nach dem Monsterkampf weiter (0.9.7.1)'); assert.equal(M.worldWear(s), true);
   // aus: exhaustRounds 0
   const t = M.newGame({ seed: 11, ai: [false, false], first: 0, rules: { exhaustRounds: 0 } });
   for (let i = 0; i < 30; i++) { const pid = t.turn; t.players[pid].drawRed = false; t.players[pid].drawN = 0; assert.ok(M.apply(t, { pid, type: 'draw' }).ok); }

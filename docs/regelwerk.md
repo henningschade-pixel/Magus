@@ -686,6 +686,13 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Tests:** Drei Tests angepasst (Nachziehmarker Weltphase, Nachziehlimit Kauf, Nachziehlimit Weltphase; der Marker-Reset läuft jetzt über den Händler), neuer Test „Magie kaufen und Upgrades sind keine Aktion mehr“. `tests/golden.json` ist neu erzeugt (absichtliche Regeländerung).
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
 
+## Änderung 0.9.7.1 (08.11.)
+
+- **Standard wieder 10 (Regeländerung):** `exhaustRounds` steht wieder auf 10 (in 0.9.7 kurz 8); das gilt für Erschöpfung und Zermürbung.
+- **Zähler der Weltphase läuft durch (Regeländerung):** Ein Monsterkampf setzt den Rundenzähler der Weltphase nicht mehr zurück. Er zählt jetzt alle Züge der Weltphase (`state.wearTurns`, in `endTurn`); Kampfzüge zählen nicht mit. Zurückgesetzt wird er nur nach einem Showdown (neuer Abschnitt). Ist der kritische Wert einmal erreicht, gilt die Zermürbung bis dahin auch nach jedem Monsterkampf weiter. `state.worldTurns` (Züge seit dem letzten Kampf) bleibt unverändert und dient weiter der Monstererholung und der KI.
+- **Tests:** Zermürbungstest angepasst (Zähler läuft nach dem Monsterkampf weiter), Standardwerte 10 in Tests und Browser-Test; `tests/golden.json` neu erzeugt.
+- Die Versionsbeschreibung im Spiel nennt die Änderung.
+
 ## Änderung 0.9.7 (08.11.)
 
 - **Rundenzähler und Zermürbung in der Weltphase (Regeländerung):** Die Weltphase hat denselben Rundenzähler wie der Kampf (eine Runde = ein Zug jedes Spielers). Er zählt die Züge seit dem letzten Kampf (`state.worldTurns`, wird nach jedem Kampf auf 0 gesetzt) und beginnt damit nach jedem Monsterkampf wieder bei Runde 1. Hat er den kritischen Wert erreicht, also **ab Runde `exhaustRounds` + 1**, setzt die **Zermürbung** ein: Wer seinen Zug beendet (Nachziehen oder Bibliothek), ohne ein Monster angegriffen zu haben, schenkt dem Gegner **Gold in Höhe der aktuellen Spielstufe** (Abschnitt 1/2/3, wie die Strafe des roten Nachziehmarkers). Ein Monsterangriff beendet den Zug nicht über `endTurn`, löst also nichts aus; nach dem Kampf beginnt der Zähler neu. `exhaustRounds` 0 schaltet die Zermürbung ab.

@@ -123,7 +123,7 @@ function endCombat(state, end) {
       startShowdown(state);
     }
   } else {
-    state.showdown++;
+    state.showdown++; state.wearTurns = 0;   // neuer Abschnitt: Zähler der Zermürbung (Weltphase) beginnt neu; ein Monsterkampf setzt ihn nicht zurück (seit 0.9.7.1)
     const goal = state.rules.winLead > 0 && state.showdown >= (state.rules.winSpFromShowdown || 1) && Math.abs(state.players[0].sp - state.players[1].sp) >= state.rules.winLead;   // seit 0.7.7.3: Siegbedingung ist der Vorsprung, nicht der Punktestand: Wer nach einem Showdown (ab winSpFromShowdown) mindestens winLead Siegpunkte vor dem Gegner liegt (4 : 0, 5 : 1 – nicht 4 : 1), gewinnt sofort; die Partie endet dann vor dem nächsten Abschnitt
     if (state.showdown >= 3 || goal) {
       state.over = true; state.phase = 'over';
