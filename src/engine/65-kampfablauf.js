@@ -283,7 +283,7 @@ function springTrap(state, owner, att, color, dmg, fxs, texts) {
   const sh = refl > 0 ? shieldHit(att.stats, refl) : { hit: 0, absorbed: 0 };   // das Schild des Angreifers mindert auch den Rückwurf (er bleibt unblockbar, das Schild ist aber kein Block)
   if (sh.hit > 0) att.stats.hp = Math.max(0, att.stats.hp - sh.hit);
   texts.push('Falle von ' + owner.name + ' (' + NAMES[t.el] + (hit ? ') trifft: ' + refl + ' unblockbarer Schaden zurück' + (sh.absorbed ? ', Schild von ' + att.name + ' mindert um ' + sh.absorbed : '') : '), Angriff in ' + NAMES[color] + ': keine Wirkung'));
-  fxs.push({ kind: 'trap', who: owner.ctrl, to: att.ctrl, el: t.el, card: t.card.id, attElem: color, hit, refl, abs: sh.absorbed, lvl: t.lvl });
+  fxs.push({ kind: 'trap', who: owner.ctrl, to: att.ctrl, el: t.el, card: t.card.id, attElem: color, hit, refl, abs: sh.absorbed, lvl: t.lvl, dmg0: dmg });
   return refl;
 }
 // Wirkung der Kombos (Angriff und nach der Verteidigung): plan = [[Schlüssel, Stufe], ...]

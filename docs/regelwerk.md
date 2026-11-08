@@ -686,6 +686,12 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Tests:** Drei Tests angepasst (Nachziehmarker Weltphase, Nachziehlimit Kauf, Nachziehlimit Weltphase; der Marker-Reset läuft jetzt über den Händler), neuer Test „Magie kaufen und Upgrades sind keine Aktion mehr“. `tests/golden.json` ist neu erzeugt (absichtliche Regeländerung).
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
 
+## Änderung 0.9.5 (08.11.)
+
+- **Falle löst nach dem Angriff aus (keine Regeländerung, nur Darstellung):** Bisher lief die Falle gleichzeitig mit dem Angriff. Jetzt erscheint zuerst der volle Angriff in der Mitte (auch der Teil, den die Falle zurückwirft). Danach fliegt die verdeckte Falle auf die Seite ihres Besitzers neben die Geschosse und dreht sich um. Passt die Farbe, lösen sich so viele Geschosse, wie die Falle zurückwirft (Stufe S, höchstens der eingehende Schaden), und fliegen als unblockbarer Schaden zum Angreifer; die HP des Angreifers sinken erst beim Einschlag. Passt die Farbe nicht, zerbricht die Karte in Splitter und der Angriff bleibt unverändert. Die Verteidigung beginnt erst nach der Falle. Wirft die Falle den ganzen Angriff zurück, gibt es keine Verteidigung, der Angriff verschwindet nach dem Rückwurf.
+- **Umsetzung:** Die Falle ist Teil der Angriffsanimation (`KampfFx`, `src/ui/26-erde.js`): `showFx` (`src/ui/26a-darstellung.js`) gibt dem Angriff den Wert `trap` mit und setzt `n` auf den vollen Schaden (`dmg0`); `TrapFx` (`src/ui/20a-ultimates.js`) spielt Karte, Rückwurf und Bruch. Die Engine liefert im Falleneffekt zusätzlich `dmg0` (Schaden vor dem Rückwurf). Regeln, KI und `tests/golden.json` sind unverändert.
+- Die Versionsbeschreibung im Spiel nennt die Änderung.
+
 ## Änderung 0.9.4.1 (08.11.)
 
 - **Echo-Effekt schmaler (keine Regeländerung):** Die in der Echo-Werkstatt angepassten Werte sind in `EchoWave.DEFAULTS` (`src/ui/12a-echo-welle.js`) übernommen. Einzige Abweichung von 0.9.4: `span` 100° statt 130°, der Effekt deckt also einen kleineren Ausschnitt der Schlange ab. Alle anderen Werte sind gleich geblieben. Die Echo-Werkstatt ist neu gebaut.

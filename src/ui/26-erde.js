@@ -116,6 +116,15 @@ function earthFormRaw(ctx, x, by, seed, i, t, tCrack, tRise, endAt, ending) {
     const n = Math.max(1, Math.min(10, fx.n)), rn = rng(Math.floor(Math.random() * 9999)), seeds = []; for (let i = 0; i < 20; i++) seeds.push(Math.floor(rn() * 1e5));
     ex = { cv, ctx: cv.getContext('2d'), t0: performance.now(), n, who: fx.who, to: fx.to, C0: center(), seeds, p: Object.assign({}, KP, { atk: fx.elem, def: fx.elem }), def: null, tAe: (n - 1) * KP.gap + KP.flight };
     if (pre) ex.t0 -= (ex.tAe + 1) * 1000;
+    ex.nEff = n;   // Geschosse, die nach der Falle übrig bleiben
+    if (fx.trap && !pre) {   // Falle (seit 0.9.5): Sie löst erst aus, wenn der Angriff in der Mitte liegt; ein Rückwurf nimmt ihm Geschosse, die Verteidigung folgt danach
+      const tp = fx.trap, refl = tp.hit ? tp.refl : 0;
+      ex.trap = tp; ex.tTrap = ex.tAe + .45; ex.tCatch = ex.tTrap + TrapFx.resolveMs() / 1000; ex.trapEnd = ex.tTrap + TrapFx.ms(tp) / 1000;
+      ex.nEff = Math.min(10, Math.max(0, fx.n - refl));
+      fxUntil = Math.max(fxUntil, Date.now() + ex.trapEnd * 1000 + 100);
+      const net = Math.max(0, refl - (tp.abs || 0));   // HP des Angreifers sinken erst, wenn der Rückwurf einschlägt
+      if (net > 0) { const ms = Math.round((ex.tCatch + .46) * 1000); holdHp(tp.to, ms, net); setTimeout(() => { if (G) render(); }, 0); setTimeout(() => { if (G) render(); }, ms + 60); }
+    }
     const loop = ts => { if (!ex || ex.cv !== cv) return; frame(ts); if (ex) ex.raf = requestAnimationFrame(loop); };
     ex.raf = requestAnimationFrame(loop);
   }
@@ -123,6 +132,7 @@ function earthFormRaw(ctx, x, by, seed, i, t, tCrack, tRise, endAt, ending) {
     const e = ex, ctx = e.ctx, p = e.p, t = (ts - e.t0) / 1000, n = e.n, C0 = e.C0, d = e.def;
     const T = d ? d.T : { tA: 0, tD: 1e9, tC: 1e9, tK: 1e9, tH: 1e9, hf: .8, cl: .6, pairs: 0, left: 0, end: 1e9 };
     ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, SW, 800);
+    if (e.trap && !e.trapOn && t >= e.tTrap) { e.trapOn = true; TrapFx.play(e.trap, { mid: { x: C0.x * SC, y: C0.y * SC } }); }
     const HA = handOf(e.who), HD = d ? d.H : null, hp = d ? d.hp : null, b = d ? d.b : 0, seeds = e.seeds;
     let amp = p.shake * (t > T.tK && t < T.tK + .4 ? (['lava', 'schlamm', 'feuerball', 'bersten'].includes(clashStyle(p, p.atk, p.def)) ? 6 : 3) * (1 - seg(t, T.tK, T.tK + .4)) : 0);   // Lava, Schlamm, Feuerball und Bersten wackeln stärker als Dampf und Woge
     const earthHit = (el, starts, N) => { if (el !== 'E') return; for (let i = 0; i < N; i++) { const ta = starts + i * p.gap + p.flight; if (t > ta && t < ta + .4) amp += p.shake * p.heavy * 7 * Math.exp(-(t - ta) * 9); } };
@@ -137,6 +147,10 @@ function earthFormRaw(ctx, x, by, seed, i, t, tCrack, tRise, endAt, ending) {
     for (let i = 0; i < n; i++) {   // Angriffsfunken
       const s0 = i * p.gap, s = seg(t, s0, s0 + p.flight), sl = slotA(i), paired = i < T.pairs, absd = !paired && i < T.pairs + (T.abs || 0);   // absd: vom Schild ausgeglichen
       if (s <= 0) continue;
+      if (e.trap && i >= e.nEff && t >= e.tCatch) {   // der Rückwurf der Falle nimmt diesem Geschoss die Kraft: es verblasst und fliegt als Rückwurf zum Angreifer
+        const g = seg(t, e.tCatch, e.tCatch + .3); if (g >= 1 || p.atk === 'E') continue;
+        ctx.save(); ctx.globalAlpha = 1 - g; drawIdle(ctx, p, p.atk, sl.x, sl.y, seeds[i], t, 1 - g); ctx.restore(); continue;
+      }
       if (p.atk === 'E') {   // Erde bricht am Platz aus dem Boden, zerbirst beim Aufprall; der Rest fliegt als Brocken zu den HP
         earthForm(ctx, sl.x, sl.y, seeds[i], i, t, s0, s0 + p.flight - EP.rise, paired ? T.tK : absd ? T.tS : T.tH, 'zerbersten');
         if (paired || absd || t < T.tH) continue;
@@ -173,6 +187,7 @@ function earthFormRaw(ctx, x, by, seed, i, t, tCrack, tRise, endAt, ending) {
     }
     if (T.left) { const q = seg(t, T.tH + T.hf, T.tH + T.hf + .2) * (1 - seg(t, T.tH + T.hf + .5, T.tH + T.hf + .7)); if (q > 0) { ctx.save(); ctx.font = '700 20px Alegreya, serif'; ctx.textAlign = 'center'; ctx.fillStyle = rgba('#ff6b6b', q); ctx.fillText('−' + T.left, hp.x, hp.y - 14 - 10 * seg(t, T.tH + T.hf, T.tH + T.hf + .7)); ctx.restore(); } }
     if (d && t > T.end) { endEx(); next(); }
+    else if (!d && e.trap && e.nEff === 0 && t > e.trapEnd + .15) { endEx(); next(); }   // der Rückwurf hat den ganzen Angriff aufgehoben: keine Verteidigung folgt
   }
   function next() { const q = queue.shift(); if (!q) return; startEx(q.fx, false); if (q.def) applyDef(q.def); }
   function attack(fx) { if (off()) return; if (ex && ex.def) queue.push({ fx, def: null }); else startEx(fx, false); }
@@ -185,13 +200,13 @@ function earthFormRaw(ctx, x, by, seed, i, t, tCrack, tRise, endAt, ending) {
   }
   function applyDef(fx) {
     const bb = Math.max(0, Math.min(10, fx.block));
-    const e = ex, p = e.p, now = (performance.now() - e.t0) / 1000, tD = Math.max(now, e.tAe + p.hover), pairs = Math.min(e.n, bb);
+    const e = ex, p = e.p, now = (performance.now() - e.t0) / 1000, tD = Math.max(now, e.tAe + p.hover, e.trapEnd || 0), pairs = Math.min(e.nEff, bb);
     const tDe = bb ? tD + (bb - 1) * p.gap + p.flight : tD, tC = tDe + .12, tK = tC + (pairs ? .3 : 0);
     p.def = fx.defElem || fx.attElem;
     const cl = pairs ? clashDur(p, clashStyle(p, p.atk, p.def)) : .6;   // Lava und Schlamm lösen sich langsamer auf als Dampf
     const shs = off() ? [] : [fx.mirror, fx.mirror2].filter(Boolean).map((m, i, a) => a.length > 1 ? Object.assign({}, m, { off: i ? 105 : -105, noDim: i > 0 }) : m);   // lösen zwei Schilde aus (Farbspiegel und Multispiegel), stehen sie nebeneinander
     const sh = shs.length ? shs[0] : null, shD = shs.length ? Math.max(...shs.map(m => MirrorFx.delay(m))) : 0, shR = shs.filter(m => m.r > 0), hf = .8;
-    const abs = shs.length ? Math.min(shs.reduce((n, m) => n + (m.abs || 0), 0), e.n - pairs) : 0, left = e.n - pairs - abs;   // vom Schild ausgeglichene Geschosse erreichen die HP nicht
+    const abs = shs.length ? Math.min(shs.reduce((n, m) => n + (m.abs || 0), 0), e.nEff - pairs) : 0, left = e.nEff - pairs - abs;   // vom Schild ausgeglichene Geschosse erreichen die HP nicht
     const tS = tK + (pairs ? .55 : 0);   // erst läuft die normale Grafik (Angriff gegen Verteidigung), danach, nur wenn das Schild wirklich eingreift, der Schild-Effekt
     const tH = sh ? tS + shD : tK + (pairs ? .45 : 0);   // der Schaden auf den HP kommt nach dem Schild-Effekt
     e.def = { H: handOf(fx.who), hp: hpOf(fx.who), ha: hpOf(fx.to), b: bb, T: { tA: 0, tD, tC, tK, tS, tH, hf, cl, pairs, left, abs, end: Math.max(left ? tH + hf + .7 : tK + .6, sh ? tS + shD : 0, pairs ? tK + cl : 0) + .3 + (p.atk === 'E' || p.def === 'E' ? .35 : 0) } };
@@ -205,5 +220,5 @@ function earthFormRaw(ctx, x, by, seed, i, t, tCrack, tRise, endAt, ending) {
     if (pairs > 0) Snd.play('block', Math.max(0, tC - now));
     if (left > 0) Snd.play('hit', Math.max(0, tH + hf - now));   // Bruch-Sound beim Einschlag der Funken
   }
-  return { attack, defense, reset() { queue = []; endEx(); }, busy() { return queue.length > 0 || !!(ex && (ex.def || performance.now() - ex.t0 < ex.tAe * 1000 + 50)); }, remaining() { if (!ex || !ex.def) return 0; return Math.max(0, ex.def.T.end - (performance.now() - ex.t0) / 1000); } };
+  return { attack, defense, reset() { queue = []; endEx(); }, busy() { return queue.length > 0 || !!(ex && (ex.def || performance.now() - ex.t0 < ex.tAe * 1000 + 50 || (ex.trap && performance.now() - ex.t0 < (ex.trapEnd + .1) * 1000))); }, remaining() { if (!ex || !ex.def) return 0; return Math.max(0, ex.def.T.end - (performance.now() - ex.t0) / 1000); } };
 })();

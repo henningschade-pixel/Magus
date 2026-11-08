@@ -120,37 +120,50 @@ const UltFx = (() => {
   return { play };
 })();
 
-/* ---------- Falle (Blau + Rot, seit 0.8): die verdeckte Karte dreht sich um; trifft die Farbe, fliegt ein Geschoss zum Angreifer ---------- */
+/* ---------- Falle (Rot + Blau, seit 0.8): Sie löst erst aus, wenn der Angriff in der Mitte liegt (seit 0.9.5, gesteuert von KampfFx). Die verdeckte Karte fliegt auf die Seite ihres Besitzers neben die Angriffsgeschosse und dreht sich um; passt die Farbe, löst sich ein Teil der Geschosse und fliegt zum Angreifer zurück, sonst zerbricht die Karte ---------- */
 const TrapFx = (() => {
   const panelOf = pid => pid === ME ? stage.querySelector('.sbody[data-lead]') : stage.querySelector('.sbody:not([data-lead])');
   const pos = (el, fb) => { if (!el) return fb; const r = el.getBoundingClientRect(), sr = stage.getBoundingClientRect(), k = sr.width / stage.offsetWidth; return { x: (r.left + r.width / 2 - sr.left) / k, y: (r.top + r.height / 2 - sr.top) / k }; };
   const COL = { F: '#ff7a3d', E: '#93c24f', W: '#52a6f5' };
-  function play(f) {
-    if (FAST || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
+  const RESOLVE = 1000;   // ms ab Start: die Karte ist umgedreht, die Falle wird aufgelöst (Rückwurf bzw. Bruch)
+  const off = () => FAST || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+  // Bruchstücke der umgedrehten Karte (Splitter als Polygone, in Prozent der Kartenfläche)
+  const SHARDS = [['0% 0%,55% 0%,46% 40%,0% 52%', -46, -30, -24], ['55% 0%,100% 0%,100% 48%,62% 55%,46% 40%', 40, -44, 19], ['0% 52%,46% 40%,62% 55%,40% 100%,0% 100%', -36, 56, -17], ['62% 55%,100% 48%,100% 100%,40% 100%', 48, 62, 28]];
+  function play(f, o) {
+    if (off()) return;
+    const mid = (o && o.mid) || { x: SW / 2, y: 400 }, ownSide = f.who === ME ? 1 : -1, attSide = f.to === ME ? 1 : -1;
     const tc = stage.querySelector('.trapcard[data-who="' + (f.who === ME ? 's' : 'o') + '"]');
     const from = pos(tc || panelOf(f.who), { x: SW / 2, y: f.who === ME ? 560 : 240 }), to = pos(panelOf(f.to), { x: SW / 2, y: f.to === ME ? 560 : 240 });
-    const w = 96, h = 134, el = document.createElement('div');
+    const rest = { x: mid.x, y: mid.y + ownSide * 112 }, w = 112, h = 157;   // die Karte liegt auf der Seite ihres Besitzers, damit die Angriffsgeschosse sichtbar bleiben
+    const el = document.createElement('div');
     el.className = 'trapfx';
-    el.style.cssText = 'left:' + (from.x - w / 2) + 'px;top:' + (from.y - h / 2) + 'px;width:' + w + 'px;height:' + h + 'px;transition:left .35s,top .35s,width .35s,height .35s';
-    el.innerHTML = '<div class="tf"><div class="bk"><img src="' + IMG.back + '"></div><div class="fr"><img src="' + (f.card && IMG[f.card] ? IMG[f.card] : IMG.back) + '"></div></div>';
+    el.style.cssText = 'left:' + (from.x - 20) + 'px;top:' + (from.y - 28) + 'px;width:40px;height:56px;transition:left .4s ease-out,top .4s ease-out,width .4s ease-out,height .4s ease-out';
+    const front = f.card && IMG[f.card] ? IMG[f.card] : IMG.back;
+    el.innerHTML = '<div class="tf"><div class="bk"><img src="' + IMG.back + '"></div><div class="fr"><img src="' + front + '"></div></div>';
     stage.appendChild(el);
-    const mid = { x: SW / 2, y: 400 };
-    requestAnimationFrame(() => { el.style.left = (mid.x - 70) + 'px'; el.style.top = (mid.y - 98) + 'px'; el.style.width = '140px'; el.style.height = '196px'; });
-    setTimeout(() => { el.classList.add('up'); Snd.play('shield_hit'); }, 380);
+    requestAnimationFrame(() => { el.style.left = (rest.x - w / 2) + 'px'; el.style.top = (rest.y - h / 2) + 'px'; el.style.width = w + 'px'; el.style.height = h + 'px'; });
+    setTimeout(() => { el.classList.add('up'); Snd.play('shield_hit'); }, 420);
     setTimeout(() => {
-      if (f.hit) {
+      if (f.hit) {   // die Farbe passt: ein Teil des Angriffs löst sich von den Geschossen in der Mitte und fliegt zum Angreifer zurück
         el.classList.add('hit'); Snd.play('hit', 0, .9);
-        const o = document.createElement('div'); o.style.cssText = 'position:absolute;z-index:296;pointer-events:none;border-radius:50%;width:26px;height:26px;margin:-13px 0 0 -13px;left:' + mid.x + 'px;top:' + mid.y + 'px;background:radial-gradient(#fff,' + (COL[f.el] || '#ff7a3d') + ' 55%,rgba(0,0,0,0));box-shadow:0 0 22px ' + (COL[f.el] || '#ff7a3d') + ';transition:left .45s ease-in,top .45s ease-in';
-        stage.appendChild(o); requestAnimationFrame(() => { o.style.left = to.x + 'px'; o.style.top = to.y + 'px'; });
+        const sx = mid.x, sy = mid.y + attSide * 34, c = COL[f.el] || '#ff7a3d';
+        const orb = document.createElement('div'); orb.style.cssText = 'position:absolute;z-index:296;pointer-events:none;border-radius:50%;width:30px;height:30px;margin:-15px 0 0 -15px;left:' + sx + 'px;top:' + sy + 'px;background:radial-gradient(#fff,' + c + ' 55%,rgba(0,0,0,0));box-shadow:0 0 24px ' + c + ';transition:left .45s ease-in,top .45s ease-in';
+        stage.appendChild(orb); requestAnimationFrame(() => { orb.style.left = to.x + 'px'; orb.style.top = to.y + 'px'; });
         setTimeout(() => {
-          o.remove();
-          const n = document.createElement('div'); n.textContent = '\u2212' + f.refl; n.style.cssText = 'position:absolute;z-index:297;pointer-events:none;font:700 38px Alegreya,serif;color:#ff6b3d;text-shadow:0 0 4px #000,0 0 10px #000;left:' + (to.x - 20) + 'px;top:' + (to.y - 24) + 'px;transition:top .8s,opacity .8s';
+          orb.remove();
+          const n = document.createElement('div'); n.textContent = '−' + f.refl; n.style.cssText = 'position:absolute;z-index:297;pointer-events:none;font:700 38px Alegreya,serif;color:#ff6b3d;text-shadow:0 0 4px #000,0 0 10px #000;left:' + (to.x - 20) + 'px;top:' + (to.y - 24) + 'px;transition:top .8s,opacity .8s';
           stage.appendChild(n); requestAnimationFrame(() => { n.style.top = (to.y - 80) + 'px'; n.style.opacity = '0'; }); setTimeout(() => n.remove(), 900);
         }, 460);
+        setTimeout(() => { el.style.transition = 'opacity .45s'; el.style.opacity = '0'; }, 500);
+        setTimeout(() => el.remove(), 1000);
+      } else {   // die Farbe passt nicht: die Karte zerbricht
+        Snd.play('break', 0, .9);
+        el.classList.add('broke');
+        el.innerHTML = SHARDS.map(sh => '<div class="sh" style="background-image:url(' + front + ');clip-path:polygon(' + sh[0] + ')" data-dx="' + sh[1] + '" data-dy="' + sh[2] + '" data-r="' + sh[3] + '"></div>').join('');
+        requestAnimationFrame(() => requestAnimationFrame(() => { el.querySelectorAll('.sh').forEach(d => { d.style.transform = 'translate(' + d.dataset.dx + 'px,' + (+d.dataset.dy + 90) + 'px) rotate(' + d.dataset.r + 'deg)'; d.style.opacity = '0'; }); }));
+        setTimeout(() => el.remove(), 900);
       }
-    }, 1050);
-    setTimeout(() => { el.style.transition = 'opacity .45s'; el.style.opacity = '0'; }, f.hit ? 1650 : 1350);
-    setTimeout(() => el.remove(), f.hit ? 2150 : 1850);
+    }, RESOLVE);
   }
-  return { play, ms: f => (f.hit ? 1650 : 1350) };
+  return { play, resolveMs: () => RESOLVE, ms: f => RESOLVE + (f.hit ? 650 : 700) };   // ms: Dauer, bis die nächste Animation (die Verteidigung) folgen darf
 })();
