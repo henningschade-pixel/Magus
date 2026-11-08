@@ -1190,3 +1190,74 @@ test('Falle: Wird der gesamte Schaden zurückgeworfen, entfällt die Verteidigun
   assert.equal(part.s.combat.action, 'defense', 'bei Restschaden bleibt die Verteidigung');
   assert.equal(part.s.combat.pending, 2);
 });
+
+/* ---------- Echo der Kombos (0.9) ---------- */
+test('Echo: Eine Sekundärkarte in der Farbe des Echos erhöht die Kombostufe um 1, höchstens auf 3 (0.9)', () => {
+  const lv = (echo, ids, mag) => M.evalAttack(STATS({ echo, mag: mag || { F: 3, E: 3, W: 3 } }), cards(ids));
+  assert.equal(lv(undefined, ['F1', 'W1']).ord.lvl, 1, 'ohne Echo Stufe 1');
+  const e = lv('W', ['F1', 'W1']);
+  assert.equal(e.ord.lvl, 2, 'Echo Wasser, Sekundärkarte Wasser: Stufe 2');
+  assert.equal(e.levels.echo, true);
+  assert.equal(lv('E', ['F1', 'W1']).ord.lvl, 1, 'Echo in einer anderen Farbe: keine Wirkung');
+  assert.equal(lv('F', ['F1', 'W1']).ord.lvl, 1, 'Das Echo der Primärfarbe zählt nicht (die Karte ist keine Sekundärkarte)');
+  const cap = lv('W', ['F3', 'W3']);
+  assert.equal(cap.ord.lvl, 3, 'höchstens Stufe 3');
+  assert.ok(!cap.levels.echo, 'bei Stufe 3 steigt nichts, also kein Echo-Hinweis');
+});
+
+test('Echo: Die Ultimate wird durch ein Echo einer ihrer Sekundärfarben um 1 Stufe erhöht, das Echo der Primärfarbe wirkt nicht (0.9)', () => {
+  const u = (echo) => M.evalAttack(STATS({ echo }), cards(['F1', 'E1', 'W1'])).levels;
+  assert.equal(u(undefined).ulti, 1);
+  assert.equal(u('E').ulti, 2, 'Erde ist Sekundärfarbe');
+  assert.equal(u('W').ulti, 2, 'Wasser ist Sekundärfarbe');
+  assert.equal(u('F').ulti, 1, 'Feuer ist die erste Karte');
+});
+
+test('Echo: Auch in der Verteidigung verstärkt das Echo einen Kombo (0.9)', () => {
+  const d = (echo) => M.evalDefense(STATS({ echo }), cards(['F1', 'W1']), 'F');
+  assert.equal(d(undefined).ord.lvl, 1);
+  assert.equal(d('W').ord.lvl, 2);
+  assert.equal(d('E').ord.lvl, 1);
+});
+
+test('Echo: Ein Kombo hinterlässt das Echo seiner ersten Farbe, der nächste Kombo erneuert es und nutzt das alte (0.9)', () => {
+  const { s, c, me, op } = combatSetup(11, ['E1', 'W1', 'F1', 'E1']);
+  const curses = () => op.deck.discard.filter(cd => M.parseCard(cd.id).curse).length;
+  assert.equal(me.stats.echo, undefined, 'zu Kampfbeginn kein Echo');
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });   // Erde + Wasser: Heilung
+  assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+  assert.equal(me.stats.echo, 'E', 'Echo in der Farbe der ersten Karte');
+  assert.ok(M.apply(s, { pid: 1, type: 'pass' }).ok);
+  c.turn = 'a'; c.action = 'attack';
+  const before = curses();
+  M.apply(s, { pid: 0, type: 'mark', slot: 2 }); M.apply(s, { pid: 0, type: 'mark', slot: 3 });   // Feuer + Erde: Lähmung, Sekundärfarbe Erde = Echo
+  assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+  assert.equal(curses() - before, 4, 'Lähmung Stufe 2 (4 Fluchkarten) statt Stufe 1');
+  assert.equal(me.stats.echo, 'F', 'das Echo wurde erneuert');
+  assert.ok(s.log.some(e => /Echo \(Erde\)/.test(e.txt)), 'Protokoll nennt das Echo');
+});
+
+test('Echo: Ein Kombo ohne passende Sekundärfarbe verstärkt nicht, erneuert das Echo aber trotzdem; am Kampfende verschwindet es (0.9)', () => {
+  const { s, c, me, op } = combatSetup(11, ['F1', 'E1']);
+  me.stats.echo = 'W';
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
+  const before = op.deck.discard.filter(cd => M.parseCard(cd.id).curse).length;
+  assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+  assert.equal(op.deck.discard.filter(cd => M.parseCard(cd.id).curse).length - before, 2, 'Stufe 1: 2 Fluchkarten');
+  assert.equal(me.stats.echo, 'F');
+  assert.ok(M.apply(s, { pid: 1, type: 'pass' }).ok);
+  c.turn = 'a'; c.action = 'attack'; op.stats.mana = 0;
+  const r = M.apply(s, { pid: 0, type: 'flee' });
+  assert.ok(r.ok, 'Kampf endet');
+  assert.equal(s.players[0].stats.echo, undefined, 'Echo verschwindet mit dem Kampf');
+});
+
+test('Echo: Die Läuterung erreicht das Echo nicht (0.9)', () => {
+  const { s, me } = combatSetup(11, ['E1', 'F1']);
+  me.stats.echo = 'F';
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
+  M.apply(s, { pid: 0, type: 'lfp', pick: ['se', 'echo', 'e', 'F'] });
+  assert.deepEqual(s.combat.lfp, [], 'Echo ist keine wählbare Markerart');
+  assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);   // Erde + Feuer: Läuterung (Sekundärfarbe Feuer = Echo, Stufe 2)
+  assert.equal(me.stats.echo, 'E', 'nur der neue Kombo erneuert das Echo');
+});

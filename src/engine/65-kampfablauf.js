@@ -74,9 +74,9 @@ function endCombat(state, end) {
   const c = state.combat, res = { mode: c.mode, reason: end.reason, winner: end.winner, monsterDefeated: false, elem: c.elem, stage: state.stage, turns: c.turns, fled: end.fled || null };   // elem/stage/turns: für die Balance-Auswertung
   if (state.keepSnap) res.snap = JSON.parse(JSON.stringify(c));   // Oberfläche: Endstand des Kampfes (vor Zurücksetzen und Rückkehr in die Weltphase)
   if (c.forced && c.forced.cards) { const fs = c.sides.a.ctrl === c.forced.pid ? c.sides.a : c.sides.b; if (fs.kind === 'player') c.forced.cards.forEach(cd => fs.deck.discard.push(cd)); c.forced = null; }   // unentschiedene Hellsicht- und Fallen-Karten kehren in den Ablagestapel zurück
-  state.players.forEach(p => { if (p.stats.trap) p.deck.discard.push(p.stats.trap.card); p.stats.freeDraws = 0; p.deck.marks = []; ['death', 'deathPhase', 'heal', 'healPhase', 'manaflow', 'manaPhase', 'rainbow', 'trap'].forEach(k => { delete p.stats[k]; }); });   // die Fallenkarte kehrt in den Ablagestapel zurück (wird gleich mit gemischt)
+  state.players.forEach(p => { if (p.stats.trap) p.deck.discard.push(p.stats.trap.card); p.stats.freeDraws = 0; p.deck.marks = []; ['death', 'deathPhase', 'heal', 'healPhase', 'manaflow', 'manaPhase', 'rainbow', 'trap', 'echo'].forEach(k => { delete p.stats[k]; }); });   // die Fallenkarte kehrt in den Ablagestapel zurück (wird gleich mit gemischt)
   state.players.forEach(p => stripCurseCards(state, p.deck));
-  ['healPhase', 'death', 'deathPhase', 'heal', 'manaflow', 'manaPhase', 'rainbow', 'trap'].forEach(k => { delete c.sides.b.stats[k]; });
+  ['healPhase', 'death', 'deathPhase', 'heal', 'manaflow', 'manaPhase', 'rainbow', 'trap', 'echo'].forEach(k => { delete c.sides.b.stats[k]; });
   const A = state.players[c.att], B = state.players[c.def];
   if (c.mode === 'monster') {
     const m = c.sides.b.monster;
@@ -339,6 +339,9 @@ function execAttack(state) {
   side.stats.mana -= ev.cost;
   consumeSelection(d, sel);
   const texts = [], fxs = [];
+  const echoOld = side.stats.echo, echoUsed = !!ev.levels.echo, isCombo = death || !!(ev.ord && ev.ord.lvl > 0);   // Echo (seit 0.9): der Kombo wird durch das Echo der Seite verstärkt und hinterlässt selbst ein neues
+  if (isCombo) side.stats.echo = ev.ultiEl || ev.prim;
+  if (echoUsed) texts.push('Echo (' + NAMES[echoOld] + '): Kombo +1 Stufe');
   applyComboPlan(state, side, opp, plan, ev, texts, fxs);
   if (death && (ev.ultiEl || ev.prim) === 'E' && side.stats.healPhase === undefined) side.stats.healPhase = side.stats.heal || 0;   // wie beim Todesfluss: ein in dieser Angriffsphase gelegter Heilmarker heilt erst am Ende der nächsten eigenen Angriffsphase
   if (death && (ev.ultiEl || ev.prim) === 'W' && side.stats.manaPhase === undefined) side.stats.manaPhase = side.stats.manaflow || 0;   // ebenso der Manamarker
@@ -401,6 +404,8 @@ function execDefense(state, passOnly) {
   // Passen in der Verteidigung bringt kein Mana (nur im Angriffszug gibt es Erholen)
   if (sel.length) consumeSelection(d, sel); else d.marks = [];
   const attacker = c.sides[c.turn === 'a' ? 'b' : 'a'];
+  const defCombo = !!(defEv && ((defEv.ord && defEv.ord.lvl > 0) || (defEv.levels && defEv.levels.ulti > 0))), defEchoOld = side.stats.echo, defEchoUsed = !!(defCombo && defEv.levels && defEv.levels.echo);   // Echo (seit 0.9), wie im Angriff
+  if (defCombo) side.stats.echo = defEv.ultiEl || defEv.el;
   // Seit 0.4 wirkt der Kombo zuerst, danach die Verteidigung: Ein Spiegel dieser Farbe wirkte früher schon gegen den Angriff, auf den verteidigt wird; seit 0.7.2.23 stellt ihn die Verteidigung erst nach dem Schaden. Seit 0.5.4 gilt das nicht mehr für die Heilung: Sie wirkt wieder nach Angriff und Verteidigung (Zerrüttung und die übrigen Kombos bleiben davor).
   let lateShield = 0, lateTrap = 0;   // Schild und Falle, die in dieser Verteidigung gestellt werden, wirken erst nach ihr
   if (defEv && defEv.levels && defEv.levels.ulti > 0) {   // Ultimate in der Verteidigung: je nach Farbe der ersten Karte Todesfluss für den Angreifer (Feuer), Heilfluss (Erde) oder Manafluss (Wasser) für den Verteidiger
@@ -415,6 +420,7 @@ function execDefense(state, passOnly) {
     for (const k of ['hs', 'fe', 'ew']) if (lvs[k] > 0) plan.push([k, lvs[k]]);
     lateShield = lvs.sh || 0; lateTrap = lvs.tr || 0;   // Heilung (gh), Schild und Falle wirken erst nach dem Schaden, Zerrüttung und die übrigen Kombos davor
     healLvl = lvs.gh || 0;
+    if (defEchoUsed) texts.push('Echo (' + NAMES[defEchoOld] + '): Kombo +1 Stufe');
     applyComboPlan(state, side, attacker, plan, defEv, texts, fxs);
     c.lfp = null;
     fxs.forEach(f => { f.first = true; });   // Oberfläche: Kombo-Animation läuft vor der Verteidigungsanimation

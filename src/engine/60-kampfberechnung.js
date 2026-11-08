@@ -19,7 +19,7 @@ function comboLevels(tiers, mag, prim) {
   if (prim && present.length === 2 && present.includes(prim)) {
     const other = present.find(e => e !== prim), key = ORD_COMBO[prim + other];
     const eff = e => tiers[e].reduce((a, t) => a + Math.min(t, mag[e]), 0);   // je Farbe die Summe der Kartenwerte (höchstens Magiestufe je Karte): mehrere Karten ergeben zusammen die Stufe
-    lv.ord = { key, lvl: Math.max(0, Math.min(3, eff(prim), eff(other))) };
+    lv.ord = { key, lvl: Math.max(0, Math.min(3, eff(prim), eff(other))), other };   // other: Farbe der zweiten Karten (für das Echo)
   }
   return lv;
 }
@@ -31,6 +31,13 @@ function levelsFor(ev) {
   if (o && o.lvl > 0 && !(ev.levels.ulti > 0)) out[{ ra: 'fe', wt: 'tr', hs: 'hs', ws: 'sh', gh: 'gh', gr: 'ew' }[o.key]] = o.lvl;
   return out;
 }
+// Echo (seit 0.9): Jeder Kombo (auch die Ultimate) hinterlässt bei seiner Seite ein Echo in der Farbe der ersten Karte (stats.echo, kein Marker, nicht läuterbar; der nächste Kombo erneuert es). Enthält der nächste Kombo eine Sekundärkarte in der Farbe des Echos, steigt seine Stufe um 1 (höchstens 3).
+function echoBoost(stats, lv, ord, ultiEl) {
+  const e = stats && stats.echo; if (!e) return;
+  if (lv.ulti > 0) { if (ultiEl && e !== ultiEl && lv.ulti < MAX_LVL_ECHO) { lv.ulti++; lv.echo = true; } }   // Ultimate: beide übrigen Farben sind Sekundärkarten
+  else if (ord && ord.lvl > 0 && ord.other === e && ord.lvl < MAX_LVL_ECHO) { ord.lvl++; ord.echo = true; lv.echo = true; }   // lv.echo nur, wenn die Stufe wirklich steigt
+}
+const MAX_LVL_ECHO = 3;
 // Fluchkarten kosten beim Ausspielen je 1 Mana und zählen nicht als Element.
 function evalAttack(stats, cards) {
   if (!cards.length) return { valid: false, reason: 'Keine Karte gewählt.' };
@@ -43,6 +50,7 @@ function evalAttack(stats, cards) {
   const levels = comboLevels(tiers, stats.mag, prim);
   if (stats.noCombo) for (const k of stats.noCombo) levels[k] = 0; // nur für Simulationen
   const ord = levels.ord && !(stats.noCombo && stats.noCombo.includes(levels.ord.key)) ? levels.ord : null;
+  echoBoost(stats, levels, ord, prim);   // Echo des letzten Kombos (seit 0.9)
   return { valid: true, prim, cost, damage, levels, ord, curses: curses.length, affordable: stats.mana >= cost, ultiEl: levels.ulti > 0 ? prim : null };
 }
 function evalDefense(stats, cards, color) {
@@ -55,7 +63,7 @@ function evalDefense(stats, cards, color) {
   const cost = curses.reduce((n, c) => n + c.tier, 0) + (el === color ? same.length : 0) + other.length;   // Verteidigung in der überlegenen Farbe ist gratis, Kombokarten kosten 1 Mana
   let block = 0; same.forEach(c => { block += Math.min(c.tier, stats.mag[el]); });
   const out = { valid: true, el, cost, block, affordable: stats.mana >= cost, levels: { fw: 0, fe: 0, ew: 0, ulti: 0 }, ord: null, ultiEl: null };
-  if (other.length) { const tiers = { F: [], E: [], W: [] }; normals.forEach(c => tiers[c.el].push(c.tier)); const lv = comboLevels(tiers, stats.mag, el); out.ord = !ulti && lv.ord && lv.ord.lvl > 0 ? lv.ord : null; if (ulti) { out.levels.ulti = lv.ulti; if (lv.ulti > 0) out.ultiEl = el; } }
+  if (other.length) { const tiers = { F: [], E: [], W: [] }; normals.forEach(c => tiers[c.el].push(c.tier)); const lv = comboLevels(tiers, stats.mag, el); echoBoost(stats, lv, lv.ord, el); out.ord = !ulti && lv.ord && lv.ord.lvl > 0 ? lv.ord : null; if (ulti) { out.levels.ulti = lv.ulti; if (lv.ulti > 0) out.ultiEl = el; } if (lv.echo) out.levels.echo = true; }
   return out;
 }
 

@@ -97,6 +97,7 @@ function combatCenter(cx) {
         prev = '';
         canExec = ev.valid && ev.affordable; val = ev.valid && ev.prim ? ev.damage : 0;
         const lvC = ev.valid ? M.levelsFor(ev) : ev.levels;
+        if (ev.valid && ev.levels.echo) prev += '<div class="note">Echo (' + NAMES[cx.myStats.echo] + '): Kombo +1 Stufe</div>';
         if (ev.valid && lvC.ew > 0 && !(ev.levels.ulti > 0)) prev += lfSummary(cx, lvC.ew);
         if (!ev.affordable) prev += '<div class="bad">Zu wenig Mana.</div>';
       }
@@ -148,11 +149,14 @@ function comboRef(cx) {
     } else if (cols.length === 2 && o) {   // zwei Farben: genau eine Kombo, mit erreichter Stufe
       const r = ORD_ROWS.find(x => x[0] === o.key);
       h += row(r[1], [r[2], r[3]], o.lvl, ordText(r[0], o.lvl), true);
+      if (o.echo) h += '<div class="note" style="margin-top:2px;font-size:13px">Echo ' + el(o.other) + ': +1 Stufe</div>';
       h += '<div class="note" style="margin-top:4px;font-size:12px">Stufe = die kleinere der beiden Kartensummen (je Karte höchstens deine Magiestufe), höchstens 3. Mehrere Karten einer Farbe zählen zusammen. Mit ' + el(M.ELEMENTS.find(x => !cols.includes(x))) + ' als dritter Farbe wird daraus die Ultimate ' + ULTI_NAME[prim] + '.</div>';
     } else {   // alle drei Farben: Ultimate
       h += ultiRow(prim, lv.ulti, ultiText(prim, lv.ulti || 'S') + ' Die Kombos entfallen.', lv.ulti > 0);
+      if (lv.echo) h += '<div class="note" style="margin-top:2px;font-size:13px">Echo ' + el(cx.myStats.echo) + ': +1 Stufe</div>';
     }
-    return '<div class="panel" style="' + box(LAYOUT.oppInfo, 'overflow:hidden;padding:8px 12px;display:flex;flex-direction:column') + '">' + h + '</div>';
+    const R = LAYOUT.oppInfo, ty = R.top + Math.round(R.h / 2) - 19;   // Echo-Marker (seit 0.9) links (eigenes Echo) und rechts (Echo des Gegners) neben der Kombo-Übersicht, auf halber Höhe, halb über dem Rand
+    return '<div class="panel" style="' + box(R, 'overflow:hidden;padding:8px 12px;display:flex;flex-direction:column') + '">' + h + '</div>' + echoToken(cx.myStats, true, { left: R.left - 20, top: ty }) + echoToken(cx.oppStats, false, { left: R.left + R.w - 18, top: ty });
   }
 }
 
