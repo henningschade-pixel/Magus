@@ -35,7 +35,9 @@ Alle drei Punkte sind in Version 0.4 umgesetzt (Monster-Zweitmagie überlegen, C
 
 Möglicher Schneeballeffekt (wer vorne liegt, baut den Vorsprung aus). Im Kampf kam nicht ein einziges Mal Überverteidigung mit den Schilden vor, also kein Rückwurf. Die Ultimate wurde nicht erreicht. Zu prüfen: Wie oft kommen Rückwurf und Ultimate in KI-Partien vor, und lohnt sich dafür eine Regel- oder Kostenänderung (siehe Rückwurf-Kosten unten)?
 
-## Fliehen (17.10.): umgesetzt
+## Fliehen (17.10.): umgesetzt, seit 0.9.1 abgeschaltet
+
+Seit 0.9.1 ist Fliehen per Regelschalter `fleeAllowed` (Standard 0) abgeschaltet, weil die Erschöpfung festgefahrene Kämpfe beendet. Der Text darunter beschreibt den früheren Stand.
 
 Eingebaut als Aktion „Fliehen“ im Monsterkampf (Bedingungen siehe `docs/regelwerk.md`). Offen: Soll es im Showdown ein Fliehen geben (dann als verlorener Showdown)? Soll Fliehen etwas kosten? Die KI nutzt es nicht, weil sie im Selbstspiel damit schlechter abschnitt.
 

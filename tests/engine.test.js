@@ -220,6 +220,7 @@ test('Monsterdecks passen zur Magie: zu jeder Magiestufe ab 2 eine Karte dieser 
 test('Fliehen: nur im Monsterkampf, im eigenen Angriffszug, bei Monster ohne Mana und ohne Todesfluss', () => {
   const fresh = () => combatSetup(11, ['F1']);
   let { s, c, me, op } = fresh();
+  s.rules.fleeAllowed = 1;   // seit 0.9.1 standardmäßig aus
   assert.equal(M.canFlee(s, 0), false, 'Monster hat noch Mana');
   assert.equal(M.apply(s, { pid: 0, type: 'flee' }).ok, false);
   c.sides.b.stats.mana = 0;
@@ -236,8 +237,20 @@ test('Fliehen: nur im Monsterkampf, im eigenen Angriffszug, bei Monster ohne Man
   assert.equal(s.phase, 'world'); assert.equal(me.stats.gold, gold, 'keine Beute'); assert.equal(s.lastCombat.monsterDefeated, false);
   assert.equal(s.turn, 1, 'der Gegenspieler ist als Nächster dran');
 });
+test('Fliehen ist standardmäßig abgeschaltet (0.9.1): canFlee falsch, Aktion abgelehnt, auch bei 0 Mana des Gegners', () => {
+  assert.equal(M.DEFAULT_RULES.fleeAllowed, 0);
+  const { s, c, me } = combatSetup(11, ['F1']);
+  c.sides.b.stats.mana = 0;
+  assert.equal(M.canFlee(s, 0), false);
+  const r = M.apply(s, { pid: 0, type: 'flee' });
+  assert.equal(r.ok, false);
+  assert.equal(s.phase, 'combat', 'der Kampf läuft weiter');
+  s.rules.fleeAllowed = 1;
+  assert.equal(M.canFlee(s, 0), true, 'mit eingeschaltetem Schalter wieder möglich');
+});
 test('Fliehen geht nicht, während ein Angriff aussteht', () => {
   const { s, c, me, op } = combatSetup(11, ['F1']);
+  s.rules.fleeAllowed = 1;
   c.sides.b.stats.mana = 0;
   M.apply(s, { pid: 0, type: 'mark', slot: 0 });
   assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
@@ -290,6 +303,7 @@ test('Fliehen im Showdown: bei 0 Mana des Gegners möglich, Showdown endet ohne 
   const s = M.newGame({ seed: 4, ai: [true, true], first: 0 });
   let steps = 0; while (!s.over && !(s.phase === 'combat' && s.combat.mode === 'showdown') && steps++ < 20000) if (!AI.runTurn(s, M.actor(s)).ok) break;
   assert.ok(s.phase === 'combat' && s.combat.mode === 'showdown', 'Showdown erreicht');
+  s.rules.fleeAllowed = 1;
   const c = s.combat, att = c.sides.a.ctrl, sp = s.players.map(p => p.sp);
   assert.equal(M.canFlee(s, att), false, 'Gegner hat noch Mana');
   c.sides.b.stats.mana = 0;
@@ -1261,6 +1275,7 @@ test('Echo: Ein Kombo ohne passende Sekundärfarbe verstärkt nicht, erneuert da
   assert.equal(op.deck.discard.filter(cd => M.parseCard(cd.id).curse).length - before, 2, 'Stufe 1: 2 Fluchkarten');
   assert.equal(me.stats.echo, 'F');
   assert.ok(M.apply(s, { pid: 1, type: 'pass' }).ok);
+  s.rules.fleeAllowed = 1;
   c.turn = 'a'; c.action = 'attack'; op.stats.mana = 0;
   const r = M.apply(s, { pid: 0, type: 'flee' });
   assert.ok(r.ok, 'Kampf endet');

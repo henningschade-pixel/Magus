@@ -112,7 +112,7 @@ test('Fliehen: Knopf ist nur bei Monster ohne Mana bedienbar und beendet den Kam
     p.on('pageerror', e => errs.push(e.message));
     await p.goto(url); await p.waitForTimeout(500);
     await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
-    await p.evaluate(() => { const G = window.__magus.state; window.Magus.apply(G, { pid: 0, type: 'combat', elem: 'F' }); window.__magus.pump(); });
+    await p.evaluate(() => { const G = window.__magus.state; G.rules.fleeAllowed = 1; window.Magus.apply(G, { pid: 0, type: 'combat', elem: 'F' }); window.__magus.pump(); });
     await p.waitForSelector('[data-act="fleeask"]');
     assert.equal(await p.getAttribute('[data-act="fleeask"]', 'disabled') !== null, true, 'mit Monster-Mana gesperrt');
     await p.evaluate(() => { const G = window.__magus.state; G.combat.sides.b.stats.mana = 0; window.__magus.pump(); });
