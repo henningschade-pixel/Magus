@@ -40,9 +40,14 @@ function onAct(d) {
     case 'magic': act({ type: 'magic', elem: d.e }); break;
     case 'drawlimit': act({ type: 'drawlimit' }); break;
     case 'fd': act({ type: 'fd', slots: [...fdSel] }); fdSel.clear(); break;
-    case 'sight': if (G.combat && G.combat.forced && G.combat.forced.kind === 'sight') { sightSel[+d.i] = d.v; render(); } break;
-    case 'trapok': if (G.combat && G.combat.forced && G.combat.forced.kind === 'trap') act({ type: 'fd', slots: [+d.i] }); break;
-    case 'sightok': { const pk = sightSel.slice(); sightSel = []; act({ type: 'fd', pick: pk }); break; }
+    case 'sight': { const f = G.combat && G.combat.forced; if (f && (f.kind === 'sight' || f.kind === 'trap') && f.cards[+d.i] && !M.parseCard(f.cards[+d.i].id).curse) {   // Hellsicht/Falle: Karte an- oder abwählen; bei genau einer zu wählenden Karte ersetzt die neue Wahl die alte
+        const i = +d.i, kept = sightSel.filter(k => k === 'k').length;
+        if (sightSel[i] === 'k') sightSel[i] = 'a';
+        else if (f.n === 1) sightSel = sightSel.map((k, j) => j === i ? 'k' : 'a');
+        else if (kept < f.n) sightSel[i] = 'k';
+        render(); } break; }
+    case 'sightok': { const f = G.combat && G.combat.forced; if (!f || (f.kind !== 'sight' && f.kind !== 'trap') || sightSel.filter(k => k === 'k').length !== f.n) break;
+      const pk = sightSel.slice(); sightSel = []; act(f.kind === 'trap' ? { type: 'fd', slots: [pk.indexOf('k')] } : { type: 'fd', pick: pk }); break; }
     case 'draw': if (canDrawNow()) { if (drawPenaltyNow() > 0 && !drawAsk) { drawAsk = true; render(); } else { drawAsk = false; act({ type: 'draw' }); } } else if (myTurn()) toast(G.phase === 'combat' && G.combat.action === 'attack' && drawNeedsMana() ? 'Roter Nachziehmarker: Nachziehen kostet ' + M.drawManaCost(G, ME) + ' Mana, du hast nicht genug.' : 'Jetzt ist kein Nachziehen möglich.'); break;
     case 'drawyes': drawAsk = false; if (canDrawNow()) act({ type: 'draw' }); else render(); break;
     case 'drawno': drawAsk = false; render(); break;

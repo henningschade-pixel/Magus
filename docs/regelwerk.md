@@ -671,6 +671,12 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Tests:** Die Flucht-Tests schalten `fleeAllowed` ein; neuer Test „Fliehen ist standardmäßig abgeschaltet“.
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
 
+## Änderung 0.9.2 (08.11.)
+
+- **Auswahl bei Falle und Hellsicht schlichter (keine Regeländerung):** Im Vordergrund liegen nur noch die gezogenen Karten und darunter ein Knopf **Bestätigen**. Ein Klick wählt eine Karte an oder wieder ab; gewählte Karten sind angehoben und golden umrandet, Fluchkarten sind abgedunkelt und nicht wählbar. Der Knopf gilt, sobald genau so viele Karten gewählt sind, wie zu wählen sind (Falle: eine, Hellsicht: Kombostufe S). Ist nur eine Karte zu wählen, ersetzt eine neue Wahl die bisherige. Überschrift, Hinweistext und die Knöpfe je Karte („Als Falle legen“, „Offen vor mich legen“, „Ablegen“) entfallen.
+- **Umsetzung:** `sightOverlayHTML` (`src/ui/18-kampf.js`) für beide Fälle; Aktionen `sight` (an-/abwählen) und `sightok` (bestätigen) in `src/ui/30-eingaben.js`, die Aktion `trapok` entfällt. Die Engine-Aktion `fd` bleibt unverändert (Falle: `slots`, Hellsicht: `pick`), ebenso `tests/golden.json`.
+- Die Versionsbeschreibung im Spiel nennt die Änderung.
+
 ## Änderung 0.9.1.2 (08.11.)
 
 - **Echo-Marker neu gestaltet und platziert (keine Regeländerung):** Der Marker ist wieder das Echo-Symbol (Stein mit konzentrischen Ringen), aber neutral und ohne Hinweis auf die Farbe (kein Buchstabe, keine Farbe). Die Farbe zeigt seine Lage: Er liegt senkrecht mittig neben dem Farbbereich der Kombo-Übersicht, zu dem das Echo gehört (die drei Zeilen Rot, Blau oder Grün). Das eigene Echo liegt links am Rand der Übersicht, das des Gegners rechts und etwas kleiner (28 statt 38 Pixel). Ohne Echo wird kein Marker gezeigt. Die Lage wird in `placeEchoTokens` (`src/ui/12-hilfen.js`) im Zustand „nichts markiert“ gemessen und für die anderen Zustände der Übersicht (eine Kombo oder Ultimate gewählt) beibehalten, damit der Marker nicht springt.

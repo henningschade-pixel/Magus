@@ -160,21 +160,16 @@ function comboRef(cx) {
   }
 }
 
-// Hellsicht: Die gezogenen Karten liegen im Vordergrund, unter jeder die drei Möglichkeiten (Hand, Ablage, Händler)
+// Hellsicht und Falle (Auswahl seit 0.9.2 schlicht): Im Vordergrund liegen nur die gezogenen Karten, ein Klick wählt eine Karte an oder ab (gewählte sind hervorgehoben, Fluchkarten nicht wählbar), darunter steht der Knopf Bestätigen. Er gilt, sobald genau n Karten gewählt sind (Falle: eine, Hellsicht: so viele wie die Kombostufe). sightSel hält je Karte 'k' (gewählt) oder 'a' (nicht gewählt).
 function sightOverlayHTML() {
   const c = G && G.phase === 'combat' && G.combat; if (!c || !c.forced || (c.forced.kind !== 'sight' && c.forced.kind !== 'trap') || c.forced.pid !== ME) { sightSel = []; return ''; }
-  if (c.forced.kind === 'trap') {   // Falle: gezogene Karten im Vordergrund, unter jeder Nicht-Fluchkarte „Als Falle legen“
-    let t = '<div class="sighttitle">Falle</div><div class="sightsub">Wähle die Karte, die du verdeckt vor dich legst. Die übrigen kommen auf den Ablagestapel.</div><div class="sightfront">';
-    c.forced.cards.forEach((cd, i) => { const cu = M.parseCard(cd.id).curse; t += '<div class="sightbig" style="animation-delay:' + i * 0.12 + 's"><img src="' + (IMG[cd.id] || IMG.back) + '"><button class="btn primary" data-act="trapok" data-i="' + i + '"' + (cu ? ' disabled' : '') + '>Als Falle legen</button></div>'; });
-    return t + '</div>';
-  }
   const cards = c.forced.cards, n = c.forced.n;
   if (sightSel.length !== cards.length) sightSel = cards.map(() => 'a');
   const kept = sightSel.filter(k => k === 'k').length;
-  let h = '<div class="sighttitle">Hellsicht</div><div class="sightsub">Wähle ' + n + ' Karte' + (n === 1 ? '' : 'n') + ' zum offenen Ausspielen (gewählt: ' + kept + '/' + n + ')</div><div class="sightfront">';
+  let h = '<div class="sightfront">';
   cards.forEach((cd, i) => {
-    const cu = M.parseCard(cd.id).curse, full = kept >= n && sightSel[i] !== 'k', btn = (k, t, tip, dis) => '<button class="btn' + (sightSel[i] === k ? ' primary' : '') + '" title="' + tip + '" data-act="sight" data-i="' + i + '" data-v="' + k + '"' + (dis ? ' disabled' : '') + '>' + t + '</button>';
-    h += '<div class="sightbig" style="animation-delay:' + i * 0.12 + 's"><img src="' + (IMG[cd.id] || IMG.back) + '">' + btn('k', 'Offen vor mich legen', 'Die Karte liegt offen vor dir, ohne Manakosten nutzbar', cu || full) + btn('a', 'Ablegen', 'Die Karte kommt auf den Ablagestapel', false) + '</div>';
+    const cu = M.parseCard(cd.id).curse, on = sightSel[i] === 'k';
+    h += '<div class="sightbig' + (on ? ' on' : '') + (cu ? ' curse' : '') + '" style="animation-delay:' + i * 0.12 + 's"' + (cu ? ' title="Fluchkarten lassen sich nicht wählen"' : ' data-act="sight" data-i="' + i + '"') + '><img src="' + (IMG[cd.id] || IMG.back) + '"></div>';
   });
   return h + '</div><button class="btn primary sightok" data-act="sightok" ' + (kept === n ? '' : 'disabled') + '>Bestätigen</button>';
 }
