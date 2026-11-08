@@ -74,9 +74,9 @@ function dispatch(state, a) {
   if (state.phase === 'combat') return applyCombat(state, a);
   return fail('Keine Aktion möglich.');
 }
-// Nachziehmarker (je Spieler, grün/rot): Nachziehen dreht ihn auf rot, jede andere Zugaktion zurück auf grün; wer bei rotem Marker nachzieht, zahlt eine Strafe (Weltphase: der Gegner erhält drawPenaltyGold Gold; Kampf: der Nachziehende verliert drawPenaltyMana Mana, ohne Mana ist das Nachziehen nicht möglich). Markieren, Sperren, Läuterungswahl, das Gratis-Nachziehen (Token) und das Opfern im Tempel (seit 0.7.6.4) zählen nicht als Aktion.
+// Nachziehmarker (je Spieler, grün/rot): Nachziehen dreht ihn auf rot, jede andere Zugaktion zurück auf grün (Weltphase: Bibliothek, Kampf beginnen; Magie, Upgrades und Opfern sind keine Aktion); wer bei rotem Marker nachzieht, zahlt eine Strafe (Weltphase: der Gegner erhält drawPenaltyGold Gold; Kampf: der Nachziehende verliert drawPenaltyMana Mana, ohne Mana ist das Nachziehen nicht möglich). Markieren, Sperren, Läuterungswahl, das Gratis-Nachziehen (Token) und das Opfern im Tempel (seit 0.7.6.4) zählen nicht als Aktion.
 function markerKind(state, a) {
-  if (state.phase === 'world') return a.type === 'draw' ? 'draw' : ['vendor', 'magic', 'spend', 'drawlimit', 'combat'].includes(a.type) ? 'other' : null;
+  if (state.phase === 'world') return a.type === 'draw' ? 'draw' : ['vendor', 'combat'].includes(a.type) ? 'other' : null;   // Magie, Upgrades und Opfern sind seit 0.9.3 keine Aktion mehr und lassen den Marker unverändert
   if (state.phase === 'combat') return a.type === 'draw' ? 'draw' : ['attack', 'defend', 'pass', 'recover', 'flee'].includes(a.type) ? 'other' : null;
   return null;
 }

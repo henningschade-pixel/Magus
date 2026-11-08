@@ -49,7 +49,7 @@ function pickSpend(p, state, pid) {
   return null;   // nichts Bezahlbares: sparen
 }
 const spendAct = (A, w) => w === 'drawlimit' ? A({ type: 'drawlimit' }) : A({ type: 'spend', what: w });   // Nachziehlimit ist eine eigene Aktion, die übrigen Punkte gehen über 'spend'
-// Wirtschaftsaktion (Punkte ausgeben, Magie kaufen, Gold opfern); sie zählt als Aktion und beendet den Zug.
+// Wirtschaftsschritt (Punkte ausgeben, Magie kaufen, Gold opfern); keine Zugaktion (seit 0.9.3), der Zug geht danach weiter.
 function ecoStep(state, pid) {
   const p = state.players[pid], s = p.stats, A = a => Object.assign({ pid }, a), Q = P(pid);
   const sw = !!state.rules.swapCosts;

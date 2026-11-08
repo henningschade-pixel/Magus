@@ -215,7 +215,7 @@ function combatPlan(state, pid) {
 }
 
 function plan(state, pid) {
-  if (state.phase === 'world') { const st = ecoStep(state, pid); if (st) return [st]; }   // Wirtschaftsaktion (Punkte ausgeben, Magie kaufen, Gold opfern) hat Vorrang und beendet den Zug; ohne das kaufte die KI in der Oberfläche nie Magie
+  if (state.phase === 'world') { const st = ecoStep(state, pid); if (st) return [st]; }   // Wirtschaftsschritt (Punkte ausgeben, Magie kaufen, Gold opfern) hat Vorrang; er ist keine Aktion, danach plant die Oberfläche denselben Zug neu
   return state.phase === 'combat' ? combatPlan(state, pid) : worldPlan(state, pid);
 }
 // Führt einen vollständigen KI-Zug aus; bei Fehlern greift eine sichere Rückfalloption.
@@ -229,13 +229,12 @@ function fallback(state, pid) {
   return [A({ type: 'draw' })];
 }
 function runTurn(state, pid) {
-  const pre = [];   // Opfern im Tempel ist kein Zug (seit 0.7.6.4): danach geht derselbe Zug weiter
+  const pre = [];   // Opfern, Magie kaufen und Upgrades sind kein Zug (Opfern seit 0.7.6.4, Magie und Upgrades seit 0.9.3): danach geht derselbe Zug weiter
   if (state.phase === 'world') {
     for (let g = 0; g < 12; g++) {
       const st = ecoStep(state, pid); if (!st) break;
       const r = M.apply(state, st); if (!r.ok) break;
       pre.push(st);
-      if (st.type !== 'temple') return { ok: true, acts: pre };   // Magie, Verbesserungen: Wirtschaftsaktion beendet den Zug
     }
   }
   const tries = [plan(state, pid), ...fallback(state, pid).map(a => [a])];

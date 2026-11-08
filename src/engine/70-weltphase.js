@@ -1,5 +1,5 @@
 /* Magus – Regelkern (Teil 7): Weltphase (Züge außerhalb des Kampfes).
-   Jede Aktion beendet den Zug (Spielerwechsel): Nachziehen, Bibliothek, Kampf, Gold opfern, Magie kaufen, jedes Upgrade (Punkte ausgeben).
+   Nur drei Aktionen beenden den Zug (Spielerwechsel): Nachziehen, Bibliothek (Händler) und Kampf. Gold opfern, Magie kaufen und jedes Upgrade (Punkte oder Gold ausgeben, auch das Nachziehlimit) sind keine Aktion (Opfern seit 0.7.6.4, Magie und Upgrades seit 0.9.3): der Spieler bleibt am Zug.
    Upgrade-Punkte dürfen aufgespart werden. */
 
 // Verlauf für die Statistik: ein Messpunkt zu Beginn, nach jedem Zug und nach jedem Kampf (ev = Kampfereignis)
@@ -100,9 +100,6 @@ function convertSurplus(state) {
   });
 }
 
-// Erfolgreiche Magie- und Upgrade-Aktionen zählen als Zugaktion: danach wechselt der Spieler (das Opfern im Tempel nicht, seit 0.7.6.4).
-function endOnOk(state, pid, kind, r) { if (r.ok) endTurn(state, pid, kind); return r; }
-
 function applyWorld(state, a) {
   const pid = a.pid, p = state.players[pid], d = p.deck, s = p.stats;
   // Markieren und Sperren sind auch außerhalb des eigenen Zuges möglich.
@@ -117,9 +114,9 @@ function applyWorld(state, a) {
     }
     case 'vendor': return execVendor(state, pid, a);
     case 'temple': return execTemple(state, pid, a.amount);   // seit 0.7.6.4 kein Zug mehr: der Spieler bleibt am Zug
-    case 'magic': return endOnOk(state, pid, 'magic', execMagic(state, pid, a.elem));
-    case 'drawlimit': return endOnOk(state, pid, 'drawlimit', execDrawLimit(state, pid));
-    case 'spend': return endOnOk(state, pid, 'spend', execSpend(state, pid, a.what));
+    case 'magic': return execMagic(state, pid, a.elem);   // seit 0.9.3 kein Zug mehr (wie Opfern und Upgrades)
+    case 'drawlimit': return execDrawLimit(state, pid);   // seit 0.9.3 kein Zug mehr
+    case 'spend': return execSpend(state, pid, a.what);   // seit 0.9.3 kein Zug mehr
     case 'combat': {
       const m = state.monsters[a.elem]; if (!m || !monsterAlive(m)) return fail(m && m.retreated ? 'Dieses Monster hat sich zurückgezogen.' : 'Dieses Monster ist besiegt.');
       d.marks = [];

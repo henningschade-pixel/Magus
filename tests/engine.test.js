@@ -433,7 +433,15 @@ test('Hellsicht: Sind höchstens S Karten brauchbar, entfällt die Wahl; Flüche
 });
 
 
-test('Nachziehmarker Weltphase: Nachziehen bei rotem Marker gibt dem Gegner 1 Gold, jede andere Aktion stellt auf grün zurück', () => {
+// Bibliothekstausch F1+F1 -> F2 (eine echte Zugaktion; Magie, Upgrades und Opfern sind es seit 0.9.3 nicht mehr)
+function vendF2(s, pid) {
+  const p = s.players[pid], d = p.deck; p.stats.limit = 2; d.marks = [];
+  d.hand[0] = Object.assign({}, d.hand[0], { id: 'F1' }); d.hand[1] = Object.assign({}, d.hand[1], { id: 'F1' });
+  M.apply(s, { pid, type: 'mark', slot: 0 }); M.apply(s, { pid, type: 'mark', slot: 1 });
+  return M.apply(s, { pid, type: 'vendor', result: 'F2', cost: ['F1', 'F1'] });
+}
+
+test('Nachziehmarker Weltphase: Nachziehen bei rotem Marker gibt dem Gegner 1 Gold, jede andere Aktion (Bibliothek, Kampf) stellt auf grün zurück, Upgrades nicht', () => {
   const s = M.newGame({ seed: 5, ai: [false, false], first: 0 }), g1 = () => s.players[1].stats.gold;
   const base = g1();
   assert.ok(M.apply(s, { pid: 0, type: 'draw' }).ok);          // grün -> rot, keine Strafe
@@ -441,10 +449,14 @@ test('Nachziehmarker Weltphase: Nachziehen bei rotem Marker gibt dem Gegner 1 Go
   assert.ok(M.apply(s, { pid: 1, type: 'draw' }).ok);
   assert.ok(M.apply(s, { pid: 0, type: 'draw' }).ok);          // rot: Strafe
   assert.equal(g1(), base + 1);
-  s.players[1].stats.gold += 5; assert.ok(M.apply(s, { pid: 1, type: 'spend', what: 'hp' }).ok);   // andere Aktion: Marker von Spieler 1 wieder grün (das Opfern im Tempel ist seit 0.7.6.4 keine Aktion mehr)
-  assert.equal(s.players[1].drawRed, false);
+  s.players[1].stats.gold += 5; assert.ok(M.apply(s, { pid: 1, type: 'spend', what: 'hp' }).ok);   // Upgrade ist keine Aktion (seit 0.9.3, wie das Opfern seit 0.7.6.4): Zug und Marker bleiben
+  assert.equal(s.turn, 1); assert.equal(s.players[1].drawRed, true);
+  assert.ok(vendF2(s, 1).ok);   // andere Aktion: Marker von Spieler 1 wieder grün
+  assert.equal(s.players[1].drawRed, false); assert.equal(s.turn, 0);
   const g0 = s.players[0].stats.gold; s.players[0].stats.gold += 5;
   assert.ok(M.apply(s, { pid: 0, type: 'spend', what: 'hp' }).ok);
+  assert.equal(s.turn, 0); assert.equal(s.players[0].drawRed, true);
+  assert.ok(vendF2(s, 0).ok);
   assert.equal(s.players[0].drawRed, false);
   assert.ok(M.apply(s, { pid: 1, type: 'draw' }).ok);
   assert.ok(M.apply(s, { pid: 0, type: 'draw' }).ok);          // wieder grün -> rot ohne Strafe
@@ -509,18 +521,16 @@ test('KI zieht im Kampf bei rotem Marker ohne Mana nicht nach (leere Hand einges
   }
 });
 
-test('Nachziehlimit: Kauf kostet Gold (1, dann 2, keine Upgrade-Punkte), beendet den Zug, höchstens Stufe 3', () => {
+test('Nachziehlimit: Kauf kostet Gold (1, dann 2, keine Upgrade-Punkte), ist keine Aktion mehr (0.9.3), höchstens Stufe 3', () => {
   const s = M.newGame({ seed: 5, ai: [false, false], first: 0 }), me = s.players[0].stats;
   assert.equal(me.drawLimit, 1);
   me.gold = 0; me.pending = 5; assert.equal(M.apply(s, { pid: 0, type: 'drawlimit' }).ok, false, 'ohne Gold nicht möglich, auch mit Upgrade-Punkten');
   me.gold = 5;
   assert.ok(M.apply(s, { pid: 0, type: 'drawlimit' }).ok);
-  assert.equal(me.drawLimit, 2); assert.equal(me.gold, 4); assert.equal(me.pending, 5, 'Upgrade-Punkte bleiben'); assert.equal(s.turn, 1, 'Zug beendet');
-  assert.ok(M.apply(s, { pid: 1, type: 'draw' }).ok);
-  assert.ok(M.apply(s, { pid: 0, type: 'drawlimit' }).ok);
+  assert.equal(me.drawLimit, 2); assert.equal(me.gold, 4); assert.equal(me.pending, 5, 'Upgrade-Punkte bleiben'); assert.equal(s.turn, 0, 'der Spieler bleibt am Zug');
+  assert.ok(M.apply(s, { pid: 0, type: 'drawlimit' }).ok, 'mehrere Käufe im selben Zug');
   assert.equal(me.drawLimit, 3); assert.equal(me.gold, 2, 'zweiter Kauf 2 Gold (Preis steigt um den Grundpreis)');
-  s.players[1].stats.gold = 5; assert.ok(M.apply(s, { pid: 1, type: 'spend', what: 'hp' }).ok);   // (zweimal hintereinander nachziehen würde dem Spieler 0 Gold schenken)
-  assert.equal(M.apply(s, { pid: 0, type: 'drawlimit' }).ok, false, 'Maximum 3'); assert.equal(me.gold, 2);
+  assert.equal(M.apply(s, { pid: 0, type: 'drawlimit' }).ok, false, 'Maximum 3'); assert.equal(me.gold, 2); assert.equal(s.turn, 0);
 });
 
 test('Nachziehlimit Weltphase: so viele Nachziehvorgänge hintereinander sind frei, danach wird der Marker rot und das nächste Nachziehen kostet Gold', () => {
@@ -535,7 +545,9 @@ test('Nachziehlimit Weltphase: so viele Nachziehvorgänge hintereinander sind fr
   assert.ok(M.apply(s, { pid: 0, type: 'draw' }).ok);   // viertes Mal: Strafe
   assert.equal(g1(), base + 1); assert.equal(p0.drawN, 3);
   other();
-  p0.stats.gold += 5; assert.ok(M.apply(s, { pid: 0, type: 'spend', what: 'hp' }).ok);   // andere Aktion: zurück auf Grün, Zähler 0
+  p0.stats.gold += 5; assert.ok(M.apply(s, { pid: 0, type: 'spend', what: 'hp' }).ok);   // Upgrade ist keine Aktion: Marker und Zähler bleiben
+  assert.equal(p0.drawRed, true); assert.equal(p0.drawN, 3); assert.equal(s.turn, 0);
+  assert.ok(vendF2(s, 0).ok);   // andere Aktion: zurück auf Grün, Zähler 0
   assert.equal(p0.drawRed, false); assert.equal(p0.drawN, 0);
 });
 
@@ -979,6 +991,21 @@ test('Fallenwahl (zuvor Abwerfen nach Zerrüttung) ist kein Zug: Zugzähler, Pas
   assert.ok(M.apply(s, { pid, type: 'fd', slots }).ok);
   assert.equal(c.forced, null);
   assert.equal(snap(), before, 'die Fallenwahl ändert nichts am Zugablauf');
+});
+
+test('Magie kaufen und Upgrades sind keine Aktion mehr: der Spieler bleibt am Zug, der Marker ändert sich nicht (0.9.3)', () => {
+  const s = M.newGame({ seed: 5, ai: [false, false], first: 0 }), p = s.players[0], st = p.stats;
+  st.gold = 12; st.pending = 6; st.mag.F = 1;
+  assert.ok(M.apply(s, { pid: 0, type: 'draw' }).ok); assert.ok(M.apply(s, { pid: 1, type: 'draw' }).ok);   // Marker von Spieler 0 rot
+  assert.equal(s.turn, 0); assert.equal(p.drawRed, true);
+  const t0 = s.worldTurns, idle0 = s.idleTurns;
+  const mg = M.apply(s, { pid: 0, type: 'magic', elem: 'F' }); assert.ok(mg.ok, 'Magie kaufen');
+  assert.ok(M.apply(s, { pid: 0, type: 'spend', what: 'hp' }).ok, 'HP-Upgrade');
+  assert.ok(M.apply(s, { pid: 0, type: 'spend', what: 'mana' }).ok, 'Mana-Upgrade');
+  assert.ok(M.apply(s, { pid: 0, type: 'temple', amount: 1 }).ok, 'Opfern');
+  assert.equal(s.turn, 0, 'weiter am Zug'); assert.equal(p.drawRed, true, 'Marker unverändert');
+  assert.equal(s.worldTurns, t0, 'kein Zug gezählt'); assert.equal(s.idleTurns, idle0, 'Stillstandszähler unverändert');
+  assert.ok(M.apply(s, { pid: 0, type: 'draw' }).ok); assert.equal(s.turn, 1, 'Nachziehen beendet den Zug');
 });
 
 test('Opfern im Tempel ist kein Zug: der Spieler bleibt am Zug, der Nachziehmarker ändert sich nicht (0.7.6.4)', () => {
