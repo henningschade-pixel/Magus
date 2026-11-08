@@ -686,6 +686,11 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Tests:** Drei Tests angepasst (Nachziehmarker Weltphase, Nachziehlimit Kauf, Nachziehlimit Weltphase; der Marker-Reset läuft jetzt über den Händler), neuer Test „Magie kaufen und Upgrades sind keine Aktion mehr“. `tests/golden.json` ist neu erzeugt (absichtliche Regeländerung).
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
 
+## Änderung 0.9.8 (08.11.)
+
+- **Credits im Hauptmenü:** Neuer Menüpunkt **Credits** (zwischen Einstellungen und Beenden) mit dem Dank an die Testspieler:innen: DarkParladin, Deekixx, H5, Leon aka Tim und Zockerboy (alphabetisch). Reine Oberflächenänderung (`showStart`, Seite `credits`), keine Regeländerung.
+- Die Versionsbeschreibung im Spiel nennt die Änderung.
+
 ## Änderung 0.9.7.1 (08.11.)
 
 - **Standard wieder 10 (Regeländerung):** `exhaustRounds` steht wieder auf 10 (in 0.9.7 kurz 8); das gilt für Erschöpfung und Zermürbung.
