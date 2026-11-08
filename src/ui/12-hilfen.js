@@ -72,12 +72,12 @@ function manaTokens(s, who) {
     : '<div class="healtok manatok" data-who="' + who + '" title="' + tip + '" style="' + pos + '">' + img + mul + '</div>';
 }
 // Echo (seit 0.9): Jeder Kombo hinterlässt ein Echo in der Farbe der ersten Karte; der nächste Kombo erneuert es. Enthält der nächste Kombo eine Sekundärkarte in dieser Farbe, steigt seine Stufe um 1 (höchstens 3). Kein Marker im Sinne der Läuterung (nicht läuterbar); dargestellt links (eigenes Echo) und rechts (Echo des Gegners) neben der Kombo-Übersicht.
-const ECHO_COL = { F: '#e8452c', E: '#5aa83c', W: '#3f8ff0' };
+// Der Marker ist farblos (Stein mit hellen Ringen); die Farbe des Echos steht als Buchstabe darin (F, E, W) und im Tooltip. Ohne Echo erscheint ein blasser, gestrichelter Ring.
 function echoToken(s, mine, box) {
-  const e = s && s.echo, who = mine ? 'dein' : 'gegnerisches', col = e ? ECHO_COL[e] : '#8a7a5a';
+  const e = s && s.echo;
   const tip = e ? (mine ? 'Dein' : 'Das') + ' Echo (' + NAMES[e] + '): Der nächste Kombo ' + (mine ? 'von dir' : 'dieser Seite') + ', der eine Sekundärkarte in ' + NAMES[e] + ' enthält, steigt um 1 Stufe (höchstens 3). Jeder neue Kombo erneuert das Echo (Farbe der ersten Karte). Nicht läuterbar.' : 'Noch kein Echo: Jeder Kombo hinterlässt ein Echo in der Farbe seiner ersten Karte. Der nächste Kombo mit einer Sekundärkarte in dieser Farbe steigt um 1 Stufe (höchstens 3). Nicht läuterbar.';
-  const svg = '<svg viewBox="0 0 56 56"><circle cx="28" cy="28" r="25" fill="#1f1a14" stroke="' + col + '" stroke-width="2.5"' + (e ? '' : ' stroke-dasharray="4 4"') + '/>' + (e ? '<circle cx="28" cy="28" r="20" fill="none" stroke="' + col + '" stroke-width="3" opacity=".35"/><circle cx="28" cy="28" r="14" fill="none" stroke="' + col + '" stroke-width="3" opacity=".65"/><circle cx="28" cy="28" r="7" fill="' + col + '"/><circle cx="25.5" cy="25.5" r="2.4" fill="#fff" opacity=".55"/>' : '<circle cx="28" cy="28" r="5" fill="none" stroke="' + col + '" stroke-width="2" opacity=".6"/>') + '</svg>';
-  return '<div class="echotok' + (e ? ' on ' + e : '') + '" data-who="' + (mine ? 's' : 'o') + '" title="' + esc(tip) + '" style="left:' + box.left + 'px;top:' + box.top + 'px">' + svg + '</div>';
+  const ln = '#cfc6b0', svg = '<svg viewBox="0 0 56 56"><circle cx="28" cy="28" r="25" fill="#26211b" stroke="' + ln + '" stroke-width="2.5"' + (e ? '' : ' stroke-dasharray="4 4"') + '/>' + (e ? '<circle cx="28" cy="28" r="19.5" fill="none" stroke="' + ln + '" stroke-width="1.5" opacity=".4"/><circle cx="28" cy="28" r="14" fill="none" stroke="' + ln + '" stroke-width="1.5" opacity=".7"/><text x="28" y="35.5" text-anchor="middle" font-family="Alegreya,serif" font-weight="700" font-size="22" fill="' + ln + '">' + e + '</text>' : '<circle cx="28" cy="28" r="5" fill="none" stroke="' + ln + '" stroke-width="2" opacity=".6"/>') + '</svg>';
+  return '<div class="echotok' + (e ? ' on' : '') + '" data-who="' + (mine ? 's' : 'o') + '" title="' + esc(tip) + '" style="left:' + box.left + 'px;top:' + box.top + 'px">' + svg + '</div>';
 }
 function deathTokens(s, who) {   // seit 0.7.2.11 ein Token mit Zähler statt mehrerer Tokens
   const N = s.death || 0; if (N <= 0) return '';
