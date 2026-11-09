@@ -53,17 +53,16 @@ function evalAttack(stats, cards) {
   echoBoost(stats, levels, ord, lastEl);   // Echo des letzten Kombos (seit 0.9)
   return { valid: true, prim, cost, damage, levels, ord, curses: curses.length, affordable: stats.mana >= cost, ultiEl: levels.ulti > 0 ? lastEl : null };
 }
+// Seit 0.9.9.2 gibt es in der Verteidigung keine Kombos mehr: Es zählen nur Karten der Verteidigungsfarbe (die erste Karte bestimmt sie); Karten einer anderen Farbe sind ungültig.
 function evalDefense(stats, cards, color) {
   if (!cards.length) return { valid: true, cost: 0, block: 0, empty: true };
   const curses = cards.filter(c => c.curse), normals = cards.filter(c => !c.curse);
-  const el = normals.length ? normals[0].el : null, lastEl = normals.length ? normals[normals.length - 1].el : null;   // lastEl bestimmt die Ultimate (seit 0.9.9)
-  const same = normals.filter(c => c.el === el), other = normals.filter(c => c.el !== el);
-  const ulti = other.length && new Set(other.map(c => c.el)).size > 1;   // alle drei Farben: Ultimate auch in der Verteidigung
+  const el = normals.length ? normals[0].el : null;
+  const same = normals.filter(c => c.el === el);
   if (el && el !== color && el !== SUPERIOR[color]) return { valid: false, reason: NAMES[el] + ' kann nicht gegen ' + NAMES[color] + ' verteidigen.' };
-  const cost = curses.reduce((n, c) => n + c.tier, 0) + (el === color ? same.filter(c => !c.free).length : 0) + other.filter(c => !c.free).length;   // Verteidigung in der überlegenen Farbe ist gratis, Kombokarten kosten 1 Mana
+  if (same.length < normals.length) return { valid: false, reason: 'In der Verteidigung sind keine Kombos möglich: nur Karten einer Farbe.' };
+  const cost = curses.reduce((n, c) => n + c.tier, 0) + (el === color ? same.filter(c => !c.free).length : 0);   // Verteidigung in der überlegenen Farbe ist gratis
   let block = 0; same.forEach(c => { block += Math.min(c.tier, stats.mag[el]); });
-  const out = { valid: true, el, cost, block, affordable: stats.mana >= cost, levels: { fw: 0, fe: 0, ew: 0, ulti: 0 }, ord: null, ultiEl: null };
-  if (other.length) { const tiers = { F: [], E: [], W: [] }; normals.forEach(c => tiers[c.el].push(c.tier)); const lv = comboLevels(tiers, stats.mag, el); echoBoost(stats, lv, lv.ord, lastEl); out.ord = !ulti && lv.ord && lv.ord.lvl > 0 ? lv.ord : null; if (ulti) { out.levels.ulti = lv.ulti; if (lv.ulti > 0) out.ultiEl = lastEl; } if (lv.echo) out.levels.echo = true; }
-  return out;
+  return { valid: true, el, cost, block, affordable: stats.mana >= cost, levels: { fw: 0, fe: 0, ew: 0, ulti: 0 }, ord: null, ultiEl: null };
 }
 

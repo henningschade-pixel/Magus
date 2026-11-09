@@ -40,9 +40,7 @@ function lfCtx() {
     lw = ev.valid ? M.levelsFor(ev).ew : 0;
     if (!ev.valid || ev.levels.ulti > 0) return null;
   } else if (c.action === 'defense') {   // seit 0.7.6.1 auch in der Verteidigung (die Läuterung wirkt dort vor der Verteidigung)
-    const sel = M.selection(cx.mine.deck); if (!sel.length) return null;
-    const ev = M.evalDefense(cx.myStats, sel, c.color);
-    lw = ev.valid && ev.ord && !(ev.levels && ev.levels.ulti > 0) ? M.levelsFor(ev).ew : 0;
+    return null;   // seit 0.9.9.2 keine Kombos (und keine Läuterung) in der Verteidigung
   } else return null;
   if (!(lw > 0)) return null;
   return { cx, c, lvl: lw, picks: lfExpand(lfPicks(cx, lw), cx) };
@@ -106,7 +104,7 @@ function combatCenter(cx) {
       const ev = M.evalDefense(cx.myStats, sel, c.color);
       if (!sel.length) prev = '';
       else if (!ev.valid) prev = '<span class="bad">' + esc(ev.reason) + '</span>';
-      else { if (ev.cost > 0) manaPv = ev.cost; prev = ''; canExec = ev.affordable; val = ev.block || 0; if (ev.ord) { const r = ORD_ROWS.find(x => x[0] === ev.ord.key), late = ev.ord.key === 'gh' || ev.ord.key === 'wt' || ev.ord.key === 'ws'; prev += '<div class="note"><b>' + r[1] + '</b> Stufe ' + ev.ord.lvl + (late ? ' nach' : ' vor') + ' der Verteidigung: ' + ordText(r[0], ev.ord.lvl) + '</div>'; if (ev.ord.key === 'gr') prev += lfSummary(cx, ev.ord.lvl); } if (!ev.affordable) prev += '<div class="bad">Zu wenig Mana.</div>'; }
+      else { if (ev.cost > 0) manaPv = ev.cost; prev = ''; canExec = ev.affordable; val = ev.block || 0; if (!ev.affordable) prev += '<div class="bad">Zu wenig Mana.</div>'; }
     }
   }
   h += '<div class="preview">' + prev + '</div><div class="btnrow">';

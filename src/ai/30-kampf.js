@@ -199,16 +199,7 @@ function combatPlan(state, pid) {
   const cand = hand.filter(h => !h.curse);
   const abs0 = Math.min(shield, pend);   // ohne Verteidigung mindert das Schild bis zu seinen Ladungen
   let best = { score: (pend - abs0) * (lethal ? Q.dLeth : Q.dPend) + abs0 * Q.mirKeep, ord: [] };   // Verzicht auf Verteidigung bringt Mana
-  const variants = [];
-  for (const sub0 of subsets(cand, Math.max(1, s.limit))) {
-    const firsts = [...new Set(sub0.filter(h => !h.curse).map(h => h.el))];
-    if (firsts.length <= 1) variants.push(sub0);
-    else firsts.forEach(f => {   // die erste Karte bestimmt die Verteidigungsfarbe; bei drei Farben bestimmt die Schlusskarte die Ultimate (seit 0.9.9)
-      const lasts = firsts.filter(l => l !== f);
-      if (firsts.length < 3) variants.push(sub0.filter(h => h.el === f).concat(sub0.filter(h => h.el !== f)));
-      else lasts.forEach(l => variants.push(sub0.filter(h => h.el === f).concat(sub0.filter(h => h.el !== f && h.el !== l), sub0.filter(h => h.el === l))));
-    });
-  }
+  const variants = subsets(cand, Math.max(1, s.limit)).filter(sub => new Set(sub.filter(h => !h.curse).map(h => h.el)).size <= 1);   // seit 0.9.9.2 nur Karten einer Farbe
   for (const sub of variants) {
     const ev = M.evalDefense(s, sub, color);
     if (!ev.valid || ev.affordable === false) continue;
@@ -216,8 +207,6 @@ function combatPlan(state, pid) {
     const nCurse = sub.filter(h => h.curse).length;
     let score = left * (lethal ? Q.dLeth : Q.dPend) + (ev.cost || 0) * Q.dCost + (sub.length - nCurse) * Q.dKeep - nCurse * 0.6;
     if (lvM > 0) score += absorbed * Q.mirKeep;   // jede geminderte Einheit Schaden kostet eine Schildladung
-    if (ev.ord) { const o = c.sides[c.turn === 'a' ? 'b' : 'a'], lvD = Object.assign({}, M.levelsFor(ev)); if (left >= s.hp) lvD.gh = 0; score -= ordComboWorth(side, o, Q, state.rules, lvD, ev); }   // tödlicher Restschaden: die Heilung nach dem Schaden verfällt
-    if (Q.dU > 0 && ev.levels && ev.levels.ulti > 0) { const o = c.sides[c.turn === 'a' ? 'b' : 'a']; score -= Q.dU * (ev.ultiEl === 'F' ? ev.levels.ulti * Q.wDeath * (o.stats.death >= ev.levels.ulti ? 0.1 : 1) * Math.max(0.4, Math.min(1.4, o.stats.hp / 4)) : ultiWorth(side, o, Q, ev.ultiEl, ev.levels.ulti)); }   // Ultimate in der Verteidigung: Feuer Todesfluss für den Angreifer, Erde Heilfluss, Wasser Manafluss
     if (score < best.score) best = { score, ord: sub };
   }
   if (!best.ord.length) return [A({ type: 'pass' })];

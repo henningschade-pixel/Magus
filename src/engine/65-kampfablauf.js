@@ -372,8 +372,8 @@ function defenseOutcome(stats, color, pending, block, mir, std, rb) {
 }
 // Was ein Kombo der Verteidigung für den laufenden Angriff ändert: Schild und Falle, die in der Verteidigung gestellt werden, wirken erst nach ihr (seit 0.7.2.23 für Schilde, seit 0.8 auch für die Falle). Die Heilung wirkt seit 0.5.4 wieder nach dem Schaden (heal: Stufe, hp: HP vor dem Schaden).
 function defenseComboPre(stats, ev, color) {
-  const lvs = ev && ev.ord && !(ev.levels && ev.levels.ulti > 0) ? levelsFor(ev) : null, rb = stats.rainbow || 0;
-  return { heal: lvs ? lvs.gh || 0 : 0, hp: stats.hp, mir: rb, std: 0, rb };
+  const rb = stats.rainbow || 0;   // seit 0.9.9.2 ohne Kombo in der Verteidigung
+  return { heal: 0, hp: stats.hp, mir: rb, std: 0, rb };
 }
 // Vorschau für die Knöpfe „Verteidigen“ und „Passen“, ohne etwas zu ändern: Mana-Kosten, Block, Restschaden und die HP danach (beim Verteidiger und, durch den Spiegelrückwurf, beim Angreifer). null, wenn gerade keine Verteidigung ansteht oder die Auswahl nicht geht.
 function previewDefense(state, passOnly) {
@@ -403,53 +403,19 @@ function execDefense(state, passOnly) {
   // Passen in der Verteidigung bringt kein Mana (nur im Angriffszug gibt es Erholen)
   if (sel.length) consumeSelection(d, sel); else d.marks = [];
   const attacker = c.sides[c.turn === 'a' ? 'b' : 'a'];
-  const defEchoOld = side.stats.echo, defEchoUsed = !!(defEv && defEv.levels && defEv.levels.echo);   // Echo (seit 0.9), wie im Angriff; seit 0.9.9.1 ändert die Verteidigung das Echo nicht mehr (es entsteht nur durch Primärmagie im Angriff), ein vorhandenes Echo verstärkt ihren Kombo weiterhin
-  // Seit 0.4 wirkt der Kombo zuerst, danach die Verteidigung: Ein Spiegel dieser Farbe wirkte früher schon gegen den Angriff, auf den verteidigt wird; seit 0.7.2.23 stellt ihn die Verteidigung erst nach dem Schaden. Seit 0.5.4 gilt das nicht mehr für die Heilung: Sie wirkt wieder nach Angriff und Verteidigung (Zerrüttung und die übrigen Kombos bleiben davor).
-  let lateShield = 0, lateTrap = 0;   // Schild und Falle, die in dieser Verteidigung gestellt werden, wirken erst nach ihr
-  if (defEv && defEv.levels && defEv.levels.ulti > 0) {   // Ultimate in der Verteidigung: je nach Farbe der Schlusskarte Todesfluss für den Angreifer (Feuer), Heilfluss (Erde) oder Manafluss (Wasser) für den Verteidiger
-    const uel = defEv.ultiEl || defEv.el;
-    if (uel !== 'E' && uel !== 'W' && attacker.stats.deathPhase === undefined) attacker.stats.deathPhase = attacker.stats.death || 0;
-    const u = castUltimate(side, attacker, uel, defEv.levels.ulti);
-    log(state, side.name + ' wirkt eine Ultimate: ' + u.text + '.', side.ctrl, uel === 'E' || uel === 'W' ? Object.assign(u.fx, { first: true }) : { kind: 'aggro', who: side.ctrl, to: attacker.ctrl, n: defEv.levels.ulti, first: true, ult: true });
-  }
-  let healLvl = 0;
-  if (defEv && defEv.ord) {
-    const lvs = levelsFor(defEv), plan = [], texts = [], fxs = [];
-    for (const k of ['hs', 'fe', 'ew']) if (lvs[k] > 0) plan.push([k, lvs[k]]);
-    lateShield = lvs.sh || 0; lateTrap = lvs.tr || 0;   // Heilung (gh), Schild und Falle wirken erst nach dem Schaden, Zerrüttung und die übrigen Kombos davor
-    healLvl = lvs.gh || 0;
-    if (defEchoUsed) texts.push('Echo (' + NAMES[defEchoOld] + '): Kombo +1 Stufe');
-    applyComboPlan(state, side, attacker, plan, defEv, texts, fxs);
-    c.lfp = null;
-    fxs.forEach(f => { f.first = true; });   // Oberfläche: Kombo-Animation läuft vor der Verteidigungsanimation
-    if (texts.length) log(state, side.name + ' wirkt einen Kombo: ' + texts.join(', ') + '.', side.ctrl, fxs.length ? fxs : undefined);
-  }
+  c.lfp = null;
   // Schild (dauerhaft, 1 bis 3 Ladungen): Er mindert den nicht geblockten Schaden gegen jede Farbe und verliert dafür je geminderten Schaden eine Ladung. Das gilt auch beim Passen.
   const { absorb, used, lost, rb, leftover } = defenseOutcome(side.stats, c.color, c.pending, block);
   const hpPre = { [side.ctrl]: side.stats.hp, [attacker.ctrl]: attacker.stats.hp };   // HP vor dem Schaden, aber nach dem Kombo (Oberfläche zeigt sie, bis die Geschosse einschlagen)
   side.stats.hp = side.stats.hp - leftover;   // vorläufig, die Heilung (seit 0.5.4 nach dem Schaden) gleicht ihn noch aus; danach nie unter 0
   const defEl = sel.length && sel[0].el && !sel[0].curse ? sel[0].el : c.color;
-  const defFx = { kind: 'defense', rec: !!passOnly, who: side.ctrl, to: attacker.ctrl, attElem: c.color, defElem: defEl, pending: c.pending, block, hpPre, afterCombo: !!(defEv && (defEv.ord || (defEv.levels && defEv.levels.ulti > 0))) };   // hpPre: HP vor dem Schaden, die Oberfläche zeigt sie, bis die Geschosse einschlagen
+  const defFx = { kind: 'defense', rec: !!passOnly, who: side.ctrl, to: attacker.ctrl, attElem: c.color, defElem: defEl, pending: c.pending, block, hpPre };   // hpPre: HP vor dem Schaden, die Oberfläche zeigt sie, bis die Geschosse einschlagen
   log(state, side.name + (passOnly ? ' passt und nimmt den Schaden hin' : ' verteidigt' + (block ? ' (Block ' + block + ')' : ' ohne Block')) + ' und verliert ' + leftover + ' HP' + '.', side.ctrl, defFx);
   if (used > 0) {
     side.stats.rainbow = Math.max(0, (side.stats.rainbow || 0) - lost); if (!side.stats.rainbow) delete side.stats.rainbow;
     log(state, 'Schild: ' + side.name + ' mindert den Schaden um ' + absorb + ' und verliert ' + lost + ' Ladung' + (lost === 1 ? '' : 'en') + '.', side.ctrl, undefined);
     // Schild-Effekt (Oberfläche, Grafik des Multischilds, elem 'R'): läuft in der Verteidigungsanimation, vor dem Schaden auf den HP
     defFx.mirror = { hpPre, elem: 'R', markers: rb, broken: lost, who: side.ctrl, att: attacker.ctrl, r: 0, abs: absorb, d: c.pending, blk: block };
-  }
-  if (healLvl > 0 && side.stats.hp > 0) {   // Heilung nach Angriff und Verteidigung (seit 0.5.4): gleicht den Schaden nachträglich aus, höchstens bis zum Maximum; seit 0.7.6.2 nur, wenn der Verteidiger nach dem Schaden noch über 0 HP steht (sonst ist er besiegt und die Heilung verfällt)
-    const hTexts = [], hFxs = [];
-    applyComboPlan(state, side, attacker, [['gh', healLvl]], defEv, hTexts, hFxs);
-    hFxs.forEach(f => { f.late = true; });   // Oberfläche: Heilungsanimation nach der Verteidigungsanimation
-    log(state, side.name + ' heilt nach der Verteidigung: ' + hTexts.join(', ') + '.', side.ctrl, hFxs);
-  }
-  if (lateShield > 0 || (lateTrap > 0 && side.stats.hp > 0)) {   // Schild und Falle (Blau + Grün, Blau + Rot) nach Angriff und Verteidigung: gelten erst für den nächsten Angriff
-    const mTexts = [], mFxs = [], plan = [];
-    if (lateTrap > 0 && side.stats.hp > 0) plan.push(['tr', lateTrap]);
-    if (lateShield > 0) plan.push(['sh', lateShield]);
-    applyComboPlan(state, side, attacker, plan, defEv, mTexts, mFxs);
-    mFxs.forEach(f => { f.late = true; });
-    log(state, side.name + ' stellt nach der Verteidigung: ' + mTexts.join(', ') + '.', side.ctrl, mFxs);
   }
   side.stats.hp = Math.max(0, side.stats.hp);
   const attSide = attacker;   // wer gerade angegriffen hat: seine Angriffsphase endet mit dieser Verteidigung
