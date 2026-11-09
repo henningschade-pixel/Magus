@@ -692,6 +692,11 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Tests:** Drei Tests angepasst (Nachziehmarker Weltphase, Nachziehlimit Kauf, Nachziehlimit Weltphase; der Marker-Reset läuft jetzt über den Händler), neuer Test „Magie kaufen und Upgrades sind keine Aktion mehr“. `tests/golden.json` ist neu erzeugt (absichtliche Regeländerung).
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
 
+## Änderung 0.9.9.4 (09.11.)
+
+- **Nachziehen-Knopf in der Verteidigung (Oberfläche):** Im Kampffenster steht in der Verteidigung neben „Verteidigen“ und „Passen“ der Knopf „Nachziehen“ (`data-act="draw"`, `src/ui/18-kampf.js`); bei rotem Marker und zu wenig Mana ist er inaktiv, die Warnabfrage für den roten Marker gilt wie beim Stapelklick. Keine Regeländerung.
+- Die Versionsbeschreibung im Spiel nennt die Änderung.
+
 ## Änderung 0.9.9.3 (09.11.)
 
 - **Nachziehen statt Verteidigen (Regeländerung):** Im Verteidigungszug ist die Aktion „Nachziehen“ erlaubt (Klick auf den Nachziehstapel). Sie ersetzt die Verteidigung: Die nicht gesperrten Karten werden abgelegt und neu gezogen, der Schaden wird wie beim Passen hingenommen (ein Schild mindert ihn weiter, es gibt keinen Block). Der Nachziehmarker gilt wie im Angriffszug: Ist er rot, kostet das Nachziehen Mana; danach springt er (Nachziehen) bzw. bleibt grün (Limit). Umsetzung: `case 'draw'` in `src/engine/65-kampfablauf.js` (ruft `execDefense(state, true)`), Oberfläche `canDrawNow` und Vorschau (`src/ui/15-karten.js`, `src/ui/30-eingaben.js`). Die KI zieht in der Verteidigung nicht nach.
