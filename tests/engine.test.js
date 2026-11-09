@@ -1345,15 +1345,22 @@ test('Zugmuster 0.10: Beispiel – A greift mit 3F an, B reagiert mit 2W: Block,
   assert.equal(c.sides[c.turn].ctrl, me.ctrl, 'A ist wieder am Zug');
 });
 
-test('Zugmuster 0.10: Gleiche Magie blockt und kostet Mana; unpassende Farbe blockt nicht, wirkt aber als Angriff', () => {
-  for (const [id, cost, hpAfter, color] of [['F2', 1, 7, 'F'], ['E2', 1, 5, 'E']]) {
-    const { s, c, op } = combatSetup(11, ['F3']);
-    op.stats.mag = { F: 3, E: 3, W: 3 }; op.stats.limit = 3; op.stats.mana = 5; op.stats.hp = 8; op.deck.hand[0] = Object.assign({}, op.deck.hand[0], { id });
-    M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
-    M.apply(s, { pid: op.ctrl, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: op.ctrl, type: 'attack' }).ok);
-    assert.equal(op.stats.mana, 5 - cost, id + ': Mana'); assert.equal(op.stats.hp, hpAfter, id + ': HP');
-    assert.equal(c.color, color); assert.equal(c.pending, 2);
-  }
+test('Zugmuster 0.10: Gleiche Magie blockt und kostet Mana; wer den Angriff nicht kontern kann, wirkt keine Magie (0.10.0.1)', () => {
+  const { s, c, op } = combatSetup(11, ['F3']);
+  op.stats.mag = { F: 3, E: 3, W: 3 }; op.stats.limit = 3; op.stats.mana = 5; op.stats.hp = 8; op.deck.hand[0] = Object.assign({}, op.deck.hand[0], { id: 'F2' });
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+  M.apply(s, { pid: op.ctrl, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: op.ctrl, type: 'attack' }).ok);
+  assert.equal(op.stats.mana, 4, 'gleiche Magie kostet Mana'); assert.equal(op.stats.hp, 7); assert.equal(c.color, 'F'); assert.equal(c.pending, 2);
+  // Erde kann Feuer nicht kontern: kein Magiezug, nur Erholen, Nachziehen oder Passen
+  const t = combatSetup(11, ['F3']), o2 = t.op;
+  o2.stats.mana = 5; o2.stats.hp = 8; o2.deck.hand[0] = Object.assign({}, o2.deck.hand[0], { id: 'E2' });
+  M.apply(t.s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(t.s, { pid: 0, type: 'attack' }).ok);
+  M.apply(t.s, { pid: o2.ctrl, type: 'mark', slot: 0 });
+  assert.equal(M.evalAttack(o2.stats, M.selection(o2.deck).length ? M.selection(o2.deck) : [], 'F').valid, false);
+  const r = M.apply(t.s, { pid: o2.ctrl, type: 'attack' });
+  assert.equal(r.ok, false, 'Erde gegen Feuer: kein Magiezug');
+  assert.equal(o2.stats.hp, 8, 'nichts geschehen'); assert.equal(t.c.action, 'defense'); assert.equal(o2.stats.mana, 5);
+  assert.ok(M.apply(t.s, { pid: o2.ctrl, type: 'pass' }).ok, 'Passen bleibt möglich');
 });
 
 test('Zugmuster 0.10: Kombo im Block-Zug – Primärkarte blockt kostenlos, die Sekundärkarte (Erde) heilt nach dem Schaden', () => {
@@ -1383,7 +1390,7 @@ test('Zugmuster 0.10: Erholen und Passen bei eingehendem Angriff nehmen den Scha
 
 test('Zugmuster 0.10: Tödlicher Restschaden beendet den Zug ohne Folgeangriff', () => {
   const { s, c, op } = combatSetup(11, ['F3']);
-  op.stats.hp = 2; op.deck.hand[0] = Object.assign({}, op.deck.hand[0], { id: 'E1' });
+  op.stats.hp = 2; op.deck.hand[0] = Object.assign({}, op.deck.hand[0], { id: 'W1' });
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
   M.apply(s, { pid: op.ctrl, type: 'mark', slot: 0 });
   const r = M.apply(s, { pid: op.ctrl, type: 'attack' });

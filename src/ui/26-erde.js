@@ -189,8 +189,8 @@ function earthFormRaw(ctx, x, by, seed, i, t, tCrack, tRise, endAt, ending) {
     if (d && t > T.end) { endEx(); next(); }
     else if (!d && e.trap && e.nEff === 0 && t > e.trapEnd + .15) { endEx(); next(); }   // der Rückwurf hat den ganzen Angriff aufgehoben: keine Verteidigung folgt
   }
-  function next() { const q = queue.shift(); if (!q) return; startEx(q.fx, false); if (q.def) applyDef(q.def); }
-  function attack(fx) { if (off()) return; if (ex && ex.def) queue.push({ fx, def: null }); else startEx(fx, false); }
+  function next() { const q = queue.shift(); if (!q) return; startEx(q.fx, !!q.pre); if (q.def) applyDef(q.def); }
+  function attack(fx) { if (off()) return; const pre = !!(fx.stand && !fx.trap); if (ex && ex.def) queue.push({ fx, def: null, pre }); else startEx(fx, pre); }   // Folgeangriff nach einem Block (stand): kein zweiter Flug, die Magie bleibt in der Mitte stehen
   function defense(fx) {
     if (off()) return;
     if (queue.length) { queue[queue.length - 1].def = fx; return; }

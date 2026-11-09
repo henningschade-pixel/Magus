@@ -87,14 +87,14 @@ function combatCenter(cx) {
   if (my) {
     const sel = M.selection(cx.mine.deck);
     {
-      if (!sel.length) prev = atk ? '' : '<div class="note">Eingehend: <b>' + c.pending + '</b> Schaden (' + NAMES[c.color] + '). Wähle Magie zum Blocken und für deinen Folgeangriff oder erhole, ziehe nach, passe.</div>';
+      if (!sel.length) prev = atk ? '' : '<div class="note">Eingehend: <b>' + c.pending + '</b> Schaden (' + NAMES[c.color] + '). Wähle Magie der Farbe ' + NAMES[c.color] + ' oder ' + NAMES[M.SUPERIOR ? M.SUPERIOR[c.color] : c.color] + ' als erste Karte (blockt und stellt den Folgeangriff) oder erhole, ziehe nach, passe.</div>';
       else {
         const ev = M.evalAttack(cx.myStats, sel, atk ? undefined : c.color);
         if (ev.valid) manaPv = ev.cost;
         prev = '';
         canExec = ev.valid && ev.affordable; val = ev.valid && ev.prim ? ev.damage : 0;
         const lvC = ev.valid ? M.levelsFor(ev) : ev.levels;
-        if (!atk && ev.valid) prev += '<div class="note">Eingehend <b>' + c.pending + '</b> (' + NAMES[c.color] + '): ' + (ev.block ? 'Block <b>' + ev.block + '</b>' + (ev.prim === c.color ? '' : ' (überlegene Magie, kostenlos)') : 'kein Block (' + (ev.prim ? NAMES[ev.prim] + ' blockt nicht gegen ' + NAMES[c.color] : 'keine Magiekarte') + ')') + '</div>';
+        if (!atk && ev.valid) prev += '<div class="note">Eingehend <b>' + c.pending + '</b> (' + NAMES[c.color] + '): ' + 'Block <b>' + ev.block + '</b>' + (ev.prim === c.color ? '' : ' (überlegene Magie, kostenlos)') + '</div>';
         if (ev.valid && ev.levels.echo) prev += '<div class="note">Echo (' + NAMES[cx.myStats.echo] + '): Kombo +1 Stufe</div>';
         if (ev.valid && lvC.ew > 0 && !(ev.levels.ulti > 0)) prev += lfSummary(cx, lvC.ew);
         if (!ev.valid) prev = '<span class="bad">' + esc(ev.reason) + '</span>';

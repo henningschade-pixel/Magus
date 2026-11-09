@@ -43,6 +43,7 @@ const MAX_LVL_ECHO = 3;
 function evalAttack(stats, cards, inc) {
   if (!cards.length) return { valid: false, reason: 'Keine Karte gewählt.' };
   const curses = cards.filter(c => c.curse), normals = cards.filter(c => !c.curse);
+  if (inc && !(normals.length && (normals[0].el === inc || normals[0].el === SUPERIOR[inc]))) return { valid: false, reason: 'Gegen ' + NAMES[inc] + ' wirken nur ' + NAMES[inc] + ' und ' + NAMES[SUPERIOR[inc]] + ' als erste Karte; sonst erholen, nachziehen oder passen.' };   // seit 0.10: Wer den eingehenden Angriff nicht kontern kann, wirkt keine Magie
   const prim = normals.length ? normals[0].el : null, lastEl = normals.length ? normals[normals.length - 1].el : null;   // lastEl: Farbe der zuletzt markierten Karte (bestimmt die Ultimate, seit 0.9.9)
   const same = prim ? normals.filter(c => c.el === prim) : [];
   const freePrim = !!(inc && prim && prim === SUPERIOR[inc]);   // überlegene Magie gegen den eingehenden Angriff: kostenlos

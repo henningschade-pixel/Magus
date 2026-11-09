@@ -354,7 +354,7 @@ function execCast(state) {
   const dmg0 = ev.prim ? ev.damage : 0;
   let dmg = dmg0;
   if (dmg0 > 0 && opp.stats.trap) dmg = dmg0 - springTrap(state, opp, side, ev.prim, dmg0, fxs, texts);   // die Falle wird aufgedeckt, sobald Schaden eingeht
-  if (dmg > 0) fxs.push({ kind: 'attack', who: side.ctrl, to: opp.ctrl, elem: ev.prim, n: dmg });
+  if (dmg > 0) fxs.push({ kind: 'attack', who: side.ctrl, to: opp.ctrl, elem: ev.prim, n: dmg, stand: !!inc });   // stand: die Magie wurde schon als Block gezeigt und bleibt nun als Folgeangriff stehen
   log(state, side.name + (inc ? ' wirkt Magie' : ' greift an') + (ev.prim ? ' (' + NAMES[ev.prim] + ', Schaden ' + dmg0 + ')' : ' (nur Flüche)') + (texts.length ? ' – ' + texts.join(', ') : '') + '.', side.ctrl, fxs.length ? fxs : undefined);
   const info = { k: 'A', who: side.key === 'a' ? 0 : 1, v: dmg0 };
   if (hpDecided(state)) return { ok: true, combatEnd: endDecided(state, info) };   // Stufe 1: Der Rückwurf der Falle hat den Wirkenden auf 0 HP gebracht; kein Fluss wirkt mehr
