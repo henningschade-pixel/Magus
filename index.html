@@ -933,33 +933,23 @@ function echoBoost(stats, lv, ord, ultiEl) {
 }
 const MAX_LVL_ECHO = 3;
 // Fluchkarten kosten beim Ausspielen je 1 Mana und zählen nicht als Element. Offen liegende Hellsichtkarten (c.free) kosten kein Mana.
-function evalAttack(stats, cards) {
+// inc: Farbe des eingehenden Angriffs (seit 0.10 wird der Schaden im selben Zug abgewehrt): Die Primärfarbe blockt, wenn sie die Angriffsfarbe oder die überlegene Farbe ist; die überlegene Farbe kostet kein Mana.
+function evalAttack(stats, cards, inc) {
   if (!cards.length) return { valid: false, reason: 'Keine Karte gewählt.' };
   const curses = cards.filter(c => c.curse), normals = cards.filter(c => !c.curse);
   const prim = normals.length ? normals[0].el : null, lastEl = normals.length ? normals[normals.length - 1].el : null;   // lastEl: Farbe der zuletzt markierten Karte (bestimmt die Ultimate, seit 0.9.9)
   const same = prim ? normals.filter(c => c.el === prim) : [];
-  const cost = normals.filter(c => !c.free).length + curses.reduce((n, c) => n + c.tier, 0);
+  const freePrim = !!(inc && prim && prim === SUPERIOR[inc]);   // überlegene Magie gegen den eingehenden Angriff: kostenlos
+  const cost = normals.filter(c => !c.free && !(freePrim && c.el === prim)).length + curses.reduce((n, c) => n + c.tier, 0);
   let damage = 0; same.forEach(c => { damage += Math.min(c.tier, stats.mag[prim]); });
+  const canBlock = !!(inc && prim && (prim === inc || prim === SUPERIOR[inc]));
   const tiers = { F: [], E: [], W: [] }; normals.forEach(c => tiers[c.el].push(c.tier));
   const levels = comboLevels(tiers, stats.mag, prim);
   if (stats.noCombo) for (const k of stats.noCombo) levels[k] = 0; // nur für Simulationen
   const ord = levels.ord && !(stats.noCombo && stats.noCombo.includes(levels.ord.key)) ? levels.ord : null;
   echoBoost(stats, levels, ord, lastEl);   // Echo des letzten Kombos (seit 0.9)
-  return { valid: true, prim, cost, damage, levels, ord, curses: curses.length, affordable: stats.mana >= cost, ultiEl: levels.ulti > 0 ? lastEl : null };
+  return { valid: true, prim, cost, damage, block: canBlock ? damage : 0, levels, ord, curses: curses.length, affordable: stats.mana >= cost, ultiEl: levels.ulti > 0 ? lastEl : null };
 }
-// Seit 0.9.9.2 gibt es in der Verteidigung keine Kombos mehr: Es zählen nur Karten der Verteidigungsfarbe (die erste Karte bestimmt sie); Karten einer anderen Farbe sind ungültig.
-function evalDefense(stats, cards, color) {
-  if (!cards.length) return { valid: true, cost: 0, block: 0, empty: true };
-  const curses = cards.filter(c => c.curse), normals = cards.filter(c => !c.curse);
-  const el = normals.length ? normals[0].el : null;
-  const same = normals.filter(c => c.el === el);
-  if (el && el !== color && el !== SUPERIOR[color]) return { valid: false, reason: NAMES[el] + ' kann nicht gegen ' + NAMES[color] + ' verteidigen.' };
-  if (same.length < normals.length) return { valid: false, reason: 'In der Verteidigung sind keine Kombos möglich: nur Karten einer Farbe.' };
-  const cost = curses.reduce((n, c) => n + c.tier, 0) + (el === color ? same.filter(c => !c.free).length : 0);   // Verteidigung in der überlegenen Farbe ist gratis
-  let block = 0; same.forEach(c => { block += Math.min(c.tier, stats.mag[el]); });
-  return { valid: true, el, cost, block, affordable: stats.mana >= cost, levels: { fw: 0, fe: 0, ew: 0, ulti: 0 }, ord: null, ultiEl: null };
-}
-
 /* ---------- Kampfablauf ---------- */
 function playerSide(state, pid, key) {
   const p = state.players[pid];
@@ -1287,36 +1277,44 @@ function applyComboPlan(state, side, opp, plan, ev, texts, fxs) {
     }
   }
 }
-function execAttack(state) {
+// Zugmuster seit 0.10: Jeder Zug hat dieselben Aktionen (Magie wirken, Erholen, Nachziehen, Passen). Wer Magie wirkt, wehrt zuerst einen eingehenden Angriff ab (nur die Primärfarbe in der Angriffsfarbe oder der überlegenen Farbe blockt; die überlegene kostet kein Mana) und stellt mit denselben Karten den Folgeangriff: Die Primärkarte setzt das Echo, die Sekundärkarte löst eine Kombo aus (durch das alte Echo verstärkt).
+function execCast(state) {
   const c = state.combat, side = c.sides[c.turn], opp = c.sides[c.turn === 'a' ? 'b' : 'a'];
   const d = side.deck, sel = selection(d);
-  const ev = evalAttack(side.stats, sel);
+  const inc = c.action === 'defense' ? c.color : null, c0pending = c.pending;
+  const ev = evalAttack(side.stats, sel, inc);
   if (!ev.valid) return fail(ev.reason);
   if (!ev.affordable) return fail('Zu wenig Mana (' + ev.cost + ' nötig).');
-  side.passed = 0;   // ein Angriff beendet die Serie der Passen-Züge
+  side.passed = 0;   // Magie wirken beendet die Serie der Passen-Züge
   const lvs = levelsFor(ev), death = ev.levels.ulti > 0, plan = [];
   if (!death) for (const k of ['hs', 'tr', 'sh', 'fe', 'ew', 'gh']) if (lvs[k] > 0) plan.push([k, lvs[k]]);
   side.stats.mana -= ev.cost;
   consumeSelection(d, sel);
+  if (inc) {   // Zuerst wird der eingehende Schaden gemindert und genommen (Block der Primärmagie, dann Schild); fällt der Wirkende dabei auf 0 HP, verfällt sein Zug
+    const left = takeIncoming(state, side, ev.block, ev.prim, true);
+    if (hpDecided(state)) return { ok: true, combatEnd: endDecided(state, { k: 'V', who: side.key === 'a' ? 0 : 1, v: ev.block, b: c0pending, left }) };
+  }
   const texts = [], fxs = [];
-  const echoOld = side.stats.echo, echoUsed = !!ev.levels.echo;   // Echo (seit 0.9): der Kombo wird durch das Echo der Seite verstärkt; seit 0.9.6 hinterlässt jede Nutzung von Primärmagie ein neues Echo (auch ohne Kombo)
-  if (ev.prim) side.stats.echo = ev.prim;   // Echo in der Farbe der ersten Karte; bei der Ultimate (Farbe der Schlusskarte: ev.ultiEl) ebenso
+  const echoOld = side.stats.echo, echoUsed = !!ev.levels.echo;   // Echo (seit 0.9): der Kombo wird durch das Echo der Seite verstärkt; jede Nutzung von Primärmagie (auch beim Blocken, seit 0.10) hinterlässt ein neues Echo
+  if (ev.prim) side.stats.echo = ev.prim;   // Echo in der Farbe der ersten Karte
   if (echoUsed) texts.push('Echo (' + NAMES[echoOld] + '): Kombo +1 Stufe');
   applyComboPlan(state, side, opp, plan, ev, texts, fxs);
-  if (death && (ev.ultiEl || ev.prim) === 'E' && side.stats.healPhase === undefined) side.stats.healPhase = side.stats.heal || 0;   // wie beim Todesfluss: ein in dieser Angriffsphase gelegter Heilmarker heilt erst am Ende der nächsten eigenen Angriffsphase
+  if (death && (ev.ultiEl || ev.prim) === 'E' && side.stats.healPhase === undefined) side.stats.healPhase = side.stats.heal || 0;   // wie beim Todesfluss: ein in diesem Zug gelegter Heilmarker heilt erst am Ende des nächsten eigenen Zugs
   if (death && (ev.ultiEl || ev.prim) === 'W' && side.stats.manaPhase === undefined) side.stats.manaPhase = side.stats.manaflow || 0;   // ebenso der Manamarker
   if (death) { const u = castUltimate(side, opp, ev.ultiEl || ev.prim, ev.levels.ulti); fxs.push(u.fx); texts.push(u.text); }
   c.lfp = null;
   const dmg0 = ev.prim ? ev.damage : 0;
   let dmg = dmg0;
-  if (dmg0 > 0 && opp.stats.trap) dmg = dmg0 - springTrap(state, opp, side, ev.prim, dmg0, fxs, texts);   // die Falle wird aufgedeckt, sobald Schaden eingeht, vor der Verteidigung
+  if (dmg0 > 0 && opp.stats.trap) dmg = dmg0 - springTrap(state, opp, side, ev.prim, dmg0, fxs, texts);   // die Falle wird aufgedeckt, sobald Schaden eingeht
   if (dmg > 0) fxs.push({ kind: 'attack', who: side.ctrl, to: opp.ctrl, elem: ev.prim, n: dmg });
-  log(state, side.name + ' greift an' + (ev.prim ? ' (' + NAMES[ev.prim] + ', Schaden ' + dmg0 + ')' : ' (nur Flüche)') + (texts.length ? ' – ' + texts.join(', ') : '') + '.', side.ctrl, fxs.length ? fxs : undefined);
-  if (hpDecided(state)) { c.turn = c.turn === 'a' ? 'b' : 'a'; c.action = 'attack'; c.color = null; c.pending = 0; c.atkTurns = (c.atkTurns || 0) + 1; }   // Stufe 1: Der Rückwurf der Falle hat den Angreifer auf 0 HP gebracht. Er ist besiegt, noch bevor der Verteidiger verteidigt oder Schaden nimmt; kein Fluss wirkt mehr
-  else if (dmg > 0) { c.color = ev.prim; c.pending = dmg; c.turn = c.turn === 'a' ? 'b' : 'a'; c.action = 'defense'; c.atkTurns = (c.atkTurns || 0) + 1; }
-  else passAttackTurn(state);
-  const res = finishStep(state, { k: 'A', who: side.key === 'a' ? 0 : 1, v: dmg0 });
-  return { ok: true, combatEnd: res };
+  log(state, side.name + (inc ? ' wirkt Magie' : ' greift an') + (ev.prim ? ' (' + NAMES[ev.prim] + ', Schaden ' + dmg0 + ')' : ' (nur Flüche)') + (texts.length ? ' – ' + texts.join(', ') : '') + '.', side.ctrl, fxs.length ? fxs : undefined);
+  const info = { k: 'A', who: side.key === 'a' ? 0 : 1, v: dmg0 };
+  if (hpDecided(state)) return { ok: true, combatEnd: endDecided(state, info) };   // Stufe 1: Der Rückwurf der Falle hat den Wirkenden auf 0 HP gebracht; kein Fluss wirkt mehr
+  deathTick(state, side, (c.atkTurns || 0) + 1);   // Ende des eigenen Zugs: Flusseffekte und Erschöpfung (Stufe 3)
+  c.turn = c.turn === 'a' ? 'b' : 'a'; c.atkTurns = (c.atkTurns || 0) + 1; c.lfp = null;
+  if (dmg > 0 && !hpDecided(state)) { c.color = ev.prim; c.pending = dmg; c.action = 'defense'; }   // der Gegner reagiert im nächsten Zug
+  else { c.action = 'attack'; c.color = null; c.pending = 0; }
+  return { ok: true, combatEnd: finishStep(state, info) };
 }
 // Fliehen (seit 0.9.1 standardmäßig abgeschaltet, Schalter fleeAllowed: 0 = aus, 1 = an; die Erschöpfung beendet festgefahrene Kämpfe): Im Monsterkampf und im Showdown darf jede Seite (im Monsterkampf der Angreifer ebenso wie der Spieler, der das Monster führt) den Kampf abbrechen, wenn der Gegner kein Mana mehr hat, ihr gerade kein Angriff entgegengebracht wird (eigener Angriffszug) und sie nicht unter einem Todesfluss steht. Kein Sieger, keine Beute; das Monster behält seine HP und sein Mana, und danach ist der Spieler am Zug, der das Monster geführt hat (er kann das angeschlagene Monster jetzt selbst angreifen).
 function canFlee(state, pid) {
@@ -1332,59 +1330,47 @@ function defenseOutcome(stats, color, pending, block, mir, std, rb) {
   const r0 = rb === undefined ? (stats.rainbow || 0) : rb, missing = Math.max(0, pending - block), absorb = Math.min(r0, missing);
   return { mLvl: r0, absorb, refl: 0, used: absorb, lostStd: 0, lostRb: absorb, lost: absorb, std: 0, rb: r0, leftover: missing - absorb };
 }
-// Was ein Kombo der Verteidigung für den laufenden Angriff ändert: Schild und Falle, die in der Verteidigung gestellt werden, wirken erst nach ihr (seit 0.7.2.23 für Schilde, seit 0.8 auch für die Falle). Die Heilung wirkt seit 0.5.4 wieder nach dem Schaden (heal: Stufe, hp: HP vor dem Schaden).
-function defenseComboPre(stats, ev, color) {
-  const rb = stats.rainbow || 0;   // seit 0.9.9.2 ohne Kombo in der Verteidigung
-  return { heal: 0, hp: stats.hp, mir: rb, std: 0, rb };
-}
-// Vorschau für die Knöpfe „Verteidigen“ und „Passen“, ohne etwas zu ändern: Mana-Kosten, Block, Restschaden und die HP danach (beim Verteidiger und, durch den Spiegelrückwurf, beim Angreifer). null, wenn gerade keine Verteidigung ansteht oder die Auswahl nicht geht.
-function previewDefense(state, passOnly) {
-  const c = state.combat;
-  if (!c || c.forced || c.action !== 'defense') return null;
-  const side = c.sides[c.turn], att = c.sides[c.turn === 'a' ? 'b' : 'a'];
-  let block = 0, cost = 0, pre = defenseComboPre(side.stats, null, c.color);   // Heilung (heal) wirkt nach dem Schaden
-  if (!passOnly) {
-    const sel = selection(side.deck);
-    if (sel.length) { const ev = evalDefense(side.stats, sel, c.color); if (!ev.valid || ev.affordable === false) return null; block = ev.block || 0; cost = ev.cost || 0; pre = defenseComboPre(side.stats, ev, c.color); }
-  }
-  const o = defenseOutcome(side.stats, c.color, c.pending, block, pre.mir, pre.std, pre.rb);
-  return Object.assign({ who: side.ctrl, att: att.ctrl, cost, block, heal: pre.heal, hpAfter: pre.hp - o.leftover > 0 ? healedHp(side.stats, pre.hp - o.leftover, pre.heal) : 0, attHpAfter: Math.max(0, att.stats.hp - o.refl) }, o);
-}
-function execDefense(state, passOnly) {
-  const c = state.combat, side = c.sides[c.turn], c0pending = c.pending;
-  const d = side.deck;
-  let block = 0, cost = 0, sel = [], defEv = null;
-  if (!passOnly) {
-    sel = selection(d);
-    const ev = evalDefense(side.stats, sel, c.color);
-    if (!ev.valid) return fail(ev.reason);
-    if (ev.affordable === false) return fail('Zu wenig Mana (' + ev.cost + ' nötig).');
-    block = ev.block || 0; cost = ev.cost || 0; defEv = ev;
-  }
-  side.stats.mana -= cost;
-  // Passen in der Verteidigung bringt kein Mana (nur im Angriffszug gibt es Erholen)
-  if (sel.length) consumeSelection(d, sel); else d.marks = [];
-  const attacker = c.sides[c.turn === 'a' ? 'b' : 'a'];
-  c.lfp = null;
-  // Schild (dauerhaft, 1 bis 3 Ladungen): Er mindert den nicht geblockten Schaden gegen jede Farbe und verliert dafür je geminderten Schaden eine Ladung. Das gilt auch beim Passen.
+// Eingehenden Schaden auflösen (seit 0.10 Teil jedes Zugs, auch beim Erholen, Nachziehen und Passen): Block, Schild, HP-Verlust, Protokoll samt Effekt. cast: die Karten des Zugs wehren ab (sonst wird der Schaden ohne Block hingenommen). Gibt den Restschaden zurück.
+function takeIncoming(state, side, block, defEl, cast) {
+  const c = state.combat, attacker = c.sides[c.turn === 'a' ? 'b' : 'a'];
   const { absorb, used, lost, rb, leftover } = defenseOutcome(side.stats, c.color, c.pending, block);
-  const hpPre = { [side.ctrl]: side.stats.hp, [attacker.ctrl]: attacker.stats.hp };   // HP vor dem Schaden, aber nach dem Kombo (Oberfläche zeigt sie, bis die Geschosse einschlagen)
-  side.stats.hp = side.stats.hp - leftover;   // vorläufig, die Heilung (seit 0.5.4 nach dem Schaden) gleicht ihn noch aus; danach nie unter 0
-  const defEl = sel.length && sel[0].el && !sel[0].curse ? sel[0].el : c.color;
-  const defFx = { kind: 'defense', rec: !!passOnly, who: side.ctrl, to: attacker.ctrl, attElem: c.color, defElem: defEl, pending: c.pending, block, hpPre };   // hpPre: HP vor dem Schaden, die Oberfläche zeigt sie, bis die Geschosse einschlagen
-  log(state, side.name + (passOnly ? ' passt und nimmt den Schaden hin' : ' verteidigt' + (block ? ' (Block ' + block + ')' : ' ohne Block')) + ' und verliert ' + leftover + ' HP' + '.', side.ctrl, defFx);
+  const hpPre = { [side.ctrl]: side.stats.hp, [attacker.ctrl]: attacker.stats.hp };   // HP vor dem Schaden (Oberfläche zeigt sie, bis die Geschosse einschlagen)
+  side.stats.hp = Math.max(0, side.stats.hp - leftover);
+  const defFx = { kind: 'defense', rec: !cast, who: side.ctrl, to: attacker.ctrl, attElem: c.color, defElem: cast && defEl ? defEl : c.color, pending: c.pending, block, hpPre };
+  log(state, side.name + (cast ? ' verteidigt' + (block ? ' (Block ' + block + ')' : ' ohne Block') : ' nimmt den Schaden hin') + ' und verliert ' + leftover + ' HP' + '.', side.ctrl, defFx);
   if (used > 0) {
     side.stats.rainbow = Math.max(0, (side.stats.rainbow || 0) - lost); if (!side.stats.rainbow) delete side.stats.rainbow;
     log(state, 'Schild: ' + side.name + ' mindert den Schaden um ' + absorb + ' und verliert ' + lost + ' Ladung' + (lost === 1 ? '' : 'en') + '.', side.ctrl, undefined);
-    // Schild-Effekt (Oberfläche, Grafik des Multischilds, elem 'R'): läuft in der Verteidigungsanimation, vor dem Schaden auf den HP
-    defFx.mirror = { hpPre, elem: 'R', markers: rb, broken: lost, who: side.ctrl, att: attacker.ctrl, r: 0, abs: absorb, d: c.pending, blk: block };
+    defFx.mirror = { hpPre, elem: 'R', markers: rb, broken: lost, who: side.ctrl, att: attacker.ctrl, r: 0, abs: absorb, d: c.pending, blk: block };   // Schild-Effekt (Oberfläche, elem 'R'): läuft in der Verteidigungsanimation
   }
-  side.stats.hp = Math.max(0, side.stats.hp);
-  const attSide = attacker;   // wer gerade angegriffen hat: seine Angriffsphase endet mit dieser Verteidigung
-  c.action = 'attack'; c.color = null; c.pending = 0; c.lfp = null;
-  if (!hpDecided(state)) deathTick(state, attSide, c.atkTurns || 0);   // Stufe 2 (Schaden nach der Verteidigung, samt Heilung) ist abgeschlossen; erst wenn dabei niemand auf 0 HP fiel, folgen als Stufe 3 die Flusseffekte (atkTurns zählt den Angriff dieser Phase schon mit)
-  const res = finishStep(state, { k: 'V', who: side.key === 'a' ? 0 : 1, v: block, b: c0pending, left: leftover });
-  return { ok: true, combatEnd: res };
+  return leftover;
+}
+// Der Zug endet, weil eine Seite auf 0 HP fiel: die Initiative wechselt, der Kampf wird ausgewertet.
+function endDecided(state, info) {
+  const c = state.combat;
+  c.turn = c.turn === 'a' ? 'b' : 'a'; c.action = 'attack'; c.color = null; c.pending = 0; c.lfp = null; c.atkTurns = (c.atkTurns || 0) + 1;
+  return finishStep(state, info);
+}
+// Zug ohne Magie (Erholen, Nachziehen, Passen) bei eingehendem Angriff: Der Schaden wird ohne Block hingenommen (ein Schild mindert ihn). Gibt { res } zurück, wenn der Kampf dadurch entschieden ist, sonst null.
+function takeHitFirst(state, side) {
+  const c = state.combat;
+  if (c.action !== 'defense') return null;
+  const c0pending = c.pending, left = takeIncoming(state, side, 0, null, false);
+  if (hpDecided(state)) { side.deck.marks = []; return { res: { ok: true, combatEnd: endDecided(state, { k: 'V', who: side.key === 'a' ? 0 : 1, v: 0, b: c0pending, left }) } }; }
+  return null;
+}
+// Vorschau für die Knöpfe „Magie wirken“ (noCast falsch) und Erholen/Nachziehen/Passen (noCast wahr), ohne etwas zu ändern: Mana-Kosten, Block, Restschaden und die HP danach. null, wenn gerade kein Angriff eingeht oder die Auswahl nicht geht.
+function previewDefense(state, noCast) {
+  const c = state.combat;
+  if (!c || c.forced || c.action !== 'defense') return null;
+  const side = c.sides[c.turn], att = c.sides[c.turn === 'a' ? 'b' : 'a'];
+  let block = 0, cost = 0, heal = 0;
+  if (!noCast) {
+    const sel = selection(side.deck);
+    if (sel.length) { const ev = evalAttack(side.stats, sel, c.color); if (!ev.valid || ev.affordable === false) return null; block = ev.block || 0; cost = ev.cost || 0; heal = ev.levels.ulti > 0 ? 0 : levelsFor(ev).gh || 0; }
+  }
+  const o = defenseOutcome(side.stats, c.color, c.pending, block);
+  return Object.assign({ who: side.ctrl, att: att.ctrl, cost, block, heal, hpAfter: side.stats.hp - o.leftover > 0 ? healedHp(side.stats, side.stats.hp - o.leftover, heal) : 0, attHpAfter: Math.max(0, att.stats.hp - o.refl) }, o);
 }
 
 function applyCombat(state, a) {
@@ -1418,12 +1404,12 @@ function applyCombat(state, a) {
   switch (a.type) {
     case 'mark': { const e = toggleMark(side.deck, a.slot, side.stats.limit); return e ? fail(e) : { ok: true }; }
     case 'lfp': { if (c.action !== 'attack' && c.action !== 'defense') return fail('Nur im Angriffs- oder Verteidigungszug.'); const ok = ['sm', 'om', 'sd', 'od', 'sh', 'oh', 'sr', 'or', 'st', 'ot']; c.lfp = a.pick === null ? null : (Array.isArray(a.pick) ? a.pick : []).filter(x => typeof x === 'string' && ok.includes(x.split(':')[0]) && (x.indexOf(':') < 0 || ELEMENTS.includes(x.split(':')[1]))).slice(0, 3); return { ok: true }; }
-    case 'attack': if (c.action !== 'attack') return fail('Jetzt wird verteidigt.'); return execAttack(state);
-    case 'defend': if (c.action !== 'defense') return fail('Jetzt wird angegriffen.'); return execDefense(state, false);
-    case 'pass':
-      if (c.action === 'defense') return execDefense(state, true);
+    case 'attack': case 'defend': return execCast(state);   // seit 0.10 gibt es nur noch „Magie wirken“ (defend bleibt als Alias für alte Aufzeichnungen)
+    case 'pass': {
+      const hit = takeHitFirst(state, side); if (hit) return hit.res;
       side.deck.marks = []; side.passed = (side.passed || 0) + 1; log(state, side.name + ' passt.', side.ctrl);   // passed: Passen-Züge in Folge (die KI greift dann eher an)
       passAttackTurn(state); return { ok: true, combatEnd: finishStep(state) };
+    }
     case 'flee': {
       if (!state.rules.fleeAllowed) return fail('Fliehen ist abgeschaltet.');
       if (c.action !== 'attack') return fail('Fliehen geht nur im eigenen Angriffszug, nicht unter Angriff.');
@@ -1435,7 +1421,7 @@ function applyCombat(state, a) {
       return { ok: true, combatEnd: endCombat(state, { reason: 'flee', winner: null, monsterDefeated: false, fled: side.key }) };
     }
     case 'recover': {
-      if (c.action !== 'attack') return fail('Erholen geht nur im Angriffszug.');
+      const hit = takeHitFirst(state, side); if (hit) return hit.res;
       const gain = recoverGain(state);
       side.stats.mana = Math.min(side.stats.maxMana, side.stats.mana + gain);
       side.deck.marks = [];
@@ -1443,16 +1429,14 @@ function applyCombat(state, a) {
       passAttackTurn(state); return { ok: true, combatEnd: finishStep(state) };
     }
     case 'draw': {
-      if (c.action !== 'attack' && c.action !== 'defense') return fail('Nachziehen geht nur im Angriffs- oder Verteidigungszug.');
       const dmc = drawManaCost(state, side.ctrl);   // roter Nachziehmarker: Nachziehen kostet Mana
       if (side.stats.mana < dmc) return fail('Bei rotem Nachziehmarker kostet Nachziehen ' + dmc + ' Mana. Es ist nicht genug Mana da.');
-      if (!drawPhase(state, side.deck)) return fail('Alle Karten sind gesperrt, es gibt nichts zu tauschen.');
+      const dd = side.deck;
+      if (!(dd.hand.some(x => !x || !x.locked) && (dd.draw.length + dd.discard.length > 0 || dd.hand.some(x => x && !x.locked)))) return fail('Alle Karten sind gesperrt, es gibt nichts zu tauschen.');
       side.stats.mana -= dmc;
-      if (c.action === 'defense') {   // seit 0.9.9.3: Nachziehen statt Verteidigen; der Schaden wird wie beim Passen hingenommen (ein Schild mindert ihn)
-        log(state, side.name + ' zieht Karten nach statt zu verteidigen' + (dmc ? ' und zahlt bei rotem Marker ' + dmc + ' Mana' : '') + '.', side.ctrl);
-        return execDefense(state, true);
-      }
-      log(state, side.name + ' zieht Karten nach (ersetzt den Angriff)' + (dmc ? ' und zahlt bei rotem Marker ' + dmc + ' Mana' : '') + '.', side.ctrl);
+      const hit = takeHitFirst(state, side); if (hit) return hit.res;   // ein eingehender Angriff wird zuerst ohne Block hingenommen
+      drawPhase(state, side.deck);
+      log(state, side.name + ' zieht Karten nach' + (dmc ? ' und zahlt bei rotem Marker ' + dmc + ' Mana' : '') + '.', side.ctrl);
       passAttackTurn(state); return { ok: true, combatEnd: finishStep(state) };
     }
     case 'freeDraw': {
@@ -1725,8 +1709,8 @@ function handCounts(d) { const c = {}; d.hand.forEach(x => { if (x) c[x.id] = (c
 return { ELEMENTS, SUPERIOR, NAMES, START_DECK, MAX_MAGIC, MAX_SLOTS, MIN_SLOTS, MAX_LIMIT, MAX_DRAW_LIMIT, MAX_UPGRADES, MONSTER_MAX_LIMIT, DEFAULT_RULES, MONSTER,
   makeRng, parseCard, selection, baseLen, dropSight, newGame, apply, record, prim, actor, other, regen, handCounts,
   vendorOffers, vendorPlans, previewTemple, pointsForGold, nextLevelCost, maxed, limitStepCost, manaStepCost, hpStepCost, slotStepCost, magicCost, drawLimitCost, upField, magicField, payTxt,
-  evalAttack, evalDefense, canFlee, stockOf, recoverGain, regenGain, comboLevels, levelsFor,
-  drawPenaltyAmount, worldRound, worldWear, worldWearGold, monsterAlive, monsterHand, markerOf, drawManaCost, drawGoldPenalty, previewDefense, defenseComboPre, allMonstersDead, magicProgress, spawnMonsters, spawnForGame };
+  evalAttack, canFlee, stockOf, recoverGain, regenGain, comboLevels, levelsFor,
+  drawPenaltyAmount, worldRound, worldWear, worldWearGold, monsterAlive, monsterHand, markerOf, drawManaCost, drawGoldPenalty, previewDefense, allMonstersDead, magicProgress, spawnMonsters, spawnForGame };
 }));</script>
 <script>/* Magus – einfacher Computergegner. Wählt nur Aktionen, die auch ein Mensch hätte. */
 (function (root, factory) {
@@ -2106,8 +2090,9 @@ function ultiWorth(side, opp, Q, el, lvl) {
   if (el === 'W') return lvl * Q.aCost * Q.uMana * ((side.stats.manaflow || 0) >= lvl ? 0.1 : 1) * (side.stats.maxMana > side.stats.mana ? 1 : 0.6);   // Manafluss: +S Mana je eigener Angriffsphase, jedes Mana ist etwa so viel wert wie sein Preis im Angriff
   return lvl * Q.wDeath * (opp.stats.death >= lvl ? 0.1 : 1) * (Q.smart ? Math.max(0.4, Math.min(1.4, opp.stats.hp / 4)) : 1);
 }
-function bestAttack(side, opp, hand, Q, state0, reserve) {
+function bestAttack(side, opp, hand, Q, state0, reserve, inc) {   // inc: { color, pend } bei eingehendem Angriff: Der Block derselben Karten zählt mit
   const stats = side.stats, lim = Math.max(1, stats.limit);
+  const shield = stats.rainbow || 0, abs0 = inc ? Math.min(shield, inc.pend) : 0, lethal = !!inc && inc.pend - abs0 >= stats.hp;
   hand = hand.filter(h => !h.curse);   // Fluchkarten lassen sich nicht ausspielen
   let best = null;
   for (const sub of subsets(hand, lim)) {
@@ -2121,7 +2106,7 @@ function bestAttack(side, opp, hand, Q, state0, reserve) {
       for (const l of rest) orders.push([f, ...rest.filter(x => x !== l), l]);
     }
     for (const ord of orders) {
-      const ev = M.evalAttack(stats, ord);
+      const ev = M.evalAttack(stats, ord, inc ? inc.color : undefined);
       if (!ev.valid || !ev.affordable) continue;
       const hurt = stats.maxHp - stats.hp, oMir = (opp.stats.manaflow || 0) + (opp.stats.rainbow || 0) + Q.lfHeal * (opp.stats.heal || 0);
       const w = { fe: Q.wFE, ew: oMir > 0 ? 1.2 + oMir * Math.max(0.3, Q.lfOppW || 0) : 0.1 };   // Läuterung lohnt, wenn der Gegner Schild- oder Manamarker trägt
@@ -2137,6 +2122,11 @@ function bestAttack(side, opp, hand, Q, state0, reserve) {
       if (resHit) value -= reserve.v;
       if (dmg > 0 && (opp.stats.rainbow || 0) > 0) value -= Math.min(opp.stats.rainbow, dmg) * Q.mirAvoid;   // Schild des Gegners: mindert bis zu seinen Ladungen von meinem nicht geblockten Schaden
       if (ord.length > 1 && dmg === 0 && combo === 0 && ev.curses === 0) value -= 5;
+      if (inc) {   // Schaden, den der Block gegenüber dem Hinnehmen erspart; das Schild bleibt erhalten, soweit der Block den Schaden schon wegnimmt
+        const left0 = Math.max(0, inc.pend - (ev.block || 0)), absorbed = Math.min(shield, left0), left = left0 - absorbed;
+        value += (Math.max(0, inc.pend - abs0) - left) * (lethal ? Q.dLeth : Q.dPend) + (abs0 - absorbed) * Q.mirKeep;
+        if (left >= stats.hp) value -= 100;   // der Zug verfällt, wenn der Restschaden tödlich ist
+      }
       if (!best || value > best.value) best = { value, ord, ev, dmg };
     }
   }
@@ -2181,7 +2171,7 @@ function combatPlan(state, pid) {
   const d = side.deck, hand = handList(d), A = a => Object.assign({ pid }, a);
   const s = side.stats, Q = P(pid);
   const canFlee = M.canFlee(state, pid) && (state.idleTurns || 0) < Q.fleeIdle;   // lange kein Kampf entschieden: nicht mehr fliehen, damit der Kampf einen Sieger bekommt (sonst Patt-Schleife Angreifen–Fliehen)
-  if (c.action === 'attack') {
+  {   // seit 0.10 ein Zugmuster: Magie wirken (mit Block, wenn ein Angriff eingeht), Erholen, Nachziehen, Passen
     if (Q.fleeHits > 0 && side.kind === 'monster' && canFlee) {   // Ich führe das Monster, der Angreifer hat kein Mana mehr: Fliehe ich, bleibt das angeschlagene Monster stehen, und ich bin als Nächster dran, es selbst zu besiegen (die Beute geht an mich)
       const me = state.players[pid].stats, net = outlook(state, pid, c.slot);
       if (net > 0 && side.stats.hp / net <= Q.fleeHits && me.hp >= Q.minHp && me.mana >= Q.minMana) return [A({ type: 'flee' })];
@@ -2196,7 +2186,7 @@ function combatPlan(state, pid) {
     let reserve = null;
     const resV = side.kind === 'monster' ? (state.players[opp.ctrl].sp > 0 ? Q.mResL : 0) : Q.mRes;
     if (resV > 0 && c.mode === 'monster' && raceTurns(state, side, opp) < raceTurns(state, opp, side)) reserve = { v: resV, hp: side.kind === 'monster' ? 99 : Q.mResHp, blk: Q.mResBlk };
-    const best = bestAttack(side, opp, hand, Q, state, reserve), gain = M.recoverGain ? M.recoverGain(state) : 1;
+    const inc = c.action === 'defense' ? { color: c.color, pend: c.pending } : null, best = bestAttack(side, opp, hand, Q, state, reserve, inc), gain = M.recoverGain ? M.recoverGain(state) : 1;
     if (c.mode === 'monster' && canFlee && !(best && best.dmg >= opp.stats.hp)) {   // Kampfprognose: Wer braucht weniger Züge, um den anderen zu besiegen? (ein sofort tödlicher Angriff geht vor)
       const tMe = raceTurns(state, side, opp), tOpp = raceTurns(state, opp, side);
       // Angreifer: Liegt das Monster in der Prognose mindestens fleeA (ohne Siegpunkte fleeA0) Züge vorn, droht eine Niederlage (−1 Siegpunkt, alle HP). Die Flucht behält beides; der bis dahin angerichtete Schaden bleibt am Monster.
@@ -2232,7 +2222,7 @@ function combatPlan(state, pid) {
       }
     }
     if (reserve && s.mana < s.maxMana && Q.mResRec) {   // Hält die Reserve einen brauchbaren Angriff zurück, erst Mana sammeln (Erholen), statt nachzuziehen und später doch mit dem letzten Mana anzugreifen
-      const raw = bestAttack(side, opp, hand, Q, state);
+      const raw = bestAttack(side, opp, hand, Q, state, undefined, inc);
       if (raw && raw.value > Q.aThr && (!best || best.value <= Q.aThr)) return [A({ type: 'recover' })];
     }
     const red = !!M.markerOf(state, pid).h.drawRed, payOk = s.mana >= M.drawManaCost(state, pid);   // roter Nachziehmarker: Nachziehen kostet Mana (ohne Mana nicht möglich)
@@ -2269,25 +2259,6 @@ function combatPlan(state, pid) {
     }
     return [A({ type: 'recover' })];
   }
-  // Verteidigung
-  const color = c.color, pend = c.pending, shield = s.rainbow || 0, lethal = pend - Math.min(shield, pend) >= s.hp;
-  const cand = hand.filter(h => !h.curse);
-  const abs0 = Math.min(shield, pend);   // ohne Verteidigung mindert das Schild bis zu seinen Ladungen
-  let best = { score: (pend - abs0) * (lethal ? Q.dLeth : Q.dPend) + abs0 * Q.mirKeep, ord: [] };   // Verzicht auf Verteidigung bringt Mana
-  const variants = subsets(cand, Math.max(1, s.limit)).filter(sub => new Set(sub.filter(h => !h.curse).map(h => h.el)).size <= 1);   // seit 0.9.9.2 nur Karten einer Farbe
-  for (const sub of variants) {
-    const ev = M.evalDefense(s, sub, color);
-    if (!ev.valid || ev.affordable === false) continue;
-    const left0 = Math.max(0, pend - (ev.block || 0)), lvM = M.defenseComboPre(s, ev, color).mir, absorbed = Math.min(lvM, left0), left = left0 - absorbed;   // das Schild mindert den nicht geblockten Schaden bis zu seinen Ladungen (ein Schild-Kombo der Verteidigung wirkt erst danach)
-    const nCurse = sub.filter(h => h.curse).length;
-    let score = left * (lethal ? Q.dLeth : Q.dPend) + (ev.cost || 0) * Q.dCost + (sub.length - nCurse) * Q.dKeep - nCurse * 0.6;
-    if (lvM > 0) score += absorbed * Q.mirKeep;   // jede geminderte Einheit Schaden kostet eine Schildladung
-    if (score < best.score) best = { score, ord: sub };
-  }
-  if (!best.ord.length) return [A({ type: 'pass' })];
-  const acts = best.ord.map(h => A({ type: 'mark', slot: h.slot }));
-  acts.push(A({ type: 'defend' }));
-  return acts;
 }
 
 function plan(state, pid) {
@@ -2300,7 +2271,7 @@ function fallback(state, pid) {
   if (state.phase === 'combat') {
     const c = state.combat;
     if (c.forced) return [A(forcedAct(state, pid))];
-    return c.action === 'defense' ? [A({ type: 'pass' })] : [A({ type: 'recover' }), A({ type: 'draw' }), A({ type: 'pass' })];
+    return [A({ type: 'recover' }), A({ type: 'draw' }), A({ type: 'pass' })];
   }
   return [A({ type: 'draw' })];
 }
@@ -3161,12 +3132,10 @@ function lfCtx() {
   if (!G || G.phase !== 'combat' || !myTurn()) return null;
   const cx = ctx(), c = cx.c;
   let lw = 0;
-  if (c.action === 'attack') {
-    const ev = M.evalAttack(cx.myStats, M.selection(cx.mine.deck));
+  if (c.action === 'attack' || c.action === 'defense') {   // seit 0.10 wirkt jeder Zug Magie (bei eingehendem Angriff mit Block)
+    const ev = M.evalAttack(cx.myStats, M.selection(cx.mine.deck), c.action === 'defense' ? c.color : undefined);
     lw = ev.valid ? M.levelsFor(ev).ew : 0;
     if (!ev.valid || ev.levels.ulti > 0) return null;
-  } else if (c.action === 'defense') {   // seit 0.7.6.1 auch in der Verteidigung (die Läuterung wirkt dort vor der Verteidigung)
-    return null;   // seit 0.9.9.2 keine Kombos (und keine Läuterung) in der Verteidigung
   } else return null;
   if (!(lw > 0)) return null;
   return { cx, c, lvl: lw, picks: lfExpand(lfPicks(cx, lw), cx) };
@@ -3214,30 +3183,26 @@ function combatCenter(cx) {
   let prev = '', canExec = false, val = 0;   // val: Wert der markierten Karten (Schaden bzw. Block) für den Knopf
   if (my) {
     const sel = M.selection(cx.mine.deck);
-    if (atk) {
-      if (!sel.length) prev = '';
+    {
+      if (!sel.length) prev = atk ? '' : '<div class="note">Eingehend: <b>' + c.pending + '</b> Schaden (' + NAMES[c.color] + '). Wähle Magie zum Blocken und für deinen Folgeangriff oder erhole, ziehe nach, passe.</div>';
       else {
-        const ev = M.evalAttack(cx.myStats, sel);
+        const ev = M.evalAttack(cx.myStats, sel, atk ? undefined : c.color);
         if (ev.valid) manaPv = ev.cost;
         prev = '';
         canExec = ev.valid && ev.affordable; val = ev.valid && ev.prim ? ev.damage : 0;
         const lvC = ev.valid ? M.levelsFor(ev) : ev.levels;
+        if (!atk && ev.valid) prev += '<div class="note">Eingehend <b>' + c.pending + '</b> (' + NAMES[c.color] + '): ' + (ev.block ? 'Block <b>' + ev.block + '</b>' + (ev.prim === c.color ? '' : ' (überlegene Magie, kostenlos)') : 'kein Block (' + (ev.prim ? NAMES[ev.prim] + ' blockt nicht gegen ' + NAMES[c.color] : 'keine Magiekarte') + ')') + '</div>';
         if (ev.valid && ev.levels.echo) prev += '<div class="note">Echo (' + NAMES[cx.myStats.echo] + '): Kombo +1 Stufe</div>';
         if (ev.valid && lvC.ew > 0 && !(ev.levels.ulti > 0)) prev += lfSummary(cx, lvC.ew);
-        if (!ev.affordable) prev += '<div class="bad">Zu wenig Mana.</div>';
+        if (!ev.valid) prev = '<span class="bad">' + esc(ev.reason) + '</span>';
+        else if (!ev.affordable) prev += '<div class="bad">Zu wenig Mana.</div>';
       }
-    } else {
-      const ev = M.evalDefense(cx.myStats, sel, c.color);
-      if (!sel.length) prev = '';
-      else if (!ev.valid) prev = '<span class="bad">' + esc(ev.reason) + '</span>';
-      else { if (ev.cost > 0) manaPv = ev.cost; prev = ''; canExec = ev.affordable; val = ev.block || 0; if (!ev.affordable) prev += '<div class="bad">Zu wenig Mana.</div>'; }
     }
   }
   h += '<div class="preview">' + prev + '</div><div class="btnrow">';
   const canFlee = my && M.canFlee(G, ME), rg = M.recoverGain(G), manaFull = cx.myStats.mana >= cx.myStats.maxMana, drawNoMana = cx.myStats.mana < M.drawManaCost(G, ME);   // Erholen bei vollem Mana und Nachziehen ohne das Mana für den roten Marker sind sinnlos: Knöpfe inaktiv
   if (!canFlee) fleeAsk = false;
-  if (atk) h += '<button class="btn danger" data-act="attack" ' + (my && canExec ? '' : 'disabled') + ' title="Angriff ausführen: Schaden der markierten Karten">Angriff (' + val + ')</button><button class="btn blue" data-act="recover" ' + (my && !manaFull ? '' : 'disabled') + ' title="' + (my && manaFull ? 'Dein Mana ist bereits voll' : 'Nur du erhältst +' + rg + ' Mana') + '">Erholen (+' + rg + ')</button><button class="btn" data-act="draw" ' + (my && !drawNoMana ? '' : 'disabled') + ' title="' + (my && drawNoMana ? 'Zu wenig Mana: Bei rotem Nachziehmarker kostet Nachziehen Mana' : 'Hand tauschen, ersetzt den Angriff') + '">Nachziehen</button><button class="btn" data-act="pass" ' + (my ? '' : 'disabled') + '>Passen</button>' + '' + (G.rules.fleeAllowed ? '<button class="btn" data-act="fleeask" ' + (canFlee ? '' : 'disabled') + ' title="Den Kampf abbrechen: kein Sieger, keine Siegpunkte. Geht nur im eigenen Angriffszug, wenn der Gegner kein Mana mehr hat und du nicht unter einem Todesfluss stehst.">Fliehen</button>' : '');   // Fliehen seit 0.9.1 abgeschaltet (Regel fleeAllowed)
-  else if (my) h += '<button class="btn primary" data-act="defend" ' + (canExec ? '' : 'disabled') + ' title="Verteidigung ausführen: Block der markierten Karten">Verteidigen (' + val + ')</button><button class="btn" data-act="pass" title="Passen: keine Verteidigung, den Schaden hinnehmen (kein Mana)">Passen</button><button class="btn" data-act="draw" ' + (!drawNoMana ? '' : 'disabled') + ' title="' + (drawNoMana ? 'Zu wenig Mana: Bei rotem Nachziehmarker kostet Nachziehen Mana' : 'Hand tauschen statt zu verteidigen; der Schaden wird hingenommen') + '">Nachziehen</button>';   // Verteidigung ist rein reaktiv: nur bei eingehendem Schaden, nur Verteidigen und Passen
+  h += '<button class="btn ' + (atk ? 'danger' : 'primary') + '" data-act="' + (atk ? 'attack' : 'defend') + '" ' + (my && canExec ? '' : 'disabled') + ' title="' + (atk ? 'Angriff ausführen: Schaden der markierten Karten' : 'Magie wirken: Die Primärkarte blockt (in der Angriffsfarbe oder der überlegenen Farbe, die überlegene kostet kein Mana) und stellt zugleich deinen Folgeangriff; die Sekundärkarte löst eine Kombo aus') + '">' + (atk ? 'Angriff (' + val + ')' : 'Magie wirken (Folgeangriff ' + val + ')') + '</button><button class="btn blue" data-act="recover" ' + (my && !manaFull ? '' : 'disabled') + ' title="' + (my && manaFull ? 'Dein Mana ist bereits voll' : 'Nur du erhältst +' + rg + ' Mana' + (atk ? '' : '; der eingehende Angriff wird ohne Block hingenommen')) + '">Erholen (+' + rg + ')</button><button class="btn" data-act="draw" ' + (my && !drawNoMana ? '' : 'disabled') + ' title="' + (my && drawNoMana ? 'Zu wenig Mana: Bei rotem Nachziehmarker kostet Nachziehen Mana' : 'Hand tauschen' + (atk ? ', ersetzt den Angriff' : '; der eingehende Angriff wird ohne Block hingenommen')) + '">Nachziehen</button><button class="btn" data-act="pass" ' + (my ? '' : 'disabled') + ' title="' + (atk ? 'Passen' : 'Passen: den Schaden hinnehmen (kein Mana)') + '">Passen</button>' + (atk && G.rules.fleeAllowed ? '<button class="btn" data-act="fleeask" ' + (canFlee ? '' : 'disabled') + ' title="Den Kampf abbrechen: kein Sieger, keine Siegpunkte. Geht nur im eigenen Zug ohne eingehenden Angriff, wenn der Gegner kein Mana mehr hat und du nicht unter einem Todesfluss stehst.">Fliehen</button>' : '');   // Fliehen seit 0.9.1 abgeschaltet (Regel fleeAllowed)
   h += '</div>';
   if (fleeAsk && canFlee) {   // Warnung: Fliehen muss bestätigt werden
     const nextMe = c.def === ME;
@@ -4508,7 +4473,7 @@ function earthFormRaw(ctx, x, by, seed, i, t, tCrack, tRise, endAt, ending) {
   return { attack, defense, reset() { queue = []; endEx(); }, busy() { return queue.length > 0 || !!(ex && (ex.def || performance.now() - ex.t0 < ex.tAe * 1000 + 50 || (ex.trap && performance.now() - ex.t0 < (ex.trapEnd + .1) * 1000))); }, remaining() { if (!ex || !ex.def) return 0; return Math.max(0, ex.def.T.end - (performance.now() - ex.t0) / 1000); } };
 })();
 // Aktuelle Versionsnummer: einzige Stelle, an der sie gesetzt wird (Menü-Link und Über-Seite lesen sie von hier; bei jedem Schritt hochzählen)
-const MAGUS_VERSION = '0.9.9.4';
+const MAGUS_VERSION = '0.10.0.0';
 /* ---------- Darstellung: Kampfeffekt-Ton, Cursor, render, Menüs, Start- und Ergebnis-Bildschirm ---------- */
 let leadPrev = null;
 let exSeen = null;   // Erschöpfungsstufe des Kampfes, wie zuletzt gezeichnet (für die Ankündigung beim Anstieg)
@@ -4797,7 +4762,7 @@ function showStart(pg) {
   } else if (pg === 'settings') {
     h += '<h2>Einstellungen</h2><div class="menulist setpage">' + settingsHTML() + back + '</div>';
   } else if (pg === 'about') {
-    h += '<p class="note intro" style="margin-top:-2px"><b>Danke, dass du Magus testest!</b> <b>Neu in Version ' + MAGUS_VERSION + ':</b> <b>Nachziehen-Knopf in der Verteidigung:</b> Neben „Verteidigen“ und „Passen“ gibt es jetzt einen Knopf „Nachziehen“. <b>Version 0.9.9.3:</b> <b>Nachziehen statt Verteidigen:</b> Wer angegriffen wird, kann statt zu verteidigen nachziehen (Klick auf den Nachziehstapel). Der Schaden wird dann wie beim Passen hingenommen; ein Schild mindert ihn weiter. Bei rotem Nachziehmarker kostet es Mana wie im Angriffszug. <b>Version 0.9.9.2:</b> <b>Keine Kombos in der Verteidigung:</b> In der Verteidigung zählen nur noch Karten einer Farbe (der Verteidigungsfarbe); Karten einer zweiten oder dritten Farbe sind dort nicht mehr erlaubt. Kombos und Ultimates gibt es nur noch im Angriff, ein vorhandenes Echo wirkt in der Verteidigung nicht mehr. <b>Version 0.9.9.1:</b> <b>Echo nur durch den Angriff:</b> Ein Echo entsteht jetzt nur noch durch Primärmagie im Angriff (mit oder ohne Kombo). Eine Verteidigung, auch mit Primärmagie, erzeugt kein Echo mehr und ändert ein vorhandenes nicht; ein vorhandenes Echo verstärkt weiterhin den Kombo einer Verteidigung. <b>Version 0.9.9:</b> <b>Kombos nach Sekundärfarbe:</b> Die zweite Farbe (Sekundärfarbe) bestimmt jetzt den Charakter einer Kombo: <b>Rot</b> bringt Schaden (Falle: Blau + Rot, Lähmung: Grün + Rot), <b>Blau</b> ist variabel (Hellsicht: Rot + Blau, Schild: Grün + Blau), <b>Grün</b> heilt und verbessert die eigene Seite (Heilung: Rot + Grün, Läuterung: Blau + Grün). Die Primärfarbe (erste Karte) wählt unter den zwei Kombos der Sekundärfarbe und liefert weiter den Schaden. Die Ultimate bestimmt die <b>zuletzt markierte Karte</b>: Rot Todesfluss, Blau Manafluss, Grün Heilfluss; die beiden anderen Farben bilden die Basis, ihre Reihenfolge ist gleichgültig. Bei der Ultimate verstärkt das Echo, wenn es die Farbe der Schlusskarte hat. Die Kombo-Übersicht im Kampf ist nach Sekundärfarbe sortiert, gleiche Sekundärfarben sind gleich getönt, die Primärfarbe steht in jeder Zeile vorn. <b>Version 0.9.8:</b> <b>Credits im Hauptmenü:</b> Das Hauptmenü hat einen neuen Punkt <b>Credits</b>. Dort steht der Dank an alle, die Magus testgespielt haben: DarkParladin, Deekixx, H5, Leon aka Tim und Zockerboy. Das Spiel selbst ist unverändert. <b>Version 0.9.7.1:</b> <b>Standard wieder 10, Zähler läuft durch:</b> Der Standard der Runden bis Erschöpfung (und damit der Zermürbung) steht wieder auf 10. Der Rundenzähler der Weltphase wird nach einem Monsterkampf nicht mehr zurückgesetzt, er zählt alle Züge der Weltphase und beginnt erst nach einem Showdown neu. <b>Version 0.9.7:</b> <b>Rundenzähler und Zermürbung in der Weltphase:</b> Die Weltphase zeigt jetzt denselben Rundenzähler wie der Kampf (eine Runde = ein Zug jedes Spielers); in 0.9.7 begann er nach jedem Monsterkampf neu (seit 0.9.7.1 nicht mehr). Hat er den kritischen Wert erreicht (derselbe Regler wie bei der Erschöpfung, in 0.9.7 kurz auf 8 gesenkt), setzt die <b>Zermürbung</b> ein: Wer seinen Zug beendet, ohne ein Monster angegriffen zu haben, schenkt dem Gegner Gold in Höhe der Spielstufe (1/2/3). Wie bei der Erschöpfung dunkelt der Hintergrund ab (bernsteinfarben), ein Schriftzug kündigt sie an und der Zähler wird hervorgehoben. <b>Version 0.9.6.1:</b> <b>Erschöpfung deutlicher:</b> Sobald die Erschöpfung einsetzt (standardmäßig nach 10 Kampfrunden, danach alle 10 Runden eine Stufe mehr), dunkelt der Hintergrund ab (mit jeder Stufe stärker und röter) und ein Schriftzug kündigt sie an. Der HP-Abzug am Ende des Angriffszugs ist jetzt animiert: Das Bild dunkelt kurz ab, dunkelrote Schwaden ziehen von der Rundenanzeige zur Lebensanzeige der betroffenen Seite, und der Abzug erscheint als Zahl. Die Regeln bleiben unverändert; die Engine wurde geprüft (Abzug im Angriffs- wie im Verteidigungspfad). <b>Version 0.9.6:</b> <b>Echo bei jeder Nutzung von Primärmagie:</b> Nicht nur Kombos, sondern jeder Angriff und jede Verteidigung hinterlässt bei dir ein Echo in der Farbe der ersten Karte (die nächste Nutzung erneuert es). Die Wirkung auf Kombos bleibt gleich: Enthält ein Kombo eine Sekundärkarte in der Farbe des Echos, steigt seine Stufe um 1 (höchstens 3). <b>Version 0.9.5.1:</b> <b>Kein Upgrade-Knopf mehr bei der Falle:</b> Wenn die Falle zerbrach (und beim Umdrehen der Karte), erschien ein großes Plus-Symbol des Upgrade-Knopfs mitten im Kampf. Die Falle trägt dieses Symbol nicht mehr. <b>Version 0.9.5:</b> <b>Falle löst nach dem Angriff aus:</b> Zuerst erscheint der Angriff in der Mitte, dann fliegt die verdeckte Falle neben die Geschosse und dreht sich um. Passt ihre Farbe, löst sich ein Teil der Geschosse und fliegt als unblockbarer Schaden zum Angreifer zurück. Passt sie nicht, zerbricht die Karte. Erst danach folgt die Verteidigung. Die Regeln bleiben unverändert. <b>Version 0.9.4.1:</b> <b>Echo-Effekt schmaler:</b> Das Leuchten und die Wellen der Echo-Schlange decken auf dem Magie-Brett einen kleineren Ausschnitt ab (100° statt 130°), die übrigen Werte stammen unverändert aus der Echo-Werkstatt. <b>Version 0.9.4:</b> <b>Echo auf dem Magie-Brett:</b> Der Echo-Marker entfällt in der digitalen Version (er bleibt dem analogen Spiel vorbehalten). Stattdessen leuchtet die Schlange der Echo-Farbe auf dem Magie-Brett pulsierend auf und sendet Wellen nach außen, bei dir und beim Gegner. Dazu gibt es die neue <b>Echo-Werkstatt</b> (Ordner werkstatt) zum Einstellen des Effekts. <b>Version 0.9.3:</b> <b>Weniger Aktionen in der Weltphase:</b> <b>Gold opfern</b>, <b>Magie kaufen</b> und jedes <b>Upgrade</b> (HP, Mana, Limit, Handplätze, Nachziehlimit) sind keine Aktion mehr: Du bleibst am Zug und kannst davon beliebig viele hintereinander ausführen. Eine Aktion, die den Zug beendet, bleibt es nur beim <b>Nachziehen</b>, beim <b>Händler</b> (Bibliothek) und beim <b>Angriff</b>. Der Nachziehmarker ändert sich durch Opfern, Magie und Upgrades nicht. Der Computergegner kauft entsprechend mehrere Dinge in einem Zug. <b>Version 0.9.2:</b> <b>Auswahl bei Falle und Hellsicht schlichter:</b> Im Vordergrund liegen nur noch die drei gezogenen Karten; ein Klick wählt eine Karte an oder wieder ab, darunter steht ein Knopf <b>Bestätigen</b>. Gewählte Karten sind hervorgehoben, Fluchkarten lassen sich nicht wählen. <b>Version 0.9.1.2:</b> <b>Echo-Marker neu platziert:</b> Der Marker ist ein neutrales Symbol ohne Farbe und liegt mittig neben dem Farbbereich der Kombo-Übersicht, zu dem das Echo gehört: dein Echo links, das des Gegners rechts und etwas kleiner. Ohne Echo gibt es keinen Marker. <b>Hellsicht ohne Umrandung:</b> Die offen liegenden Hellsichtkarten haben keine goldene Umrandung mehr. <b>Version 0.9.1:</b> <b>Fliehen abgeschaltet:</b> Jetzt, da die <b>Erschöpfung</b> festgefahrene Kämpfe beendet, gibt es die Aktion <b>Fliehen</b> im Monsterkampf und im Showdown nicht mehr; der Knopf entfällt. Ein Kampf endet durch Sieg, Niederlage oder Erschöpfung. Die Regel bleibt als Schalter <code>fleeAllowed</code> in der Engine erhalten (Standard 0 = aus). <b>Version 0.9.0.1:</b> <b>Hellsicht neu:</b> Du ziehst drei Karten und wählst S davon aus; sie liegen offen vor dir, sind wie Handkarten ohne Manakosten nutzbar und werden danach abgelegt. Die übrigen kommen auf den Ablagestapel. <b>Version 0.9:</b> <b>Echo der Kombos:</b> Jeder Kombo (auch die Ultimate) hinterlässt bei seiner Seite ein Echo in der Farbe der ersten Karte. Das nächste Echo erneuert es. Enthält der nächste Kombo eine Sekundärkarte in der Farbe des Echos, steigt seine Stufe um 1 (höchstens 3). Das Echo ist als Marker sichtbar und lässt sich nicht läutern. <b>Version 0.8.7.3:</b> <b>Verteidigung bei vollem Rückwurf:</b> Wirft die Falle den gesamten Schaden zurück, entfällt die Verteidigung; die Gegenseite greift sofort an (Regel war schon so, jetzt durch einen Test abgesichert). <b>Version 0.8.7.2:</b> <b>Sinnlose Knöpfe inaktiv:</b> Im Angriffszug ist <b>Erholen</b> bei vollem Mana ausgegraut, <b>Nachziehen</b> bei rotem Nachziehmarker, wenn das Mana für die Kosten fehlt. <b>Version 0.8.7.1:</b> <b>Karten unter den Bildschirmen:</b> Zurückfliegende und verbrennende Karten liegen nicht mehr über dem Endbildschirm und den Menü- und Startbildschirmen, sondern dahinter. <b>Version 0.8.6.1:</b> <b>Siegbedingung:</b> Bei Gleichstand an Siegpunkten entscheidet jetzt zuerst die <b>Tempelstufe</b>, danach das <b>Gold</b> (vorher umgekehrt). <b>Version 0.8.6:</b> <b>Spielanleitung:</b> Zu Magus gibt es jetzt eine Anleitung als Präsentation im Stil eines analogen Spiels (Idee, Ablauf, Karten, Kampf, Kombos, Showdown, Spielende). Das Spiel selbst ist unverändert. <b>Version 0.8.4.1:</b> <b>Schild vor jeder Schadensquelle:</b> Das Schild mindert jetzt auch den <b>Rückwurf der Falle</b>, den <b>Todesfluss</b> und die <b>Erschöpfung</b> (je geminderten Schaden eine Ladung). <b>Version 0.8.4:</b> <b>Einstellungen aufgeräumt:</b> Die Gruppen Ton und Spiel haben je eine Kopfzeile mit Schalter beziehungsweise „Standardwerte“, die Werte stehen mit kompakten Knöpfen in einer Zeile. <b>Version 0.8.3.1:</b> <b>Reihenfolge bei der Niederlagenprüfung:</b> Fällt eine Seite auf 0 HP, wird in fester Reihenfolge geprüft: erst der <b>reflektierte Schaden</b> (Falle), dann der <b>Schaden nach der Verteidigung</b>, zuletzt die <b>Flusseffekte</b> (Todesfluss, Erschöpfung, Heil- und Manafluss). Die erste Stufe, in der jemand auf 0 HP fällt, entscheidet; spätere Stufen wirken dann nicht mehr. <b>Version 0.8.2.1:</b> <b>Neuer Endbildschirm:</b> Der Sieg wird groß gefeiert, die Niederlage würdig abgeschlossen; dazu ein Rückblick auf die Höhepunkte der Partie (mächtigster Angriff, stärkste Abwehr, knappster Sieg, Aufholjagd, letzter Hieb, beim Verlierer auch der Wendepunkt), der Siegpunktverlauf und eine Bilanz. Ein Klick überspringt die Animation, ein Klick auf eine Karte zeigt den Kampfverlauf. <b>Version 0.8.1.1:</b> <b>Spieleinstellungen in den Einstellungen:</b> Sie stehen jetzt in den Einstellungen im Abschnitt <b>Spiel</b>, getrennt vom Abschnitt <b>Ton</b>; dort lassen sich die <b>Runden bis zur Erschöpfung</b> (Standard 10) und der <b>Siegpunkt-Vorsprung</b> für das vorzeitige Spielende nach einem Showdown (Standard 4) einstellen; 0 schaltet die jeweilige Regel ab. Die Werte gelten für neue Spiele und bleiben im Browser gespeichert. <b>Version 0.8.0.8:</b> <b>Falle schwächer:</b> Sie wirft jetzt 1/2/3 statt 2/4/6 unblockbaren Schaden zurück. <b>Version 0.8.0.7:</b> <b>Fallenkarte schlichter:</b> Ohne blauen Rahmen, mit Stufenzähler; für den Gegner umgedreht. <b>Version 0.8.0.6:</b> <b>Mischen bei Falle und Hellsicht:</b> Reicht der Zugstapel nicht, wird der Ablagestapel gemischt und weitergezogen (Test ergänzt). <b>Version 0.8.0.5:</b> <b>Falle in der Mitte:</b> Die Falle zieht drei Karten vom Stapel (ohne die Hand zu ersetzen) und zeigt sie im Vordergrund; die nicht gewählten gehen auf den Ablagestapel. <b>Version 0.8.0.4:</b> <b>Hellsicht-Auswahl ruhiger:</b> Beim Wählen färben sich nur die Knöpfe ein, die Karten blenden nicht mehr neu ein. <b>Version 0.8.0.3:</b> <b>Hellsicht im Vordergrund:</b> Die gezogenen Karten liegen groß über dem Kampffeld, unter jeder stehen die drei Möglichkeiten. <b>Version 0.8.0.2:</b> <b>Hellsicht:</b> Blau + Rot zieht so viele Karten wie die Kombostufe; für jede entscheidest du, ob sie auf die Hand kommt (sofern Platz ist), auf den Ablagestapel oder zurück zum Händler. <b>Version 0.8.0.1:</b> <b>Falle statt Zerrüttung:</b> Auch Rot + Blau legt jetzt die Falle; die Zerrüttung entfällt. <b>Version 0.8:</b> <b>Blaue Kombos überarbeitet:</b> Blau + Rot legt eine <b>Falle</b> (drei Karten ziehen, eine verdeckt vor dich legen; bei Schaden aufgedeckt: passt die Farbe, werden 2/4/6 unblockbar vor der Verteidigung zurückgeworfen). Blau + Grün ist ein <b>Schild</b> (mindert nicht geblockten Schaden um 1/2/3 Ladungen). Blau + Rot + Grün ist der <b>Manafluss</b> (1/2/3 Mana am Ende deines Angriffszugs, mit neuer Animation). <b>Version 0.7.7.8:</b> <b>KI opfert nur mit Ergebnis:</b> Der Computergegner opfert im Tempel nur noch Gold, wenn die Punkte für eine Magiestufe wirklich herauskommen. Das galt für sein Überschussgold schon (alle 504 Opfer in 200 Partien endeten direkt in einem Magiekauf); jetzt gilt es auch in der Eröffnung. <b>Version 0.7.7.7:</b> <b>KI-Tempelopfer geprüft:</b> Die KI kann ihr Überschussgold jetzt auch gesammelt für mehrere Magiestufen auf einmal opfern (ein großes Opfer ergibt mehr Punkte als mehrere kleine). Die Messung zeigt, dass das Warten schlechter abschneidet als das sofortige Opfern; der Standard bleibt deshalb unverändert. <b>Version 0.7.7.6:</b> <b>KI nachtrainiert:</b> Der Computergegner opfert überschüssiges Gold jetzt sofort für Magie (Standard 1 statt 6) und baut seine HP etwas höher aus (7 statt 6). Gegen den Pool aus früh angreifenden Gegnern gewinnt er damit deutlich häufiger. <b>Version 0.7.7.5:</b> <b>KI setzt Überschussgold ein:</b> Kann der Computergegner nichts mehr für Gold verbessern, opfert er sein Gold im Tempel für die nächste Magiestufe. Vorher blieb seine Magie auf Stufe 1, und er sammelte über 100 Gold an. <b>Version 0.7.7.4:</b> Versionsnummer im Hauptmenü korrigiert. <b>Version 0.7.7.3:</b> <b>Vorzeitiges Spielende korrigiert:</b> Das Spiel endet nach einem Showdown, wenn ein Spieler mindestens <b>4 Siegpunkte Vorsprung</b> hat (4 : 0, 5 : 1). Bei 4 : 1 geht es weiter. <b>Version 0.7.7.2:</b> Die <b>Kampfrunden</b> sind nicht mehr begrenzt. Stattdessen gibt es die <b>Erschöpfung</b>: Nach je 10 Kampfrunden steigt sie um 1, und beide Seiten verlieren am Ende ihres Angriffszugs entsprechend viele HP (Runde 11–20: 1 HP, Runde 21–30: 2 HP …). <b>Version 0.7.6.8:</b> Die Farben des <b>Multischilds</b> sind kräftiger (Rot, Gelb, Grün, Blau, Violett). <b>Version 0.7.6.7:</b> Lösen <b>zwei Schilde</b> gleichzeitig aus (Farbspiegel und Multispiegel), laufen beide Schild-Effekte nebeneinander ab statt nur einer. <b>Version 0.7.6.6:</b> <b>Vorzeitiges Spielende:</b> Wer nach einem Showdown mit 4 oder mehr Siegpunkten führt, gewinnt das Spiel sofort; bei Gleichstand geht es weiter. <b>Version 0.7.6.5:</b> Die <b>Kampfrunden</b> werden gezählt (im Kampffenster: „Runde 3 von 10“) und sind auf 10 begrenzt. Eine Runde ist ein Angriffszug jeder Seite. Ist nach der 10. Runde keiner auf 0 HP gefallen, endet der Kampf unentschieden (Monster behält seine Verletzungen, im Showdown gibt es keine Siegpunkte). Die KI greift dafür früher an. <b>Version 0.7.6.4:</b> Das <b>Opfern von Gold im Tempel</b> ist kein Zug mehr: Du bleibst am Zug, kannst mehrmals opfern und danach in derselben Runde Magie kaufen; der Nachziehmarker bleibt dabei unverändert. Unter der Magiegrafik steht jetzt, was die <b>nächste Magiestufe</b> kostet. Die KI opfert und kauft entsprechend im selben Zug. <b>Version 0.7.6.3:</b> Das <b>Abwerfen nach einer Zerrüttung</b> ist kein Zug: Es zählt nicht für den Zugzähler und lässt den Nachziehmarker unverändert. <b>Version 0.7.6.2:</b> Die <b>Heilung</b> wirkt nach dem Schaden nur noch, wenn der Verteidiger ihn überlebt: Fällt er durch den Schaden auf 0 HP, ist er besiegt und die Heilung verfällt. <b>Version 0.7.6.1:</b> Die <b>Läuterung</b> lässt sich jetzt auch in der Verteidigung wählen: Eigene Nachziehtokens und Schilde (und alle anderen Marker) sind anklickbar, und die Vorschau sagt, dass die Läuterung <i>vor</i> der Verteidigung wirkt. <b>Version 0.7.5.1:</b> Der <b>Computergegner</b> wurde an die neuen Regeln angepasst: Er opfert kein Gold mehr für Magie, bewertet Heilfluss und Multispiegel neu, entfernt mit der Läuterung gezielt eigene Todesmarker und gegnerische Heilmarker und wartet mit der Eröffnung auf den ersten besiegten Monsterkampf statt auf zufälliges Gold; Angriffs- und Schadensgewichte sind neu abgestimmt. Die Regeln bleiben gleich. <b>Version 0.7.3.3:</b> Der Siegpunktestand sitzt mittig im innersten Ring des Magie-Boards. <b>Version 0.7.3.2:</b> Versatz am Magie-Board korrigiert: Die Leucht- und Abdunkelmarken der Stufen sitzen jetzt genau auf den Edelsteinen der neuen Grafik. <b>Version 0.7.3.1:</b> Das Magie-Board (unten rechts) hat eine neue Grafik: der dreifache Ouroboros mit roten, grünen und blauen Edelsteinen. <b>Version 0.7.2.24:</b> Jeder Spieler beginnt mit 3 statt 2 Siegpunkten. <b>Version 0.7.2.23:</b> Schilde (Farbspiegel und Multispiegel), die in der Verteidigung gestellt werden, wirken erst nach ihr, wie die Heilung: nicht mehr gegen den laufenden Angriff, aber ab dem nächsten. <b>Version 0.7.2.22:</b> Die Versionsliste zeigt nur noch die Updates der aktuellen Hauptversion 0.7 (ältere Einträge entfallen). <b>Version 0.7.2.21:</b> Der Innenschatten des Multispiegels ist etwas weicher. <b>Version 0.7.2.20:</b> Der Innenschatten am Rand des Multispiegels ist kleiner und härter. <b>Version 0.7.2.19:</b> Die Teilung des Multispiegels hat keine Trennlinie, nur die schattierte rechte Hälfte. <b>Version 0.7.2.18:</b> Der Multispiegel ist mittig von oben nach unten geteilt, die rechte Hälfte ist schattiert (wie bei den anderen Schildern). <b>Version 0.7.2.17:</b> Der Multispiegel wirft vom Rand einen Schatten nach innen. <b>Version 0.7.2.16:</b> Der Schatten der Marker liegt noch dichter am Marker. <b>Version 0.7.2.15:</b> Der Multispiegel ist dunkler und passt zu den übrigen Schildern. <b>Version 0.7.2.14:</b> Die Markerreihe liegt so, dass weder markierte Handkarten noch Zähler verdeckt werden. <b>Version 0.7.2.12:</b> Todes- und Heilmarker erscheinen nur noch als ein Token mit Zähler (×N), statt mehrfach abgebildet zu werden; der Multispiegel hatte den Zähler schon. <b>Version 0.7.2.11:</b> Alle Marker (Todes-, Heil- und Schildmarker) liegen in einer lockeren Reihe mittig direkt vor den Handkarten ihres Spielers und verdecken keine Anzeigen. <b>Version 0.7.2.10:</b> Der Schatten der Marker ist näher und härter; Schildmarker sind jetzt ebenfalls Pappmarker. <b>Version 0.7.2.9:</b> Todes- und Heilmarker haben eine dezente Tiefe und wirken wie ausgestanzte Pappmarker. <b>Version 0.7.2.8:</b> Der <b>Heilfluss</b> wirkt wie der Todesfluss erst am Ende der <b>nächsten</b> eigenen Angriffsphase, nicht schon in der Phase, in der die Ultimate gelegt wurde. <b>Version 0.7.2.7:</b> Das <b>Multischild</b> heißt jetzt <b>Multispiegel</b>. <b>Version 0.7.2.6:</b> Todes- und Heilmarker liegen als Haufen mittig vor dem Stapel ihres Spielers, leicht verdreht und versetzt (Todesmarker vorn, Heilmarker in einer zweiten Reihe); der Heilmarker ist kleiner und dezenter. <b>Version 0.7.2.5:</b> Das Ritual von <b>Heilfluss</b> und <b>Multischild</b> erscheint jetzt bei jedem Wirken der Ultimate, auch wenn die Stufe nicht steigt (vorher nur bei steigender Stufe). <b>Version 0.7.2.4:</b> Das <b>Prisma</b> heißt jetzt <b>Multischild</b>. Sein Ritual beginnt mit einem Kreis, aus dem die Schildkuppel wächst; Kristall und Lichtstrahl entfallen. <b>Version 0.7.2.3:</b> Der <b>Heilfluss</b> hat jetzt auch am Ende der Angriffsphase einen Effekt: Aus jedem Heilmarker steigt eine grüne Wolke zur Lebensanzeige und heilt dort (wie die Wolke des Todesfluss). <b>Version 0.7.2.2:</b> Die Ultimates <b>Heilfluss</b> und <b>Prisma</b> haben jetzt ein eigenes Ritual auf dem Bildschirm (wie das Pentagramm des Todesfluss). Die <b>Stufen des Prisma verfallen</b> wie die eines Farbspiegels, verbraucht wird aber immer zuerst der Farbspiegel. <b>Version 0.7.2.1:</b> Keine Spieländerung: Die neue <b>Ultimate-Werkstatt</b> (Effektwerkstatt für die Kombos aus allen drei Elementen) zeigt Todesfluss, Prisma und Heilfluss als Ritual mit Markern und Wirkung; sie liegt im Projekt unter <b>werkstatt/</b>. <b>Version 0.7.1.2:</b> Umbenennung in den Kombos: Das Wasser-Ultimate heißt jetzt <b>Prisma</b> (vorher Regenbogenschild), die beiden Spiegel-Kombos heißen <b>Feuerspiegel</b> und <b>Erdspiegel</b>. <b>Version 0.7.1.1:</b> In der Kombo-Übersicht ist die Schrift größer und füllt das Fenster; die Farbgruppen (Feuer, Wasser, Erde) sind getönt und durch Abstand getrennt. <b>Version 0.7.0.3:</b> Die Kombo-Übersicht nutzt die volle Höhe ihres Fensters. <b>Version 0.7.0.2:</b> In der Kombo-Übersicht entfallen die Farbüberschriften und der Zusatz „(Ultimate)“; die Reihenfolge nach Farbe bleibt. <b>Version 0.7.0.1:</b> Die <b>Kombo-Übersicht</b> ordnet alle Kombos nach Farbe der ersten Karte; die Ultimate steht unter ihrer Farbe (Feuer <b>Todesfluss</b>, Wasser Regenbogenschild, Erde Heilfluss) und alles ist ohne Scrollen sichtbar. Der Todes-Fluch heißt jetzt Todesfluss. <b>Version 0.7:</b> <b>Ultimates nach Farbe der ersten Karte:</b> Feuer wirkt wie bisher als Todesfluss, Erde legt einen <b>Heilfluss</b> (grüne Marker mit Plus heilen dich am Ende jeder deiner Angriffsphasen), Wasser einen <b>Regenbogenschild</b> (wirkt gegen jede Farbe wie ein Spiegel, verbraucht sich aber nicht). Alle drei Marker entfernt nur die Läuterung. <b>Gold opfern</b> geht ohne Obergrenze. <b>Karten</b> lassen sich unabhängig von der entwickelten Magie kaufen. Die <b>Strafe des roten Nachziehmarkers</b> (Mana und Gold) wächst mit dem Abschnitt (1/2/3); vor dem Nachziehen warnt eine Abfrage. Der Hinweistext zur Schildwirkung entfällt.</p><div class="menulist">' + back + '</div>';
+    h += '<p class="note intro" style="margin-top:-2px"><b>Danke, dass du Magus testest!</b> <b>Neu in Version ' + MAGUS_VERSION + ':</b> <b>Neues Zugmuster:</b> Aktions- und Reaktionszug gibt es nicht mehr. In jedem Zug kannst du Magie wirken, erholen, nachziehen oder passen. Wirst du angegriffen, blockt deine Primärmagie den Schaden zuerst (Angriffsfarbe oder überlegene Farbe; die überlegene kostet kein Mana, die gleiche weiterhin Mana). Danach stellen dieselben Karten deinen Folgeangriff: Die Primärkarte setzt das Echo, die Sekundärkarte löst eine Kombo aus, vom alten Echo verstärkt. Beispiel: A greift mit 3 Feuer an, B wirkt 2 Wasser: B blockt 2, nimmt 1 Schaden und greift danach mit 2 Wasser an. Erholen, Nachziehen und Passen nehmen den Angriff ohne Block hin. <b>Version 0.9.9.4:</b> <b>Nachziehen-Knopf in der Verteidigung:</b> Neben „Verteidigen“ und „Passen“ gibt es jetzt einen Knopf „Nachziehen“. <b>Version 0.9.9.3:</b> <b>Nachziehen statt Verteidigen:</b> Wer angegriffen wird, kann statt zu verteidigen nachziehen (Klick auf den Nachziehstapel). Der Schaden wird dann wie beim Passen hingenommen; ein Schild mindert ihn weiter. Bei rotem Nachziehmarker kostet es Mana wie im Angriffszug. <b>Version 0.9.9.2:</b> <b>Keine Kombos in der Verteidigung:</b> In der Verteidigung zählen nur noch Karten einer Farbe (der Verteidigungsfarbe); Karten einer zweiten oder dritten Farbe sind dort nicht mehr erlaubt. Kombos und Ultimates gibt es nur noch im Angriff, ein vorhandenes Echo wirkt in der Verteidigung nicht mehr. <b>Version 0.9.9.1:</b> <b>Echo nur durch den Angriff:</b> Ein Echo entsteht jetzt nur noch durch Primärmagie im Angriff (mit oder ohne Kombo). Eine Verteidigung, auch mit Primärmagie, erzeugt kein Echo mehr und ändert ein vorhandenes nicht; ein vorhandenes Echo verstärkt weiterhin den Kombo einer Verteidigung. <b>Version 0.9.9:</b> <b>Kombos nach Sekundärfarbe:</b> Die zweite Farbe (Sekundärfarbe) bestimmt jetzt den Charakter einer Kombo: <b>Rot</b> bringt Schaden (Falle: Blau + Rot, Lähmung: Grün + Rot), <b>Blau</b> ist variabel (Hellsicht: Rot + Blau, Schild: Grün + Blau), <b>Grün</b> heilt und verbessert die eigene Seite (Heilung: Rot + Grün, Läuterung: Blau + Grün). Die Primärfarbe (erste Karte) wählt unter den zwei Kombos der Sekundärfarbe und liefert weiter den Schaden. Die Ultimate bestimmt die <b>zuletzt markierte Karte</b>: Rot Todesfluss, Blau Manafluss, Grün Heilfluss; die beiden anderen Farben bilden die Basis, ihre Reihenfolge ist gleichgültig. Bei der Ultimate verstärkt das Echo, wenn es die Farbe der Schlusskarte hat. Die Kombo-Übersicht im Kampf ist nach Sekundärfarbe sortiert, gleiche Sekundärfarben sind gleich getönt, die Primärfarbe steht in jeder Zeile vorn. <b>Version 0.9.8:</b> <b>Credits im Hauptmenü:</b> Das Hauptmenü hat einen neuen Punkt <b>Credits</b>. Dort steht der Dank an alle, die Magus testgespielt haben: DarkParladin, Deekixx, H5, Leon aka Tim und Zockerboy. Das Spiel selbst ist unverändert. <b>Version 0.9.7.1:</b> <b>Standard wieder 10, Zähler läuft durch:</b> Der Standard der Runden bis Erschöpfung (und damit der Zermürbung) steht wieder auf 10. Der Rundenzähler der Weltphase wird nach einem Monsterkampf nicht mehr zurückgesetzt, er zählt alle Züge der Weltphase und beginnt erst nach einem Showdown neu. <b>Version 0.9.7:</b> <b>Rundenzähler und Zermürbung in der Weltphase:</b> Die Weltphase zeigt jetzt denselben Rundenzähler wie der Kampf (eine Runde = ein Zug jedes Spielers); in 0.9.7 begann er nach jedem Monsterkampf neu (seit 0.9.7.1 nicht mehr). Hat er den kritischen Wert erreicht (derselbe Regler wie bei der Erschöpfung, in 0.9.7 kurz auf 8 gesenkt), setzt die <b>Zermürbung</b> ein: Wer seinen Zug beendet, ohne ein Monster angegriffen zu haben, schenkt dem Gegner Gold in Höhe der Spielstufe (1/2/3). Wie bei der Erschöpfung dunkelt der Hintergrund ab (bernsteinfarben), ein Schriftzug kündigt sie an und der Zähler wird hervorgehoben. <b>Version 0.9.6.1:</b> <b>Erschöpfung deutlicher:</b> Sobald die Erschöpfung einsetzt (standardmäßig nach 10 Kampfrunden, danach alle 10 Runden eine Stufe mehr), dunkelt der Hintergrund ab (mit jeder Stufe stärker und röter) und ein Schriftzug kündigt sie an. Der HP-Abzug am Ende des Angriffszugs ist jetzt animiert: Das Bild dunkelt kurz ab, dunkelrote Schwaden ziehen von der Rundenanzeige zur Lebensanzeige der betroffenen Seite, und der Abzug erscheint als Zahl. Die Regeln bleiben unverändert; die Engine wurde geprüft (Abzug im Angriffs- wie im Verteidigungspfad). <b>Version 0.9.6:</b> <b>Echo bei jeder Nutzung von Primärmagie:</b> Nicht nur Kombos, sondern jeder Angriff und jede Verteidigung hinterlässt bei dir ein Echo in der Farbe der ersten Karte (die nächste Nutzung erneuert es). Die Wirkung auf Kombos bleibt gleich: Enthält ein Kombo eine Sekundärkarte in der Farbe des Echos, steigt seine Stufe um 1 (höchstens 3). <b>Version 0.9.5.1:</b> <b>Kein Upgrade-Knopf mehr bei der Falle:</b> Wenn die Falle zerbrach (und beim Umdrehen der Karte), erschien ein großes Plus-Symbol des Upgrade-Knopfs mitten im Kampf. Die Falle trägt dieses Symbol nicht mehr. <b>Version 0.9.5:</b> <b>Falle löst nach dem Angriff aus:</b> Zuerst erscheint der Angriff in der Mitte, dann fliegt die verdeckte Falle neben die Geschosse und dreht sich um. Passt ihre Farbe, löst sich ein Teil der Geschosse und fliegt als unblockbarer Schaden zum Angreifer zurück. Passt sie nicht, zerbricht die Karte. Erst danach folgt die Verteidigung. Die Regeln bleiben unverändert. <b>Version 0.9.4.1:</b> <b>Echo-Effekt schmaler:</b> Das Leuchten und die Wellen der Echo-Schlange decken auf dem Magie-Brett einen kleineren Ausschnitt ab (100° statt 130°), die übrigen Werte stammen unverändert aus der Echo-Werkstatt. <b>Version 0.9.4:</b> <b>Echo auf dem Magie-Brett:</b> Der Echo-Marker entfällt in der digitalen Version (er bleibt dem analogen Spiel vorbehalten). Stattdessen leuchtet die Schlange der Echo-Farbe auf dem Magie-Brett pulsierend auf und sendet Wellen nach außen, bei dir und beim Gegner. Dazu gibt es die neue <b>Echo-Werkstatt</b> (Ordner werkstatt) zum Einstellen des Effekts. <b>Version 0.9.3:</b> <b>Weniger Aktionen in der Weltphase:</b> <b>Gold opfern</b>, <b>Magie kaufen</b> und jedes <b>Upgrade</b> (HP, Mana, Limit, Handplätze, Nachziehlimit) sind keine Aktion mehr: Du bleibst am Zug und kannst davon beliebig viele hintereinander ausführen. Eine Aktion, die den Zug beendet, bleibt es nur beim <b>Nachziehen</b>, beim <b>Händler</b> (Bibliothek) und beim <b>Angriff</b>. Der Nachziehmarker ändert sich durch Opfern, Magie und Upgrades nicht. Der Computergegner kauft entsprechend mehrere Dinge in einem Zug. <b>Version 0.9.2:</b> <b>Auswahl bei Falle und Hellsicht schlichter:</b> Im Vordergrund liegen nur noch die drei gezogenen Karten; ein Klick wählt eine Karte an oder wieder ab, darunter steht ein Knopf <b>Bestätigen</b>. Gewählte Karten sind hervorgehoben, Fluchkarten lassen sich nicht wählen. <b>Version 0.9.1.2:</b> <b>Echo-Marker neu platziert:</b> Der Marker ist ein neutrales Symbol ohne Farbe und liegt mittig neben dem Farbbereich der Kombo-Übersicht, zu dem das Echo gehört: dein Echo links, das des Gegners rechts und etwas kleiner. Ohne Echo gibt es keinen Marker. <b>Hellsicht ohne Umrandung:</b> Die offen liegenden Hellsichtkarten haben keine goldene Umrandung mehr. <b>Version 0.9.1:</b> <b>Fliehen abgeschaltet:</b> Jetzt, da die <b>Erschöpfung</b> festgefahrene Kämpfe beendet, gibt es die Aktion <b>Fliehen</b> im Monsterkampf und im Showdown nicht mehr; der Knopf entfällt. Ein Kampf endet durch Sieg, Niederlage oder Erschöpfung. Die Regel bleibt als Schalter <code>fleeAllowed</code> in der Engine erhalten (Standard 0 = aus). <b>Version 0.9.0.1:</b> <b>Hellsicht neu:</b> Du ziehst drei Karten und wählst S davon aus; sie liegen offen vor dir, sind wie Handkarten ohne Manakosten nutzbar und werden danach abgelegt. Die übrigen kommen auf den Ablagestapel. <b>Version 0.9:</b> <b>Echo der Kombos:</b> Jeder Kombo (auch die Ultimate) hinterlässt bei seiner Seite ein Echo in der Farbe der ersten Karte. Das nächste Echo erneuert es. Enthält der nächste Kombo eine Sekundärkarte in der Farbe des Echos, steigt seine Stufe um 1 (höchstens 3). Das Echo ist als Marker sichtbar und lässt sich nicht läutern. <b>Version 0.8.7.3:</b> <b>Verteidigung bei vollem Rückwurf:</b> Wirft die Falle den gesamten Schaden zurück, entfällt die Verteidigung; die Gegenseite greift sofort an (Regel war schon so, jetzt durch einen Test abgesichert). <b>Version 0.8.7.2:</b> <b>Sinnlose Knöpfe inaktiv:</b> Im Angriffszug ist <b>Erholen</b> bei vollem Mana ausgegraut, <b>Nachziehen</b> bei rotem Nachziehmarker, wenn das Mana für die Kosten fehlt. <b>Version 0.8.7.1:</b> <b>Karten unter den Bildschirmen:</b> Zurückfliegende und verbrennende Karten liegen nicht mehr über dem Endbildschirm und den Menü- und Startbildschirmen, sondern dahinter. <b>Version 0.8.6.1:</b> <b>Siegbedingung:</b> Bei Gleichstand an Siegpunkten entscheidet jetzt zuerst die <b>Tempelstufe</b>, danach das <b>Gold</b> (vorher umgekehrt). <b>Version 0.8.6:</b> <b>Spielanleitung:</b> Zu Magus gibt es jetzt eine Anleitung als Präsentation im Stil eines analogen Spiels (Idee, Ablauf, Karten, Kampf, Kombos, Showdown, Spielende). Das Spiel selbst ist unverändert. <b>Version 0.8.4.1:</b> <b>Schild vor jeder Schadensquelle:</b> Das Schild mindert jetzt auch den <b>Rückwurf der Falle</b>, den <b>Todesfluss</b> und die <b>Erschöpfung</b> (je geminderten Schaden eine Ladung). <b>Version 0.8.4:</b> <b>Einstellungen aufgeräumt:</b> Die Gruppen Ton und Spiel haben je eine Kopfzeile mit Schalter beziehungsweise „Standardwerte“, die Werte stehen mit kompakten Knöpfen in einer Zeile. <b>Version 0.8.3.1:</b> <b>Reihenfolge bei der Niederlagenprüfung:</b> Fällt eine Seite auf 0 HP, wird in fester Reihenfolge geprüft: erst der <b>reflektierte Schaden</b> (Falle), dann der <b>Schaden nach der Verteidigung</b>, zuletzt die <b>Flusseffekte</b> (Todesfluss, Erschöpfung, Heil- und Manafluss). Die erste Stufe, in der jemand auf 0 HP fällt, entscheidet; spätere Stufen wirken dann nicht mehr. <b>Version 0.8.2.1:</b> <b>Neuer Endbildschirm:</b> Der Sieg wird groß gefeiert, die Niederlage würdig abgeschlossen; dazu ein Rückblick auf die Höhepunkte der Partie (mächtigster Angriff, stärkste Abwehr, knappster Sieg, Aufholjagd, letzter Hieb, beim Verlierer auch der Wendepunkt), der Siegpunktverlauf und eine Bilanz. Ein Klick überspringt die Animation, ein Klick auf eine Karte zeigt den Kampfverlauf. <b>Version 0.8.1.1:</b> <b>Spieleinstellungen in den Einstellungen:</b> Sie stehen jetzt in den Einstellungen im Abschnitt <b>Spiel</b>, getrennt vom Abschnitt <b>Ton</b>; dort lassen sich die <b>Runden bis zur Erschöpfung</b> (Standard 10) und der <b>Siegpunkt-Vorsprung</b> für das vorzeitige Spielende nach einem Showdown (Standard 4) einstellen; 0 schaltet die jeweilige Regel ab. Die Werte gelten für neue Spiele und bleiben im Browser gespeichert. <b>Version 0.8.0.8:</b> <b>Falle schwächer:</b> Sie wirft jetzt 1/2/3 statt 2/4/6 unblockbaren Schaden zurück. <b>Version 0.8.0.7:</b> <b>Fallenkarte schlichter:</b> Ohne blauen Rahmen, mit Stufenzähler; für den Gegner umgedreht. <b>Version 0.8.0.6:</b> <b>Mischen bei Falle und Hellsicht:</b> Reicht der Zugstapel nicht, wird der Ablagestapel gemischt und weitergezogen (Test ergänzt). <b>Version 0.8.0.5:</b> <b>Falle in der Mitte:</b> Die Falle zieht drei Karten vom Stapel (ohne die Hand zu ersetzen) und zeigt sie im Vordergrund; die nicht gewählten gehen auf den Ablagestapel. <b>Version 0.8.0.4:</b> <b>Hellsicht-Auswahl ruhiger:</b> Beim Wählen färben sich nur die Knöpfe ein, die Karten blenden nicht mehr neu ein. <b>Version 0.8.0.3:</b> <b>Hellsicht im Vordergrund:</b> Die gezogenen Karten liegen groß über dem Kampffeld, unter jeder stehen die drei Möglichkeiten. <b>Version 0.8.0.2:</b> <b>Hellsicht:</b> Blau + Rot zieht so viele Karten wie die Kombostufe; für jede entscheidest du, ob sie auf die Hand kommt (sofern Platz ist), auf den Ablagestapel oder zurück zum Händler. <b>Version 0.8.0.1:</b> <b>Falle statt Zerrüttung:</b> Auch Rot + Blau legt jetzt die Falle; die Zerrüttung entfällt. <b>Version 0.8:</b> <b>Blaue Kombos überarbeitet:</b> Blau + Rot legt eine <b>Falle</b> (drei Karten ziehen, eine verdeckt vor dich legen; bei Schaden aufgedeckt: passt die Farbe, werden 2/4/6 unblockbar vor der Verteidigung zurückgeworfen). Blau + Grün ist ein <b>Schild</b> (mindert nicht geblockten Schaden um 1/2/3 Ladungen). Blau + Rot + Grün ist der <b>Manafluss</b> (1/2/3 Mana am Ende deines Angriffszugs, mit neuer Animation). <b>Version 0.7.7.8:</b> <b>KI opfert nur mit Ergebnis:</b> Der Computergegner opfert im Tempel nur noch Gold, wenn die Punkte für eine Magiestufe wirklich herauskommen. Das galt für sein Überschussgold schon (alle 504 Opfer in 200 Partien endeten direkt in einem Magiekauf); jetzt gilt es auch in der Eröffnung. <b>Version 0.7.7.7:</b> <b>KI-Tempelopfer geprüft:</b> Die KI kann ihr Überschussgold jetzt auch gesammelt für mehrere Magiestufen auf einmal opfern (ein großes Opfer ergibt mehr Punkte als mehrere kleine). Die Messung zeigt, dass das Warten schlechter abschneidet als das sofortige Opfern; der Standard bleibt deshalb unverändert. <b>Version 0.7.7.6:</b> <b>KI nachtrainiert:</b> Der Computergegner opfert überschüssiges Gold jetzt sofort für Magie (Standard 1 statt 6) und baut seine HP etwas höher aus (7 statt 6). Gegen den Pool aus früh angreifenden Gegnern gewinnt er damit deutlich häufiger. <b>Version 0.7.7.5:</b> <b>KI setzt Überschussgold ein:</b> Kann der Computergegner nichts mehr für Gold verbessern, opfert er sein Gold im Tempel für die nächste Magiestufe. Vorher blieb seine Magie auf Stufe 1, und er sammelte über 100 Gold an. <b>Version 0.7.7.4:</b> Versionsnummer im Hauptmenü korrigiert. <b>Version 0.7.7.3:</b> <b>Vorzeitiges Spielende korrigiert:</b> Das Spiel endet nach einem Showdown, wenn ein Spieler mindestens <b>4 Siegpunkte Vorsprung</b> hat (4 : 0, 5 : 1). Bei 4 : 1 geht es weiter. <b>Version 0.7.7.2:</b> Die <b>Kampfrunden</b> sind nicht mehr begrenzt. Stattdessen gibt es die <b>Erschöpfung</b>: Nach je 10 Kampfrunden steigt sie um 1, und beide Seiten verlieren am Ende ihres Angriffszugs entsprechend viele HP (Runde 11–20: 1 HP, Runde 21–30: 2 HP …). <b>Version 0.7.6.8:</b> Die Farben des <b>Multischilds</b> sind kräftiger (Rot, Gelb, Grün, Blau, Violett). <b>Version 0.7.6.7:</b> Lösen <b>zwei Schilde</b> gleichzeitig aus (Farbspiegel und Multispiegel), laufen beide Schild-Effekte nebeneinander ab statt nur einer. <b>Version 0.7.6.6:</b> <b>Vorzeitiges Spielende:</b> Wer nach einem Showdown mit 4 oder mehr Siegpunkten führt, gewinnt das Spiel sofort; bei Gleichstand geht es weiter. <b>Version 0.7.6.5:</b> Die <b>Kampfrunden</b> werden gezählt (im Kampffenster: „Runde 3 von 10“) und sind auf 10 begrenzt. Eine Runde ist ein Angriffszug jeder Seite. Ist nach der 10. Runde keiner auf 0 HP gefallen, endet der Kampf unentschieden (Monster behält seine Verletzungen, im Showdown gibt es keine Siegpunkte). Die KI greift dafür früher an. <b>Version 0.7.6.4:</b> Das <b>Opfern von Gold im Tempel</b> ist kein Zug mehr: Du bleibst am Zug, kannst mehrmals opfern und danach in derselben Runde Magie kaufen; der Nachziehmarker bleibt dabei unverändert. Unter der Magiegrafik steht jetzt, was die <b>nächste Magiestufe</b> kostet. Die KI opfert und kauft entsprechend im selben Zug. <b>Version 0.7.6.3:</b> Das <b>Abwerfen nach einer Zerrüttung</b> ist kein Zug: Es zählt nicht für den Zugzähler und lässt den Nachziehmarker unverändert. <b>Version 0.7.6.2:</b> Die <b>Heilung</b> wirkt nach dem Schaden nur noch, wenn der Verteidiger ihn überlebt: Fällt er durch den Schaden auf 0 HP, ist er besiegt und die Heilung verfällt. <b>Version 0.7.6.1:</b> Die <b>Läuterung</b> lässt sich jetzt auch in der Verteidigung wählen: Eigene Nachziehtokens und Schilde (und alle anderen Marker) sind anklickbar, und die Vorschau sagt, dass die Läuterung <i>vor</i> der Verteidigung wirkt. <b>Version 0.7.5.1:</b> Der <b>Computergegner</b> wurde an die neuen Regeln angepasst: Er opfert kein Gold mehr für Magie, bewertet Heilfluss und Multispiegel neu, entfernt mit der Läuterung gezielt eigene Todesmarker und gegnerische Heilmarker und wartet mit der Eröffnung auf den ersten besiegten Monsterkampf statt auf zufälliges Gold; Angriffs- und Schadensgewichte sind neu abgestimmt. Die Regeln bleiben gleich. <b>Version 0.7.3.3:</b> Der Siegpunktestand sitzt mittig im innersten Ring des Magie-Boards. <b>Version 0.7.3.2:</b> Versatz am Magie-Board korrigiert: Die Leucht- und Abdunkelmarken der Stufen sitzen jetzt genau auf den Edelsteinen der neuen Grafik. <b>Version 0.7.3.1:</b> Das Magie-Board (unten rechts) hat eine neue Grafik: der dreifache Ouroboros mit roten, grünen und blauen Edelsteinen. <b>Version 0.7.2.24:</b> Jeder Spieler beginnt mit 3 statt 2 Siegpunkten. <b>Version 0.7.2.23:</b> Schilde (Farbspiegel und Multispiegel), die in der Verteidigung gestellt werden, wirken erst nach ihr, wie die Heilung: nicht mehr gegen den laufenden Angriff, aber ab dem nächsten. <b>Version 0.7.2.22:</b> Die Versionsliste zeigt nur noch die Updates der aktuellen Hauptversion 0.7 (ältere Einträge entfallen). <b>Version 0.7.2.21:</b> Der Innenschatten des Multispiegels ist etwas weicher. <b>Version 0.7.2.20:</b> Der Innenschatten am Rand des Multispiegels ist kleiner und härter. <b>Version 0.7.2.19:</b> Die Teilung des Multispiegels hat keine Trennlinie, nur die schattierte rechte Hälfte. <b>Version 0.7.2.18:</b> Der Multispiegel ist mittig von oben nach unten geteilt, die rechte Hälfte ist schattiert (wie bei den anderen Schildern). <b>Version 0.7.2.17:</b> Der Multispiegel wirft vom Rand einen Schatten nach innen. <b>Version 0.7.2.16:</b> Der Schatten der Marker liegt noch dichter am Marker. <b>Version 0.7.2.15:</b> Der Multispiegel ist dunkler und passt zu den übrigen Schildern. <b>Version 0.7.2.14:</b> Die Markerreihe liegt so, dass weder markierte Handkarten noch Zähler verdeckt werden. <b>Version 0.7.2.12:</b> Todes- und Heilmarker erscheinen nur noch als ein Token mit Zähler (×N), statt mehrfach abgebildet zu werden; der Multispiegel hatte den Zähler schon. <b>Version 0.7.2.11:</b> Alle Marker (Todes-, Heil- und Schildmarker) liegen in einer lockeren Reihe mittig direkt vor den Handkarten ihres Spielers und verdecken keine Anzeigen. <b>Version 0.7.2.10:</b> Der Schatten der Marker ist näher und härter; Schildmarker sind jetzt ebenfalls Pappmarker. <b>Version 0.7.2.9:</b> Todes- und Heilmarker haben eine dezente Tiefe und wirken wie ausgestanzte Pappmarker. <b>Version 0.7.2.8:</b> Der <b>Heilfluss</b> wirkt wie der Todesfluss erst am Ende der <b>nächsten</b> eigenen Angriffsphase, nicht schon in der Phase, in der die Ultimate gelegt wurde. <b>Version 0.7.2.7:</b> Das <b>Multischild</b> heißt jetzt <b>Multispiegel</b>. <b>Version 0.7.2.6:</b> Todes- und Heilmarker liegen als Haufen mittig vor dem Stapel ihres Spielers, leicht verdreht und versetzt (Todesmarker vorn, Heilmarker in einer zweiten Reihe); der Heilmarker ist kleiner und dezenter. <b>Version 0.7.2.5:</b> Das Ritual von <b>Heilfluss</b> und <b>Multischild</b> erscheint jetzt bei jedem Wirken der Ultimate, auch wenn die Stufe nicht steigt (vorher nur bei steigender Stufe). <b>Version 0.7.2.4:</b> Das <b>Prisma</b> heißt jetzt <b>Multischild</b>. Sein Ritual beginnt mit einem Kreis, aus dem die Schildkuppel wächst; Kristall und Lichtstrahl entfallen. <b>Version 0.7.2.3:</b> Der <b>Heilfluss</b> hat jetzt auch am Ende der Angriffsphase einen Effekt: Aus jedem Heilmarker steigt eine grüne Wolke zur Lebensanzeige und heilt dort (wie die Wolke des Todesfluss). <b>Version 0.7.2.2:</b> Die Ultimates <b>Heilfluss</b> und <b>Prisma</b> haben jetzt ein eigenes Ritual auf dem Bildschirm (wie das Pentagramm des Todesfluss). Die <b>Stufen des Prisma verfallen</b> wie die eines Farbspiegels, verbraucht wird aber immer zuerst der Farbspiegel. <b>Version 0.7.2.1:</b> Keine Spieländerung: Die neue <b>Ultimate-Werkstatt</b> (Effektwerkstatt für die Kombos aus allen drei Elementen) zeigt Todesfluss, Prisma und Heilfluss als Ritual mit Markern und Wirkung; sie liegt im Projekt unter <b>werkstatt/</b>. <b>Version 0.7.1.2:</b> Umbenennung in den Kombos: Das Wasser-Ultimate heißt jetzt <b>Prisma</b> (vorher Regenbogenschild), die beiden Spiegel-Kombos heißen <b>Feuerspiegel</b> und <b>Erdspiegel</b>. <b>Version 0.7.1.1:</b> In der Kombo-Übersicht ist die Schrift größer und füllt das Fenster; die Farbgruppen (Feuer, Wasser, Erde) sind getönt und durch Abstand getrennt. <b>Version 0.7.0.3:</b> Die Kombo-Übersicht nutzt die volle Höhe ihres Fensters. <b>Version 0.7.0.2:</b> In der Kombo-Übersicht entfallen die Farbüberschriften und der Zusatz „(Ultimate)“; die Reihenfolge nach Farbe bleibt. <b>Version 0.7.0.1:</b> Die <b>Kombo-Übersicht</b> ordnet alle Kombos nach Farbe der ersten Karte; die Ultimate steht unter ihrer Farbe (Feuer <b>Todesfluss</b>, Wasser Regenbogenschild, Erde Heilfluss) und alles ist ohne Scrollen sichtbar. Der Todes-Fluch heißt jetzt Todesfluss. <b>Version 0.7:</b> <b>Ultimates nach Farbe der ersten Karte:</b> Feuer wirkt wie bisher als Todesfluss, Erde legt einen <b>Heilfluss</b> (grüne Marker mit Plus heilen dich am Ende jeder deiner Angriffsphasen), Wasser einen <b>Regenbogenschild</b> (wirkt gegen jede Farbe wie ein Spiegel, verbraucht sich aber nicht). Alle drei Marker entfernt nur die Läuterung. <b>Gold opfern</b> geht ohne Obergrenze. <b>Karten</b> lassen sich unabhängig von der entwickelten Magie kaufen. Die <b>Strafe des roten Nachziehmarkers</b> (Mana und Gold) wächst mit dem Abschnitt (1/2/3); vor dem Nachziehen warnt eine Abfrage. Der Hinweistext zur Schildwirkung entfällt.</p><div class="menulist">' + back + '</div>';
   } else if (pg === 'credits') {
     h += '<h2>Credits</h2><p class="note" style="text-align:center">Danke fürs Testspielen an</p><div class="menulist"><p class="note" style="text-align:center;font-size:21px;line-height:1.7"><b>DarkParladin</b><br><b>Deekixx</b><br><b>H5</b><br><b>Leon aka Tim</b><br><b>Zockerboy</b></p>' + back + '</div>';
   } else if (pg === 'quit') {

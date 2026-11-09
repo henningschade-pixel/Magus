@@ -5,9 +5,11 @@ test('Kartenkosten: jede gespielte Karte kostet 1 Mana, überlegene Verteidigung
   const s = M.newGame({ seed: 5, ai: [false, false], first: 0 }), st = STATS();
   assert.equal(M.evalAttack(st, cards(['F3', 'E2'])).cost, 2);        // Primärkarte + Kombokarte
   assert.equal(M.evalAttack(st, cards(['F1', 'F1', 'E1'])).cost, 3);
-  assert.equal(M.evalDefense(st, cards(['W2']), 'F').cost, 0);          // Wasser ist gegen Feuer überlegen
-  assert.equal(M.evalDefense(st, cards(['W2', 'F1']), 'F').valid, false);  // seit 0.9.9.2 keine Kombokarten in der Verteidigung
-  assert.equal(M.evalDefense(st, cards(['F2']), 'F').cost, 1);          // Verteidigung in der Angriffsfarbe
+  assert.equal(M.evalAttack(st, cards(['W2']), 'F').cost, 0);           // Wasser ist gegen Feuer überlegen (eingehender Angriff in Feuer)
+  assert.equal(M.evalAttack(st, cards(['W2', 'W1']), 'F').cost, 0);
+  assert.equal(M.evalAttack(st, cards(['W2', 'E1']), 'F').cost, 1);     // die Kombokarte kostet 1 (seit 0.10 mit Kombo im selben Zug)
+  assert.equal(M.evalAttack(st, cards(['F2']), 'F').cost, 1);           // gleiche Magie wie der Angriff kostet weiterhin Mana
+  assert.equal(M.evalAttack(st, cards(['W2'])).cost, 1);                // ohne eingehenden Angriff keine Ausnahme
 });
 
 test('Erholen und Regeneration wachsen mit dem Abschnitt (1/2/3)', () => {
@@ -729,7 +731,7 @@ test('Monsterkarte (Weltphase): die Standardwerte base enthalten auch die Magie 
 });
 
 test('Vorschau Verteidigung (Verteidigen/Passen) stimmt mit der tatsächlichen Ausführung überein, auch mit Spiegel und Rückwurf', () => {
-  for (const [mode, mirror, hand, mark] of [['defend', 0, ['W2'], 0], ['pass', 0, ['W2'], 0], ['pass', 2, ['W2'], 0], ['defend', 2, ['W3'], 0], ['defend', 0, [], -1]]) {
+  for (const [mode, mirror, hand, mark] of [['defend', 0, ['W2'], 0], ['pass', 0, ['W2'], 0], ['pass', 2, ['W2'], 0], ['defend', 2, ['W3'], 0]]) {
     const { s, c, me, op } = combatSetup(11, hand);
     me.stats.hp = 6; op.stats.hp = 6; c.turn = 'a'; c.action = 'defense'; c.color = 'F'; c.pending = mode === 'defend' && mirror ? 1 : 3;
     if (mirror) me.stats.mirrorEl = { F: mirror }, me.stats.mirror = mirror;
@@ -842,13 +844,11 @@ test('Ultimate im Angriff nach Farbe der letzten Karte: Erde legt Heilmarker, de
   [0, 1, 2].forEach(i => assert.ok(M.apply(s, { pid: 0, type: 'mark', slot: i }).ok));
   assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
   assert.equal(me.stats.heal, 2, 'Heilmarker Stufe 2 bei mir'); assert.equal(op.stats.death || 0, 0, 'kein Todesfluss für den Gegner');
-  assert.ok(M.apply(s, { pid: op.ctrl, type: 'pass' }).ok);
-  assert.equal(me.stats.hp, 2, 'Heilfluss wirkt wie der Todesfluss nicht in der Phase, in der er gelegt wurde (seit 0.7.2.8)');
+  assert.equal(me.stats.hp, 2, 'Heilfluss wirkt wie der Todesfluss nicht in dem Zug, in dem er gelegt wurde (seit 0.7.2.8)');
   assert.equal(me.stats.healPhase, undefined, 'Phasenmerker gelöscht');
-  const hp0 = me.stats.hp; s.combat.sides[s.combat.turn === 'a' ? 'a' : 'b'];
-  // nächste eigene Angriffsphase: Gegner ist am Zug, danach wieder ich; am Ende meiner Phase heilt der Marker
+  const hp0 = me.stats.hp;
   assert.equal(s.combat.sides[s.combat.turn].ctrl, op.ctrl, 'Gegner am Zug'); assert.ok(M.apply(s, { pid: op.ctrl, type: 'pass' }).ok);
-  assert.equal(s.combat.sides[s.combat.turn].ctrl, me.ctrl, 'ich am Zug'); assert.ok(M.apply(s, { pid: 0, type: 'pass' }).ok);
+  assert.equal(s.combat.sides[s.combat.turn].ctrl, me.ctrl, 'ich am Zug'); assert.ok(M.apply(s, { pid: 0, type: 'pass' }).ok);   // am Ende meines nächsten Zugs heilt der Marker
   assert.equal(me.stats.hp, hp0 + 2, 'Heilfluss: +2 HP am Ende der nächsten eigenen Angriffsphase');
 });
 
@@ -1132,25 +1132,23 @@ test('Niederlagenprüfung 1: Der Rückwurf der Falle entscheidet vor der Verteid
   assert.equal(r.combatEnd.reason, 'hp'); assert.equal(r.combatEnd.winner, 'b', 'der Angreifer fällt durch den Rückwurf');
   assert.equal(r.combatEnd.snap.sides.b.stats.hp, 9, 'der Verteidiger hat keinen Schaden genommen');
 });
-test('Niederlagenprüfung 2: Fällt der Verteidiger durch den Schaden nach der Verteidigung auf 0 HP, wirkt kein Fluss mehr (auch kein tödlicher Todesfluss des Angreifers)', () => {
+test('Niederlagenprüfung 2: Fällt der Verteidiger durch den Schaden auf 0 HP, wirkt kein Fluss mehr (auch kein Heilfluss, der ihn aufrichten würde)', () => {
   const { s, me, op } = combatSetup(11, ['F3']);
-  me.stats.hp = 2; me.stats.maxHp = 9; me.stats.death = 5; me.stats.deathPhase = 5;   // der Todesfluss würde den Angreifer am Phasenende töten
-  op.stats.hp = 1; op.stats.maxHp = 9; op.stats.mana = 0;
+  op.stats.hp = 1; op.stats.maxHp = 9; op.stats.mana = 0; op.stats.heal = 5;
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
   const r = M.apply(s, { pid: op.ctrl, type: 'pass' });
   assert.ok(r.ok && r.combatEnd);
-  assert.equal(r.combatEnd.winner, 'a', 'Stufe 2 entscheidet vor Stufe 3: kein Unentschieden');
-  assert.equal(me.stats.hp, 2, 'der Todesfluss hat nicht mehr getickt');
+  assert.equal(r.combatEnd.winner, 'a', 'Der Schaden entscheidet vor den Flüssen');
+  assert.equal(op.stats.hp, 0, 'der Heilfluss hat nicht mehr getickt');
 });
-test('Niederlagenprüfung 3: Der Todesfluss am Phasenende besiegt den Angreifer; der Heilfluss kommt danach und belebt nicht wieder', () => {
+test('Niederlagenprüfung 3: Der Todesfluss am Zugende besiegt den Wirkenden; der Heilfluss kommt danach und belebt nicht wieder', () => {
   const { s, me, op } = combatSetup(11, ['F1']);
-  me.stats.hp = 2; me.stats.maxHp = 9; me.stats.death = 2; me.stats.deathPhase = 2; me.stats.heal = 3; me.stats.healPhase = 3;
+  me.stats.hp = 2; me.stats.maxHp = 9; me.stats.death = 2; me.stats.heal = 3;
   op.stats.hp = op.stats.maxHp = 9;
-  op.stats.rainbow = 3;   // das Schild schluckt den ganzen Schaden: der Verteidiger bleibt unversehrt
-  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
-  const r = M.apply(s, { pid: op.ctrl, type: 'pass' });
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 });
+  const r = M.apply(s, { pid: 0, type: 'attack' });
   assert.ok(r.ok && r.combatEnd);
-  assert.equal(r.combatEnd.winner, 'b', 'der Angreifer fällt durch den Todesfluss');
+  assert.equal(r.combatEnd.winner, 'b', 'der Wirkende fällt durch den Todesfluss, sein Angriff verfällt');
   assert.equal(me.stats.hp, 0, 'der Heilfluss hat ihn nicht wieder aufgerichtet');
 });
 
@@ -1270,7 +1268,7 @@ test('Echo: Auch ein Angriff ohne Kombo hinterlässt ein Echo der Primärmagie; 
   assert.equal(me.stats.echo, 'F', 'der Kombo erneuert das Echo');
 });
 
-test('Echo: Eine Verteidigung ändert das Echo nicht, auch nicht mit Primärmagie (0.9.9.1)', () => {
+test('Echo: Auch der Block mit Primärmagie setzt das Echo (0.10)', () => {
   const { s, c, op } = combatSetup(11, ['W1']);
   op.deck.hand[0] = Object.assign({}, op.deck.hand[0], { id: 'W1' });
   op.stats.echo = 'E'; op.stats.mana = 9;
@@ -1278,8 +1276,8 @@ test('Echo: Eine Verteidigung ändert das Echo nicht, auch nicht mit Primärmagi
   assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
   assert.equal(c.action, 'defense');
   assert.ok(M.apply(s, { pid: op.ctrl, type: 'mark', slot: 0 }).ok);
-  assert.ok(M.apply(s, { pid: op.ctrl, type: 'defend' }).ok);
-  assert.equal(op.stats.echo, 'E', 'Verteidigung mit einer Wasserkarte lässt das bisherige Erde-Echo unverändert');
+  assert.ok(M.apply(s, { pid: op.ctrl, type: 'attack' }).ok);
+  assert.equal(op.stats.echo, 'W', 'Magie im Zug mit eingehendem Angriff setzt das Echo auf die Farbe der Primärkarte');
 });
 
 test('Zermürbung: Rundenzähler der Weltphase, ab Runde exhaustRounds + 1 schenkt jeder Zug ohne Monsterangriff dem Gegner Gold in Höhe der Spielstufe (0.9.7)', () => {
@@ -1305,20 +1303,8 @@ test('Zermürbung: Rundenzähler der Weltphase, ab Runde exhaustRounds + 1 schen
   assert.equal(M.worldWear(t), false); assert.ok(!t.log.some(l => /Zermürbung/.test(l.txt)));
 });
 
-test('Keine Kombos in der Verteidigung: Karten einer zweiten Farbe sind ungültig (0.9.9.2)', () => {
-  const st = STATS({ echo: 'W' });
-  assert.equal(M.evalDefense(st, cards(['F1', 'W1']), 'F').valid, false);
-  assert.equal(M.evalDefense(st, cards(['W2', 'F1', 'E1']), 'F').valid, false);
-  const ok = M.evalDefense(st, cards(['W2', 'W1']), 'F');
-  assert.ok(ok.valid && ok.ord === null && ok.levels.ulti === 0 && ok.block === 3, 'mehrere Karten einer Farbe blocken weiter, auch mit Echo ohne Kombo');
-  const { s, c, me } = combatSetup(11, ['F3', 'E3']);
-  me.stats.hp = 8; me.stats.maxHp = 9; c.turn = 'a'; c.action = 'defense'; c.color = 'E'; c.pending = 6;
-  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
-  assert.equal(M.apply(s, { pid: 0, type: 'defend' }).ok, false, 'Verteidigen mit zwei Farben wird abgelehnt');
-  assert.equal(me.stats.hp, 8);
-});
 
-test('Nachziehen statt Verteidigen: Hand wird neu gefüllt, der Schaden wird hingenommen, danach ist man im Angriffszug (0.9.9.3)', () => {
+test('Nachziehen bei eingehendem Angriff: Hand wird neu gefüllt, der Schaden wird hingenommen, danach ist der Gegner am Zug (0.10)', () => {
   const { s, c, me } = combatSetup(11, ['F3', 'E3']);
   me.stats.hp = 8; me.stats.maxHp = 9; c.turn = 'a'; c.action = 'defense'; c.color = 'E'; c.pending = 3;
   const ids0 = me.deck.hand.map(x => x && x.id).join();
@@ -1326,8 +1312,9 @@ test('Nachziehen statt Verteidigen: Hand wird neu gefüllt, der Schaden wird hin
   assert.ok(r.ok, r.reason);
   assert.equal(me.stats.hp, 5, 'kein Block: voller Schaden');
   assert.notEqual(me.deck.hand.map(x => x && x.id).join(), ids0, 'neue Karten gezogen');
-  assert.equal(s.combat.action, 'attack', 'danach eigener Angriffszug');
-  assert.ok(s.log.some(l => /statt zu verteidigen/.test(l.txt)));
+  assert.equal(s.combat.action, 'attack', 'kein Angriff eingeht');
+  assert.notEqual(s.combat.sides[s.combat.turn].ctrl, me.ctrl, 'Initiative wechselt');
+  assert.ok(s.log.some(l => /nimmt den Schaden hin/.test(l.txt)));
 });
 
 test('Nachziehen in der Verteidigung: roter Marker kostet Mana, ohne Mana nicht möglich (0.9.9.3)', () => {
@@ -1340,4 +1327,66 @@ test('Nachziehen in der Verteidigung: roter Marker kostet Mana, ohne Mana nicht 
   me.stats.mana = cost + 2;
   assert.ok(M.apply(s, { pid: 0, type: 'draw' }).ok);
   assert.equal(me.stats.mana, 2, 'Mana bezahlt');
+});
+
+test('Zugmuster 0.10: Beispiel – A greift mit 3F an, B reagiert mit 2W: Block, ein Schaden, kostenlos, Folgeangriff 2W mit Echo Wasser', () => {
+  const { s, c, me, op } = combatSetup(11, ['F3']);
+  op.stats.mag = { F: 3, E: 3, W: 3 }; op.stats.limit = 3; op.stats.mana = 5; op.stats.hp = 9;
+  op.deck.hand[0] = Object.assign({}, op.deck.hand[0], { id: 'W2' });
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+  assert.equal(c.action, 'defense'); assert.equal(c.pending, 3); assert.equal(c.color, 'F');
+  M.apply(s, { pid: op.ctrl, type: 'mark', slot: 0 });
+  const pv = M.previewDefense(s, false);
+  assert.ok(M.apply(s, { pid: op.ctrl, type: 'attack' }).ok);
+  assert.equal(op.stats.hp, 8, '3 − Block 2 = 1 Schaden'); assert.equal(pv.hpAfter, 8);
+  assert.equal(op.stats.mana, 5, 'überlegene Magie kostet kein Mana');
+  assert.equal(op.stats.echo, 'W');
+  assert.equal(c.action, 'defense', 'der Folgeangriff steht an'); assert.equal(c.color, 'W'); assert.equal(c.pending, 2);
+  assert.equal(c.sides[c.turn].ctrl, me.ctrl, 'A ist wieder am Zug');
+});
+
+test('Zugmuster 0.10: Gleiche Magie blockt und kostet Mana; unpassende Farbe blockt nicht, wirkt aber als Angriff', () => {
+  for (const [id, cost, hpAfter, color] of [['F2', 1, 7, 'F'], ['E2', 1, 5, 'E']]) {
+    const { s, c, op } = combatSetup(11, ['F3']);
+    op.stats.mag = { F: 3, E: 3, W: 3 }; op.stats.limit = 3; op.stats.mana = 5; op.stats.hp = 8; op.deck.hand[0] = Object.assign({}, op.deck.hand[0], { id });
+    M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+    M.apply(s, { pid: op.ctrl, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: op.ctrl, type: 'attack' }).ok);
+    assert.equal(op.stats.mana, 5 - cost, id + ': Mana'); assert.equal(op.stats.hp, hpAfter, id + ': HP');
+    assert.equal(c.color, color); assert.equal(c.pending, 2);
+  }
+});
+
+test('Zugmuster 0.10: Kombo im Block-Zug – Primärkarte blockt kostenlos, die Sekundärkarte (Erde) heilt nach dem Schaden', () => {
+  const { s, c, op } = combatSetup(11, ['E3']);   // gegen Erde blockt Feuer (überlegen)
+  op.stats.mag = { F: 3, E: 3, W: 3 }; op.stats.limit = 3; op.stats.mana = 5; op.stats.hp = 6; op.stats.maxHp = 9;
+  op.deck.hand[0] = Object.assign({}, op.deck.hand[0], { id: 'F3' }); op.deck.hand[1] = Object.assign({}, op.deck.hand[1], { id: 'E3' });
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+  assert.equal(c.color, 'E'); assert.equal(c.pending, 3);
+  M.apply(s, { pid: op.ctrl, type: 'mark', slot: 0 }); M.apply(s, { pid: op.ctrl, type: 'mark', slot: 1 });
+  assert.ok(M.apply(s, { pid: op.ctrl, type: 'attack' }).ok);
+  assert.equal(op.stats.mana, 4, 'nur die Kombokarte kostet 1 Mana');
+  assert.equal(op.stats.hp, 9, 'Block 3 nimmt den Schaden, die Heilung 3 füllt auf');
+  assert.equal(c.color, 'F'); assert.equal(c.pending, 3, 'Folgeangriff mit dem Feuer');
+});
+
+test('Zugmuster 0.10: Erholen und Passen bei eingehendem Angriff nehmen den Schaden hin, dann wechselt die Initiative ohne Folgeangriff', () => {
+  for (const type of ['recover', 'pass']) {
+    const { s, c, me, op } = combatSetup(11, ['F3']);
+    op.stats.mana = 3; op.stats.hp = 9;
+    M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+    assert.ok(M.apply(s, { pid: op.ctrl, type }).ok);
+    assert.equal(op.stats.hp, 6, type + ': voller Schaden');
+    assert.equal(op.stats.mana, type === 'recover' ? 3 + M.recoverGain(s) : 3);
+    assert.equal(c.action, 'attack'); assert.equal(c.pending, 0); assert.equal(c.sides[c.turn].ctrl, me.ctrl);
+  }
+});
+
+test('Zugmuster 0.10: Tödlicher Restschaden beendet den Zug ohne Folgeangriff', () => {
+  const { s, c, op } = combatSetup(11, ['F3']);
+  op.stats.hp = 2; op.deck.hand[0] = Object.assign({}, op.deck.hand[0], { id: 'E1' });
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+  M.apply(s, { pid: op.ctrl, type: 'mark', slot: 0 });
+  const r = M.apply(s, { pid: op.ctrl, type: 'attack' });
+  assert.ok(r.ok && r.combatEnd); assert.equal(r.combatEnd.winner, 'a');
+  assert.equal(op.stats.hp, 0);
 });

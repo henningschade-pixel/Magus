@@ -35,12 +35,10 @@ function lfCtx() {
   if (!G || G.phase !== 'combat' || !myTurn()) return null;
   const cx = ctx(), c = cx.c;
   let lw = 0;
-  if (c.action === 'attack') {
-    const ev = M.evalAttack(cx.myStats, M.selection(cx.mine.deck));
+  if (c.action === 'attack' || c.action === 'defense') {   // seit 0.10 wirkt jeder Zug Magie (bei eingehendem Angriff mit Block)
+    const ev = M.evalAttack(cx.myStats, M.selection(cx.mine.deck), c.action === 'defense' ? c.color : undefined);
     lw = ev.valid ? M.levelsFor(ev).ew : 0;
     if (!ev.valid || ev.levels.ulti > 0) return null;
-  } else if (c.action === 'defense') {   // seit 0.7.6.1 auch in der Verteidigung (die Läuterung wirkt dort vor der Verteidigung)
-    return null;   // seit 0.9.9.2 keine Kombos (und keine Läuterung) in der Verteidigung
   } else return null;
   if (!(lw > 0)) return null;
   return { cx, c, lvl: lw, picks: lfExpand(lfPicks(cx, lw), cx) };
@@ -88,30 +86,26 @@ function combatCenter(cx) {
   let prev = '', canExec = false, val = 0;   // val: Wert der markierten Karten (Schaden bzw. Block) für den Knopf
   if (my) {
     const sel = M.selection(cx.mine.deck);
-    if (atk) {
-      if (!sel.length) prev = '';
+    {
+      if (!sel.length) prev = atk ? '' : '<div class="note">Eingehend: <b>' + c.pending + '</b> Schaden (' + NAMES[c.color] + '). Wähle Magie zum Blocken und für deinen Folgeangriff oder erhole, ziehe nach, passe.</div>';
       else {
-        const ev = M.evalAttack(cx.myStats, sel);
+        const ev = M.evalAttack(cx.myStats, sel, atk ? undefined : c.color);
         if (ev.valid) manaPv = ev.cost;
         prev = '';
         canExec = ev.valid && ev.affordable; val = ev.valid && ev.prim ? ev.damage : 0;
         const lvC = ev.valid ? M.levelsFor(ev) : ev.levels;
+        if (!atk && ev.valid) prev += '<div class="note">Eingehend <b>' + c.pending + '</b> (' + NAMES[c.color] + '): ' + (ev.block ? 'Block <b>' + ev.block + '</b>' + (ev.prim === c.color ? '' : ' (überlegene Magie, kostenlos)') : 'kein Block (' + (ev.prim ? NAMES[ev.prim] + ' blockt nicht gegen ' + NAMES[c.color] : 'keine Magiekarte') + ')') + '</div>';
         if (ev.valid && ev.levels.echo) prev += '<div class="note">Echo (' + NAMES[cx.myStats.echo] + '): Kombo +1 Stufe</div>';
         if (ev.valid && lvC.ew > 0 && !(ev.levels.ulti > 0)) prev += lfSummary(cx, lvC.ew);
-        if (!ev.affordable) prev += '<div class="bad">Zu wenig Mana.</div>';
+        if (!ev.valid) prev = '<span class="bad">' + esc(ev.reason) + '</span>';
+        else if (!ev.affordable) prev += '<div class="bad">Zu wenig Mana.</div>';
       }
-    } else {
-      const ev = M.evalDefense(cx.myStats, sel, c.color);
-      if (!sel.length) prev = '';
-      else if (!ev.valid) prev = '<span class="bad">' + esc(ev.reason) + '</span>';
-      else { if (ev.cost > 0) manaPv = ev.cost; prev = ''; canExec = ev.affordable; val = ev.block || 0; if (!ev.affordable) prev += '<div class="bad">Zu wenig Mana.</div>'; }
     }
   }
   h += '<div class="preview">' + prev + '</div><div class="btnrow">';
   const canFlee = my && M.canFlee(G, ME), rg = M.recoverGain(G), manaFull = cx.myStats.mana >= cx.myStats.maxMana, drawNoMana = cx.myStats.mana < M.drawManaCost(G, ME);   // Erholen bei vollem Mana und Nachziehen ohne das Mana für den roten Marker sind sinnlos: Knöpfe inaktiv
   if (!canFlee) fleeAsk = false;
-  if (atk) h += '<button class="btn danger" data-act="attack" ' + (my && canExec ? '' : 'disabled') + ' title="Angriff ausführen: Schaden der markierten Karten">Angriff (' + val + ')</button><button class="btn blue" data-act="recover" ' + (my && !manaFull ? '' : 'disabled') + ' title="' + (my && manaFull ? 'Dein Mana ist bereits voll' : 'Nur du erhältst +' + rg + ' Mana') + '">Erholen (+' + rg + ')</button><button class="btn" data-act="draw" ' + (my && !drawNoMana ? '' : 'disabled') + ' title="' + (my && drawNoMana ? 'Zu wenig Mana: Bei rotem Nachziehmarker kostet Nachziehen Mana' : 'Hand tauschen, ersetzt den Angriff') + '">Nachziehen</button><button class="btn" data-act="pass" ' + (my ? '' : 'disabled') + '>Passen</button>' + '' + (G.rules.fleeAllowed ? '<button class="btn" data-act="fleeask" ' + (canFlee ? '' : 'disabled') + ' title="Den Kampf abbrechen: kein Sieger, keine Siegpunkte. Geht nur im eigenen Angriffszug, wenn der Gegner kein Mana mehr hat und du nicht unter einem Todesfluss stehst.">Fliehen</button>' : '');   // Fliehen seit 0.9.1 abgeschaltet (Regel fleeAllowed)
-  else if (my) h += '<button class="btn primary" data-act="defend" ' + (canExec ? '' : 'disabled') + ' title="Verteidigung ausführen: Block der markierten Karten">Verteidigen (' + val + ')</button><button class="btn" data-act="pass" title="Passen: keine Verteidigung, den Schaden hinnehmen (kein Mana)">Passen</button><button class="btn" data-act="draw" ' + (!drawNoMana ? '' : 'disabled') + ' title="' + (drawNoMana ? 'Zu wenig Mana: Bei rotem Nachziehmarker kostet Nachziehen Mana' : 'Hand tauschen statt zu verteidigen; der Schaden wird hingenommen') + '">Nachziehen</button>';   // Verteidigung ist rein reaktiv: nur bei eingehendem Schaden, nur Verteidigen und Passen
+  h += '<button class="btn ' + (atk ? 'danger' : 'primary') + '" data-act="' + (atk ? 'attack' : 'defend') + '" ' + (my && canExec ? '' : 'disabled') + ' title="' + (atk ? 'Angriff ausführen: Schaden der markierten Karten' : 'Magie wirken: Die Primärkarte blockt (in der Angriffsfarbe oder der überlegenen Farbe, die überlegene kostet kein Mana) und stellt zugleich deinen Folgeangriff; die Sekundärkarte löst eine Kombo aus') + '">' + (atk ? 'Angriff (' + val + ')' : 'Magie wirken (Folgeangriff ' + val + ')') + '</button><button class="btn blue" data-act="recover" ' + (my && !manaFull ? '' : 'disabled') + ' title="' + (my && manaFull ? 'Dein Mana ist bereits voll' : 'Nur du erhältst +' + rg + ' Mana' + (atk ? '' : '; der eingehende Angriff wird ohne Block hingenommen')) + '">Erholen (+' + rg + ')</button><button class="btn" data-act="draw" ' + (my && !drawNoMana ? '' : 'disabled') + ' title="' + (my && drawNoMana ? 'Zu wenig Mana: Bei rotem Nachziehmarker kostet Nachziehen Mana' : 'Hand tauschen' + (atk ? ', ersetzt den Angriff' : '; der eingehende Angriff wird ohne Block hingenommen')) + '">Nachziehen</button><button class="btn" data-act="pass" ' + (my ? '' : 'disabled') + ' title="' + (atk ? 'Passen' : 'Passen: den Schaden hinnehmen (kein Mana)') + '">Passen</button>' + (atk && G.rules.fleeAllowed ? '<button class="btn" data-act="fleeask" ' + (canFlee ? '' : 'disabled') + ' title="Den Kampf abbrechen: kein Sieger, keine Siegpunkte. Geht nur im eigenen Zug ohne eingehenden Angriff, wenn der Gegner kein Mana mehr hat und du nicht unter einem Todesfluss stehst.">Fliehen</button>' : '');   // Fliehen seit 0.9.1 abgeschaltet (Regel fleeAllowed)
   h += '</div>';
   if (fleeAsk && canFlee) {   // Warnung: Fliehen muss bestätigt werden
     const nextMe = c.def === ME;

@@ -121,6 +121,6 @@ function handCounts(d) { const c = {}; d.hand.forEach(x => { if (x) c[x.id] = (c
 return { ELEMENTS, SUPERIOR, NAMES, START_DECK, MAX_MAGIC, MAX_SLOTS, MIN_SLOTS, MAX_LIMIT, MAX_DRAW_LIMIT, MAX_UPGRADES, MONSTER_MAX_LIMIT, DEFAULT_RULES, MONSTER,
   makeRng, parseCard, selection, baseLen, dropSight, newGame, apply, record, prim, actor, other, regen, handCounts,
   vendorOffers, vendorPlans, previewTemple, pointsForGold, nextLevelCost, maxed, limitStepCost, manaStepCost, hpStepCost, slotStepCost, magicCost, drawLimitCost, upField, magicField, payTxt,
-  evalAttack, evalDefense, canFlee, stockOf, recoverGain, regenGain, comboLevels, levelsFor,
-  drawPenaltyAmount, worldRound, worldWear, worldWearGold, monsterAlive, monsterHand, markerOf, drawManaCost, drawGoldPenalty, previewDefense, defenseComboPre, allMonstersDead, magicProgress, spawnMonsters, spawnForGame };
+  evalAttack, canFlee, stockOf, recoverGain, regenGain, comboLevels, levelsFor,
+  drawPenaltyAmount, worldRound, worldWear, worldWearGold, monsterAlive, monsterHand, markerOf, drawManaCost, drawGoldPenalty, previewDefense, allMonstersDead, magicProgress, spawnMonsters, spawnForGame };
 }));

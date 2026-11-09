@@ -325,36 +325,44 @@ function applyComboPlan(state, side, opp, plan, ev, texts, fxs) {
     }
   }
 }
-function execAttack(state) {
+// Zugmuster seit 0.10: Jeder Zug hat dieselben Aktionen (Magie wirken, Erholen, Nachziehen, Passen). Wer Magie wirkt, wehrt zuerst einen eingehenden Angriff ab (nur die Primärfarbe in der Angriffsfarbe oder der überlegenen Farbe blockt; die überlegene kostet kein Mana) und stellt mit denselben Karten den Folgeangriff: Die Primärkarte setzt das Echo, die Sekundärkarte löst eine Kombo aus (durch das alte Echo verstärkt).
+function execCast(state) {
   const c = state.combat, side = c.sides[c.turn], opp = c.sides[c.turn === 'a' ? 'b' : 'a'];
   const d = side.deck, sel = selection(d);
-  const ev = evalAttack(side.stats, sel);
+  const inc = c.action === 'defense' ? c.color : null, c0pending = c.pending;
+  const ev = evalAttack(side.stats, sel, inc);
   if (!ev.valid) return fail(ev.reason);
   if (!ev.affordable) return fail('Zu wenig Mana (' + ev.cost + ' nötig).');
-  side.passed = 0;   // ein Angriff beendet die Serie der Passen-Züge
+  side.passed = 0;   // Magie wirken beendet die Serie der Passen-Züge
   const lvs = levelsFor(ev), death = ev.levels.ulti > 0, plan = [];
   if (!death) for (const k of ['hs', 'tr', 'sh', 'fe', 'ew', 'gh']) if (lvs[k] > 0) plan.push([k, lvs[k]]);
   side.stats.mana -= ev.cost;
   consumeSelection(d, sel);
+  if (inc) {   // Zuerst wird der eingehende Schaden gemindert und genommen (Block der Primärmagie, dann Schild); fällt der Wirkende dabei auf 0 HP, verfällt sein Zug
+    const left = takeIncoming(state, side, ev.block, ev.prim, true);
+    if (hpDecided(state)) return { ok: true, combatEnd: endDecided(state, { k: 'V', who: side.key === 'a' ? 0 : 1, v: ev.block, b: c0pending, left }) };
+  }
   const texts = [], fxs = [];
-  const echoOld = side.stats.echo, echoUsed = !!ev.levels.echo;   // Echo (seit 0.9): der Kombo wird durch das Echo der Seite verstärkt; seit 0.9.6 hinterlässt jede Nutzung von Primärmagie ein neues Echo (auch ohne Kombo)
-  if (ev.prim) side.stats.echo = ev.prim;   // Echo in der Farbe der ersten Karte; bei der Ultimate (Farbe der Schlusskarte: ev.ultiEl) ebenso
+  const echoOld = side.stats.echo, echoUsed = !!ev.levels.echo;   // Echo (seit 0.9): der Kombo wird durch das Echo der Seite verstärkt; jede Nutzung von Primärmagie (auch beim Blocken, seit 0.10) hinterlässt ein neues Echo
+  if (ev.prim) side.stats.echo = ev.prim;   // Echo in der Farbe der ersten Karte
   if (echoUsed) texts.push('Echo (' + NAMES[echoOld] + '): Kombo +1 Stufe');
   applyComboPlan(state, side, opp, plan, ev, texts, fxs);
-  if (death && (ev.ultiEl || ev.prim) === 'E' && side.stats.healPhase === undefined) side.stats.healPhase = side.stats.heal || 0;   // wie beim Todesfluss: ein in dieser Angriffsphase gelegter Heilmarker heilt erst am Ende der nächsten eigenen Angriffsphase
+  if (death && (ev.ultiEl || ev.prim) === 'E' && side.stats.healPhase === undefined) side.stats.healPhase = side.stats.heal || 0;   // wie beim Todesfluss: ein in diesem Zug gelegter Heilmarker heilt erst am Ende des nächsten eigenen Zugs
   if (death && (ev.ultiEl || ev.prim) === 'W' && side.stats.manaPhase === undefined) side.stats.manaPhase = side.stats.manaflow || 0;   // ebenso der Manamarker
   if (death) { const u = castUltimate(side, opp, ev.ultiEl || ev.prim, ev.levels.ulti); fxs.push(u.fx); texts.push(u.text); }
   c.lfp = null;
   const dmg0 = ev.prim ? ev.damage : 0;
   let dmg = dmg0;
-  if (dmg0 > 0 && opp.stats.trap) dmg = dmg0 - springTrap(state, opp, side, ev.prim, dmg0, fxs, texts);   // die Falle wird aufgedeckt, sobald Schaden eingeht, vor der Verteidigung
+  if (dmg0 > 0 && opp.stats.trap) dmg = dmg0 - springTrap(state, opp, side, ev.prim, dmg0, fxs, texts);   // die Falle wird aufgedeckt, sobald Schaden eingeht
   if (dmg > 0) fxs.push({ kind: 'attack', who: side.ctrl, to: opp.ctrl, elem: ev.prim, n: dmg });
-  log(state, side.name + ' greift an' + (ev.prim ? ' (' + NAMES[ev.prim] + ', Schaden ' + dmg0 + ')' : ' (nur Flüche)') + (texts.length ? ' – ' + texts.join(', ') : '') + '.', side.ctrl, fxs.length ? fxs : undefined);
-  if (hpDecided(state)) { c.turn = c.turn === 'a' ? 'b' : 'a'; c.action = 'attack'; c.color = null; c.pending = 0; c.atkTurns = (c.atkTurns || 0) + 1; }   // Stufe 1: Der Rückwurf der Falle hat den Angreifer auf 0 HP gebracht. Er ist besiegt, noch bevor der Verteidiger verteidigt oder Schaden nimmt; kein Fluss wirkt mehr
-  else if (dmg > 0) { c.color = ev.prim; c.pending = dmg; c.turn = c.turn === 'a' ? 'b' : 'a'; c.action = 'defense'; c.atkTurns = (c.atkTurns || 0) + 1; }
-  else passAttackTurn(state);
-  const res = finishStep(state, { k: 'A', who: side.key === 'a' ? 0 : 1, v: dmg0 });
-  return { ok: true, combatEnd: res };
+  log(state, side.name + (inc ? ' wirkt Magie' : ' greift an') + (ev.prim ? ' (' + NAMES[ev.prim] + ', Schaden ' + dmg0 + ')' : ' (nur Flüche)') + (texts.length ? ' – ' + texts.join(', ') : '') + '.', side.ctrl, fxs.length ? fxs : undefined);
+  const info = { k: 'A', who: side.key === 'a' ? 0 : 1, v: dmg0 };
+  if (hpDecided(state)) return { ok: true, combatEnd: endDecided(state, info) };   // Stufe 1: Der Rückwurf der Falle hat den Wirkenden auf 0 HP gebracht; kein Fluss wirkt mehr
+  deathTick(state, side, (c.atkTurns || 0) + 1);   // Ende des eigenen Zugs: Flusseffekte und Erschöpfung (Stufe 3)
+  c.turn = c.turn === 'a' ? 'b' : 'a'; c.atkTurns = (c.atkTurns || 0) + 1; c.lfp = null;
+  if (dmg > 0 && !hpDecided(state)) { c.color = ev.prim; c.pending = dmg; c.action = 'defense'; }   // der Gegner reagiert im nächsten Zug
+  else { c.action = 'attack'; c.color = null; c.pending = 0; }
+  return { ok: true, combatEnd: finishStep(state, info) };
 }
 // Fliehen (seit 0.9.1 standardmäßig abgeschaltet, Schalter fleeAllowed: 0 = aus, 1 = an; die Erschöpfung beendet festgefahrene Kämpfe): Im Monsterkampf und im Showdown darf jede Seite (im Monsterkampf der Angreifer ebenso wie der Spieler, der das Monster führt) den Kampf abbrechen, wenn der Gegner kein Mana mehr hat, ihr gerade kein Angriff entgegengebracht wird (eigener Angriffszug) und sie nicht unter einem Todesfluss steht. Kein Sieger, keine Beute; das Monster behält seine HP und sein Mana, und danach ist der Spieler am Zug, der das Monster geführt hat (er kann das angeschlagene Monster jetzt selbst angreifen).
 function canFlee(state, pid) {
@@ -370,59 +378,47 @@ function defenseOutcome(stats, color, pending, block, mir, std, rb) {
   const r0 = rb === undefined ? (stats.rainbow || 0) : rb, missing = Math.max(0, pending - block), absorb = Math.min(r0, missing);
   return { mLvl: r0, absorb, refl: 0, used: absorb, lostStd: 0, lostRb: absorb, lost: absorb, std: 0, rb: r0, leftover: missing - absorb };
 }
-// Was ein Kombo der Verteidigung für den laufenden Angriff ändert: Schild und Falle, die in der Verteidigung gestellt werden, wirken erst nach ihr (seit 0.7.2.23 für Schilde, seit 0.8 auch für die Falle). Die Heilung wirkt seit 0.5.4 wieder nach dem Schaden (heal: Stufe, hp: HP vor dem Schaden).
-function defenseComboPre(stats, ev, color) {
-  const rb = stats.rainbow || 0;   // seit 0.9.9.2 ohne Kombo in der Verteidigung
-  return { heal: 0, hp: stats.hp, mir: rb, std: 0, rb };
-}
-// Vorschau für die Knöpfe „Verteidigen“ und „Passen“, ohne etwas zu ändern: Mana-Kosten, Block, Restschaden und die HP danach (beim Verteidiger und, durch den Spiegelrückwurf, beim Angreifer). null, wenn gerade keine Verteidigung ansteht oder die Auswahl nicht geht.
-function previewDefense(state, passOnly) {
-  const c = state.combat;
-  if (!c || c.forced || c.action !== 'defense') return null;
-  const side = c.sides[c.turn], att = c.sides[c.turn === 'a' ? 'b' : 'a'];
-  let block = 0, cost = 0, pre = defenseComboPre(side.stats, null, c.color);   // Heilung (heal) wirkt nach dem Schaden
-  if (!passOnly) {
-    const sel = selection(side.deck);
-    if (sel.length) { const ev = evalDefense(side.stats, sel, c.color); if (!ev.valid || ev.affordable === false) return null; block = ev.block || 0; cost = ev.cost || 0; pre = defenseComboPre(side.stats, ev, c.color); }
-  }
-  const o = defenseOutcome(side.stats, c.color, c.pending, block, pre.mir, pre.std, pre.rb);
-  return Object.assign({ who: side.ctrl, att: att.ctrl, cost, block, heal: pre.heal, hpAfter: pre.hp - o.leftover > 0 ? healedHp(side.stats, pre.hp - o.leftover, pre.heal) : 0, attHpAfter: Math.max(0, att.stats.hp - o.refl) }, o);
-}
-function execDefense(state, passOnly) {
-  const c = state.combat, side = c.sides[c.turn], c0pending = c.pending;
-  const d = side.deck;
-  let block = 0, cost = 0, sel = [], defEv = null;
-  if (!passOnly) {
-    sel = selection(d);
-    const ev = evalDefense(side.stats, sel, c.color);
-    if (!ev.valid) return fail(ev.reason);
-    if (ev.affordable === false) return fail('Zu wenig Mana (' + ev.cost + ' nötig).');
-    block = ev.block || 0; cost = ev.cost || 0; defEv = ev;
-  }
-  side.stats.mana -= cost;
-  // Passen in der Verteidigung bringt kein Mana (nur im Angriffszug gibt es Erholen)
-  if (sel.length) consumeSelection(d, sel); else d.marks = [];
-  const attacker = c.sides[c.turn === 'a' ? 'b' : 'a'];
-  c.lfp = null;
-  // Schild (dauerhaft, 1 bis 3 Ladungen): Er mindert den nicht geblockten Schaden gegen jede Farbe und verliert dafür je geminderten Schaden eine Ladung. Das gilt auch beim Passen.
+// Eingehenden Schaden auflösen (seit 0.10 Teil jedes Zugs, auch beim Erholen, Nachziehen und Passen): Block, Schild, HP-Verlust, Protokoll samt Effekt. cast: die Karten des Zugs wehren ab (sonst wird der Schaden ohne Block hingenommen). Gibt den Restschaden zurück.
+function takeIncoming(state, side, block, defEl, cast) {
+  const c = state.combat, attacker = c.sides[c.turn === 'a' ? 'b' : 'a'];
   const { absorb, used, lost, rb, leftover } = defenseOutcome(side.stats, c.color, c.pending, block);
-  const hpPre = { [side.ctrl]: side.stats.hp, [attacker.ctrl]: attacker.stats.hp };   // HP vor dem Schaden, aber nach dem Kombo (Oberfläche zeigt sie, bis die Geschosse einschlagen)
-  side.stats.hp = side.stats.hp - leftover;   // vorläufig, die Heilung (seit 0.5.4 nach dem Schaden) gleicht ihn noch aus; danach nie unter 0
-  const defEl = sel.length && sel[0].el && !sel[0].curse ? sel[0].el : c.color;
-  const defFx = { kind: 'defense', rec: !!passOnly, who: side.ctrl, to: attacker.ctrl, attElem: c.color, defElem: defEl, pending: c.pending, block, hpPre };   // hpPre: HP vor dem Schaden, die Oberfläche zeigt sie, bis die Geschosse einschlagen
-  log(state, side.name + (passOnly ? ' passt und nimmt den Schaden hin' : ' verteidigt' + (block ? ' (Block ' + block + ')' : ' ohne Block')) + ' und verliert ' + leftover + ' HP' + '.', side.ctrl, defFx);
+  const hpPre = { [side.ctrl]: side.stats.hp, [attacker.ctrl]: attacker.stats.hp };   // HP vor dem Schaden (Oberfläche zeigt sie, bis die Geschosse einschlagen)
+  side.stats.hp = Math.max(0, side.stats.hp - leftover);
+  const defFx = { kind: 'defense', rec: !cast, who: side.ctrl, to: attacker.ctrl, attElem: c.color, defElem: cast && defEl ? defEl : c.color, pending: c.pending, block, hpPre };
+  log(state, side.name + (cast ? ' verteidigt' + (block ? ' (Block ' + block + ')' : ' ohne Block') : ' nimmt den Schaden hin') + ' und verliert ' + leftover + ' HP' + '.', side.ctrl, defFx);
   if (used > 0) {
     side.stats.rainbow = Math.max(0, (side.stats.rainbow || 0) - lost); if (!side.stats.rainbow) delete side.stats.rainbow;
     log(state, 'Schild: ' + side.name + ' mindert den Schaden um ' + absorb + ' und verliert ' + lost + ' Ladung' + (lost === 1 ? '' : 'en') + '.', side.ctrl, undefined);
-    // Schild-Effekt (Oberfläche, Grafik des Multischilds, elem 'R'): läuft in der Verteidigungsanimation, vor dem Schaden auf den HP
-    defFx.mirror = { hpPre, elem: 'R', markers: rb, broken: lost, who: side.ctrl, att: attacker.ctrl, r: 0, abs: absorb, d: c.pending, blk: block };
+    defFx.mirror = { hpPre, elem: 'R', markers: rb, broken: lost, who: side.ctrl, att: attacker.ctrl, r: 0, abs: absorb, d: c.pending, blk: block };   // Schild-Effekt (Oberfläche, elem 'R'): läuft in der Verteidigungsanimation
   }
-  side.stats.hp = Math.max(0, side.stats.hp);
-  const attSide = attacker;   // wer gerade angegriffen hat: seine Angriffsphase endet mit dieser Verteidigung
-  c.action = 'attack'; c.color = null; c.pending = 0; c.lfp = null;
-  if (!hpDecided(state)) deathTick(state, attSide, c.atkTurns || 0);   // Stufe 2 (Schaden nach der Verteidigung, samt Heilung) ist abgeschlossen; erst wenn dabei niemand auf 0 HP fiel, folgen als Stufe 3 die Flusseffekte (atkTurns zählt den Angriff dieser Phase schon mit)
-  const res = finishStep(state, { k: 'V', who: side.key === 'a' ? 0 : 1, v: block, b: c0pending, left: leftover });
-  return { ok: true, combatEnd: res };
+  return leftover;
+}
+// Der Zug endet, weil eine Seite auf 0 HP fiel: die Initiative wechselt, der Kampf wird ausgewertet.
+function endDecided(state, info) {
+  const c = state.combat;
+  c.turn = c.turn === 'a' ? 'b' : 'a'; c.action = 'attack'; c.color = null; c.pending = 0; c.lfp = null; c.atkTurns = (c.atkTurns || 0) + 1;
+  return finishStep(state, info);
+}
+// Zug ohne Magie (Erholen, Nachziehen, Passen) bei eingehendem Angriff: Der Schaden wird ohne Block hingenommen (ein Schild mindert ihn). Gibt { res } zurück, wenn der Kampf dadurch entschieden ist, sonst null.
+function takeHitFirst(state, side) {
+  const c = state.combat;
+  if (c.action !== 'defense') return null;
+  const c0pending = c.pending, left = takeIncoming(state, side, 0, null, false);
+  if (hpDecided(state)) { side.deck.marks = []; return { res: { ok: true, combatEnd: endDecided(state, { k: 'V', who: side.key === 'a' ? 0 : 1, v: 0, b: c0pending, left }) } }; }
+  return null;
+}
+// Vorschau für die Knöpfe „Magie wirken“ (noCast falsch) und Erholen/Nachziehen/Passen (noCast wahr), ohne etwas zu ändern: Mana-Kosten, Block, Restschaden und die HP danach. null, wenn gerade kein Angriff eingeht oder die Auswahl nicht geht.
+function previewDefense(state, noCast) {
+  const c = state.combat;
+  if (!c || c.forced || c.action !== 'defense') return null;
+  const side = c.sides[c.turn], att = c.sides[c.turn === 'a' ? 'b' : 'a'];
+  let block = 0, cost = 0, heal = 0;
+  if (!noCast) {
+    const sel = selection(side.deck);
+    if (sel.length) { const ev = evalAttack(side.stats, sel, c.color); if (!ev.valid || ev.affordable === false) return null; block = ev.block || 0; cost = ev.cost || 0; heal = ev.levels.ulti > 0 ? 0 : levelsFor(ev).gh || 0; }
+  }
+  const o = defenseOutcome(side.stats, c.color, c.pending, block);
+  return Object.assign({ who: side.ctrl, att: att.ctrl, cost, block, heal, hpAfter: side.stats.hp - o.leftover > 0 ? healedHp(side.stats, side.stats.hp - o.leftover, heal) : 0, attHpAfter: Math.max(0, att.stats.hp - o.refl) }, o);
 }
 
 function applyCombat(state, a) {
@@ -456,12 +452,12 @@ function applyCombat(state, a) {
   switch (a.type) {
     case 'mark': { const e = toggleMark(side.deck, a.slot, side.stats.limit); return e ? fail(e) : { ok: true }; }
     case 'lfp': { if (c.action !== 'attack' && c.action !== 'defense') return fail('Nur im Angriffs- oder Verteidigungszug.'); const ok = ['sm', 'om', 'sd', 'od', 'sh', 'oh', 'sr', 'or', 'st', 'ot']; c.lfp = a.pick === null ? null : (Array.isArray(a.pick) ? a.pick : []).filter(x => typeof x === 'string' && ok.includes(x.split(':')[0]) && (x.indexOf(':') < 0 || ELEMENTS.includes(x.split(':')[1]))).slice(0, 3); return { ok: true }; }
-    case 'attack': if (c.action !== 'attack') return fail('Jetzt wird verteidigt.'); return execAttack(state);
-    case 'defend': if (c.action !== 'defense') return fail('Jetzt wird angegriffen.'); return execDefense(state, false);
-    case 'pass':
-      if (c.action === 'defense') return execDefense(state, true);
+    case 'attack': case 'defend': return execCast(state);   // seit 0.10 gibt es nur noch „Magie wirken“ (defend bleibt als Alias für alte Aufzeichnungen)
+    case 'pass': {
+      const hit = takeHitFirst(state, side); if (hit) return hit.res;
       side.deck.marks = []; side.passed = (side.passed || 0) + 1; log(state, side.name + ' passt.', side.ctrl);   // passed: Passen-Züge in Folge (die KI greift dann eher an)
       passAttackTurn(state); return { ok: true, combatEnd: finishStep(state) };
+    }
     case 'flee': {
       if (!state.rules.fleeAllowed) return fail('Fliehen ist abgeschaltet.');
       if (c.action !== 'attack') return fail('Fliehen geht nur im eigenen Angriffszug, nicht unter Angriff.');
@@ -473,7 +469,7 @@ function applyCombat(state, a) {
       return { ok: true, combatEnd: endCombat(state, { reason: 'flee', winner: null, monsterDefeated: false, fled: side.key }) };
     }
     case 'recover': {
-      if (c.action !== 'attack') return fail('Erholen geht nur im Angriffszug.');
+      const hit = takeHitFirst(state, side); if (hit) return hit.res;
       const gain = recoverGain(state);
       side.stats.mana = Math.min(side.stats.maxMana, side.stats.mana + gain);
       side.deck.marks = [];
@@ -481,16 +477,14 @@ function applyCombat(state, a) {
       passAttackTurn(state); return { ok: true, combatEnd: finishStep(state) };
     }
     case 'draw': {
-      if (c.action !== 'attack' && c.action !== 'defense') return fail('Nachziehen geht nur im Angriffs- oder Verteidigungszug.');
       const dmc = drawManaCost(state, side.ctrl);   // roter Nachziehmarker: Nachziehen kostet Mana
       if (side.stats.mana < dmc) return fail('Bei rotem Nachziehmarker kostet Nachziehen ' + dmc + ' Mana. Es ist nicht genug Mana da.');
-      if (!drawPhase(state, side.deck)) return fail('Alle Karten sind gesperrt, es gibt nichts zu tauschen.');
+      const dd = side.deck;
+      if (!(dd.hand.some(x => !x || !x.locked) && (dd.draw.length + dd.discard.length > 0 || dd.hand.some(x => x && !x.locked)))) return fail('Alle Karten sind gesperrt, es gibt nichts zu tauschen.');
       side.stats.mana -= dmc;
-      if (c.action === 'defense') {   // seit 0.9.9.3: Nachziehen statt Verteidigen; der Schaden wird wie beim Passen hingenommen (ein Schild mindert ihn)
-        log(state, side.name + ' zieht Karten nach statt zu verteidigen' + (dmc ? ' und zahlt bei rotem Marker ' + dmc + ' Mana' : '') + '.', side.ctrl);
-        return execDefense(state, true);
-      }
-      log(state, side.name + ' zieht Karten nach (ersetzt den Angriff)' + (dmc ? ' und zahlt bei rotem Marker ' + dmc + ' Mana' : '') + '.', side.ctrl);
+      const hit = takeHitFirst(state, side); if (hit) return hit.res;   // ein eingehender Angriff wird zuerst ohne Block hingenommen
+      drawPhase(state, side.deck);
+      log(state, side.name + ' zieht Karten nach' + (dmc ? ' und zahlt bei rotem Marker ' + dmc + ' Mana' : '') + '.', side.ctrl);
       passAttackTurn(state); return { ok: true, combatEnd: finishStep(state) };
     }
     case 'freeDraw': {

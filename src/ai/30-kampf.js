@@ -31,8 +31,9 @@ function ultiWorth(side, opp, Q, el, lvl) {
   if (el === 'W') return lvl * Q.aCost * Q.uMana * ((side.stats.manaflow || 0) >= lvl ? 0.1 : 1) * (side.stats.maxMana > side.stats.mana ? 1 : 0.6);   // Manafluss: +S Mana je eigener Angriffsphase, jedes Mana ist etwa so viel wert wie sein Preis im Angriff
   return lvl * Q.wDeath * (opp.stats.death >= lvl ? 0.1 : 1) * (Q.smart ? Math.max(0.4, Math.min(1.4, opp.stats.hp / 4)) : 1);
 }
-function bestAttack(side, opp, hand, Q, state0, reserve) {
+function bestAttack(side, opp, hand, Q, state0, reserve, inc) {   // inc: { color, pend } bei eingehendem Angriff: Der Block derselben Karten zählt mit
   const stats = side.stats, lim = Math.max(1, stats.limit);
+  const shield = stats.rainbow || 0, abs0 = inc ? Math.min(shield, inc.pend) : 0, lethal = !!inc && inc.pend - abs0 >= stats.hp;
   hand = hand.filter(h => !h.curse);   // Fluchkarten lassen sich nicht ausspielen
   let best = null;
   for (const sub of subsets(hand, lim)) {
@@ -46,7 +47,7 @@ function bestAttack(side, opp, hand, Q, state0, reserve) {
       for (const l of rest) orders.push([f, ...rest.filter(x => x !== l), l]);
     }
     for (const ord of orders) {
-      const ev = M.evalAttack(stats, ord);
+      const ev = M.evalAttack(stats, ord, inc ? inc.color : undefined);
       if (!ev.valid || !ev.affordable) continue;
       const hurt = stats.maxHp - stats.hp, oMir = (opp.stats.manaflow || 0) + (opp.stats.rainbow || 0) + Q.lfHeal * (opp.stats.heal || 0);
       const w = { fe: Q.wFE, ew: oMir > 0 ? 1.2 + oMir * Math.max(0.3, Q.lfOppW || 0) : 0.1 };   // Läuterung lohnt, wenn der Gegner Schild- oder Manamarker trägt
@@ -62,6 +63,11 @@ function bestAttack(side, opp, hand, Q, state0, reserve) {
       if (resHit) value -= reserve.v;
       if (dmg > 0 && (opp.stats.rainbow || 0) > 0) value -= Math.min(opp.stats.rainbow, dmg) * Q.mirAvoid;   // Schild des Gegners: mindert bis zu seinen Ladungen von meinem nicht geblockten Schaden
       if (ord.length > 1 && dmg === 0 && combo === 0 && ev.curses === 0) value -= 5;
+      if (inc) {   // Schaden, den der Block gegenüber dem Hinnehmen erspart; das Schild bleibt erhalten, soweit der Block den Schaden schon wegnimmt
+        const left0 = Math.max(0, inc.pend - (ev.block || 0)), absorbed = Math.min(shield, left0), left = left0 - absorbed;
+        value += (Math.max(0, inc.pend - abs0) - left) * (lethal ? Q.dLeth : Q.dPend) + (abs0 - absorbed) * Q.mirKeep;
+        if (left >= stats.hp) value -= 100;   // der Zug verfällt, wenn der Restschaden tödlich ist
+      }
       if (!best || value > best.value) best = { value, ord, ev, dmg };
     }
   }
@@ -106,7 +112,7 @@ function combatPlan(state, pid) {
   const d = side.deck, hand = handList(d), A = a => Object.assign({ pid }, a);
   const s = side.stats, Q = P(pid);
   const canFlee = M.canFlee(state, pid) && (state.idleTurns || 0) < Q.fleeIdle;   // lange kein Kampf entschieden: nicht mehr fliehen, damit der Kampf einen Sieger bekommt (sonst Patt-Schleife Angreifen–Fliehen)
-  if (c.action === 'attack') {
+  {   // seit 0.10 ein Zugmuster: Magie wirken (mit Block, wenn ein Angriff eingeht), Erholen, Nachziehen, Passen
     if (Q.fleeHits > 0 && side.kind === 'monster' && canFlee) {   // Ich führe das Monster, der Angreifer hat kein Mana mehr: Fliehe ich, bleibt das angeschlagene Monster stehen, und ich bin als Nächster dran, es selbst zu besiegen (die Beute geht an mich)
       const me = state.players[pid].stats, net = outlook(state, pid, c.slot);
       if (net > 0 && side.stats.hp / net <= Q.fleeHits && me.hp >= Q.minHp && me.mana >= Q.minMana) return [A({ type: 'flee' })];
@@ -121,7 +127,7 @@ function combatPlan(state, pid) {
     let reserve = null;
     const resV = side.kind === 'monster' ? (state.players[opp.ctrl].sp > 0 ? Q.mResL : 0) : Q.mRes;
     if (resV > 0 && c.mode === 'monster' && raceTurns(state, side, opp) < raceTurns(state, opp, side)) reserve = { v: resV, hp: side.kind === 'monster' ? 99 : Q.mResHp, blk: Q.mResBlk };
-    const best = bestAttack(side, opp, hand, Q, state, reserve), gain = M.recoverGain ? M.recoverGain(state) : 1;
+    const inc = c.action === 'defense' ? { color: c.color, pend: c.pending } : null, best = bestAttack(side, opp, hand, Q, state, reserve, inc), gain = M.recoverGain ? M.recoverGain(state) : 1;
     if (c.mode === 'monster' && canFlee && !(best && best.dmg >= opp.stats.hp)) {   // Kampfprognose: Wer braucht weniger Züge, um den anderen zu besiegen? (ein sofort tödlicher Angriff geht vor)
       const tMe = raceTurns(state, side, opp), tOpp = raceTurns(state, opp, side);
       // Angreifer: Liegt das Monster in der Prognose mindestens fleeA (ohne Siegpunkte fleeA0) Züge vorn, droht eine Niederlage (−1 Siegpunkt, alle HP). Die Flucht behält beides; der bis dahin angerichtete Schaden bleibt am Monster.
@@ -157,7 +163,7 @@ function combatPlan(state, pid) {
       }
     }
     if (reserve && s.mana < s.maxMana && Q.mResRec) {   // Hält die Reserve einen brauchbaren Angriff zurück, erst Mana sammeln (Erholen), statt nachzuziehen und später doch mit dem letzten Mana anzugreifen
-      const raw = bestAttack(side, opp, hand, Q, state);
+      const raw = bestAttack(side, opp, hand, Q, state, undefined, inc);
       if (raw && raw.value > Q.aThr && (!best || best.value <= Q.aThr)) return [A({ type: 'recover' })];
     }
     const red = !!M.markerOf(state, pid).h.drawRed, payOk = s.mana >= M.drawManaCost(state, pid);   // roter Nachziehmarker: Nachziehen kostet Mana (ohne Mana nicht möglich)
@@ -194,25 +200,6 @@ function combatPlan(state, pid) {
     }
     return [A({ type: 'recover' })];
   }
-  // Verteidigung
-  const color = c.color, pend = c.pending, shield = s.rainbow || 0, lethal = pend - Math.min(shield, pend) >= s.hp;
-  const cand = hand.filter(h => !h.curse);
-  const abs0 = Math.min(shield, pend);   // ohne Verteidigung mindert das Schild bis zu seinen Ladungen
-  let best = { score: (pend - abs0) * (lethal ? Q.dLeth : Q.dPend) + abs0 * Q.mirKeep, ord: [] };   // Verzicht auf Verteidigung bringt Mana
-  const variants = subsets(cand, Math.max(1, s.limit)).filter(sub => new Set(sub.filter(h => !h.curse).map(h => h.el)).size <= 1);   // seit 0.9.9.2 nur Karten einer Farbe
-  for (const sub of variants) {
-    const ev = M.evalDefense(s, sub, color);
-    if (!ev.valid || ev.affordable === false) continue;
-    const left0 = Math.max(0, pend - (ev.block || 0)), lvM = M.defenseComboPre(s, ev, color).mir, absorbed = Math.min(lvM, left0), left = left0 - absorbed;   // das Schild mindert den nicht geblockten Schaden bis zu seinen Ladungen (ein Schild-Kombo der Verteidigung wirkt erst danach)
-    const nCurse = sub.filter(h => h.curse).length;
-    let score = left * (lethal ? Q.dLeth : Q.dPend) + (ev.cost || 0) * Q.dCost + (sub.length - nCurse) * Q.dKeep - nCurse * 0.6;
-    if (lvM > 0) score += absorbed * Q.mirKeep;   // jede geminderte Einheit Schaden kostet eine Schildladung
-    if (score < best.score) best = { score, ord: sub };
-  }
-  if (!best.ord.length) return [A({ type: 'pass' })];
-  const acts = best.ord.map(h => A({ type: 'mark', slot: h.slot }));
-  acts.push(A({ type: 'defend' }));
-  return acts;
 }
 
 function plan(state, pid) {
@@ -225,7 +212,7 @@ function fallback(state, pid) {
   if (state.phase === 'combat') {
     const c = state.combat;
     if (c.forced) return [A(forcedAct(state, pid))];
-    return c.action === 'defense' ? [A({ type: 'pass' })] : [A({ type: 'recover' }), A({ type: 'draw' }), A({ type: 'pass' })];
+    return [A({ type: 'recover' }), A({ type: 'draw' }), A({ type: 'pass' })];
   }
   return [A({ type: 'draw' })];
 }

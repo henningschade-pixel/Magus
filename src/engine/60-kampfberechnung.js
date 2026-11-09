@@ -39,30 +39,20 @@ function echoBoost(stats, lv, ord, ultiEl) {
 }
 const MAX_LVL_ECHO = 3;
 // Fluchkarten kosten beim Ausspielen je 1 Mana und zählen nicht als Element. Offen liegende Hellsichtkarten (c.free) kosten kein Mana.
-function evalAttack(stats, cards) {
+// inc: Farbe des eingehenden Angriffs (seit 0.10 wird der Schaden im selben Zug abgewehrt): Die Primärfarbe blockt, wenn sie die Angriffsfarbe oder die überlegene Farbe ist; die überlegene Farbe kostet kein Mana.
+function evalAttack(stats, cards, inc) {
   if (!cards.length) return { valid: false, reason: 'Keine Karte gewählt.' };
   const curses = cards.filter(c => c.curse), normals = cards.filter(c => !c.curse);
   const prim = normals.length ? normals[0].el : null, lastEl = normals.length ? normals[normals.length - 1].el : null;   // lastEl: Farbe der zuletzt markierten Karte (bestimmt die Ultimate, seit 0.9.9)
   const same = prim ? normals.filter(c => c.el === prim) : [];
-  const cost = normals.filter(c => !c.free).length + curses.reduce((n, c) => n + c.tier, 0);
+  const freePrim = !!(inc && prim && prim === SUPERIOR[inc]);   // überlegene Magie gegen den eingehenden Angriff: kostenlos
+  const cost = normals.filter(c => !c.free && !(freePrim && c.el === prim)).length + curses.reduce((n, c) => n + c.tier, 0);
   let damage = 0; same.forEach(c => { damage += Math.min(c.tier, stats.mag[prim]); });
+  const canBlock = !!(inc && prim && (prim === inc || prim === SUPERIOR[inc]));
   const tiers = { F: [], E: [], W: [] }; normals.forEach(c => tiers[c.el].push(c.tier));
   const levels = comboLevels(tiers, stats.mag, prim);
   if (stats.noCombo) for (const k of stats.noCombo) levels[k] = 0; // nur für Simulationen
   const ord = levels.ord && !(stats.noCombo && stats.noCombo.includes(levels.ord.key)) ? levels.ord : null;
   echoBoost(stats, levels, ord, lastEl);   // Echo des letzten Kombos (seit 0.9)
-  return { valid: true, prim, cost, damage, levels, ord, curses: curses.length, affordable: stats.mana >= cost, ultiEl: levels.ulti > 0 ? lastEl : null };
+  return { valid: true, prim, cost, damage, block: canBlock ? damage : 0, levels, ord, curses: curses.length, affordable: stats.mana >= cost, ultiEl: levels.ulti > 0 ? lastEl : null };
 }
-// Seit 0.9.9.2 gibt es in der Verteidigung keine Kombos mehr: Es zählen nur Karten der Verteidigungsfarbe (die erste Karte bestimmt sie); Karten einer anderen Farbe sind ungültig.
-function evalDefense(stats, cards, color) {
-  if (!cards.length) return { valid: true, cost: 0, block: 0, empty: true };
-  const curses = cards.filter(c => c.curse), normals = cards.filter(c => !c.curse);
-  const el = normals.length ? normals[0].el : null;
-  const same = normals.filter(c => c.el === el);
-  if (el && el !== color && el !== SUPERIOR[color]) return { valid: false, reason: NAMES[el] + ' kann nicht gegen ' + NAMES[color] + ' verteidigen.' };
-  if (same.length < normals.length) return { valid: false, reason: 'In der Verteidigung sind keine Kombos möglich: nur Karten einer Farbe.' };
-  const cost = curses.reduce((n, c) => n + c.tier, 0) + (el === color ? same.filter(c => !c.free).length : 0);   // Verteidigung in der überlegenen Farbe ist gratis
-  let block = 0; same.forEach(c => { block += Math.min(c.tier, stats.mag[el]); });
-  return { valid: true, el, cost, block, affordable: stats.mana >= cost, levels: { fw: 0, fe: 0, ew: 0, ulti: 0 }, ord: null, ultiEl: null };
-}
-
