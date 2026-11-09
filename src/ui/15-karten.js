@@ -129,7 +129,7 @@ function renderCards() {
   ph += lab(L_MY, cx.myDeck, true) + lab(L_OP, cx.oppDeck, false);
   const canDraw = canDrawNow();
   ph += drawWarnHTML();
-  ph += '<div class="pilehit ' + (canDraw ? '' : 'off') + '" data-act="draw" title="Nachziehen: nicht gesperrte Karten ablegen und neu füllen" style="left:' + L_MY.draw.x + 'px;top:' + L_MY.draw.y + 'px;width:' + CW * L_MY.ps + 'px;height:' + CH * L_MY.ps + 'px"></div>';
+  ph += '<div class="pilehit ' + (canDraw ? '' : 'off') + '" data-act="draw" title="Nachziehen: nicht gesperrte Karten ablegen und neu füllen (im Kampf ersetzt es Angriff oder Verteidigung; ohne Verteidigung wird der Schaden hingenommen)" style="left:' + L_MY.draw.x + 'px;top:' + L_MY.draw.y + 'px;width:' + CW * L_MY.ps + 'px;height:' + CH * L_MY.ps + 'px"></div>';
   ph += '<div class="pilehit" data-act="deckview" title="Dein Deck als Balkendiagramm (Stufen der Karten)" style="left:' + L_MY.disc.x + 'px;top:' + L_MY.disc.y + 'px;width:' + CW * L_MY.ps + 'px;height:' + CH * L_MY.ps + 'px"></div>';
   $('dimdeck').classList.toggle('on', !!deckView);   // Deckübersicht: Spielfeld dahinter sanft abdunkeln
   if (deckView) ph += deckPopHTML(cx.myDeck);
@@ -184,7 +184,7 @@ function drawWarnHTML() {
 }
 function canDrawNow() {
   if (!myTurn()) return false;
-  if (G.phase === 'combat') return G.combat.action === 'attack' && !drawNeedsMana();
+  if (G.phase === 'combat') return (G.combat.action === 'attack' || G.combat.action === 'defense') && !drawNeedsMana();   // seit 0.9.9.3 auch statt der Verteidigung
   return true;
 }
 // Kampf, roter Nachziehmarker: Nachziehen kostet Mana. Wahr, wenn mein Mana dafür nicht reicht.

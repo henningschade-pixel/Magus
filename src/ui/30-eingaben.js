@@ -112,7 +112,7 @@ function pvShow(b) {
     const set = (pid, key, html) => { const p = pnl(pid), el = p && p.querySelector('[data-pv="' + key + '"]'); if (!el) return; const old = el.innerHTML, oldT = el.textContent; el.innerHTML = html; undos.push(() => { el.innerHTML = old; }); ArcFx.mark(el, oldT, undos); };
     const cst = G.phase === 'combat' ? ctx().myStats : st;   // im Kampf zählen die Werte des geführten Monsters, nicht die Weltphasen-Werte des Spielers
     const dn = x => '<span class="pvdn">' + x + '</span>', up = x => '<span class="pvnew">' + x + '</span>';
-    if (act === 'draw') {   // roter Nachziehmarker: im Kampf kostet es Mana, in der Weltphase bekommt der Gegner Gold
+    if (act === 'draw' && !(G.phase === 'combat' && G.combat && G.combat.action === 'defense')) {   // roter Nachziehmarker: im Kampf kostet es Mana, in der Weltphase bekommt der Gegner Gold
       if (!canDrawNow()) return;
       const mc = M.drawManaCost(G, ME), gp = M.drawGoldPenalty(G, ME);
       if (mc > 0) set(ME, 'mana', dn(Math.max(0, cst.mana - mc)) + '/' + cst.maxMana);
@@ -122,9 +122,10 @@ function pvShow(b) {
       const nm = Math.min(cst.maxMana, cst.mana + M.recoverGain(G));
       set(ME, 'mana', (nm > cst.mana ? up(nm) : cst.mana) + '/' + cst.maxMana);
     } else {   // Verteidigen / Passen: Mana-Kosten und Restschaden (rot), Spiegelrückwurf auf den Angreifer (rot)
-      const pd = myTurn() && G.phase === 'combat' ? M.previewDefense(G, act === 'pass') : null;
+      const pd = myTurn() && G.phase === 'combat' ? M.previewDefense(G, act !== 'defend') : null;   // Passen und Nachziehen: ohne Verteidigung
       if (!pd || pd.who !== ME) return;
-      set(ME, 'mana', (pd.cost > 0 ? dn(Math.max(0, cst.mana - pd.cost)) : cst.mana) + '/' + cst.maxMana);   // beim Passen wird nichts gespielt, auch wenn Karten markiert sind
+      const pc = act === 'draw' ? M.drawManaCost(G, ME) : pd.cost;
+      set(ME, 'mana', (pc > 0 ? dn(Math.max(0, cst.mana - pc)) : cst.mana) + '/' + cst.maxMana);   // beim Passen wird nichts gespielt, auch wenn Karten markiert sind
       if (pd.leftover > 0 || pd.heal > 0) set(ME, 'hp', (pd.hpAfter < cst.hp ? dn(pd.hpAfter) : pd.hpAfter > cst.hp ? up(pd.hpAfter) : pd.hpAfter) + '/' + cst.maxHp);   // Heilung wirkt nach dem Schaden (seit 0.5.4) vor dem Schaden (Kombo zuerst)
       if (pd.refl > 0) { const cs = G.combat.sides.a.ctrl === pd.att ? G.combat.sides.a : G.combat.sides.b; set(pd.att, 'hp', dn(pd.attHpAfter) + '/' + cs.stats.maxHp); }
     }

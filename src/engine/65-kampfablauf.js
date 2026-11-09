@@ -481,11 +481,15 @@ function applyCombat(state, a) {
       passAttackTurn(state); return { ok: true, combatEnd: finishStep(state) };
     }
     case 'draw': {
-      if (c.action !== 'attack') return fail('Nachziehen geht nur im Angriffszug.');
+      if (c.action !== 'attack' && c.action !== 'defense') return fail('Nachziehen geht nur im Angriffs- oder Verteidigungszug.');
       const dmc = drawManaCost(state, side.ctrl);   // roter Nachziehmarker: Nachziehen kostet Mana
       if (side.stats.mana < dmc) return fail('Bei rotem Nachziehmarker kostet Nachziehen ' + dmc + ' Mana. Es ist nicht genug Mana da.');
       if (!drawPhase(state, side.deck)) return fail('Alle Karten sind gesperrt, es gibt nichts zu tauschen.');
       side.stats.mana -= dmc;
+      if (c.action === 'defense') {   // seit 0.9.9.3: Nachziehen statt Verteidigen; der Schaden wird wie beim Passen hingenommen (ein Schild mindert ihn)
+        log(state, side.name + ' zieht Karten nach statt zu verteidigen' + (dmc ? ' und zahlt bei rotem Marker ' + dmc + ' Mana' : '') + '.', side.ctrl);
+        return execDefense(state, true);
+      }
       log(state, side.name + ' zieht Karten nach (ersetzt den Angriff)' + (dmc ? ' und zahlt bei rotem Marker ' + dmc + ' Mana' : '') + '.', side.ctrl);
       passAttackTurn(state); return { ok: true, combatEnd: finishStep(state) };
     }

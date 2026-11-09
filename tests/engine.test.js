@@ -1317,3 +1317,27 @@ test('Keine Kombos in der Verteidigung: Karten einer zweiten Farbe sind ungülti
   assert.equal(M.apply(s, { pid: 0, type: 'defend' }).ok, false, 'Verteidigen mit zwei Farben wird abgelehnt');
   assert.equal(me.stats.hp, 8);
 });
+
+test('Nachziehen statt Verteidigen: Hand wird neu gefüllt, der Schaden wird hingenommen, danach ist man im Angriffszug (0.9.9.3)', () => {
+  const { s, c, me } = combatSetup(11, ['F3', 'E3']);
+  me.stats.hp = 8; me.stats.maxHp = 9; c.turn = 'a'; c.action = 'defense'; c.color = 'E'; c.pending = 3;
+  const ids0 = me.deck.hand.map(x => x && x.id).join();
+  const r = M.apply(s, { pid: 0, type: 'draw' });
+  assert.ok(r.ok, r.reason);
+  assert.equal(me.stats.hp, 5, 'kein Block: voller Schaden');
+  assert.notEqual(me.deck.hand.map(x => x && x.id).join(), ids0, 'neue Karten gezogen');
+  assert.equal(s.combat.action, 'attack', 'danach eigener Angriffszug');
+  assert.ok(s.log.some(l => /statt zu verteidigen/.test(l.txt)));
+});
+
+test('Nachziehen in der Verteidigung: roter Marker kostet Mana, ohne Mana nicht möglich (0.9.9.3)', () => {
+  const { s, c, me } = combatSetup(11, ['F3', 'E3']);
+  me.stats.hp = 9; c.turn = 'a'; c.action = 'defense'; c.color = 'E'; c.pending = 1;
+  s.players[0].drawRed = true; s.players[0].drawN = 1;
+  const cost = M.drawManaCost(s, 0); assert.ok(cost > 0);
+  me.stats.mana = cost - 1;
+  assert.equal(M.apply(s, { pid: 0, type: 'draw' }).ok, false, 'zu wenig Mana');
+  me.stats.mana = cost + 2;
+  assert.ok(M.apply(s, { pid: 0, type: 'draw' }).ok);
+  assert.equal(me.stats.mana, 2, 'Mana bezahlt');
+});

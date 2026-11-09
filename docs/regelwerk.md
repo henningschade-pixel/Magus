@@ -65,6 +65,8 @@ Der aktive Spieler wählt ein lebendes Monster und greift an, der Mitspieler fü
 
 **Fliehen (neu):** Im Monsterkampf darf jede Seite fliehen, wenn das Monster 0 Mana hat, ihm gerade kein Angriff entgegengebracht wird (er ist in seinem Angriffszug) und er nicht unter einem Todesfluss steht. Der Kampf endet ohne Sieger und ohne Beute, das Monster behält seine HP und sein Mana, der Mitspieler ist als Nächster dran (mit der üblichen Regeneration). Im Showdown gilt dasselbe Fliehen: Der Showdown endet dann ohne Sieger, und es gibt keine Siegpunkte (anders als bei einem Showdown, in dem beide fallen). Die KI flieht nicht (`fleeT` 999): Im Selbstspiel verlor sie damit.
 
+**Nachziehen in der Verteidigung (seit 0.9.9.3):** Statt zu verteidigen kann man nachziehen; der Schaden wird wie beim Passen hingenommen.
+
 **Erholen:** Wer den Angriff auslässt, erhält **Mana in Höhe des Abschnitts** (1 / 2 / 3). In der Verteidigung gibt es **kein Erholen**: Wer dort passt, führt keine Verteidigung aus und nimmt den Schaden hin (ein Spiegel dieser Farbe gleicht bis zu seiner Stufe aus und verliert dafür Stufen), erhält aber kein Mana. Nachziehen, Erholen und Passen beenden den Zug.
 
 **Kampfende:**
@@ -688,6 +690,12 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Umsetzung:** `applyWorld` (`src/engine/70-weltphase.js`) ruft `execMagic`, `execDrawLimit` und `execSpend` ohne `endTurn` auf (`endOnOk` entfällt); `markerKind` (`src/engine/80-start.js`) kennt in der Weltphase nur noch Nachziehen als `draw` sowie Händler und Kampf als `other`. Die Oberfläche braucht keine Änderung: Nach dem Kauf ist derselbe Spieler weiter am Zug (`pump`).
 - **KI:** `runTurn` (`src/ai/30-kampf.js`) führt alle Wirtschaftsschritte (`ecoStep`, höchstens 12) vor der eigentlichen Aktion im selben Zug aus; bisher beendete jeder Schritt außer dem Opfern den Zug. Die Stellschrauben bleiben unverändert und sind für die neue Regel nicht nachtrainiert (Messung mit `npm run balance` offen).
 - **Tests:** Drei Tests angepasst (Nachziehmarker Weltphase, Nachziehlimit Kauf, Nachziehlimit Weltphase; der Marker-Reset läuft jetzt über den Händler), neuer Test „Magie kaufen und Upgrades sind keine Aktion mehr“. `tests/golden.json` ist neu erzeugt (absichtliche Regeländerung).
+- Die Versionsbeschreibung im Spiel nennt die Änderung.
+
+## Änderung 0.9.9.3 (09.11.)
+
+- **Nachziehen statt Verteidigen (Regeländerung):** Im Verteidigungszug ist die Aktion „Nachziehen“ erlaubt (Klick auf den Nachziehstapel). Sie ersetzt die Verteidigung: Die nicht gesperrten Karten werden abgelegt und neu gezogen, der Schaden wird wie beim Passen hingenommen (ein Schild mindert ihn weiter, es gibt keinen Block). Der Nachziehmarker gilt wie im Angriffszug: Ist er rot, kostet das Nachziehen Mana; danach springt er (Nachziehen) bzw. bleibt grün (Limit). Umsetzung: `case 'draw'` in `src/engine/65-kampfablauf.js` (ruft `execDefense(state, true)`), Oberfläche `canDrawNow` und Vorschau (`src/ui/15-karten.js`, `src/ui/30-eingaben.js`). Die KI zieht in der Verteidigung nicht nach.
+- **Tests:** Neue Tests zum Nachziehen in der Verteidigung.
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
 
 ## Änderung 0.9.9.2 (09.11.)
