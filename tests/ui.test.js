@@ -139,7 +139,7 @@ test('Läuterung: Todesmarker beider Seiten sind im Kampfbildschirm anklickbar',
       const G = window.__magus.state, M = window.Magus; G.turn = 0; M.apply(G, { pid: 0, type: 'combat', elem: 'F' });
       const me = G.combat.sides.a, op = G.combat.sides.b; me.stats.limit = 3; me.stats.mag = { F: 3, E: 3, W: 3 }; me.stats.mana = me.stats.maxMana = 9;
       me.stats.death = 2; op.stats.death = 3;
-      ['E2', 'F2'].forEach((id, i) => { me.deck.hand[i] = Object.assign({}, me.deck.hand[i], { id }); });
+      ['W2', 'E2'].forEach((id, i) => { me.deck.hand[i] = Object.assign({}, me.deck.hand[i], { id }); });
       M.apply(G, { pid: 0, type: 'mark', slot: 0 }); M.apply(G, { pid: 0, type: 'mark', slot: 1 }); window.__magus.pump();
     });
     await p.waitForTimeout(300);
@@ -163,7 +163,7 @@ test('Läuterung: eigene und gegnerische Mana- und Schildmarker sind im Kampfbil
       const G = window.__magus.state, M = window.Magus; G.turn = 0; M.apply(G, { pid: 0, type: 'combat', elem: 'F' });
       const me = G.combat.sides.a, op = G.combat.sides.b; me.stats.limit = 3; me.stats.mag = { F: 3, E: 3, W: 3 }; me.stats.mana = me.stats.maxMana = 9;
       me.stats.manaflow = 2; op.stats.rainbow = 1;
-      ['E2', 'F2'].forEach((id, i) => { me.deck.hand[i] = Object.assign({}, me.deck.hand[i], { id }); });
+      ['W2', 'E2'].forEach((id, i) => { me.deck.hand[i] = Object.assign({}, me.deck.hand[i], { id }); });
       M.apply(G, { pid: 0, type: 'mark', slot: 0 }); M.apply(G, { pid: 0, type: 'mark', slot: 1 }); window.__magus.pump();
     });
     await p.waitForTimeout(300);
@@ -250,7 +250,7 @@ test('Lähmung: die Flüche erscheinen erst im Ablagestapel, wenn die Animation 
     const ablage = () => p.evaluate(() => [...document.querySelectorAll('*')].filter(e => e.children.length === 0 && /^Ablage \d+$/.test(e.textContent.trim())).map(e => +e.textContent.replace(/\D/g, '')));
     await p.evaluate(() => {
       const G = window.__magus.state, me = G.combat.sides.a; me.stats.mag = { F: 3, E: 3, W: 3 }; me.stats.limit = 3; me.stats.mana = me.stats.maxMana = 9;
-      ['F2', 'E1', 'E1'].forEach((id, i) => { me.deck.hand[i] = Object.assign({}, me.deck.hand[i], { id }); window.Magus.apply(G, { pid: 0, type: 'mark', slot: i }); });
+      ['E1', 'E1', 'F2'].forEach((id, i) => { me.deck.hand[i] = Object.assign({}, me.deck.hand[i], { id }); window.Magus.apply(G, { pid: 0, type: 'mark', slot: i }); });
       window.__magus.act({ type: 'attack' });
     });
     await p.waitForTimeout(300);

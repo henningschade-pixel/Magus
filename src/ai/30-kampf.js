@@ -8,13 +8,13 @@ function threatScores(opp) {
   }
   return out;
 }
-// Wert einer Falle der Stufe lvl (Blau + Rot, seit 0.8): Sie wirft S (1/2/3) unblockbaren Schaden zurück, wenn der Gegner in ihrer Farbe angreift. Die KI legt die Farbe an, mit der der Gegner nach seinem Deck am ehesten angreift; wq.wTrap gewichtet den erwarteten Rückwurf. Eine schon liegende Falle wird ersetzt, das mindert den Wert.
+// Wert einer Falle der Stufe lvl (Blau + Rot seit 0.9.9; seit 0.8 als Kombo): Sie wirft S (1/2/3) unblockbaren Schaden zurück, wenn der Gegner in ihrer Farbe angreift. Die KI legt die Farbe an, mit der der Gegner nach seinem Deck am ehesten angreift; wq.wTrap gewichtet den erwarteten Rückwurf. Eine schon liegende Falle wird ersetzt, das mindert den Wert.
 function trapWorth(side, opp, Q, lvl) {
   if (!(lvl > 0)) return 0;
   const sc = threatScores(opp), tot = sc.F + sc.E + sc.W, top = Math.max(sc.F, sc.E, sc.W), p = tot > 0 ? top / tot : 1 / 3;
   return lvl * p * Q.wTrap * (side.stats.trap ? 0.3 : 1);
 }
-// Wert eines Schilds der Stufe lvl (Blau + Grün, seit 0.8): Es bringt die Ladungen auf die Stufe, gewertet wird nur der Zugewinn gegenüber den Ladungen, die schon liegen.
+// Wert eines Schilds der Stufe lvl (Grün + Blau seit 0.9.9; seit 0.8 als Kombo): Es bringt die Ladungen auf die Stufe, gewertet wird nur der Zugewinn gegenüber den Ladungen, die schon liegen.
 function shieldWorth(side, Q, lvl) { return lvl > 0 ? Math.max(0, lvl - (side.stats.rainbow || 0)) * Q.wFW : 0; }
 // Wert eines geordneten Kombos (ohne Ultimate) für die KI; gleiche Gewichte wie im Angriff
 // Läuterung gegen den eigenen Todesfluss (seit 0.7.4): Jeder entfernte eigene Todesmarker erspart einen HP-Verlust je Angriffsphase bis Kampfende; lfDeath ist der Wert je Marker.
@@ -24,7 +24,7 @@ function ordComboWorth(side, opp, Q, rules, lvs, ev) {
   const wEw = oMir > 0 ? 1.2 + oMir * Math.max(0.3, Q.lfOppW || 0) : 0.1;
   return lvs.hs * 0.5 + trapWorth(side, opp, Q, lvs.tr) + shieldWorth(side, Q, lvs.sh) + lvs.fe * Q.wFE + lvs.ew * wEw + purgeDeath(side, Q, lvs.ew) + Math.min(lvs.gh * (rules.lifeflowHeal || 1), hurt) * Q.wEW + (lvs.gh > 0 && hurt === 0 ? 0.1 : 0);
 }
-// Wert einer Ultimate der Stufe lvl nach der Farbe der ersten Karte (seit 0.7): Feuer Todesfluss beim Gegner, Erde Heilfluss und Wasser Manafluss bei mir selbst (seit 0.8). Liegt schon ein Marker gleicher oder höherer Stufe, bringt sie kaum etwas.
+// Wert einer Ultimate der Stufe lvl nach der Farbe der letzten Karte (seit 0.9.9, vorher der ersten): Feuer Todesfluss beim Gegner, Erde Heilfluss und Wasser Manafluss bei mir selbst (seit 0.8). Liegt schon ein Marker gleicher oder höherer Stufe, bringt sie kaum etwas.
 function ultiWorth(side, opp, Q, el, lvl) {
   if (!(lvl > 0)) return 0;
   if (el === 'E') return lvl * Q.wEW * Q.uHeal * ((side.stats.heal || 0) >= lvl ? 0.1 : 1) * (side.stats.maxHp > side.stats.hp ? 1 : 0.6);
@@ -37,7 +37,14 @@ function bestAttack(side, opp, hand, Q, state0, reserve) {
   let best = null;
   for (const sub of subsets(hand, lim)) {
     const firsts = sub.filter(h => !h.curse);
-    const orders = firsts.length ? firsts.map(f => [f, ...sub.filter(x => x !== f)]) : [sub];
+    // Reihenfolgen: jede Karte kann erste sein; bei drei Farben bestimmt seit 0.9.9 die zuletzt markierte Karte die Ultimate, deshalb auch jede andere Karte als letzte
+    const orders = [];
+    if (!firsts.length) orders.push(sub);
+    else for (const f of firsts) {
+      const rest = sub.filter(x => x !== f);
+      if (rest.length < 2) { orders.push([f, ...rest]); continue; }
+      for (const l of rest) orders.push([f, ...rest.filter(x => x !== l), l]);
+    }
     for (const ord of orders) {
       const ev = M.evalAttack(stats, ord);
       if (!ev.valid || !ev.affordable) continue;
@@ -195,7 +202,12 @@ function combatPlan(state, pid) {
   const variants = [];
   for (const sub0 of subsets(cand, Math.max(1, s.limit))) {
     const firsts = [...new Set(sub0.filter(h => !h.curse).map(h => h.el))];
-    if (firsts.length <= 1) variants.push(sub0); else firsts.forEach(f => variants.push(sub0.filter(h => h.el === f).concat(sub0.filter(h => h.el !== f))));   // die erste Karte bestimmt die Verteidigungsfarbe
+    if (firsts.length <= 1) variants.push(sub0);
+    else firsts.forEach(f => {   // die erste Karte bestimmt die Verteidigungsfarbe; bei drei Farben bestimmt die Schlusskarte die Ultimate (seit 0.9.9)
+      const lasts = firsts.filter(l => l !== f);
+      if (firsts.length < 3) variants.push(sub0.filter(h => h.el === f).concat(sub0.filter(h => h.el !== f)));
+      else lasts.forEach(l => variants.push(sub0.filter(h => h.el === f).concat(sub0.filter(h => h.el !== f && h.el !== l), sub0.filter(h => h.el === l))));
+    });
   }
   for (const sub of variants) {
     const ev = M.evalDefense(s, sub, color);

@@ -17,7 +17,7 @@ test('Erholen und Regeneration wachsen mit dem Abschnitt (1/2/3)', () => {
 });
 
 test('Lähmung legt 2·S Fluchkarten auf den Ablagestapel des Gegners', () => {
-  for (const [hand, expect] of [[['F1', 'E1'], 2], [['F2', 'E2'], 4], [['F3', 'E3'], 6]]) {
+  for (const [hand, expect] of [[['E1', 'F1'], 2], [['E2', 'F2'], 4], [['E3', 'F3'], 6]]) {
     const { s, c, me, op } = combatSetup(11, hand);
     hand.forEach((_, i) => assert.ok(M.apply(s, { pid: 0, type: 'mark', slot: i }).ok));
     const curses = () => op.deck.discard.filter(x => x.id[0] === 'C').length, n0 = curses();
@@ -27,7 +27,7 @@ test('Lähmung legt 2·S Fluchkarten auf den Ablagestapel des Gegners', () => {
 });
 
 test('Läuterung zerstört gegnerische Nachziehtokens, ohne sie gutzuschreiben', () => {
-  const { s, me, op } = combatSetup(11, ['E1', 'F1']);
+  const { s, me, op } = combatSetup(11, ['W1', 'E1']);
   op.stats.freeDraws = 3; me.stats.freeDraws = 0;
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
   assert.ok(M.apply(s, { pid: 0, type: 'lfp', pick: ['ot'] }).ok);
@@ -37,7 +37,7 @@ test('Läuterung zerstört gegnerische Nachziehtokens, ohne sie gutzuschreiben',
 });
 
 test('Läuterung entfernt auch eigene Manamarker und gibt dafür ein Nachziehtoken', () => {
-  const { s, me } = combatSetup(11, ['E1', 'F1']);
+  const { s, me } = combatSetup(11, ['W1', 'E1']);
   me.stats.manaflow = 3; me.stats.freeDraws = 0;
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
   assert.ok(M.apply(s, { pid: 0, type: 'lfp', pick: ['sm'] }).ok);
@@ -46,12 +46,12 @@ test('Läuterung entfernt auch eigene Manamarker und gibt dafür ein Nachziehtok
   assert.equal(me.stats.freeDraws, 1);
 });
 
-test('Ultimate in der Verteidigung: alle drei Farben erlaubt, mit Feuer als erster Karte Todesfluss für den Angreifer', () => {
+test('Ultimate in der Verteidigung: alle drei Farben erlaubt, mit Feuer als letzter Karte Todesfluss für den Angreifer', () => {
   const { s, me, op } = combatSetup(11, ['F1']);
   op.stats.limit = 3; op.stats.mana = 9;
   op.deck.hand.forEach((x, i) => { if (x) op.deck.hand[i] = Object.assign({}, x, { id: ['F3', 'W2', 'E2'][i] || x.id }); });
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
-  [0, 1, 2].forEach(i => assert.ok(M.apply(s, { pid: op.ctrl, type: 'mark', slot: i }).ok));   // erste Karte F3: Feuer-Ultimate
+  [1, 2, 0].forEach(i => assert.ok(M.apply(s, { pid: op.ctrl, type: 'mark', slot: i }).ok));   // erste Karte W2 verteidigt, letzte Karte F3: Feuer-Ultimate (seit 0.9.9 entscheidet die Schlusskarte)
   assert.ok(M.apply(s, { pid: op.ctrl, type: 'defend' }).ok);
   assert.ok(me.stats.death >= 1, 'Angreifer trägt einen Todesmarker');
   assert.equal(me.stats.deathPhase, undefined, 'Der frisch gesprochene Fluch hat in dieser Phase nicht getickt (Marker verbraucht)');
@@ -90,7 +90,7 @@ test('Schild wirkt gegen jede Farbe und wirft nichts zurück', () => {
 });
 test('Ein neues Schild bringt die Ladungen auf die Stufe, es addiert nicht (höchstens 3)', () => {
   const st = {}; M.shieldAdd ? null : null;
-  const { s, me } = combatSetup(11, ['W2', 'E2']);
+  const { s, me } = combatSetup(11, ['E2', 'W2']);
   me.stats.rainbow = 1;
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
   assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
@@ -289,7 +289,7 @@ test('Kartenvorrat: Startdecks aus gemischten Stufe-1-Karten, getauschte Karten 
 
 test('Läuterung kann Todesmarker beider Seiten entfernen (eigene und gegnerische), je entferntem Marker ein Gratis-Nachziehen', () => {
   for (const [pick, mineLeft, theirsLeft] of [['sd', 0, 2], ['od', 1, 1]]) {
-    const { s, me, op } = combatSetup(11, ['E1', 'F1']);
+    const { s, me, op } = combatSetup(11, ['W1', 'E1']);
     me.stats.death = 1; op.stats.death = 2; me.stats.freeDraws = 0;
     M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
     assert.ok(M.apply(s, { pid: 0, type: 'lfp', pick: [pick] }).ok);
@@ -315,7 +315,7 @@ test('Fliehen im Showdown: bei 0 Mana des Gegners möglich, Showdown endet ohne 
 });
 
 test('Läuterung Stufe 3 entfernt beliebig gemischt eigene und gegnerische Mana-, Schild- und Todesmarker', () => {
-  const { s, me, op } = combatSetup(11, ['E3', 'F3']);
+  const { s, me, op } = combatSetup(11, ['W3', 'E3']);
   me.stats.manaflow = 2; me.stats.death = 1;
   op.stats.rainbow = 1; op.stats.death = 2; me.stats.freeDraws = 0;
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
@@ -351,8 +351,8 @@ test('Falle: Stufe S wirft S zurück (1/2/3), gedeckelt durch den eingehenden Sc
   assert.equal(trapFall('F', 3, 'F1').me.stats.hp, 8);   // Schaden 1, Rückwurf min(3, 1) = 1
   assert.equal(trapFall('F', 3, 'F2').me.stats.hp, 7);   // Schaden 2, Rückwurf min(3, 2) = 2
 });
-test('Falle legen: Rot + Blau zieht drei Karten vom Stapel (nicht in die Hand), eine liegt verdeckt vor mir, die übrigen kommen auf den Ablagestapel', () => {
-  const { s, me, c } = combatSetup(11, ['F2', 'W2']);
+test('Falle legen: Blau + Rot zieht drei Karten vom Stapel (nicht in die Hand), eine liegt verdeckt vor mir, die übrigen kommen auf den Ablagestapel', () => {
+  const { s, me, c } = combatSetup(11, ['W2', 'F2']);
   me.deck.draw = ['E1', 'F1', 'W1', 'E2'].map((id, i) => ({ id, uid: 8000 + i }));   // zuletzt gezogen: E2, W1, F1
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
   const handN = me.deck.hand.filter(Boolean).length - 2, d0 = me.deck.discard.length;
@@ -369,7 +369,7 @@ test('Falle legen: Rot + Blau zieht drei Karten vom Stapel (nicht in die Hand), 
 });
 
 test('Falle und Hellsicht: Reicht der Zugstapel nicht, wird der Ablagestapel gemischt und weitergezogen', () => {
-  for (const [hand, kind, n] of [[['F2', 'W2'], 'trap', 3], [['W2', 'F2'], 'sight', 3]]) {
+  for (const [hand, kind, n] of [[['W2', 'F2'], 'trap', 3], [['F2', 'W2'], 'sight', 3]]) {
     const { s, me, c } = combatSetup(11, hand);
     me.deck.draw = [{ id: 'E1', uid: 1 }]; me.deck.discard = ['F1', 'W1', 'E2', 'F2'].map((id, i) => ({ id, uid: 10 + i }));
     hand.forEach((_, i) => M.apply(s, { pid: 0, type: 'mark', slot: i }));
@@ -379,15 +379,15 @@ test('Falle und Hellsicht: Reicht der Zugstapel nicht, wird der Ablagestapel gem
     assert.equal(c.forced.cards[0].id, 'E1', kind + ': zuerst die Restkarte des Zugstapels');
     assert.equal(me.deck.discard.length, 0, kind + ': der Ablagestapel ging in den Zugstapel');
   }
-  const { s, me, c } = combatSetup(11, ['F2', 'W2']);   // Zugstapel 1 Karte, Ablage leer: die beiden gespielten Kombokarten liegen danach im Ablagestapel und werden mit gemischt
+  const { s, me, c } = combatSetup(11, ['W2', 'F2']);   // Zugstapel 1 Karte, Ablage leer: die beiden gespielten Kombokarten liegen danach im Ablagestapel und werden mit gemischt
   me.deck.draw = [{ id: 'E1', uid: 1 }]; me.deck.discard = [];
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
   assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
   assert.equal(c.forced.cards.length, 3, 'E1 plus die zwei gespielten Karten');
 });
 
-test('Hellsicht (Blau + Rot): zieht 3 Karten, S davon liegen offen vor dir, der Rest wird abgelegt', () => {
-  const { s, me, c } = combatSetup(11, ['W2', 'F2']);
+test('Hellsicht (Rot + Blau): zieht 3 Karten, S davon liegen offen vor dir, der Rest wird abgelegt', () => {
+  const { s, me, c } = combatSetup(11, ['F2', 'W2']);
   me.deck.draw = ['E1', 'F1', 'W1', 'E2'].map((id, i) => ({ id, uid: 7000 + i }));   // zuletzt gezogen wird E2
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
   assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
@@ -404,7 +404,7 @@ test('Hellsicht (Blau + Rot): zieht 3 Karten, S davon liegen offen vor dir, der 
   assert.equal(me.deck.discard.length, disc0 + 1); assert.equal(me.deck.discard[disc0].id, 'W1', 'abgelegte Karte');
 });
 test('Hellsicht: offene Karten kosten kein Mana und werden nach dem Ausspielen abgelegt; Rest verfällt am Kampfende', () => {
-  const { s, me, c } = combatSetup(11, ['W2', 'F2']);
+  const { s, me, c } = combatSetup(11, ['F2', 'W2']);
   me.deck.draw = ['E1', 'F1', 'W1', 'E2'].map((id, i) => ({ id, uid: 7000 + i }));
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
   M.apply(s, { pid: 0, type: 'attack' }); M.apply(s, { pid: 0, type: 'fd', pick: ['k', 'a', 'k'] });
@@ -417,13 +417,13 @@ test('Hellsicht: offene Karten kosten kein Mana und werden nach dem Ausspielen a
   assert.equal(me.deck.extra, 0); assert.equal(me.deck.hand.length, bl); assert.equal(me.deck.discard.length, 2 + 1 + 2, 'Kombokarten, abgelegte und beide offenen Karten im Ablagestapel');
 });
 test('Hellsicht: Sind höchstens S Karten brauchbar, entfällt die Wahl; Flüche bleiben nie offen', () => {
-  const { s, me, c } = combatSetup(11, ['W3', 'F3']);
+  const { s, me, c } = combatSetup(11, ['F3', 'W3']);
   me.deck.draw = ['E1', 'F1', 'W1'].map((id, i) => ({ id, uid: 7100 + i }));
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
   assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
   assert.ok(!c.forced, 'Stufe 3 bei 3 Karten: keine Wahl');
   assert.equal(me.deck.extra, 3);
-  const u = combatSetup(11, ['W2', 'F2']);
+  const u = combatSetup(11, ['F2', 'W2']);
   u.me.deck.draw = [{ id: 'E1', uid: 1 }, { id: 'F1', uid: 2 }, { id: 'W1', uid: 3 }];
   u.me.deck.draw.push({ id: 'E2', uid: 4 });
   M.apply(u.s, { pid: 0, type: 'mark', slot: 0 }); M.apply(u.s, { pid: 0, type: 'mark', slot: 1 });
@@ -490,7 +490,7 @@ test('Nachziehmarker Kampf: bei rotem Marker ohne Mana ist Nachziehen nicht mög
 });
 
 test('KI-Läuterung entfernt zuerst das Schild, dann die Manamarker des Gegners', () => {
-  const { s, c, me, op } = combatSetup(11, ['E3', 'F3']);
+  const { s, c, me, op } = combatSetup(11, ['W3', 'E3']);
   me.deck.draw = Array.from({ length: 8 }, () => ({ id: 'E2' })); me.deck.discard = [];
   op.stats.rainbow = 1; op.stats.manaflow = 1;
   const acts = AI.plan(s, 0);
@@ -667,14 +667,28 @@ test('Steigende Preise (priceRise): jeder Kauf einer Kategorie verteuert die nä
   for (let i = 0; i < 2; i++) { t.turn = 0; assert.ok(M.apply(t, { pid: 0, type: 'spend', what: 'hp' }).ok); } assert.equal(ts.gold, 7);
 });
 
-test('Kombo mit mehreren Karten der zweiten Farbe: F2, W1, W1 ergibt Falle 2 (Kartenstufen derselben Farbe zählen zusammen)', () => {
+test('Kombo mit mehreren Karten der zweiten Farbe: F2, W1, W1 ergibt Hellsicht 2 (Kartenstufen derselben Farbe zählen zusammen)', () => {
   const st = { mag: { F: 3, E: 3, W: 3 }, mana: 9 }, ev = ids => M.evalAttack(st, ids.map(id => Object.assign({ id }, M.parseCard(id))));
-  assert.deepEqual([ev(['F2', 'W1', 'W1']).ord.key, ev(['F2', 'W1', 'W1']).ord.lvl], ['wt', 2]);
-  assert.equal(ev(['F2', 'W1']).ord.lvl, 1); assert.equal(ev(['F2', 'W1']).ord.key, 'wt', 'Rot + Blau ist die Falle');
-  assert.deepEqual([ev(['W1', 'F2', 'F1']).ord.key, ev(['W1', 'F2', 'F1']).ord.lvl], ['hs', 1]);   // andere erste Farbe: Hellsicht (Blau + Rot), Stufe = Minimum der Farbsummen
-  assert.deepEqual([ev(['W2', 'F1', 'F1']).ord.key, ev(['W2', 'F1', 'F1']).ord.lvl], ['hs', 2]);
-  assert.deepEqual([ev(['W1', 'E1', 'E1']).ord.key, ev(['W1', 'E1', 'E1']).ord.lvl], ['ws', 1]);   // Blau + Grün: Schild
+  assert.deepEqual([ev(['F2', 'W1', 'W1']).ord.key, ev(['F2', 'W1', 'W1']).ord.lvl], ['hs', 2]);
+  assert.equal(ev(['F2', 'W1']).ord.lvl, 1); assert.equal(ev(['F2', 'W1']).ord.key, 'hs', 'Rot + Blau ist die Hellsicht');
+  assert.deepEqual([ev(['W1', 'F2', 'F1']).ord.key, ev(['W1', 'F2', 'F1']).ord.lvl], ['wt', 1]);   // andere erste Farbe: Falle (Blau + Rot), Stufe = Minimum der Farbsummen
+  assert.deepEqual([ev(['W2', 'F1', 'F1']).ord.key, ev(['W2', 'F1', 'F1']).ord.lvl], ['wt', 2]);
+  assert.deepEqual([ev(['W1', 'E1', 'E1']).ord.key, ev(['W1', 'E1', 'E1']).ord.lvl], ['gr', 1]);   // Blau + Grün: Läuterung
   assert.equal(ev(['F1', 'F1', 'E2']).ord.lvl, 2); assert.equal(ev(['F1', 'F1', 'E1']).ord.lvl, 1);
+});
+
+test('Zuordnung (0.9.9): Die Sekundärfarbe bestimmt den Charakter, die Primärfarbe wählt unter zwei Kombos', () => {
+  const st = { mag: { F: 3, E: 3, W: 3 }, mana: 9 }, key = ids => M.evalAttack(st, ids.map(id => Object.assign({ id }, M.parseCard(id)))).ord.key;
+  assert.deepEqual([key(['W1', 'F1']), key(['E1', 'F1'])], ['wt', 'ra'], 'Sekundär Rot: Falle, Lähmung');
+  assert.deepEqual([key(['F1', 'W1']), key(['E1', 'W1'])], ['hs', 'ws'], 'Sekundär Blau: Hellsicht, Schild');
+  assert.deepEqual([key(['F1', 'E1']), key(['W1', 'E1'])], ['gh', 'gr'], 'Sekundär Grün: Heilung, Läuterung');
+});
+
+test('Ultimate (0.9.9): Die zuletzt markierte Karte bestimmt sie (Rot Todesfluss, Blau Manafluss, Grün Heilfluss), die Reihenfolge der Basis zählt nicht', () => {
+  const st = { mag: { F: 3, E: 3, W: 3 }, mana: 9 }, el = ids => M.evalAttack(st, ids.map(id => Object.assign({ id }, M.parseCard(id)))).ultiEl;
+  assert.equal(el(['W1', 'E1', 'F1']), 'F'); assert.equal(el(['E1', 'W1', 'F1']), 'F');
+  assert.equal(el(['F1', 'E1', 'W1']), 'W'); assert.equal(el(['E1', 'F1', 'W1']), 'W');
+  assert.equal(el(['F1', 'W1', 'E1']), 'E'); assert.equal(el(['W1', 'F1', 'E1']), 'E');
 });
 
 test('Ultimate: mehrere Karten einer Farbe ergeben zusammen die Stufe (E2, F2, W1, W1 = Ultimate 2)', () => {
@@ -684,7 +698,7 @@ test('Ultimate: mehrere Karten einer Farbe ergeben zusammen die Stufe (E2, F2, W
 });
 
 test('Läuterung kann auch eigene Nachziehtokens zerstören (ohne Gutschrift)', () => {
-  const { s, me } = combatSetup(11, ['E1', 'F1']);
+  const { s, me } = combatSetup(11, ['W1', 'E1']);
   me.stats.freeDraws = 2;
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
   assert.ok(M.apply(s, { pid: 0, type: 'lfp', pick: ['st'] }).ok);
@@ -698,7 +712,7 @@ test('Todesfluss aus der Verteidigung wirkt nicht sofort, sondern erst in der n�
   op.deck.hand.forEach((x, i) => { if (x) op.deck.hand[i] = Object.assign({}, x, { id: ['F3', 'W2', 'E2'][i] || x.id }); });
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
   const hp0 = me.stats.hp;
-  [0, 1, 2].forEach(i => assert.ok(M.apply(s, { pid: op.ctrl, type: 'mark', slot: i }).ok));   // erste Karte F3: Feuer-Ultimate
+  [1, 2, 0].forEach(i => assert.ok(M.apply(s, { pid: op.ctrl, type: 'mark', slot: i }).ok));   // letzte Karte F3: Feuer-Ultimate
   assert.ok(M.apply(s, { pid: op.ctrl, type: 'defend' }).ok);
   assert.ok(me.stats.death >= 1);
   assert.ok(me.stats.hp >= hp0 - 5 && !s.log.slice(-6).some(e => /Todesfluss: /.test(e.txt)), 'kein Fluchschaden am Ende dieser Phase');
@@ -789,8 +803,8 @@ test('Monster: Das Nebenelement (Folgemagie) ist das überlegene Element (Feuer 
 });
 
 test('Heilung der Verteidigung wirkt nach dem Schaden (seit 0.5.4, nur bis zum Maximum)', () => {
-  const { s, c, me } = combatSetup(11, ['E3', 'W3']);   // gegen Wasser verteidigt Erde (überlegen, gratis), Wasser ist Kombokarte: Heilung 3
-  me.stats.hp = 8; me.stats.maxHp = 9; c.turn = 'a'; c.action = 'defense'; c.color = 'W'; c.pending = 6;
+  const { s, c, me } = combatSetup(11, ['F3', 'E3']);   // gegen Erde verteidigt Feuer (überlegen, gratis), Erde ist Kombokarte: Heilung 3
+  me.stats.hp = 8; me.stats.maxHp = 9; c.turn = 'a'; c.action = 'defense'; c.color = 'E'; c.pending = 6;
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
   const pv = M.previewDefense(s, false);
   assert.ok(M.apply(s, { pid: 0, type: 'defend' }).ok);
@@ -803,8 +817,8 @@ test('Heilung der Verteidigung wirkt nach dem Schaden (seit 0.5.4, nur bis zum M
 });
 
 test('Heilung nach dem Schaden verfällt, wenn der Verteidiger durch den Schaden auf 0 HP fällt (seit 0.7.6.2)', () => {
-  const { s, c, me } = combatSetup(11, ['E3', 'W3']);
-  me.stats.hp = 1; me.stats.maxHp = 9; c.turn = 'a'; c.action = 'defense'; c.color = 'W'; c.pending = 4;
+  const { s, c, me } = combatSetup(11, ['F3', 'E3']);
+  me.stats.hp = 1; me.stats.maxHp = 9; c.turn = 'a'; c.action = 'defense'; c.color = 'E'; c.pending = 4;
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
   assert.equal(M.previewDefense(s, false).hpAfter, 0, 'Vorschau: tot, keine Heilung');
   assert.ok(M.apply(s, { pid: 0, type: 'defend' }).ok);
@@ -813,8 +827,8 @@ test('Heilung nach dem Schaden verfällt, wenn der Verteidiger durch den Schaden
 });
 
 test('Heilung nach dem Schaden greift, wenn der Verteidiger den Schaden überlebt (seit 0.7.6.2)', () => {
-  const { s, c, me } = combatSetup(11, ['E3', 'W3']);
-  me.stats.hp = 2; me.stats.maxHp = 9; c.turn = 'a'; c.action = 'defense'; c.color = 'W'; c.pending = 4;
+  const { s, c, me } = combatSetup(11, ['F3', 'E3']);
+  me.stats.hp = 2; me.stats.maxHp = 9; c.turn = 'a'; c.action = 'defense'; c.color = 'E'; c.pending = 4;
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
   assert.ok(M.apply(s, { pid: 0, type: 'defend' }).ok);
   assert.ok(s.combat, 'der Kampf geht weiter');
@@ -822,8 +836,8 @@ test('Heilung nach dem Schaden greift, wenn der Verteidiger den Schaden überleb
 });
 
 test('Läuterung in der Verteidigung: Wahl per lfp (eigener Spiegelmarker, eigenes Nachziehtoken), danach wieder frei', () => {
-  const { s, c, me, op } = combatSetup(11, ['E1', 'F1']);   // gegen Erde verteidigt Erde, Feuer als Kombokarte: Läuterung 1
-  c.turn = 'a'; c.action = 'defense'; c.color = 'E'; c.pending = 1;
+  const { s, c, me, op } = combatSetup(11, ['W1', 'E1']);   // gegen Feuer verteidigt Wasser (überlegen), Erde als Kombokarte: Läuterung 1
+  c.turn = 'a'; c.action = 'defense'; c.color = 'F'; c.pending = 1;
   me.stats.mirrorEl = { F: 1, E: 0, W: 0 }; me.stats.mirror = 1; me.stats.freeDraws = 1; op.stats.mirrorEl = { F: 0, E: 1, W: 0 }; op.stats.mirror = 1;
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
   assert.ok(M.apply(s, { pid: 0, type: 'lfp', pick: ['st'] }).ok, 'Wahl ist in der Verteidigung erlaubt');
@@ -834,8 +848,8 @@ test('Läuterung in der Verteidigung: Wahl per lfp (eigener Spiegelmarker, eigen
 });
 
 test('Schild der Verteidigung wirkt erst nach ihr (wie die Heilung, seit 0.7.2.23; Schild seit 0.8)', () => {
-  const { s, c, me } = combatSetup(11, ['W3', 'E3']);   // Wasser verteidigt gegen Feuer, Grün als Kombokarte: Schild 3
-  me.stats.hp = 9; c.turn = 'a'; c.action = 'defense'; c.color = 'F'; c.pending = 5;
+  const { s, c, me } = combatSetup(11, ['E3', 'W3']);   // Erde verteidigt gegen Wasser (überlegen), Blau als Kombokarte: Schild 3
+  me.stats.hp = 9; c.turn = 'a'; c.action = 'defense'; c.color = 'W'; c.pending = 5;
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
   const pv = M.previewDefense(s, false);
   assert.ok(M.apply(s, { pid: 0, type: 'defend' }).ok);
@@ -900,8 +914,8 @@ test('Gold opfern ohne Obergrenze (0.7): auch 9 Gold auf einmal', () => {
   assert.equal(me.stats.gold, 0); assert.ok(me.temple.level >= 4, 'Tempelstufe wächst mit der großen Spende');
 });
 
-test('Ultimate im Angriff nach Farbe der ersten Karte: Erde legt Heilmarker, der am Ende der eigenen Angriffsphase heilt', () => {
-  const { s, me, op } = combatSetup(11, ['E2', 'F2', 'W2']);
+test('Ultimate im Angriff nach Farbe der letzten Karte: Erde legt Heilmarker, der am Ende der eigenen Angriffsphase heilt', () => {
+  const { s, me, op } = combatSetup(11, ['F2', 'W2', 'E2']);
   me.stats.maxHp = 9; me.stats.hp = 2;
   [0, 1, 2].forEach(i => assert.ok(M.apply(s, { pid: 0, type: 'mark', slot: i }).ok));
   assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
@@ -917,7 +931,7 @@ test('Ultimate im Angriff nach Farbe der ersten Karte: Erde legt Heilmarker, der
 });
 
 test('Ultimate im Angriff: Wasser legt Manamarker der Stufe S bei mir', () => {
-  const { s, me, op } = combatSetup(11, ['W2', 'F2', 'E2']);
+  const { s, me, op } = combatSetup(11, ['F2', 'E2', 'W2']);
   [0, 1, 2].forEach(i => assert.ok(M.apply(s, { pid: 0, type: 'mark', slot: i }).ok));
   assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
   assert.equal(me.stats.manaflow, 2); assert.equal(op.stats.death || 0, 0);
@@ -936,7 +950,7 @@ test('Manafluss: am Ende der eigenen Angriffsphase +S Mana (höchstens bis zum M
 });
 
 test('Ultimate in der Verteidigung: Erde legt Heilmarker, Wasser Manamarker (jeweils beim Verteidiger)', () => {
-  for (const [att, def, key] of [['E1', ['E3', 'W2', 'F2'], 'heal'], ['F1', ['W2', 'F3', 'E2'], 'manaflow']]) {
+  for (const [att, def, key] of [['E1', ['F3', 'W2', 'E2'], 'heal'], ['F1', ['F3', 'E2', 'W2'], 'manaflow']]) {
     const { s, me, op } = combatSetup(11, [att]);
     op.stats.limit = 3; op.stats.mana = 9;
     op.deck.hand.forEach((x, i) => { if (x) op.deck.hand[i] = Object.assign({}, x, { id: def[i] || x.id }); });
@@ -959,7 +973,7 @@ test('Schild wirkt gegen jede Farbe und verliert dabei Ladungen (seit 0.7.2.2, L
 
 
 test('Läuterung entfernt Heilmarker und Prismen des Gegners', () => {
-  const { s, me, op } = combatSetup(11, ['E3', 'F3']);
+  const { s, me, op } = combatSetup(11, ['W3', 'E3']);
   op.stats.heal = 2; op.stats.rainbow = 1; me.stats.freeDraws = 0;
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
   assert.ok(M.apply(s, { pid: 0, type: 'lfp', pick: ['oh', 'oh', 'or'] }).ok);
@@ -981,7 +995,7 @@ test('Strafe des Nachziehmarkers wächst mit der Spielstufe (0.7): Grundwert mal
 });
 
 test('Fallenwahl (zuvor Abwerfen nach Zerrüttung) ist kein Zug: Zugzähler, Passen-Zähler, Nachziehmarker und Seite am Zug bleiben unverändert (0.7.6.3)', () => {
-  const { s, c, me, op } = combatSetup(11, ['F1', 'W1']);
+  const { s, c, me, op } = combatSetup(11, ['W1', 'F1']);
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
   assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
   assert.ok(c.forced && c.forced.kind === 'trap', 'Falle: der Spieler wählt eine der gezogenen Karten');
@@ -1280,12 +1294,12 @@ test('Echo: Eine Sekundärkarte in der Farbe des Echos erhöht die Kombostufe um
   assert.ok(!cap.levels.echo, 'bei Stufe 3 steigt nichts, also kein Echo-Hinweis');
 });
 
-test('Echo: Die Ultimate wird durch ein Echo einer ihrer Sekundärfarben um 1 Stufe erhöht, das Echo der Primärfarbe wirkt nicht (0.9)', () => {
-  const u = (echo) => M.evalAttack(STATS({ echo }), cards(['F1', 'E1', 'W1'])).levels;
+test('Echo: Die Ultimate wird durch ein Echo der Schlusskartenfarbe um 1 Stufe erhöht, das Echo der Basisfarben wirkt nicht (0.9.9)', () => {
+  const u = (echo) => M.evalAttack(STATS({ echo }), cards(['F1', 'E1', 'W1'])).levels;   // Schlusskarte Blau: Manafluss, Basis Rot + Grün
   assert.equal(u(undefined).ulti, 1);
-  assert.equal(u('E').ulti, 2, 'Erde ist Sekundärfarbe');
-  assert.equal(u('W').ulti, 2, 'Wasser ist Sekundärfarbe');
-  assert.equal(u('F').ulti, 1, 'Feuer ist die erste Karte');
+  assert.equal(u('W').ulti, 2, 'Blau ist die Sekundärfarbe (Schlusskarte)');
+  assert.equal(u('E').ulti, 1, 'Grün gehört zur Basis');
+  assert.equal(u('F').ulti, 1, 'Rot gehört zur Basis');
 });
 
 test('Echo: Auch in der Verteidigung verstärkt das Echo einen Kombo (0.9)', () => {
@@ -1296,30 +1310,30 @@ test('Echo: Auch in der Verteidigung verstärkt das Echo einen Kombo (0.9)', () 
 });
 
 test('Echo: Ein Kombo hinterlässt das Echo seiner ersten Farbe, der nächste Kombo erneuert es und nutzt das alte (0.9)', () => {
-  const { s, c, me, op } = combatSetup(11, ['E1', 'W1', 'F1', 'E1']);
+  const { s, c, me, op } = combatSetup(11, ['F1', 'E1', 'E1', 'F1']);
   const curses = () => op.deck.discard.filter(cd => M.parseCard(cd.id).curse).length;
   assert.equal(me.stats.echo, undefined, 'zu Kampfbeginn kein Echo');
-  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });   // Erde + Wasser: Heilung
+  M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });   // Feuer + Erde: Heilung
   assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
-  assert.equal(me.stats.echo, 'E', 'Echo in der Farbe der ersten Karte');
+  assert.equal(me.stats.echo, 'F', 'Echo in der Farbe der ersten Karte');
   assert.ok(M.apply(s, { pid: 1, type: 'pass' }).ok);
   c.turn = 'a'; c.action = 'attack';
   const before = curses();
-  M.apply(s, { pid: 0, type: 'mark', slot: 2 }); M.apply(s, { pid: 0, type: 'mark', slot: 3 });   // Feuer + Erde: Lähmung, Sekundärfarbe Erde = Echo
+  M.apply(s, { pid: 0, type: 'mark', slot: 2 }); M.apply(s, { pid: 0, type: 'mark', slot: 3 });   // Erde + Feuer: Lähmung, Sekundärfarbe Feuer = Echo
   assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
   assert.equal(curses() - before, 4, 'Lähmung Stufe 2 (4 Fluchkarten) statt Stufe 1');
-  assert.equal(me.stats.echo, 'F', 'das Echo wurde erneuert');
-  assert.ok(s.log.some(e => /Echo \(Erde\)/.test(e.txt)), 'Protokoll nennt das Echo');
+  assert.equal(me.stats.echo, 'E', 'das Echo wurde erneuert');
+  assert.ok(s.log.some(e => /Echo \(Feuer\)/.test(e.txt)), 'Protokoll nennt das Echo');
 });
 
 test('Echo: Ein Kombo ohne passende Sekundärfarbe verstärkt nicht, erneuert das Echo aber trotzdem; am Kampfende verschwindet es (0.9)', () => {
-  const { s, c, me, op } = combatSetup(11, ['F1', 'E1']);
+  const { s, c, me, op } = combatSetup(11, ['E1', 'F1']);
   me.stats.echo = 'W';
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
   const before = op.deck.discard.filter(cd => M.parseCard(cd.id).curse).length;
   assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
   assert.equal(op.deck.discard.filter(cd => M.parseCard(cd.id).curse).length - before, 2, 'Stufe 1: 2 Fluchkarten');
-  assert.equal(me.stats.echo, 'F');
+  assert.equal(me.stats.echo, 'E');
   assert.ok(M.apply(s, { pid: 1, type: 'pass' }).ok);
   s.rules.fleeAllowed = 1;
   c.turn = 'a'; c.action = 'attack'; op.stats.mana = 0;
@@ -1329,13 +1343,13 @@ test('Echo: Ein Kombo ohne passende Sekundärfarbe verstärkt nicht, erneuert da
 });
 
 test('Echo: Die Läuterung erreicht das Echo nicht (0.9)', () => {
-  const { s, me } = combatSetup(11, ['E1', 'F1']);
-  me.stats.echo = 'F';
+  const { s, me } = combatSetup(11, ['W1', 'E1']);
+  me.stats.echo = 'E';
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
-  M.apply(s, { pid: 0, type: 'lfp', pick: ['se', 'echo', 'e', 'F'] });
+  M.apply(s, { pid: 0, type: 'lfp', pick: ['se', 'echo', 'e', 'E'] });
   assert.deepEqual(s.combat.lfp, [], 'Echo ist keine wählbare Markerart');
-  assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);   // Erde + Feuer: Läuterung (Sekundärfarbe Feuer = Echo, Stufe 2)
-  assert.equal(me.stats.echo, 'E', 'nur der neue Kombo erneuert das Echo');
+  assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);   // Wasser + Erde: Läuterung (Sekundärfarbe Erde = Echo, Stufe 2)
+  assert.equal(me.stats.echo, 'W', 'nur der neue Kombo erneuert das Echo');
 });
 
 test('Echo: Auch Angriff und Verteidigung ohne Kombo hinterlassen ein Echo der Primärmagie; Kombos wirken weiter über die Sekundärkarte (0.9.6)', () => {

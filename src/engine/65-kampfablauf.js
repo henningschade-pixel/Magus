@@ -170,7 +170,7 @@ function shieldHit(stats, dmg) {
   return { hit: dmg - ab, absorbed: ab };
 }
 function shieldAdd(stats, n) { stats.rainbow = Math.max(stats.rainbow || 0, Math.min(n, MAX_LVL)); }
-// Ultimates (seit 0.7 nach der Farbe der ersten Karte): Feuer = Todesfluss (stats.death, Marker beim Gegner), Erde = Heilfluss (stats.heal, +1 HP je Marker am Ende der eigenen Angriffsphase), Wasser = Manafluss (seit 0.8, stats.manaflow: +1 Mana je Marker am Ende der eigenen Angriffsphase). Alle drei Marker entfernt nur die Läuterung.
+// Ultimates (seit 0.9.9 nach der Farbe der zuletzt markierten Karte, vorher der ersten): Feuer = Todesfluss (stats.death, Marker beim Gegner), Erde = Heilfluss (stats.heal, +1 HP je Marker am Ende der eigenen Angriffsphase), Wasser = Manafluss (seit 0.8, stats.manaflow: +1 Mana je Marker am Ende der eigenen Angriffsphase). Alle drei Marker entfernt nur die Läuterung.
 // Läuterung: gewählte Marker (sm/om Manamarker, sd/od Todesmarker, sh/oh Heilmarker, sr/or Schildmarker, st/ot Nachziehtokens), höchstens S; ohne Wahl automatisch eigene Todesmarker, dann Schild-, Mana- und Heilmarker des Gegners.
 function lifeflowPicks(state, side, opp, lvl) {
   if (Array.isArray(state.combat.lfp)) return state.combat.lfp.slice(0, lvl);
@@ -219,7 +219,7 @@ function deathTick(state, side, done) {   // done: Nummer des Angriffszugs (1, 2
     if (side.stats.mana > before) log(state, 'Manafluss: ' + side.name + ' regeneriert ' + (side.stats.mana - before) + ' Mana am Ende der Angriffsphase.', side.ctrl, { kind: 'manatick', who: side.ctrl, n: side.stats.mana - before, marks: mf });
   }
 }
-// Ultimate wirken lassen: die Farbe der ersten Karte (el) bestimmt die Marker. who legt sie bei sich (Erde, Wasser) oder beim Gegner (Feuer).
+// Ultimate wirken lassen: die Farbe der Schlusskarte (el, seit 0.9.9; vorher der ersten Karte) bestimmt die Marker. who legt sie bei sich (Erde, Wasser) oder beim Gegner (Feuer).
 function castUltimate(side, opp, el, lvl) {
   lvl = Math.max(1, Math.min(MAX_LVL, lvl));
   if (el === 'E') { side.stats.heal = Math.max(side.stats.heal || 0, lvl); return { text: 'Ultimate ' + lvl + ' (Erde): Heilfluss, ' + side.stats.heal + ' HP am Ende jeder eigenen Angriffsphase bis Kampfende', fx: { kind: 'ultimate', who: side.ctrl, to: side.ctrl, el: 'E', n: lvl } }; }
@@ -255,7 +255,7 @@ function sightResolve(state, side, cards, pick) {
   addSight(d, keep);
   return { k: keep.length, a: cards.length - keep.length };
 }
-// Falle (Rot + Blau, seit 0.8.0.1; vorher Blau + Rot, seit 0.8): Die Seite zieht drei Karten vom Zugstapel (seit 0.8.0.5 nicht mehr in die Hand) und legt eine davon verdeckt vor sich; die übrigen kommen auf den Ablagestapel (stats.trap = { card, el, tier, lvl }; kein Marker, die Läuterung erreicht sie nicht). Welche, wählt der Spieler (c.forced mit kind 'trap'; ohne Wahlmöglichkeit gleich). Fluchkarten kommen nicht in Frage.
+// Falle (Blau + Rot seit 0.9.9; zuvor Rot + Blau seit 0.8.0.1, davor Blau + Rot seit 0.8): Die Seite zieht drei Karten vom Zugstapel (seit 0.8.0.5 nicht mehr in die Hand) und legt eine davon verdeckt vor sich; die übrigen kommen auf den Ablagestapel (stats.trap = { card, el, tier, lvl }; kein Marker, die Läuterung erreicht sie nicht). Welche, wählt der Spieler (c.forced mit kind 'trap'; ohne Wahlmöglichkeit gleich). Fluchkarten kommen nicht in Frage.
 function trapDraw(state, side, lvl) {
   const d = side.deck, cards = [];
   for (let i = 0; i < 3; i++) {   // drei Karten direkt vom Zugstapel (der Ablagestapel wird bei Bedarf gemischt); sie ersetzen keine Handkarten
@@ -338,7 +338,7 @@ function execAttack(state) {
   consumeSelection(d, sel);
   const texts = [], fxs = [];
   const echoOld = side.stats.echo, echoUsed = !!ev.levels.echo;   // Echo (seit 0.9): der Kombo wird durch das Echo der Seite verstärkt; seit 0.9.6 hinterlässt jede Nutzung von Primärmagie ein neues Echo (auch ohne Kombo)
-  if (ev.prim) side.stats.echo = ev.ultiEl || ev.prim;
+  if (ev.prim) side.stats.echo = ev.prim;   // Echo in der Farbe der ersten Karte; bei der Ultimate (Farbe der Schlusskarte: ev.ultiEl) ebenso
   if (echoUsed) texts.push('Echo (' + NAMES[echoOld] + '): Kombo +1 Stufe');
   applyComboPlan(state, side, opp, plan, ev, texts, fxs);
   if (death && (ev.ultiEl || ev.prim) === 'E' && side.stats.healPhase === undefined) side.stats.healPhase = side.stats.heal || 0;   // wie beim Todesfluss: ein in dieser Angriffsphase gelegter Heilmarker heilt erst am Ende der nächsten eigenen Angriffsphase
@@ -404,10 +404,10 @@ function execDefense(state, passOnly) {
   if (sel.length) consumeSelection(d, sel); else d.marks = [];
   const attacker = c.sides[c.turn === 'a' ? 'b' : 'a'];
   const defEchoOld = side.stats.echo, defEchoUsed = !!(defEv && defEv.levels && defEv.levels.echo);   // Echo (seit 0.9), wie im Angriff; seit 0.9.6 hinterlässt auch eine Verteidigung ohne Kombo ein Echo in der Farbe ihrer ersten Karte
-  if (defEv && defEv.el) side.stats.echo = defEv.ultiEl || defEv.el;
+  if (defEv && defEv.el) side.stats.echo = defEv.el;   // Farbe der ersten Karte (bei der Ultimate nicht die der Schlusskarte)
   // Seit 0.4 wirkt der Kombo zuerst, danach die Verteidigung: Ein Spiegel dieser Farbe wirkte früher schon gegen den Angriff, auf den verteidigt wird; seit 0.7.2.23 stellt ihn die Verteidigung erst nach dem Schaden. Seit 0.5.4 gilt das nicht mehr für die Heilung: Sie wirkt wieder nach Angriff und Verteidigung (Zerrüttung und die übrigen Kombos bleiben davor).
   let lateShield = 0, lateTrap = 0;   // Schild und Falle, die in dieser Verteidigung gestellt werden, wirken erst nach ihr
-  if (defEv && defEv.levels && defEv.levels.ulti > 0) {   // Ultimate in der Verteidigung: je nach Farbe der ersten Karte Todesfluss für den Angreifer (Feuer), Heilfluss (Erde) oder Manafluss (Wasser) für den Verteidiger
+  if (defEv && defEv.levels && defEv.levels.ulti > 0) {   // Ultimate in der Verteidigung: je nach Farbe der Schlusskarte Todesfluss für den Angreifer (Feuer), Heilfluss (Erde) oder Manafluss (Wasser) für den Verteidiger
     const uel = defEv.ultiEl || defEv.el;
     if (uel !== 'E' && uel !== 'W' && attacker.stats.deathPhase === undefined) attacker.stats.deathPhase = attacker.stats.death || 0;
     const u = castUltimate(side, attacker, uel, defEv.levels.ulti);

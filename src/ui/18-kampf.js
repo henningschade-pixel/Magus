@@ -1,6 +1,7 @@
 /* ---------- Kampf ---------- */
-const ORD_ROWS = [['ra', 'Lähmung', 'F', 'E'], ['wt', 'Falle', 'F', 'W'], ['hs', 'Hellsicht', 'W', 'F'], ['ws', 'Schild', 'W', 'E'], ['gh', 'Heilung', 'E', 'W'], ['gr', 'Läuterung', 'E', 'F']];
-// Wirkung der Ultimate nach der Farbe der ersten Karte (seit 0.7)
+// Zeilen [Schlüssel, Name, Primärfarbe, Sekundärfarbe]; geordnet nach der Sekundärfarbe, die den Charakter bestimmt (seit 0.9.9): Rot Schaden, Blau variabel, Grün Heilung/Verbesserung
+const ORD_ROWS = [['wt', 'Falle', 'W', 'F'], ['ra', 'Lähmung', 'E', 'F'], ['hs', 'Hellsicht', 'F', 'W'], ['ws', 'Schild', 'E', 'W'], ['gh', 'Heilung', 'F', 'E'], ['gr', 'Läuterung', 'W', 'E']];
+// Wirkung der Ultimate nach der Farbe der zuletzt markierten Karte (seit 0.9.9; vorher der ersten Karte)
 function ultiText(el, lv) {
   if (el === 'E') return 'Heilfluss (Erde): Du bekommst ' + lv + ' Heilmarker und heilst ' + lv + ' HP am Ende jeder deiner Angriffsphasen bis Kampfende (höchstens bis zu den max. HP).';
   if (el === 'W') return 'Manafluss (Wasser): Du bekommst ' + lv + ' Manamarker und regenerierst ' + lv + ' Mana am Ende jeder deiner Angriffsphasen bis Kampfende (höchstens bis zum maximalen Mana).';
@@ -126,33 +127,37 @@ function comboRef(cx) {
   const mag = cx.myStats.mag;
   const sel = M.selection(cx.mine.deck), ev = sel.length ? M.evalAttack(cx.myStats, sel) : null, lv = ev && ev.valid ? ev.levels : { fw: 0, fe: 0, ew: 0, ulti: 0 };
   const el = e => '<span class="' + e + '">' + NAMES[e] + '</span>';
-  let h = '<h3 style="margin-bottom:3px" title="Die erste markierte Karte bestimmt die Farbe der Kombo; mit allen drei Farben wird daraus die Ultimate dieser Farbe. S = die kleinere der beiden Kartensummen (Kartenstufe, je Karte höchstens deine Magiestufe), höchstens 3. Jede gespielte Karte kostet 1 Mana, auch Kombokarten.">Kombo-Übersicht <span class="note" style="font-size:13px">S = Kombostufe</span></h3>';
+  let h = '<h3 style="margin-bottom:3px" title="Die erste markierte Karte (Primärkarte) bestimmt den Schaden, die zweite Farbe (Sekundärfarbe) den Charakter der Kombo: Rot Schaden, Blau variabel, Grün Heilung. Mit allen drei Farben wird daraus die Ultimate der zuletzt markierten Farbe. S = die kleinere der beiden Kartensummen (Kartenstufe, je Karte höchstens deine Magiestufe), höchstens 3. Jede gespielte Karte kostet 1 Mana, auch Kombokarten.">Kombo-Übersicht <span class="note" style="font-size:13px">S = Kombostufe</span></h3>';
   {
     const normals = sel.filter(c => !c.curse), cols = [...new Set(normals.map(c => c.el))], prim = normals.length ? normals[0].el : null;
     const o = ev && ev.valid && ev.ord && !(ev.levels.ulti > 0) ? ev.ord : null, uS0 = Math.min(3, mag.F, mag.E, mag.W);
     let fs = 20;   // Schriftgrad der Zeilen: füllt die Höhe des Fensters (seit 0.7.1.1); Texte und Hinweise skalieren mit
-    const row = (name, els, lvl, text, on, tip) => '<div' + (tip ? ' title="' + esc(tip) + '"' : '') + ' class="cref p' + els[0] + (on ? ' on' : '') + '" style="padding:1px 8px;margin-bottom:0;font-size:' + fs + 'px;flex:1 1 0;display:flex;flex-direction:column;justify-content:center;gap:0"><div style="line-height:1.15"><b>' + name + '</b> ' + els.map(el).join(' + ') + (lvl ? ' <span class="note" style="font-size:.8em">· Stufe ' + lvl + '</span>' : '') + (text ? '<small style="font-size:' + Math.round(fs * 0.72) + 'px">' + text + '</small>' : '') + '</div></div>';
-    // Die Ultimate (alle drei Farben) steht seit 0.7 unter der Farbe ihrer ersten Karte: Feuer Todesfluss, Wasser Manafluss (seit 0.8), Erde Heilfluss.
-    const ULTI_NAME = { F: 'Todesfluss', W: 'Manafluss', E: 'Heilfluss' }, ROLE = { F: 'Feuer', W: 'Wasser', E: 'Erde' };
-    const ultiRow = (p, lvl, text, on, tip) => row(ULTI_NAME[p], [p, ...M.ELEMENTS.filter(x => x !== p)], lvl, text, on, tip);
-    if (cols.length === 0) {   // noch nichts markiert: alle Kombos nach Farbe der ersten Karte, Wirkung als Tooltip
-      fs = 18;
-      ['F', 'W', 'E'].forEach(p => {
-        ORD_ROWS.filter(r => r[2] === p).forEach(r => { h += row(r[1], [r[2], r[3]], 0, '', false, ordText(r[0], 'S', true)); });
-        h += ultiRow(p, 0, '', false, ultiText(p, 'S'));
+    const row = (name, els, lvl, text, on, tip) => '<div' + (tip ? ' title="' + esc(tip) + '"' : '') + ' class="cref p' + els[els.length - 1] + (on ? ' on' : '') + '" style="padding:1px 8px;margin-bottom:0;font-size:' + fs + 'px;flex:1 1 0;display:flex;flex-direction:column;justify-content:center;gap:0"><div style="line-height:1.15"><b>' + name + '</b> ' + els.map(el).join(' + ') + (lvl ? ' <span class="note" style="font-size:.8em">· Stufe ' + lvl + '</span>' : '') + (text ? '<small style="font-size:' + Math.round(fs * 0.72) + 'px">' + text + '</small>' : '') + '</div></div>';
+    // Seit 0.9.9 nach der Sekundärfarbe geordnet (zuletzt markierte Karte, bestimmt den Charakter: Rot Schaden, Blau variabel, Grün Heilung); gleiche Sekundärfarbe = gleiche Tönung, die Primärfarbe steht in jeder Zeile vorn. Die Ultimate (alle drei Farben) steht unter der Farbe ihrer Schlusskarte: Rot Todesfluss, Blau Manafluss, Grün Heilfluss.
+    const ULTI_NAME = { F: 'Todesfluss', W: 'Manafluss', E: 'Heilfluss' }, SEC = ['F', 'W', 'E'];
+    const ultiRow = (sc, lvl, text, on, tip) => row(ULTI_NAME[sc], [...SEC.filter(x => x !== sc), sc], lvl, text, on, tip);   // Basis (Primärfarben) zuerst, die Schlusskarte zuletzt
+    const lastEl = normals.length ? normals[normals.length - 1].el : null;
+    if (cols.length === 0) {   // noch nichts markiert: alle Kombos nach Sekundärfarbe, Wirkung als Tooltip
+      fs = 17;
+      SEC.forEach(sc => {
+        ORD_ROWS.filter(r => r[3] === sc).forEach(r => { h += row(r[1], [r[2], r[3]], 0, '', false, ordText(r[0], 'S', true)); });
+        h += ultiRow(sc, 0, '', false, ultiText(sc, 'S') + ' Gespielt, indem die Schlusskarte zuletzt auf zwei andere Farben gelegt wird.');
       });
-    } else if (cols.length === 1) {   // eine Farbe: die Kombos dieser Farbe samt Ultimate, genauer erklärt
-      fs = 20;
+    } else if (cols.length === 1) {   // eine Farbe: die Kombos mit dieser Primärfarbe samt der Ultimates, die sie enthalten, genauer erklärt
+      fs = 18;
       h += '<div class="note" style="margin-bottom:3px;font-size:14px">Erste Karte: ' + el(prim) + '. Markiere eine zweite Farbe:</div>';
-      ORD_ROWS.filter(r => r[2] === prim).forEach(r => { h += row(r[1], [r[2], r[3]], 0, ORD_SHORT[r[0]], false, ordText(r[0], 'S')); });
-      h += ultiRow(prim, 0, ULTI_SHORT[prim], false, 'Mit allen drei Farben, ersetzt die Kombo. ' + ultiText(prim, 'S'));
+      SEC.forEach(sc => {
+        ORD_ROWS.filter(r => r[2] === prim && r[3] === sc).forEach(r => { h += row(r[1], [r[2], r[3]], 0, ORD_SHORT[r[0]], false, ordText(r[0], 'S')); });
+        if (sc !== prim) h += ultiRow(sc, 0, ULTI_SHORT[sc], false, 'Mit allen drei Farben, die ' + NAMES[sc] + '-Karte zuletzt; ersetzt die Kombo. ' + ultiText(sc, 'S'));
+      });
     } else if (cols.length === 2 && o) {   // zwei Farben: genau eine Kombo, mit erreichter Stufe
-      const r = ORD_ROWS.find(x => x[0] === o.key);
+      const r = ORD_ROWS.find(x => x[0] === o.key), third = M.ELEMENTS.find(x => !cols.includes(x));
       h += row(r[1], [r[2], r[3]], o.lvl, ordText(r[0], o.lvl), true);
       if (o.echo) h += '<div class="note" style="margin-top:2px;font-size:13px">Echo ' + el(o.other) + ': +1 Stufe</div>';
-      h += '<div class="note" style="margin-top:4px;font-size:12px">Stufe = die kleinere der beiden Kartensummen (je Karte höchstens deine Magiestufe), höchstens 3. Mehrere Karten einer Farbe zählen zusammen. Mit ' + el(M.ELEMENTS.find(x => !cols.includes(x))) + ' als dritter Farbe wird daraus die Ultimate ' + ULTI_NAME[prim] + '.</div>';
-    } else {   // alle drei Farben: Ultimate
-      h += ultiRow(prim, lv.ulti, ultiText(prim, lv.ulti || 'S') + ' Die Kombos entfallen.', lv.ulti > 0);
+      h += '<div class="note" style="margin-top:4px;font-size:12px">Stufe = die kleinere der beiden Kartensummen (je Karte höchstens deine Magiestufe), höchstens 3. Mehrere Karten einer Farbe zählen zusammen. Kommt ' + el(third) + ' als dritte Farbe zuletzt dazu, wird daraus die Ultimate ' + ULTI_NAME[third] + '.</div>';
+    } else {   // alle drei Farben: Ultimate der Schlusskarte
+      const ue = (ev && ev.ultiEl) || lastEl;
+      h += ultiRow(ue, lv.ulti, ultiText(ue, lv.ulti || 'S') + ' Die Kombos entfallen.', lv.ulti > 0);
       if (lv.echo) h += '<div class="note" style="margin-top:2px;font-size:13px">Echo ' + el(cx.myStats.echo) + ': +1 Stufe</div>';
     }
     const R = LAYOUT.oppInfo;   // Echo (seit 0.9.4): kein Marker mehr, die Schlange der Echo-Farbe auf dem Magie-Brett pulsiert (boardHTML)
