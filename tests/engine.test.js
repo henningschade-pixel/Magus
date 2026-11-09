@@ -1352,7 +1352,7 @@ test('Echo: Die Läuterung erreicht das Echo nicht (0.9)', () => {
   assert.equal(me.stats.echo, 'W', 'nur der neue Kombo erneuert das Echo');
 });
 
-test('Echo: Auch Angriff und Verteidigung ohne Kombo hinterlassen ein Echo der Primärmagie; Kombos wirken weiter über die Sekundärkarte (0.9.6)', () => {
+test('Echo: Auch ein Angriff ohne Kombo hinterlässt ein Echo der Primärmagie; Kombos wirken weiter über die Sekundärkarte (0.9.6)', () => {
   const { s, c, me, op } = combatSetup(11, ['W1', 'F1', 'W1']);
   assert.equal(me.stats.echo, undefined, 'zu Kampfbeginn kein Echo');
   M.apply(s, { pid: 0, type: 'mark', slot: 0 });   // einfacher Wasserangriff, kein Kombo
@@ -1367,7 +1367,7 @@ test('Echo: Auch Angriff und Verteidigung ohne Kombo hinterlassen ein Echo der P
   assert.equal(me.stats.echo, 'F', 'der Kombo erneuert das Echo');
 });
 
-test('Echo: Eine Verteidigung ohne Kombo hinterlässt ein Echo, Passen lässt es stehen (0.9.6)', () => {
+test('Echo: Eine Verteidigung ändert das Echo nicht, auch nicht mit Primärmagie (0.9.9.1)', () => {
   const { s, c, op } = combatSetup(11, ['W1']);
   op.deck.hand[0] = Object.assign({}, op.deck.hand[0], { id: 'W1' });
   op.stats.echo = 'E'; op.stats.mana = 9;
@@ -1376,7 +1376,7 @@ test('Echo: Eine Verteidigung ohne Kombo hinterlässt ein Echo, Passen lässt es
   assert.equal(c.action, 'defense');
   assert.ok(M.apply(s, { pid: op.ctrl, type: 'mark', slot: 0 }).ok);
   assert.ok(M.apply(s, { pid: op.ctrl, type: 'defend' }).ok);
-  assert.equal(op.stats.echo, 'W', 'Verteidigung mit einer Wasserkarte hinterlässt ein Wasser-Echo');
+  assert.equal(op.stats.echo, 'E', 'Verteidigung mit einer Wasserkarte lässt das bisherige Erde-Echo unverändert');
 });
 
 test('Zermürbung: Rundenzähler der Weltphase, ab Runde exhaustRounds + 1 schenkt jeder Zug ohne Monsterangriff dem Gegner Gold in Höhe der Spielstufe (0.9.7)', () => {
