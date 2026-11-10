@@ -690,6 +690,11 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Tests:** Drei Tests angepasst (Nachziehmarker Weltphase, Nachziehlimit Kauf, Nachziehlimit Weltphase; der Marker-Reset läuft jetzt über den Händler), neuer Test „Magie kaufen und Upgrades sind keine Aktion mehr“. `tests/golden.json` ist neu erzeugt (absichtliche Regeländerung).
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
 
+## Änderung 0.9.9.6 (10.11.)
+
+- **Menüs scrollbar:** Menüfenster (Hauptmenü, Einstellungen, Neu in Version, …) scrollen innerhalb des Fensters, wenn der Inhalt höher ist als der Bildschirm; zuvor wurde der Rand abgeschnitten (u. a. Verteidigungsphase und „Zurück“ in den Einstellungen). Keine Regeländerung.
+- Die Versionsbeschreibung im Spiel nennt die Änderung.
+
 ## Änderung 0.9.9.5 (10.11.)
 
 - **Einstellung „Erlaubte Aktionen“:** Im Einstellungsmenü gibt es je Phase Schalter für die erlaubten Aktionen. Angriffsphase: Angreifen, Erholen, Nachziehen, Passen, Echo setzen, Kombo wirken. Verteidigungsphase: Verteidigen, Erholen, Nachziehen, Passen, Echo setzen, Kombo wirken. Die Werte gelten für neue Spiele, werden im Browser gespeichert und gehen im Mehrspielermodus vom Gastgeber aus (Regeln `allowAtk`, `allowDef`, Werte 1/0).
