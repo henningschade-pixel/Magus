@@ -46,7 +46,7 @@ function bestAttack(side, opp, hand, Q, state0, reserve) {
       for (const l of rest) orders.push([f, ...rest.filter(x => x !== l), l]);
     }
     for (const ord of orders) {
-      const ev = M.evalAttack(stats, ord);
+      const ev = M.evalAttack(stats, ord, state0 ? { combo: M.allowed(state0, 'attack', 'combo') } : undefined);
       if (!ev.valid || !ev.affordable) continue;
       const hurt = stats.maxHp - stats.hp, oMir = (opp.stats.manaflow || 0) + (opp.stats.rainbow || 0) + Q.lfHeal * (opp.stats.heal || 0);
       const w = { fe: Q.wFE, ew: oMir > 0 ? 1.2 + oMir * Math.max(0.3, Q.lfOppW || 0) : 0.1 };   // Läuterung lohnt, wenn der Gegner Schild- oder Manamarker trägt
@@ -210,7 +210,7 @@ function combatPlan(state, pid) {
     });
   }
   for (const sub of variants) {
-    const ev = M.evalDefense(s, sub, color);
+    const ev = M.evalDefense(s, sub, color, { combo: M.allowed(state, 'defense', 'combo') });
     if (!ev.valid || ev.affordable === false) continue;
     const left0 = Math.max(0, pend - (ev.block || 0)), lvM = M.defenseComboPre(s, ev, color).mir, absorbed = Math.min(lvM, left0), left = left0 - absorbed;   // das Schild mindert den nicht geblockten Schaden bis zu seinen Ladungen (ein Schild-Kombo der Verteidigung wirkt erst danach)
     const nCurse = sub.filter(h => h.curse).length;
@@ -236,7 +236,7 @@ function fallback(state, pid) {
   if (state.phase === 'combat') {
     const c = state.combat;
     if (c.forced) return [A(forcedAct(state, pid))];
-    return c.action === 'defense' ? [A({ type: 'pass' })] : [A({ type: 'recover' }), A({ type: 'draw' }), A({ type: 'pass' })];
+    return c.action === 'defense' ? [A({ type: 'pass' }), A({ type: 'recover' }), A({ type: 'draw' })] : [A({ type: 'recover' }), A({ type: 'draw' }), A({ type: 'pass' }), A({ type: 'attack' })];   // Einstellungen: nicht jede Aktion ist in jeder Phase erlaubt, die Engine lehnt unerlaubte ab
   }
   return [A({ type: 'draw' })];
 }

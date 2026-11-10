@@ -426,6 +426,9 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .setgrp .volbox{gap:6px;padding:10px 14px}
 .rulerow{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:19px;padding:6px 0}
 .rulerow+.rulerow{border-top:1px solid var(--line)}
+.phasehead{font-size:17px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);padding:6px 0 2px}
+.menulist .btn.tgl{min-width:64px}
+.menulist .btn.tgl.on{color:var(--gold)}
 .rulerow span{text-align:left;white-space:nowrap}
 .stepper{display:flex;align-items:center;gap:6px}
 .menulist .stepper .btn{font-size:22px;padding:0;width:40px;height:36px;line-height:1;min-width:0}

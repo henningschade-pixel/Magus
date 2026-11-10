@@ -690,6 +690,14 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Tests:** Drei Tests angepasst (Nachziehmarker Weltphase, Nachziehlimit Kauf, Nachziehlimit Weltphase; der Marker-Reset läuft jetzt über den Händler), neuer Test „Magie kaufen und Upgrades sind keine Aktion mehr“. `tests/golden.json` ist neu erzeugt (absichtliche Regeländerung).
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
 
+## Änderung 0.9.9.5 (10.11.)
+
+- **Einstellung „Erlaubte Aktionen“:** Im Einstellungsmenü gibt es je Phase Schalter für die erlaubten Aktionen. Angriffsphase: Angreifen, Erholen, Nachziehen, Passen, Echo setzen, Kombo wirken. Verteidigungsphase: Verteidigen, Erholen, Nachziehen, Passen, Echo setzen, Kombo wirken. Die Werte gelten für neue Spiele, werden im Browser gespeichert und gehen im Mehrspielermodus vom Gastgeber aus (Regeln `allowAtk`, `allowDef`, Werte 1/0).
+- **Standardwerte** entsprechen dem Stand 0.9.9: Angriffsphase alles an; Verteidigungsphase Verteidigen, Passen, Echo, Kombo an, Erholen und Nachziehen aus.
+- **Bedeutung:** *Echo setzen* aus: Die Primärmagie der Phase hinterlässt kein Echo (ein vorhandenes Echo verstärkt weiter). *Kombo wirken* aus: Die Phase erlaubt nur Karten einer Farbe. *Erholen* und *Nachziehen* in der Verteidigungsphase (neu): Der Schaden wird ohne Block hingenommen (ein Schild mindert ihn), danach folgt wie beim Passen der eigene Angriff. *Angreifen* und *Verteidigen* aus: Die Magie-Aktion der Phase entfällt. Erholen oder Passen bleibt je Phase immer erlaubt (sind beide ausgeschaltet, gilt Passen).
+- **Umsetzung:** `allowed(state, phase, k)` und Prüfungen in `applyCombat`/`execAttack`/`execDefense` (`src/engine/65-kampfablauf.js`); `evalAttack`/`evalDefense` mit `opt.combo`; Einstellungsseite `PHASE_OPTS` (`src/ui/26a-darstellung.js`); Kampfknöpfe zeigen nur erlaubte Aktionen (`src/ui/18-kampf.js`); KI-Fallback probiert alle Aktionen. Die KI wählt in der Verteidigung weiter nur Verteidigen oder Passen.
+- Die Versionsbeschreibung im Spiel nennt die Änderung.
+
 ## Änderung 0.9.9 (09.11.)
 
 - **Kombos nach Sekundärfarbe (Regeländerung):** Die Sekundärfarbe (zweite Farbe) bestimmt den Charakter der Kombo: Rot (Schaden) Falle und Lähmung, Blau (variabel) Hellsicht und Schild, Grün (Heilung) Heilung und Läuterung. Neue Farbpaare (Primär + Sekundär): **Falle** Blau + Rot (vorher Rot + Blau), **Lähmung** Grün + Rot (vorher Rot + Grün), **Hellsicht** Rot + Blau (vorher Blau + Rot), **Schild** Grün + Blau (vorher Blau + Grün), **Heilung** Rot + Grün (vorher Grün + Blau), **Läuterung** Blau + Grün (vorher Grün + Rot). Die Wirkungen und Stufen sind unverändert; nur `ORD_COMBO` (`src/engine/60-kampfberechnung.js`) ordnet die Paare neu zu.

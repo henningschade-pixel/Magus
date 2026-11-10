@@ -184,7 +184,7 @@ function drawWarnHTML() {
 }
 function canDrawNow() {
   if (!myTurn()) return false;
-  if (G.phase === 'combat') return G.combat.action === 'attack' && !drawNeedsMana();
+  if (G.phase === 'combat') return (G.combat.action === 'attack' || G.combat.action === 'defense') && M.allowed(G, G.combat.action, 'draw') && !drawNeedsMana();   // Einstellungen: Nachziehen je Phase
   return true;
 }
 // Kampf, roter Nachziehmarker: Nachziehen kostet Mana. Wahr, wenn mein Mana dafür nicht reicht.

@@ -8,7 +8,8 @@ function onAct(d) {
     case 'stopen': statsOpen(true); break;
     case 'sndtoggle': Snd.toggle(); Snd.play('ui_click', 0, .8); if (menuView) { setTimeout(menuView, 350); menuView(); } break;
     case 'menu': showStart(d.p); break;
-    case 'rule': if (d.k === 'all') RULE_OPTS.forEach(o => setGameRule(o.k, 'def')); else setGameRule(d.k, d.d); if (menuView) menuView(); break;
+    case 'rulephase': setPhaseRule(d.ph, d.k); if (menuView) menuView(); break;
+    case 'rule': if (d.k === 'all') { RULE_OPTS.forEach(o => setGameRule(o.k, 'def')); resetPhaseRules(); } else setGameRule(d.k, d.d); if (menuView) menuView(); break;
     case 'quit': try { window.close(); } catch (e) {} setTimeout(() => showStart('quit'), 150); break;
     case 'homeset': homeSettings(); break;
     case 'homeback': homeMenuDraw(); break;
@@ -116,11 +117,15 @@ function pvShow(b) {
       if (!canDrawNow()) return;
       const mc = M.drawManaCost(G, ME), gp = M.drawGoldPenalty(G, ME);
       if (mc > 0) set(ME, 'mana', dn(Math.max(0, cst.mana - mc)) + '/' + cst.maxMana);
+      const pdD = G.phase === 'combat' && G.combat.action === 'defense' ? M.previewDefense(G, true) : null;   // Verteidigungsphase: der Schaden wird hingenommen
+      if (pdD && pdD.who === ME && pdD.leftover > 0) set(ME, 'hp', dn(pdD.hpAfter) + '/' + cst.maxHp);
       if (gp > 0) set(1 - ME, 'gold', up(G.players[1 - ME].stats.gold + gp));
     } else if (act === 'recover') {   // Erholen: Mana steigt höchstens bis zum Maximum; die markierten Karten werden nicht gespielt
-      if (!myTurn() || G.phase !== 'combat' || G.combat.action !== 'attack') return;
+      if (!myTurn() || G.phase !== 'combat') return;
       const nm = Math.min(cst.maxMana, cst.mana + M.recoverGain(G));
       set(ME, 'mana', (nm > cst.mana ? up(nm) : cst.mana) + '/' + cst.maxMana);
+      const pdR = G.combat.action === 'defense' ? M.previewDefense(G, true) : null;   // Verteidigungsphase: der Schaden wird hingenommen
+      if (pdR && pdR.who === ME && pdR.leftover > 0) set(ME, 'hp', dn(pdR.hpAfter) + '/' + cst.maxHp);
     } else {   // Verteidigen / Passen: Mana-Kosten und Restschaden (rot), Spiegelrückwurf auf den Angreifer (rot)
       const pd = myTurn() && G.phase === 'combat' ? M.previewDefense(G, act === 'pass') : null;
       if (!pd || pd.who !== ME) return;
@@ -187,7 +192,7 @@ function homeSettings() {
   overlay.innerHTML = '<div class="box start" style="width:520px"><h1 style="font-size:44px">Einstellungen</h1><div class="menulist setpage" style="margin-top:10px">' + settingsHTML() + '<button class="btn" data-act="homeback">Zurück</button></div></div>';
 }
 // Klickton für Menü- und Bedienknöpfe (Aktionen mit eigenem Ton ausgenommen)
-const CLICK_ACTS = new Set(['sacdn', 'sacup', 'deckview', 'home', 'resume', 'restart', 'leave', 'newgame', 'newspec', 'specspeed', 'stend', 'finfight', 'logdl', 'stclose', 'stopen', 'sndtoggle', 'rule', 'menu', 'quit', 'homeset', 'homeback', 'stfit', 'stwho', 'stser', 'dismiss']);
+const CLICK_ACTS = new Set(['sacdn', 'sacup', 'deckview', 'home', 'resume', 'restart', 'leave', 'newgame', 'newspec', 'specspeed', 'stend', 'finfight', 'logdl', 'stclose', 'stopen', 'sndtoggle', 'rule', 'rulephase', 'menu', 'quit', 'homeset', 'homeback', 'stfit', 'stwho', 'stser', 'dismiss']);
 stage.addEventListener('pointerdown', e => { const b = e.target.closest('button'); if (b && (b.id === 'homebtn' || b.id === 'statsbtn' || b.classList.contains('logdl') || CLICK_ACTS.has(b.dataset.act))) Snd.play('ui_click'); }, true);
 const homeBtn = document.createElement('button');
 homeBtn.id = 'homebtn'; homeBtn.title = 'Hauptmenü (die Partie bleibt erhalten)'; homeBtn.textContent = '⌂';

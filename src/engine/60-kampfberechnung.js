@@ -39,10 +39,12 @@ function echoBoost(stats, lv, ord, ultiEl) {
 }
 const MAX_LVL_ECHO = 3;
 // Fluchkarten kosten beim Ausspielen je 1 Mana und zählen nicht als Element. Offen liegende Hellsichtkarten (c.free) kosten kein Mana.
-function evalAttack(stats, cards) {
+// opt.combo === false: In dieser Phase sind Kombos abgeschaltet (Einstellung allowAtk/allowDef): nur Karten einer Farbe.
+function evalAttack(stats, cards, opt) {
   if (!cards.length) return { valid: false, reason: 'Keine Karte gewählt.' };
   const curses = cards.filter(c => c.curse), normals = cards.filter(c => !c.curse);
   const prim = normals.length ? normals[0].el : null, lastEl = normals.length ? normals[normals.length - 1].el : null;   // lastEl: Farbe der zuletzt markierten Karte (bestimmt die Ultimate, seit 0.9.9)
+  if (opt && opt.combo === false && normals.some(c => c.el !== prim)) return { valid: false, reason: 'Kombos sind in dieser Phase abgeschaltet (Einstellungen): nur Karten einer Farbe.' };
   const same = prim ? normals.filter(c => c.el === prim) : [];
   const cost = normals.filter(c => !c.free).length + curses.reduce((n, c) => n + c.tier, 0);
   let damage = 0; same.forEach(c => { damage += Math.min(c.tier, stats.mag[prim]); });
@@ -53,11 +55,12 @@ function evalAttack(stats, cards) {
   echoBoost(stats, levels, ord, lastEl);   // Echo des letzten Kombos (seit 0.9)
   return { valid: true, prim, cost, damage, levels, ord, curses: curses.length, affordable: stats.mana >= cost, ultiEl: levels.ulti > 0 ? lastEl : null };
 }
-function evalDefense(stats, cards, color) {
+function evalDefense(stats, cards, color, opt) {
   if (!cards.length) return { valid: true, cost: 0, block: 0, empty: true };
   const curses = cards.filter(c => c.curse), normals = cards.filter(c => !c.curse);
   const el = normals.length ? normals[0].el : null, lastEl = normals.length ? normals[normals.length - 1].el : null;   // lastEl bestimmt die Ultimate (seit 0.9.9)
   const same = normals.filter(c => c.el === el), other = normals.filter(c => c.el !== el);
+  if (opt && opt.combo === false && other.length) return { valid: false, reason: 'Kombos sind in dieser Phase abgeschaltet (Einstellungen): nur Karten einer Farbe.' };
   const ulti = other.length && new Set(other.map(c => c.el)).size > 1;   // alle drei Farben: Ultimate auch in der Verteidigung
   if (el && el !== color && el !== SUPERIOR[color]) return { valid: false, reason: NAMES[el] + ' kann nicht gegen ' + NAMES[color] + ' verteidigen.' };
   const cost = curses.reduce((n, c) => n + c.tier, 0) + (el === color ? same.filter(c => !c.free).length : 0) + other.filter(c => !c.free).length;   // Verteidigung in der überlegenen Farbe ist gratis, Kombokarten kosten 1 Mana

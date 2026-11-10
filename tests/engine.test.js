@@ -1401,3 +1401,50 @@ test('Zermürbung: Rundenzähler der Weltphase, ab Runde exhaustRounds + 1 schen
   for (let i = 0; i < 30; i++) { const pid = t.turn; t.players[pid].drawRed = false; t.players[pid].drawN = 0; assert.ok(M.apply(t, { pid, type: 'draw' }).ok); }
   assert.equal(M.worldWear(t), false); assert.ok(!t.log.some(l => /Zermürbung/.test(l.txt)));
 });
+
+test('Erlaubte Aktionen je Phase (0.9.9.5): Standard – Erholen und Nachziehen nur in der Angriffsphase, alles andere erlaubt', () => {
+  const { s } = combatSetup(11, ['F3']);
+  for (const k of ['attack', 'recover', 'draw', 'pass', 'echo', 'combo']) assert.equal(M.allowed(s, 'attack', k), true, 'Angriff ' + k);
+  for (const k of ['defend', 'pass', 'echo', 'combo']) assert.equal(M.allowed(s, 'defense', k), true, 'Verteidigung ' + k);
+  for (const k of ['recover', 'draw']) assert.equal(M.allowed(s, 'defense', k), false, 'Verteidigung ' + k);
+  s.rules.allowAtk = { pass: 0, recover: 0 }; assert.equal(M.allowed(s, 'attack', 'pass'), true, 'sind Erholen und Passen aus, gilt Passen');
+});
+
+test('Erlaubte Aktionen: Verteidigungsphase – Erholen und Nachziehen statt Verteidigen, wenn erlaubt; sonst abgelehnt', () => {
+  for (const type of ['recover', 'draw']) {
+    const { s, c, me, op } = combatSetup(11, ['F3']);
+    op.stats.mana = 2; op.stats.hp = 9; op.stats.maxHp = 9;
+    M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+    assert.equal(c.action, 'defense');
+    assert.equal(M.apply(s, { pid: op.ctrl, type }).ok, false, type + ' ist in der Verteidigung standardmäßig aus');
+    s.rules.allowDef = Object.assign({}, M.DEFAULT_RULES.allowDef, { [type]: 1 });
+    const hp0 = op.stats.hp, r = M.apply(s, { pid: op.ctrl, type });
+    assert.ok(r.ok, r.error);
+    assert.ok(op.stats.hp < hp0, 'der Schaden wird ohne Block hingenommen');
+    if (type === 'recover') assert.equal(op.stats.mana, 2 + M.recoverGain(s));
+    assert.equal(c.action, 'attack', 'danach folgt der eigene Angriff'); assert.equal(c.sides[c.turn].ctrl, op.ctrl);
+    assert.ok(s.log.some(l => /nimmt den Schaden hin/.test(l.txt)));
+  }
+});
+
+test('Erlaubte Aktionen: Angreifen oder Verteidigen abgeschaltet; Echo und Kombo je Phase', () => {
+  let t = combatSetup(11, ['F3', 'W1']);
+  t.s.rules.allowAtk = Object.assign({}, M.DEFAULT_RULES.allowAtk, { attack: 0 });
+  M.apply(t.s, { pid: 0, type: 'mark', slot: 0 });
+  assert.equal(M.apply(t.s, { pid: 0, type: 'attack' }).ok, false, 'Angreifen aus');
+  assert.ok(M.apply(t.s, { pid: 0, type: 'recover' }).ok || M.apply(t.s, { pid: 0, type: 'pass' }).ok);
+  t = combatSetup(11, ['F3', 'W1']);
+  t.s.rules.allowAtk = Object.assign({}, M.DEFAULT_RULES.allowAtk, { echo: 0 });
+  M.apply(t.s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(t.s, { pid: 0, type: 'attack' }).ok);
+  assert.equal(t.me.stats.echo, undefined, 'ohne Echo-Einstellung hinterlässt der Angriff kein Echo');
+  t = combatSetup(11, ['F3', 'W1']);
+  t.s.rules.allowAtk = Object.assign({}, M.DEFAULT_RULES.allowAtk, { combo: 0 });
+  M.apply(t.s, { pid: 0, type: 'mark', slot: 0 }); M.apply(t.s, { pid: 0, type: 'mark', slot: 1 });
+  const r = M.apply(t.s, { pid: 0, type: 'attack' });
+  assert.equal(r.ok, false); assert.match(r.error, /Kombos sind in dieser Phase abgeschaltet/);
+  t = combatSetup(11, ['F3']);
+  t.s.rules.allowDef = Object.assign({}, M.DEFAULT_RULES.allowDef, { defend: 0 });
+  M.apply(t.s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(t.s, { pid: 0, type: 'attack' }).ok);
+  assert.equal(M.apply(t.s, { pid: t.op.ctrl, type: 'defend' }).ok, false, 'Verteidigen aus');
+  assert.ok(M.apply(t.s, { pid: t.op.ctrl, type: 'pass' }).ok);
+});
