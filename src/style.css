@@ -430,6 +430,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .rulerow+.rulerow{border-top:1px solid var(--line)}
 .phasehead{font-size:17px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);padding:6px 0 2px}
 .menulist .btn.tgl{min-width:64px}
+.menulist .setbox .btn.tgl{min-width:124px}
 .menulist .btn.tgl.on{color:var(--gold)}
 .rulerow span{text-align:left;white-space:nowrap}
 .stepper{display:flex;align-items:center;gap:6px}

@@ -325,10 +325,11 @@ function applyComboPlan(state, side, opp, plan, ev, texts, fxs) {
     }
   }
 }
-// Erlaubte Aktionen je Phase (Einstellungen seit 0.9.9.5): rules.allowAtk (Angriffsphase: attack, recover, draw, pass, echo, combo) und rules.allowDef (Verteidigungsphase: defend, recover, draw, pass, echo, combo), Werte 1/0. echo: die Magie der Phase setzt ein Echo; combo: Karten einer zweiten Farbe lösen eine Kombo aus. Erholen oder Passen bleibt immer erlaubt (sind beide abgeschaltet, gilt Passen).
+// Erlaubte Aktionen je Phase (Einstellungen seit 0.9.9.5): rules.allowAtk (Angriffsphase: attack, recover, draw, pass, echo, combo) und rules.allowDef (Verteidigungsphase: defend, recover, draw, pass, echo, combo), Werte 1/0 (allowDef zusätzlich 2 = nur nach einem Angriff, 3 = nur ohne vorausgegangenen Angriff). echo: die Magie der Phase setzt ein Echo; combo: Karten einer zweiten Farbe lösen eine Kombo aus. Erholen oder Passen bleibt immer erlaubt (sind beide abgeschaltet, gilt Passen).
 function allowed(state, phase, k) {
   const key = phase === 'defense' ? 'allowDef' : 'allowAtk', o = (state.rules && state.rules[key]) || {}, dflt = DEFAULT_RULES[key];
-  const on = x => o[x] !== undefined && o[x] !== null ? !!+o[x] : !!dflt[x];
+  const atkBefore = !!(state.combat && state.combat.pending > 0);   // Verteidigungsphase: ein Angriff mit Schaden ging voraus
+  const on = x => { const v = o[x] !== undefined && o[x] !== null ? +o[x] : +dflt[x]; return key === 'allowDef' && v >= 2 ? (v === 2 ? atkBefore : !atkBefore) : !!v; };   // Verteidigung: 1 an, 0 aus, 2 nur nach Angriff, 3 nur ohne Angriff
   if (k === 'pass') return on('pass') || !on('recover');   // Erholen oder Passen bleibt immer möglich, damit keine Phase ohne ausführbare Aktion bleibt
   return on(k);
 }

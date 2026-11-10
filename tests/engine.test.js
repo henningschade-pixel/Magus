@@ -1448,3 +1448,18 @@ test('Erlaubte Aktionen: Angreifen oder Verteidigen abgeschaltet; Echo und Kombo
   assert.equal(M.apply(t.s, { pid: t.op.ctrl, type: 'defend' }).ok, false, 'Verteidigen aus');
   assert.ok(M.apply(t.s, { pid: t.op.ctrl, type: 'pass' }).ok);
 });
+
+test('Erlaubte Aktionen: Verteidigung „nach Angriff“ (2) und „ohne Angriff“ (3)', () => {
+  const t = combatSetup(11, ['F3']);
+  M.apply(t.s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(t.s, { pid: 0, type: 'attack' }).ok);
+  assert.equal(t.c.action, 'defense'); assert.ok(t.c.pending > 0);
+  t.s.rules.allowDef = Object.assign({}, M.DEFAULT_RULES.allowDef, { recover: 2, draw: 3, defend: 3 });
+  assert.equal(M.allowed(t.s, 'defense', 'recover'), true, 'nach Angriff: ein Angriff ging voraus');
+  assert.equal(M.allowed(t.s, 'defense', 'draw'), false, 'ohne Angriff: nicht nach einem Angriff');
+  assert.equal(M.apply(t.s, { pid: t.op.ctrl, type: 'defend' }).ok, false, 'Verteidigen nur ohne Angriff');
+  t.c.pending = 0;
+  assert.equal(M.allowed(t.s, 'defense', 'recover'), false); assert.equal(M.allowed(t.s, 'defense', 'draw'), true);
+  t.s.rules.allowDef = Object.assign({}, M.DEFAULT_RULES.allowDef, { pass: 3, recover: 2 });
+  assert.equal(M.allowed(t.s, 'defense', 'pass'), true, 'ohne Angriff und Passen erlaubt');
+  t.c.pending = 3; assert.equal(M.allowed(t.s, 'defense', 'pass'), false, 'Passen nur ohne Angriff, Erholen nur nach Angriff');
+});

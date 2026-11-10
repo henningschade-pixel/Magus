@@ -690,6 +690,12 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Tests:** Drei Tests angepasst (Nachziehmarker Weltphase, Nachziehlimit Kauf, Nachziehlimit Weltphase; der Marker-Reset läuft jetzt über den Händler), neuer Test „Magie kaufen und Upgrades sind keine Aktion mehr“. `tests/golden.json` ist neu erzeugt (absichtliche Regeländerung).
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
 
+## Änderung 0.9.9.7 (10.11.)
+
+- **Vier Stufen je Aktion der Verteidigungsphase:** Verteidigen, Erholen, Nachziehen, Passen, Echo setzen und Kombo wirken lassen sich auf *an* (die Option besteht in jeder Verteidigung), *aus* (in keiner), *nach Angriff* (nur wenn ein Angriff mit Schaden vorausging) oder *ohne Angriff* (nur wenn kein Angriff vorausging) stellen. Ein Klick schaltet in dieser Reihenfolge weiter. Regel `allowDef`: 1 an, 0 aus, 2 nach Angriff, 3 ohne Angriff. Die Angriffsphase behält an/aus.
+- **Hinweis:** Die Verteidigungsphase entsteht derzeit nur durch einen Angriff mit Schaden. Dort entspricht *nach Angriff* daher *an*, und *ohne Angriff* greift nicht (die Option fehlt in der Verteidigung). Die Stufen wirken erst, wenn eine Verteidigung ohne vorausgegangenen Angriff möglich ist.
+- Erholen oder Passen bleibt je Situation erlaubt: Ist in der Lage keins von beiden erlaubt, gilt Passen; die Einstellungsseite verhindert, beide auf *aus* zu stellen.
+
 ## Änderung 0.9.9.6 (10.11.)
 
 - **Menüs scrollbar:** Menüfenster (Hauptmenü, Einstellungen, Neu in Version, …) scrollen innerhalb des Fensters, wenn der Inhalt höher ist als der Bildschirm; zuvor wurde der Rand abgeschnitten (u. a. Verteidigungsphase und „Zurück“ in den Einstellungen). Keine Regeländerung.
