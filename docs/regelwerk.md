@@ -690,6 +690,11 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Tests:** Drei Tests angepasst (Nachziehmarker Weltphase, Nachziehlimit Kauf, Nachziehlimit Weltphase; der Marker-Reset läuft jetzt über den Händler), neuer Test „Magie kaufen und Upgrades sind keine Aktion mehr“. `tests/golden.json` ist neu erzeugt (absichtliche Regeländerung).
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
 
+## Änderung 0.9.9.9 (10.11.)
+
+- **Standardwerte Verteidigungsphase:** Verteidigen *nach Angriff* (2), Erholen *aus*, Nachziehen *aus*, Passen *an*, Echo setzen *an*, Kombo wirken *an*. Angriffsphase unverändert (alles an). Im Spielverlauf ändert sich dadurch nichts, da die Verteidigung nur nach einem Angriff entsteht.
+- **Passen abschaltbar:** In den Einstellungen lässt sich Passen auch dann auf *aus* stellen, wenn Erholen aus ist. Sind in einer Lage Erholen und Passen beide nicht erlaubt, bleibt Passen als Notausgang möglich, damit der Zug nie blockiert.
+
 ## Änderung 0.9.9.8 (10.11.)
 
 - **Scrollposition im Menü:** Beim Umschalten einer Einstellung (Schalter, Stufen, Ton) bleibt die Scrollposition des Menüfensters erhalten. Keine Regeländerung.
@@ -698,7 +703,7 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 
 - **Vier Stufen je Aktion der Verteidigungsphase:** Verteidigen, Erholen, Nachziehen, Passen, Echo setzen und Kombo wirken lassen sich auf *an* (die Option besteht in jeder Verteidigung), *aus* (in keiner), *nach Angriff* (nur wenn ein Angriff mit Schaden vorausging) oder *ohne Angriff* (nur wenn kein Angriff vorausging) stellen. Ein Klick schaltet in dieser Reihenfolge weiter. Regel `allowDef`: 1 an, 0 aus, 2 nach Angriff, 3 ohne Angriff. Die Angriffsphase behält an/aus.
 - **Hinweis:** Die Verteidigungsphase entsteht derzeit nur durch einen Angriff mit Schaden. Dort entspricht *nach Angriff* daher *an*, und *ohne Angriff* greift nicht (die Option fehlt in der Verteidigung). Die Stufen wirken erst, wenn eine Verteidigung ohne vorausgegangenen Angriff möglich ist.
-- Erholen oder Passen bleibt je Situation erlaubt: Ist in der Lage keins von beiden erlaubt, gilt Passen; die Einstellungsseite verhindert, beide auf *aus* zu stellen.
+- Ist in einer Lage weder Erholen noch Passen erlaubt, gilt Passen (Notausgang).
 
 ## Änderung 0.9.9.6 (10.11.)
 
