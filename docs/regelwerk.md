@@ -89,8 +89,8 @@ Die Farbe der ersten markierten Karte (**Primärfarbe**) liefert den Schaden und
 | Blau (variabel) | Hellsicht | Rot + Blau | ziehe 3 Karten, wähle S davon aus und lege sie offen vor dich (ohne Manakosten nutzbar, danach abgelegt); die übrigen kommen auf den Ablagestapel |
 | Blau (variabel) | Schild | Grün + Blau | Schild mit S Ladungen (nicht addiert, höchstens 3) |
 | Blau (variabel) | Manafluss (Ultimate) | Rot + Grün, zuletzt Blau | Manafluss (Stufe S) |
-| Grün (Heilung) | Heilung | Rot + Grün | S HP heilen |
-| Grün (Heilung) | Läuterung | Blau + Grün | S beliebige Marker vom Brett entfernen, je entferntem Marker ein Nachziehtoken |
+| Grün (Heilung) | Heilung | Blau + Grün | S HP heilen |
+| Grün (Heilung) | Läuterung | Rot + Grün | S beliebige Marker vom Brett entfernen, je entferntem Marker ein Nachziehtoken |
 | Grün (Heilung) | Heilfluss (Ultimate) | Rot + Blau, zuletzt Grün | Heilfluss (Stufe S) |
 
 **Ultimate (seit 0.9.9):** Sie entsteht mit allen drei Farben; die **zuletzt markierte Karte** bestimmt ihre Wirkung (Rot Todesfluss, Blau Manafluss, Grün Heilfluss), die beiden anderen Farben bilden die Basis in beliebiger Reihenfolge. Bis 0.9.8 bestimmte die erste Karte die Ultimate. Der Schaden kommt weiter von der Primärfarbe (erste Karte).
@@ -689,6 +689,12 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **KI:** `runTurn` (`src/ai/30-kampf.js`) führt alle Wirtschaftsschritte (`ecoStep`, höchstens 12) vor der eigentlichen Aktion im selben Zug aus; bisher beendete jeder Schritt außer dem Opfern den Zug. Die Stellschrauben bleiben unverändert und sind für die neue Regel nicht nachtrainiert (Messung mit `npm run balance` offen).
 - **Tests:** Drei Tests angepasst (Nachziehmarker Weltphase, Nachziehlimit Kauf, Nachziehlimit Weltphase; der Marker-Reset läuft jetzt über den Händler), neuer Test „Magie kaufen und Upgrades sind keine Aktion mehr“. `tests/golden.json` ist neu erzeugt (absichtliche Regeländerung).
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
+
+## Änderung 0.9.9.12 (10.11.)
+
+- **Heilung und Läuterung getauscht (Regeländerung):** Heilung wirkt jetzt mit **Blau + Grün** (Primärfarbe Blau, Sekundärfarbe Grün), Läuterung mit **Rot + Grün** (zuvor Heilung Rot + Grün, Läuterung Blau + Grün). Wirkung, Stufen und Echo bleiben unverändert.
+- **Kombo-Übersicht nach Primärfarbe sortiert:** Die Liste steht in der Reihenfolge Rot, Blau, Grün nach der ersten Karte (Hellsicht, Läuterung | Falle, Heilung | Lähmung, Schild), danach die drei Ultimates. Die Hintergrundfarbe der Zeilen bleibt nach der Sekundärfarbe (zuletzt markierte Karte).
+- Tests angepasst (Läuterungs- und Heilungstests mit den neuen Farben), `golden.json` neu erzeugt (die KI spielt andere Kombos).
 
 ## Änderung 0.9.9.11 (10.11.)
 

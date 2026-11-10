@@ -27,7 +27,7 @@ test('Lähmung legt 2·S Fluchkarten auf den Ablagestapel des Gegners', () => {
 });
 
 test('Läuterung zerstört gegnerische Nachziehtokens, ohne sie gutzuschreiben', () => {
-  const { s, me, op } = combatSetup(11, ['W1', 'E1']);
+  const { s, me, op } = combatSetup(11, ['F1', 'E1']);
   op.stats.freeDraws = 3; me.stats.freeDraws = 0;
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
   assert.ok(M.apply(s, { pid: 0, type: 'lfp', pick: ['ot'] }).ok);
@@ -37,7 +37,7 @@ test('Läuterung zerstört gegnerische Nachziehtokens, ohne sie gutzuschreiben',
 });
 
 test('Läuterung entfernt auch eigene Manamarker und gibt dafür ein Nachziehtoken', () => {
-  const { s, me } = combatSetup(11, ['W1', 'E1']);
+  const { s, me } = combatSetup(11, ['F1', 'E1']);
   me.stats.manaflow = 3; me.stats.freeDraws = 0;
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
   assert.ok(M.apply(s, { pid: 0, type: 'lfp', pick: ['sm'] }).ok);
@@ -289,7 +289,7 @@ test('Kartenvorrat: Startdecks aus gemischten Stufe-1-Karten, getauschte Karten 
 
 test('Läuterung kann Todesmarker beider Seiten entfernen (eigene und gegnerische), je entferntem Marker ein Gratis-Nachziehen', () => {
   for (const [pick, mineLeft, theirsLeft] of [['sd', 0, 2], ['od', 1, 1]]) {
-    const { s, me, op } = combatSetup(11, ['W1', 'E1']);
+    const { s, me, op } = combatSetup(11, ['F1', 'E1']);
     me.stats.death = 1; op.stats.death = 2; me.stats.freeDraws = 0;
     M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
     assert.ok(M.apply(s, { pid: 0, type: 'lfp', pick: [pick] }).ok);
@@ -315,7 +315,7 @@ test('Fliehen im Showdown: bei 0 Mana des Gegners möglich, Showdown endet ohne 
 });
 
 test('Läuterung Stufe 3 entfernt beliebig gemischt eigene und gegnerische Mana-, Schild- und Todesmarker', () => {
-  const { s, me, op } = combatSetup(11, ['W3', 'E3']);
+  const { s, me, op } = combatSetup(11, ['F3', 'E3']);
   me.stats.manaflow = 2; me.stats.death = 1;
   op.stats.rainbow = 1; op.stats.death = 2; me.stats.freeDraws = 0;
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
@@ -490,7 +490,7 @@ test('Nachziehmarker Kampf: bei rotem Marker ohne Mana ist Nachziehen nicht mög
 });
 
 test('KI-Läuterung entfernt zuerst das Schild, dann die Manamarker des Gegners', () => {
-  const { s, c, me, op } = combatSetup(11, ['W3', 'E3']);
+  const { s, c, me, op } = combatSetup(11, ['F3', 'E3']);
   me.deck.draw = Array.from({ length: 8 }, () => ({ id: 'E2' })); me.deck.discard = [];
   op.stats.rainbow = 1; op.stats.manaflow = 1;
   const acts = AI.plan(s, 0);
@@ -673,7 +673,7 @@ test('Kombo mit mehreren Karten der zweiten Farbe: F2, W1, W1 ergibt Hellsicht 2
   assert.equal(ev(['F2', 'W1']).ord.lvl, 1); assert.equal(ev(['F2', 'W1']).ord.key, 'hs', 'Rot + Blau ist die Hellsicht');
   assert.deepEqual([ev(['W1', 'F2', 'F1']).ord.key, ev(['W1', 'F2', 'F1']).ord.lvl], ['wt', 1]);   // andere erste Farbe: Falle (Blau + Rot), Stufe = Minimum der Farbsummen
   assert.deepEqual([ev(['W2', 'F1', 'F1']).ord.key, ev(['W2', 'F1', 'F1']).ord.lvl], ['wt', 2]);
-  assert.deepEqual([ev(['W1', 'E1', 'E1']).ord.key, ev(['W1', 'E1', 'E1']).ord.lvl], ['gr', 1]);   // Blau + Grün: Läuterung
+  assert.deepEqual([ev(['W1', 'E1', 'E1']).ord.key, ev(['W1', 'E1', 'E1']).ord.lvl], ['gh', 1]);   // Blau + Grün: Heilung (seit 0.9.9.12)
   assert.equal(ev(['F1', 'F1', 'E2']).ord.lvl, 2); assert.equal(ev(['F1', 'F1', 'E1']).ord.lvl, 1);
 });
 
@@ -681,7 +681,7 @@ test('Zuordnung (0.9.9): Die Sekundärfarbe bestimmt den Charakter, die Primärf
   const st = { mag: { F: 3, E: 3, W: 3 }, mana: 9 }, key = ids => M.evalAttack(st, ids.map(id => Object.assign({ id }, M.parseCard(id)))).ord.key;
   assert.deepEqual([key(['W1', 'F1']), key(['E1', 'F1'])], ['wt', 'ra'], 'Sekundär Rot: Falle, Lähmung');
   assert.deepEqual([key(['F1', 'W1']), key(['E1', 'W1'])], ['hs', 'ws'], 'Sekundär Blau: Hellsicht, Schild');
-  assert.deepEqual([key(['F1', 'E1']), key(['W1', 'E1'])], ['gh', 'gr'], 'Sekundär Grün: Heilung, Läuterung');
+  assert.deepEqual([key(['F1', 'E1']), key(['W1', 'E1'])], ['gr', 'gh'], 'Sekundär Grün: Läuterung (Rot + Grün), Heilung (Blau + Grün)');
 });
 
 test('Ultimate (0.9.9): Die zuletzt markierte Karte bestimmt sie (Rot Todesfluss, Blau Manafluss, Grün Heilfluss), die Reihenfolge der Basis zählt nicht', () => {
@@ -698,7 +698,7 @@ test('Ultimate: mehrere Karten einer Farbe ergeben zusammen die Stufe (E2, F2, W
 });
 
 test('Läuterung kann auch eigene Nachziehtokens zerstören (ohne Gutschrift)', () => {
-  const { s, me } = combatSetup(11, ['W1', 'E1']);
+  const { s, me } = combatSetup(11, ['F1', 'E1']);
   me.stats.freeDraws = 2;
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
   assert.ok(M.apply(s, { pid: 0, type: 'lfp', pick: ['st'] }).ok);
@@ -803,8 +803,8 @@ test('Monster: Das Nebenelement (Folgemagie) ist das überlegene Element (Feuer 
 });
 
 test('Heilung der Verteidigung wirkt nach dem Schaden (seit 0.5.4, nur bis zum Maximum)', () => {
-  const { s, c, me } = combatSetup(11, ['F3', 'E3']);   // gegen Erde verteidigt Feuer (überlegen, gratis), Erde ist Kombokarte: Heilung 3
-  me.stats.hp = 8; me.stats.maxHp = 9; c.turn = 'a'; c.action = 'defense'; c.color = 'E'; c.pending = 6;
+  const { s, c, me } = combatSetup(11, ['W3', 'E3']);   // gegen Feuer verteidigt Wasser (überlegen, gratis), Erde ist Kombokarte: Heilung 3 (Blau + Grün)
+  me.stats.hp = 8; me.stats.maxHp = 9; c.turn = 'a'; c.action = 'defense'; c.color = 'F'; c.pending = 6;
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
   const pv = M.previewDefense(s, false);
   assert.ok(M.apply(s, { pid: 0, type: 'defend' }).ok);
@@ -827,8 +827,8 @@ test('Heilung nach dem Schaden verfällt, wenn der Verteidiger durch den Schaden
 });
 
 test('Heilung nach dem Schaden greift, wenn der Verteidiger den Schaden überlebt (seit 0.7.6.2)', () => {
-  const { s, c, me } = combatSetup(11, ['F3', 'E3']);
-  me.stats.hp = 2; me.stats.maxHp = 9; c.turn = 'a'; c.action = 'defense'; c.color = 'E'; c.pending = 4;
+  const { s, c, me } = combatSetup(11, ['W3', 'E3']);
+  me.stats.hp = 2; me.stats.maxHp = 9; c.turn = 'a'; c.action = 'defense'; c.color = 'F'; c.pending = 4;
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
   assert.ok(M.apply(s, { pid: 0, type: 'defend' }).ok);
   assert.ok(s.combat, 'der Kampf geht weiter');
@@ -836,7 +836,7 @@ test('Heilung nach dem Schaden greift, wenn der Verteidiger den Schaden überleb
 });
 
 test('Läuterung in der Verteidigung: Wahl per lfp (eigener Spiegelmarker, eigenes Nachziehtoken), danach wieder frei', () => {
-  const { s, c, me, op } = combatSetup(11, ['W1', 'E1']);   // gegen Feuer verteidigt Wasser (überlegen), Erde als Kombokarte: Läuterung 1
+  const { s, c, me, op } = combatSetup(11, ['F1', 'E1']);   // Feuer + Erde: Läuterung 1
   c.turn = 'a'; c.action = 'defense'; c.color = 'F'; c.pending = 1;
   me.stats.mirrorEl = { F: 1, E: 0, W: 0 }; me.stats.mirror = 1; me.stats.freeDraws = 1; op.stats.mirrorEl = { F: 0, E: 1, W: 0 }; op.stats.mirror = 1;
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
@@ -973,7 +973,7 @@ test('Schild wirkt gegen jede Farbe und verliert dabei Ladungen (seit 0.7.2.2, L
 
 
 test('Läuterung entfernt Heilmarker und Prismen des Gegners', () => {
-  const { s, me, op } = combatSetup(11, ['W3', 'E3']);
+  const { s, me, op } = combatSetup(11, ['F3', 'E3']);
   op.stats.heal = 2; op.stats.rainbow = 1; me.stats.freeDraws = 0;
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
   assert.ok(M.apply(s, { pid: 0, type: 'lfp', pick: ['oh', 'oh', 'or'] }).ok);

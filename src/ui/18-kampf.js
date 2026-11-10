@@ -1,6 +1,6 @@
 /* ---------- Kampf ---------- */
 // Zeilen [Schlüssel, Name, Primärfarbe, Sekundärfarbe]; geordnet nach der Sekundärfarbe, die den Charakter bestimmt (seit 0.9.9): Rot Schaden, Blau variabel, Grün Heilung/Verbesserung
-const ORD_ROWS = [['wt', 'Falle', 'W', 'F'], ['ra', 'Lähmung', 'E', 'F'], ['hs', 'Hellsicht', 'F', 'W'], ['ws', 'Schild', 'E', 'W'], ['gh', 'Heilung', 'F', 'E'], ['gr', 'Läuterung', 'W', 'E']];
+const ORD_ROWS = [['wt', 'Falle', 'W', 'F'], ['ra', 'Lähmung', 'E', 'F'], ['hs', 'Hellsicht', 'F', 'W'], ['ws', 'Schild', 'E', 'W'], ['gh', 'Heilung', 'W', 'E'], ['gr', 'Läuterung', 'F', 'E']];
 // Wirkung der Ultimate nach der Farbe der zuletzt markierten Karte (seit 0.9.9; vorher der ersten Karte)
 function ultiText(el, lv) {
   if (el === 'E') return 'Heilfluss (Erde): Du bekommst ' + lv + ' Heilmarker und heilst ' + lv + ' HP am Ende jeder deiner Angriffsphasen bis Kampfende (höchstens bis zu den max. HP).';
@@ -144,16 +144,14 @@ function comboRef(cx) {
     const o = ev && ev.valid && ev.ord && !(ev.levels.ulti > 0) ? ev.ord : null, uS0 = Math.min(3, mag.F, mag.E, mag.W);
     let fs = 20;   // Schriftgrad der Zeilen: füllt die Höhe des Fensters (seit 0.7.1.1); Texte und Hinweise skalieren mit
     const row = (name, els, lvl, text, on, tip) => '<div' + (tip ? ' title="' + esc(tip) + '"' : '') + ' class="cref p' + els[els.length - 1] + (on ? ' on' : '') + '" style="padding:1px 8px;margin-bottom:0;font-size:' + fs + 'px;flex:1 1 0;display:flex;flex-direction:column;justify-content:center;gap:0"><div style="line-height:1.15"><b>' + name + '</b> ' + els.map(el).join(' + ') + (lvl ? ' <span class="note" style="font-size:.8em">· Stufe ' + lvl + '</span>' : '') + (text ? '<small style="font-size:' + Math.round(fs * 0.72) + 'px">' + text + '</small>' : '') + '</div></div>';
-    // Seit 0.9.9 nach der Sekundärfarbe geordnet (zuletzt markierte Karte, bestimmt den Charakter: Rot Schaden, Blau variabel, Grün Heilung); gleiche Sekundärfarbe = gleiche Tönung, die Primärfarbe steht in jeder Zeile vorn. Die Ultimate (alle drei Farben) steht unter der Farbe ihrer Schlusskarte: Rot Todesfluss, Blau Manafluss, Grün Heilfluss.
+    // Hintergrund nach der Sekundärfarbe (zuletzt markierte Karte, bestimmt den Charakter: Rot Schaden, Blau variabel, Grün Heilung); gleiche Sekundärfarbe = gleiche Tönung; die Liste ist seit 0.9.9.12 nach der Primärfarbe sortiert, die Primärfarbe steht in jeder Zeile vorn. Die Ultimate (alle drei Farben) steht unter der Farbe ihrer Schlusskarte: Rot Todesfluss, Blau Manafluss, Grün Heilfluss.
     const ULTI_NAME = { F: 'Todesfluss', W: 'Manafluss', E: 'Heilfluss' }, SEC = ['F', 'W', 'E'];
     const ultiRow = (sc, lvl, text, on, tip) => row(ULTI_NAME[sc], [...SEC.filter(x => x !== sc), sc], lvl, text, on, tip);   // Basis (Primärfarben) zuerst, die Schlusskarte zuletzt
     const lastEl = normals.length ? normals[normals.length - 1].el : null;
     if (cols.length === 0) {   // noch nichts markiert: alle Kombos nach Sekundärfarbe, Wirkung als Tooltip
       fs = 17;
-      SEC.forEach(sc => {
-        ORD_ROWS.filter(r => r[3] === sc).forEach(r => { h += row(r[1], [r[2], r[3]], 0, '', false, ordText(r[0], 'S', true)); });
-        h += ultiRow(sc, 0, '', false, ultiText(sc, 'S') + ' Gespielt, indem die Schlusskarte zuletzt auf zwei andere Farben gelegt wird.');
-      });
+      SEC.forEach(pc => SEC.forEach(sc => ORD_ROWS.filter(r => r[2] === pc && r[3] === sc).forEach(r => { h += row(r[1], [r[2], r[3]], 0, '', false, ordText(r[0], 'S', true)); })));   // seit 0.9.9.12 nach Primärfarbe sortiert (Hintergrund weiter nach Sekundärfarbe)
+      SEC.forEach(sc => { h += ultiRow(sc, 0, '', false, ultiText(sc, 'S') + ' Gespielt, indem die Schlusskarte zuletzt auf zwei andere Farben gelegt wird.'); });
     } else if (cols.length === 1) {   // eine Farbe: die Kombos mit dieser Primärfarbe samt der Ultimates, die sie enthalten, genauer erklärt
       fs = 18;
       h += '<div class="note" style="margin-bottom:3px;font-size:14px">Erste Karte: ' + el(prim) + '. Markiere eine zweite Farbe:</div>';

@@ -23,8 +23,8 @@ function comboLevels(tiers, mag, prim) {
   }
   return lv;
 }
-// Schlüssel = Primärfarbe + Sekundärfarbe (F Rot/Feuer, W Blau/Wasser, E Grün/Erde). Seit 0.9.9 bestimmt die Sekundärfarbe den Charakter: Rot (Schaden): wt Falle (Blau + Rot), ra Lähmung (Grün + Rot); Blau (variabel): hs Hellsicht (Rot + Blau), ws Schild (Grün + Blau); Grün (Heilung/Verbesserung): gh Heilung (Rot + Grün), gr Läuterung (Blau + Grün).
-const ORD_COMBO = { WF: 'wt', EF: 'ra', FW: 'hs', EW: 'ws', FE: 'gh', WE: 'gr' };
+// Schlüssel = Primärfarbe + Sekundärfarbe (F Rot/Feuer, W Blau/Wasser, E Grün/Erde). Seit 0.9.9 bestimmt die Sekundärfarbe den Charakter: Rot (Schaden): wt Falle (Blau + Rot), ra Lähmung (Grün + Rot); Blau (variabel): hs Hellsicht (Rot + Blau), ws Schild (Grün + Blau); Grün (Heilung/Verbesserung): gh Heilung (Blau + Grün), gr Läuterung (Rot + Grün) (seit 0.9.9.12; zuvor Heilung Rot + Grün, Läuterung Blau + Grün).
+const ORD_COMBO = { WF: 'wt', EF: 'ra', FW: 'hs', EW: 'ws', FE: 'gr', WE: 'gh' };   // seit 0.9.9.12 getauscht: Heilung = Blau + Grün, Läuterung = Rot + Grün
 // Kombostufen auf die Plätze hs (Hellsicht), tr (Falle), sh (Schild), fe (Flüche), ew (Marker entfernen), gh (Heilung) abgebildet.
 function levelsFor(ev) {
   const out = { hs: 0, tr: 0, sh: 0, fe: 0, ew: 0, gh: 0, ulti: ev.levels.ulti }, o = ev.ord;
