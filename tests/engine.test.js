@@ -1404,7 +1404,7 @@ test('Zermürbung: Rundenzähler der Weltphase, ab Runde exhaustRounds + 1 schen
 
 test('Erlaubte Aktionen je Phase (0.9.9.5): Standard – Erholen und Nachziehen nur in der Angriffsphase, alles andere erlaubt', () => {
   const { s, c } = combatSetup(11, ['F3']);
-  assert.equal(M.DEFAULT_RULES.allowDef.defend, 2, 'Standard: Verteidigen nur nach einem Angriff'); c.pending = 3;
+  assert.deepEqual(M.DEFAULT_RULES.allowDef, { defend: 2, recover: 3, draw: 3, pass: 1, echo: 1, combo: 1 }, 'Standard der Verteidigung'); c.pending = 3;
   for (const k of ['attack', 'recover', 'draw', 'pass', 'echo', 'combo']) assert.equal(M.allowed(s, 'attack', k), true, 'Angriff ' + k);
   for (const k of ['defend', 'pass', 'echo', 'combo']) assert.equal(M.allowed(s, 'defense', k), true, 'Verteidigung ' + k);
   for (const k of ['recover', 'draw']) assert.equal(M.allowed(s, 'defense', k), false, 'Verteidigung ' + k);
