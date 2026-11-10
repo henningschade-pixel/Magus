@@ -6,10 +6,10 @@ function onAct(d) {
     case 'specspeed': setSpecSpeed(specSpeed === 1 ? 3 : specSpeed === 3 ? 99 : 1); break;
     case 'home': homeMenu(); break;
     case 'stopen': statsOpen(true); break;
-    case 'sndtoggle': Snd.toggle(); Snd.play('ui_click', 0, .8); if (menuView) { setTimeout(menuView, 350); menuView(); } break;
+    case 'sndtoggle': Snd.toggle(); Snd.play('ui_click', 0, .8); if (menuView) { setTimeout(menuRedraw, 350); menuRedraw(); } break;
     case 'menu': showStart(d.p); break;
-    case 'rulephase': setPhaseRule(d.ph, d.k); if (menuView) menuView(); break;
-    case 'rule': if (d.k === 'all') { RULE_OPTS.forEach(o => setGameRule(o.k, 'def')); resetPhaseRules(); } else setGameRule(d.k, d.d); if (menuView) menuView(); break;
+    case 'rulephase': setPhaseRule(d.ph, d.k); menuRedraw(); break;
+    case 'rule': if (d.k === 'all') { RULE_OPTS.forEach(o => setGameRule(o.k, 'def')); resetPhaseRules(); } else setGameRule(d.k, d.d); menuRedraw(); break;
     case 'quit': try { window.close(); } catch (e) {} setTimeout(() => showStart('quit'), 150); break;
     case 'homeset': homeSettings(); break;
     case 'homeback': homeMenuDraw(); break;
