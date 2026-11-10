@@ -1,7 +1,7 @@
 /* ---------- Zugwechsel (Werte der Zugwechsel-Werkstatt): Der Rand teilt sich in der Mitte, zwei Linien laufen links und rechts zur anderen Seite ---------- */
 let turnSide = null, turnAnim = null, turnWait = 0, cardsUntil = 0;   // cardsUntil: bis wann Karten fliegen oder verbrennen
 const TURN = { dur: 1.1, pause: .15, width: 4, glow: 26, head: 1, tail: .35, comet: .8, inner: 70, pulse: .35 };
-function turnClasses() { const live = !turnAnim || turnAnim.done; stage.classList.toggle('turn-me', turnSide === 'me' && live); stage.classList.toggle('turn-opp', turnSide === 'opp' && live); }
+function turnClasses() { const live = !turnAnim || turnAnim.done; stage.classList.toggle('react', !!(G && !G.over && G.phase === 'combat' && G.combat && G.combat.action === 'defense' && (turnSide === 'me' || turnSide === 'opp'))); stage.classList.toggle('turn-me', turnSide === 'me' && live); stage.classList.toggle('turn-opp', turnSide === 'opp' && live); }
 function turnSync() {
   const want = G && !G.over ? (myTurn() ? 'me' : 'opp') : null;
   if ((!turnAnim || turnAnim.done) && want !== turnSide) {

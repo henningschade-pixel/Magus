@@ -690,6 +690,11 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Tests:** Drei Tests angepasst (Nachziehmarker Weltphase, Nachziehlimit Kauf, Nachziehlimit Weltphase; der Marker-Reset läuft jetzt über den Händler), neuer Test „Magie kaufen und Upgrades sind keine Aktion mehr“. `tests/golden.json` ist neu erzeugt (absichtliche Regeländerung).
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
 
+## Änderung 0.9.9.11 (10.11.)
+
+- **Aktion und Reaktion sichtbar:** In der Kampfmitte steht unter der Rundenzeile eine Plakette „Du/<Name> Aktion“ (Angriffsphase, Gold) bzw. „Du/<Name> Reaktion auf N Schaden“ (Verteidigungsphase, Blau). Der Zugrahmen bleibt in der Aktion gold und wird in der Reaktion blau. Der Zugmarker wandert unverändert.
+- **Stand der Umsetzung (Prüfung):** Eine Reaktion entsteht derzeit nur nach einem Angriff mit Schaden. Folgt auf eine Aktion kein Angriff (Erholen, Nachziehen, Passen, Angriff ohne Schaden), gibt es keine Reaktion; der andere Spieler beginnt direkt mit seiner Aktion. Wirksam sind daher in der Verteidigungsphase die Stufen *an*, *aus* und *nach Angriff*; *ohne Angriff* greift nie. Die Einstellungen der Verteidigungsphase wirken auf Verteidigen, Erholen, Nachziehen, Passen, Echo und Kombo (Engine, Knöpfe, Vorschau, KI-Auswahl).
+
 ## Änderung 0.9.9.10 (10.11.)
 
 - **Standardwerte Verteidigungsphase:** Verteidigen *nach Angriff* (2), Erholen *ohne Angriff* (3), Nachziehen *ohne Angriff* (3), Passen *an*, Echo setzen *an*, Kombo wirken *an*. Da die Verteidigung derzeit nur nach einem Angriff entsteht, sind Erholen und Nachziehen dort im Spielverlauf weiterhin nicht verfügbar. Angriffsphase unverändert (alles an).

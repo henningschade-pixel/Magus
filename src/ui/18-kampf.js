@@ -63,6 +63,12 @@ function lfSummary(cx, lvl) {
 // Gold, das im Tempel eingesetzt werden müsste, um die nächste Tempelstufe zu erreichen (n Gold ergeben n(n+1)/2 Punkte)
 function goldForNext(pool, level) { const need = M.nextLevelCost(level) - pool; let n = 1; while (M.pointsForGold(n) < need && n < 20) n++; return need <= 0 ? 0 : n; }
 const fracHTML = (pool, level) => pool + '/' + M.nextLevelCost(level) + ' <span class="gneed" title="Gold, das im Tempel eingesetzt werden müsste, um die nächste Stufe zu erreichen">(' + goldForNext(pool, level) + ' Gold)</span>';
+// Aktion oder Reaktion (seit 0.9.9.11): Wer die Aktion ausführt (Angriffsphase) und wer reagiert (Verteidigungsphase), steht als Plakette in der Kampfmitte; der Zugrahmen färbt sich bei der Reaktion blau
+function phaseBadge(c, my) {
+  const react = c.action === 'defense', who = my ? 'Du' : esc(c.sides[c.turn].name);
+  const tip = react ? who + (my ? ' reagierst' : ' reagiert') + ' auf den Angriff (' + c.pending + ' Schaden): Verteidigen oder eine andere erlaubte Reaktion. Danach folgt die nächste Aktion.' : who + (my ? ' bist' : ' ist') + ' in der Aktion: Angriff oder eine andere erlaubte Aktion. Danach reagiert der andere Spieler.';
+  return '<div class="phasebadge ' + (react ? 'react' : 'act') + '" title="' + tip + '"><span class="pbwho">' + who + '</span> <b>' + (react ? 'Reaktion' : 'Aktion') + '</b>' + (react ? ' <span class="pbsub">auf ' + c.pending + ' Schaden</span>' : '') + '</div>';
+}
 let manaPv = 0;   // Manakosten der markierten Karten, als rote Vorschau am Mana-Wert
 function combatCenter(cx) {
   manaPv = 0;
@@ -72,6 +78,7 @@ function combatCenter(cx) {
     const tip = 'Eine Kampfrunde ist ein Angriffszug jeder Seite.' + (ex > 0 ? ' Nach je ' + ex + ' Runden steigt die Erschöpfung um 1: Beide Seiten verlieren am Ende ihres Angriffszugs so viele HP, wie die Erschöpfung hoch ist.' : '') + (mr > 0 ? ' Nach ' + mr + ' Runden endet der Kampf unentschieden.' : '');
     return '<div class="note" style="margin-top:-2px" title="' + tip + '">Runde <b>' + (mr > 0 ? Math.min(mr, rd) : rd) + '</b>' + (mr > 0 ? ' von ' + mr : '') + (lv > 0 ? ' · <b style="color:#e0605a">Erschöpfung ' + lv + '</b>' : (ex > 0 ? ' · Erschöpfung ab Runde ' + (ex + 1) : '')) + '</div>';
   })();
+  if (!(c.forced && (c.forced.kind === 'trap' || c.forced.kind === 'sight'))) h += phaseBadge(c, my);
   if (c.forced && c.forced.kind === 'trap') {   // Falle: eine der gezogenen Karten wählen (ich, im Vordergrund) bzw. warten (Gegner)
     const vs = c.sides.a.ctrl === c.forced.pid ? c.sides.a : c.sides.b;
     h += c.forced.pid === ME
