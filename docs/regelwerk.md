@@ -690,6 +690,16 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Tests:** Drei Tests angepasst (Nachziehmarker Weltphase, Nachziehlimit Kauf, Nachziehlimit Weltphase; der Marker-Reset läuft jetzt über den Händler), neuer Test „Magie kaufen und Upgrades sind keine Aktion mehr“. `tests/golden.json` ist neu erzeugt (absichtliche Regeländerung).
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
 
+## Änderung 0.9.9.13 (10.11.)
+
+- **Reaktion ohne Angriff (Regeländerung):** Jeder Zug besteht aus der Aktion eines Spielers und der Reaktion des anderen. Entscheidet sich Spieler A in seiner Aktion gegen einen Angriff (Erholen, Nachziehen, Passen) oder bleibt sein Angriff ohne Schaden, hat Spieler B dennoch eine Reaktionsphase (Verteidigungsphase ohne eingehenden Schaden). Dort gelten die Einstellungen der Verteidigungsphase mit den Stufen *an* und *ohne Angriff*; *nach Angriff* und *aus* gelten dort nicht. Danach führt B seine eigene Aktion aus.
+- **Optionen der Reaktion ohne Angriff:** Erholen (Mana wie in der Aktion), Nachziehen (Hand tauschen, Mana bei rotem Marker) und Passen (nicht reagieren). *Verteidigen* sowie Echo und Kombo entfallen, weil nichts zu verteidigen ist.
+- **Entfällt die Reaktion?** Ja, wenn Erholen und Nachziehen dort nicht erlaubt oder nicht sinnvoll sind (Mana voll bzw. zu wenig Mana für den roten Nachziehmarker); Passen allein löst keine Reaktion aus. Dann beginnt der Gegner gleich mit seiner Aktion.
+- **Standard:** Erholen und Nachziehen stehen auf *ohne Angriff*. Nach einer Aktion ohne Angriff kann der Gegner sich also vor seiner Aktion erholen oder nachziehen.
+- **Zählung:** Die Reaktion zählt nicht als Angriffszug (Kampfrunden, Erschöpfung, Fluss-Effekte unverändert: sie wirken am Ende der Aktion). Die Reaktion zählt aber als Kampfschritt im Verlauf. Passen in der Reaktion beendet nicht die Serie der Passen-Züge.
+- **KI:** Sie erholt sich in der Reaktion ohne Angriff, wenn es erlaubt ist und Mana fehlt, sonst passt sie. Nachziehen wählt sie dort nicht.
+- Anzeige: Plakette „Reaktion ohne Angriff“ und blauer Rahmen wie bei der Reaktion auf einen Angriff. Tests: Kampftests setzen Erholen/Nachziehen der Verteidigung auf aus (alter Ablauf); neuer Test „Reaktion ohne Angriff“; `golden.json` neu erzeugt.
+
 ## Änderung 0.9.9.12 (10.11.)
 
 - **Heilung und Läuterung getauscht (Regeländerung):** Heilung wirkt jetzt mit **Blau + Grün** (Primärfarbe Blau, Sekundärfarbe Grün), Läuterung mit **Rot + Grün** (zuvor Heilung Rot + Grün, Läuterung Blau + Grün). Wirkung, Stufen und Echo bleiben unverändert.

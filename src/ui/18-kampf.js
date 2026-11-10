@@ -66,8 +66,8 @@ const fracHTML = (pool, level) => pool + '/' + M.nextLevelCost(level) + ' <span 
 // Aktion oder Reaktion (seit 0.9.9.11): Wer die Aktion ausführt (Angriffsphase) und wer reagiert (Verteidigungsphase), steht als Plakette in der Kampfmitte; der Zugrahmen färbt sich bei der Reaktion blau
 function phaseBadge(c, my) {
   const react = c.action === 'defense', who = my ? 'Du' : esc(c.sides[c.turn].name);
-  const tip = react ? who + (my ? ' reagierst' : ' reagiert') + ' auf den Angriff (' + c.pending + ' Schaden): Verteidigen oder eine andere erlaubte Reaktion. Danach folgt die nächste Aktion.' : who + (my ? ' bist' : ' ist') + ' in der Aktion: Angriff oder eine andere erlaubte Aktion. Danach reagiert der andere Spieler.';
-  return '<div class="phasebadge ' + (react ? 'react' : 'act') + '" title="' + tip + '"><span class="pbwho">' + who + '</span> <b>' + (react ? 'Reaktion' : 'Aktion') + '</b>' + (react ? ' <span class="pbsub">auf ' + c.pending + ' Schaden</span>' : '') + '</div>';
+  const tip = react ? who + (my ? ' reagierst' : ' reagiert') + (c.pending > 0 ? ' auf den Angriff (' + c.pending + ' Schaden): Verteidigen oder eine andere erlaubte Reaktion.' : ', obwohl kein Angriff mit Schaden erfolgte: Erholen, Nachziehen oder Passen, soweit in den Einstellungen für „ohne Angriff“ erlaubt.') + ' Danach folgt die eigene Aktion.' : who + (my ? ' bist' : ' ist') + ' in der Aktion: Angriff oder eine andere erlaubte Aktion. Danach reagiert der andere Spieler.';
+  return '<div class="phasebadge ' + (react ? 'react' : 'act') + '" title="' + tip + '"><span class="pbwho">' + who + '</span> <b>' + (react ? 'Reaktion' : 'Aktion') + '</b>' + (react ? ' <span class="pbsub">' + (c.pending > 0 ? 'auf ' + c.pending + ' Schaden' : 'ohne Angriff') + '</span>' : '') + '</div>';
 }
 let manaPv = 0;   // Manakosten der markierten Karten, als rote Vorschau am Mana-Wert
 function combatCenter(cx) {
@@ -110,8 +110,8 @@ function combatCenter(cx) {
         if (!ev.affordable) prev += '<div class="bad">Zu wenig Mana.</div>';
       }
     } else {
-      const ev = M.evalDefense(cx.myStats, sel, c.color, { combo: M.allowed(G, 'defense', 'combo') });
-      if (!sel.length) prev = '';
+      const ev = c.pending > 0 ? M.evalDefense(cx.myStats, sel, c.color, { combo: M.allowed(G, 'defense', 'combo') }) : { valid: true };   // Reaktion ohne Angriff: nichts zu verteidigen
+      if (!sel.length || !c.pending) prev = '';
       else if (!ev.valid) prev = '<span class="bad">' + esc(ev.reason) + '</span>';
       else { if (ev.cost > 0) manaPv = ev.cost; prev = ''; canExec = ev.affordable; val = ev.block || 0; if (ev.ord) { const r = ORD_ROWS.find(x => x[0] === ev.ord.key), late = ev.ord.key === 'gh' || ev.ord.key === 'wt' || ev.ord.key === 'ws'; prev += '<div class="note"><b>' + r[1] + '</b> Stufe ' + ev.ord.lvl + (late ? ' nach' : ' vor') + ' der Verteidigung: ' + ordText(r[0], ev.ord.lvl) + '</div>'; if (ev.ord.key === 'gr') prev += lfSummary(cx, ev.ord.lvl); } if (!ev.affordable) prev += '<div class="bad">Zu wenig Mana.</div>'; }
     }
@@ -120,11 +120,11 @@ function combatCenter(cx) {
   const canFlee = my && M.canFlee(G, ME), rg = M.recoverGain(G), manaFull = cx.myStats.mana >= cx.myStats.maxMana, drawNoMana = cx.myStats.mana < M.drawManaCost(G, ME);   // Erholen bei vollem Mana und Nachziehen ohne das Mana für den roten Marker sind sinnlos: Knöpfe inaktiv
   if (!canFlee) fleeAsk = false;
   const AL = k => M.allowed(G, atk ? 'attack' : 'defense', k);   // Einstellungen: erlaubte Aktionen je Phase (nicht erlaubte Knöpfe fehlen)
-  const bRecover = AL('recover') ? '<button class="btn blue" data-act="recover" ' + (my && !manaFull ? '' : 'disabled') + ' title="' + (my && manaFull ? 'Dein Mana ist bereits voll' : 'Nur du erhältst +' + rg + ' Mana' + (atk ? '' : '; der Schaden wird ohne Verteidigung hingenommen')) + '">Erholen (+' + rg + ')</button>' : '';
-  const bDraw = AL('draw') ? '<button class="btn" data-act="draw" ' + (my && !drawNoMana ? '' : 'disabled') + ' title="' + (my && drawNoMana ? 'Zu wenig Mana: Bei rotem Nachziehmarker kostet Nachziehen Mana' : 'Hand tauschen, ersetzt ' + (atk ? 'den Angriff' : 'die Verteidigung; der Schaden wird hingenommen')) + '">Nachziehen</button>' : '';
-  const bPass = AL('pass') ? '<button class="btn" data-act="pass" ' + (my ? '' : 'disabled') + (atk ? '' : ' title="Passen: keine Verteidigung, den Schaden hinnehmen (kein Mana)"') + '>Passen</button>' : '';
+  const bRecover = AL('recover') ? '<button class="btn blue" data-act="recover" ' + (my && !manaFull ? '' : 'disabled') + ' title="' + (my && manaFull ? 'Dein Mana ist bereits voll' : 'Nur du erhältst +' + rg + ' Mana' + (atk || !c.pending ? '' : '; der Schaden wird ohne Verteidigung hingenommen')) + '">Erholen (+' + rg + ')</button>' : '';
+  const bDraw = AL('draw') ? '<button class="btn" data-act="draw" ' + (my && !drawNoMana ? '' : 'disabled') + ' title="' + (my && drawNoMana ? 'Zu wenig Mana: Bei rotem Nachziehmarker kostet Nachziehen Mana' : 'Hand tauschen, ersetzt ' + (atk ? 'den Angriff' : c.pending ? 'die Verteidigung; der Schaden wird hingenommen' : 'die Reaktion')) + '">Nachziehen</button>' : '';
+  const bPass = AL('pass') ? '<button class="btn" data-act="pass" ' + (my ? '' : 'disabled') + (atk ? '' : c.pending ? ' title="Passen: keine Verteidigung, den Schaden hinnehmen (kein Mana)"' : ' title="Passen: nicht reagieren, die eigene Aktion folgt"') + '>Passen</button>' : '';
   if (atk) h += (AL('attack') ? '<button class="btn danger" data-act="attack" ' + (my && canExec ? '' : 'disabled') + ' title="Angriff ausführen: Schaden der markierten Karten">Angriff (' + val + ')</button>' : '') + bRecover + bDraw + bPass + (G.rules.fleeAllowed ? '<button class="btn" data-act="fleeask" ' + (canFlee ? '' : 'disabled') + ' title="Den Kampf abbrechen: kein Sieger, keine Siegpunkte. Geht nur im eigenen Angriffszug, wenn der Gegner kein Mana mehr hat und du nicht unter einem Todesfluss stehst.">Fliehen</button>' : '');   // Fliehen seit 0.9.1 abgeschaltet (Regel fleeAllowed)
-  else if (my) h += (AL('defend') ? '<button class="btn primary" data-act="defend" ' + (canExec ? '' : 'disabled') + ' title="Verteidigung ausführen: Block der markierten Karten">Verteidigen (' + val + ')</button>' : '') + bRecover + bDraw + bPass;
+  else if (my) h += (AL('defend') && c.pending > 0 ? '<button class="btn primary" data-act="defend" ' + (canExec ? '' : 'disabled') + ' title="Verteidigung ausführen: Block der markierten Karten">Verteidigen (' + val + ')</button>' : '') + bRecover + bDraw + bPass;
   h += '</div>';
   if (fleeAsk && canFlee) {   // Warnung: Fliehen muss bestätigt werden
     const nextMe = c.def === ME;

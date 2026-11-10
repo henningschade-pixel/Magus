@@ -106,6 +106,10 @@ function combatPlan(state, pid) {
   const d = side.deck, hand = handList(d), A = a => Object.assign({ pid }, a);
   const s = side.stats, Q = P(pid);
   const canFlee = M.canFlee(state, pid) && (state.idleTurns || 0) < Q.fleeIdle;   // lange kein Kampf entschieden: nicht mehr fliehen, damit der Kampf einen Sieger bekommt (sonst Patt-Schleife Angreifen–Fliehen)
+  if (c.action === 'defense' && !c.pending) {   // Reaktion ohne Angriff (seit 0.9.9.13): Erholen, wenn erlaubt und Mana fehlt, sonst Passen; Nachziehen wählt die KI hier nicht (die Aktion folgt gleich)
+    if (M.allowed(state, 'defense', 'recover') && s.mana < s.maxMana) return [A({ type: 'recover' })];
+    return [A({ type: 'pass' })];
+  }
   if (c.action === 'attack') {
     if (Q.fleeHits > 0 && side.kind === 'monster' && canFlee) {   // Ich führe das Monster, der Angreifer hat kein Mana mehr: Fliehe ich, bleibt das angeschlagene Monster stehen, und ich bin als Nächster dran, es selbst zu besiegen (die Beute geht an mich)
       const me = state.players[pid].stats, net = outlook(state, pid, c.slot);

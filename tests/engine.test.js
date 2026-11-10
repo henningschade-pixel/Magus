@@ -1403,7 +1403,7 @@ test('Zermürbung: Rundenzähler der Weltphase, ab Runde exhaustRounds + 1 schen
 });
 
 test('Erlaubte Aktionen je Phase (0.9.9.5): Standard – Erholen und Nachziehen nur in der Angriffsphase, alles andere erlaubt', () => {
-  const { s, c } = combatSetup(11, ['F3']);
+  const { s, c } = combatSetup(11, ['F3']); s.rules.allowDef = Object.assign({}, M.DEFAULT_RULES.allowDef);
   assert.deepEqual(M.DEFAULT_RULES.allowDef, { defend: 2, recover: 3, draw: 3, pass: 1, echo: 1, combo: 1 }, 'Standard der Verteidigung'); c.pending = 3;
   for (const k of ['attack', 'recover', 'draw', 'pass', 'echo', 'combo']) assert.equal(M.allowed(s, 'attack', k), true, 'Angriff ' + k);
   for (const k of ['defend', 'pass', 'echo', 'combo']) assert.equal(M.allowed(s, 'defense', k), true, 'Verteidigung ' + k);
@@ -1463,4 +1463,30 @@ test('Erlaubte Aktionen: Verteidigung „nach Angriff“ (2) und „ohne Angriff
   t.s.rules.allowDef = Object.assign({}, M.DEFAULT_RULES.allowDef, { pass: 3, recover: 2 });
   assert.equal(M.allowed(t.s, 'defense', 'pass'), true, 'ohne Angriff und Passen erlaubt');
   t.c.pending = 3; assert.equal(M.allowed(t.s, 'defense', 'pass'), false, 'Passen nur ohne Angriff, Erholen nur nach Angriff');
+});
+
+test('Reaktion ohne Angriff (0.9.9.13): Nach einer Aktion ohne Angriff reagiert die Gegenseite, wenn Erholen oder Nachziehen „ohne Angriff“ erlaubt sind', () => {
+  const dflt = { allowDef: Object.assign({}, M.DEFAULT_RULES.allowDef) };
+  let { s, c, me, op } = combatSetup(11, ['F3'], { rules: dflt });
+  me.stats.mana = 5; op.stats.mana = 2;
+  assert.ok(M.apply(s, { pid: 0, type: 'recover' }).ok);   // Aktion ohne Angriff
+  assert.equal(c.action, 'defense'); assert.equal(c.pending, 0); assert.equal(c.sides[c.turn].ctrl, op.ctrl, 'die Gegenseite reagiert');
+  assert.equal(M.apply(s, { pid: op.ctrl, type: 'defend' }).ok, false, 'ohne Angriff gibt es nichts zu verteidigen');
+  assert.equal(M.apply(s, { pid: 0, type: 'recover' }).ok, false, 'nicht am Zug');
+  const hp = op.stats.hp, r = M.apply(s, { pid: op.ctrl, type: 'recover' });
+  assert.ok(r.ok, r.error); assert.equal(op.stats.mana, 2 + M.recoverGain(s)); assert.equal(op.stats.hp, hp);
+  assert.equal(c.action, 'attack', 'danach folgt die eigene Aktion'); assert.equal(c.sides[c.turn].ctrl, op.ctrl);
+  // Passen in der Reaktion: keine Wirkung, danach die eigene Aktion
+  ({ s, c, me, op } = combatSetup(11, ['F3'], { rules: dflt })); me.stats.mana = 5; op.stats.mana = 2;
+  M.apply(s, { pid: 0, type: 'pass' }); assert.equal(c.action, 'defense');
+  assert.ok(M.apply(s, { pid: op.ctrl, type: 'pass' }).ok); assert.equal(c.action, 'attack'); assert.equal(op.stats.mana, 2);
+  // Nachziehen in der Reaktion
+  ({ s, c, me, op } = combatSetup(11, ['F3'], { rules: dflt })); op.stats.mana = 2;
+  M.apply(s, { pid: 0, type: 'pass' }); assert.ok(M.apply(s, { pid: op.ctrl, type: 'draw' }).ok); assert.equal(c.action, 'attack');
+  // „nach Angriff“: keine Reaktion ohne Angriff, die Gegenseite beginnt gleich mit ihrer Aktion
+  ({ s, c, me, op } = combatSetup(11, ['F3'], { rules: { allowDef: Object.assign({}, M.DEFAULT_RULES.allowDef, { recover: 2, draw: 2 }) } })); op.stats.mana = 2;
+  M.apply(s, { pid: 0, type: 'pass' }); assert.equal(c.action, 'attack'); assert.equal(c.sides[c.turn].ctrl, op.ctrl);
+  // volles Mana und kein Nachziehen: Erholen ist sinnlos, keine Reaktion
+  ({ s, c, me, op } = combatSetup(11, ['F3'], { rules: { allowDef: Object.assign({}, M.DEFAULT_RULES.allowDef, { draw: 0 }) } })); op.stats.mana = op.stats.maxMana;
+  M.apply(s, { pid: 0, type: 'pass' }); assert.equal(c.action, 'attack');
 });

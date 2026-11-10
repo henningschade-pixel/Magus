@@ -471,7 +471,7 @@ test('Erschöpfung: Hintergrund dunkelt ab, Ankündigung erscheint, der HP-Abzug
     await p.goto(url); await p.waitForTimeout(500);
     await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
     await p.evaluate(() => {
-      const G = window.__magus.state, M = window.Magus; G.rules.exhaustRounds = 1;
+      const G = window.__magus.state, M = window.Magus; G.rules.exhaustRounds = 1; G.rules.allowDef = Object.assign({}, M.DEFAULT_RULES.allowDef, { recover: 0, draw: 0 });   // ohne Reaktion ohne Angriff
       M.apply(G, { pid: 0, type: 'combat', elem: 'F' });
       const c = G.combat; c.sides.a.stats.hp = c.sides.a.stats.maxHp = 50; c.sides.b.stats.hp = c.sides.b.stats.maxHp = 50; window.__magus.pump();
     });

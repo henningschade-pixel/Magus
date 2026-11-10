@@ -232,6 +232,22 @@ function passAttackTurn(state) {
   deathTick(state, c.sides[c.turn], (c.atkTurns || 0) + 1);
   c.turn = c.turn === 'a' ? 'b' : 'a'; c.action = 'attack'; c.color = null; c.pending = 0; c.lfp = null;
   c.atkTurns = (c.atkTurns || 0) + 1;   // ein Angriffszug ist vorbei (Angriff ohne Schaden, Passen, Erholen, Nachziehen)
+  if (!hpDecided(state) && reactionUseful(state)) c.action = 'defense';   // seit 0.9.9.13: Auch ohne Angriff reagiert die Gegenseite (Reaktion ohne Angriff, pending 0); danach folgt ihre eigene Aktion
+}
+// Reaktion ohne Angriff (seit 0.9.9.13): Sie entsteht nur, wenn die Einstellungen für die Verteidigungsphase (allowDef, Stufen an / ohne Angriff) dort Erholen oder Nachziehen erlauben und beides etwas bewirken kann; sonst beginnt die Gegenseite gleich mit ihrer Aktion. Verteidigen gibt es ohne Angriff nicht
+function reactionUseful(state) {
+  const c = state.combat, side = c.sides[c.turn], keep = c.action, kp = c.pending;
+  c.action = 'defense'; c.pending = 0;
+  const rec = allowed(state, 'defense', 'recover') && side.stats.mana < side.stats.maxMana;
+  const drw = allowed(state, 'defense', 'draw') && side.stats.mana >= drawManaCost(state, side.ctrl);
+  c.action = keep; c.pending = kp;
+  return !!(rec || drw);
+}
+// Ende der Reaktion ohne Angriff: dieselbe Seite führt jetzt ihre Aktion aus
+function endReaction(state) {
+  const c = state.combat, side = c.sides[c.turn];
+  side.deck.marks = []; c.action = 'attack'; c.color = null; c.pending = 0; c.lfp = null;
+  return { ok: true, combatEnd: finishStep(state, { who: side.key === 'a' ? 0 : 1 }) };
 }
 
 // HP nach einer Heilung um lvl: höchstens bis zu den maximalen HP, nie weniger als vorher
@@ -500,9 +516,10 @@ function applyCombat(state, a) {
     case 'mark': { const e = toggleMark(side.deck, a.slot, side.stats.limit); return e ? fail(e) : { ok: true }; }
     case 'lfp': { if (c.action !== 'attack' && c.action !== 'defense') return fail('Nur im Angriffs- oder Verteidigungszug.'); const ok = ['sm', 'om', 'sd', 'od', 'sh', 'oh', 'sr', 'or', 'st', 'ot']; c.lfp = a.pick === null ? null : (Array.isArray(a.pick) ? a.pick : []).filter(x => typeof x === 'string' && ok.includes(x.split(':')[0]) && (x.indexOf(':') < 0 || ELEMENTS.includes(x.split(':')[1]))).slice(0, 3); return { ok: true }; }
     case 'attack': if (c.action !== 'attack') return fail('Jetzt wird verteidigt.'); if (!allowed(state, 'attack', 'attack')) return fail('Angreifen ist in den Einstellungen für die Angriffsphase abgeschaltet.'); return execAttack(state);
-    case 'defend': if (c.action !== 'defense') return fail('Jetzt wird angegriffen.'); if (!allowed(state, 'defense', 'defend')) return fail('Verteidigen ist in den Einstellungen für die Verteidigungsphase abgeschaltet.'); return execDefense(state, false);
+    case 'defend': if (c.action !== 'defense') return fail('Jetzt wird angegriffen.'); if (!c.pending) return fail('Ohne Angriff gibt es nichts zu verteidigen.'); if (!allowed(state, 'defense', 'defend')) return fail('Verteidigen ist in den Einstellungen für die Verteidigungsphase abgeschaltet.'); return execDefense(state, false);
     case 'pass':
       if (!allowed(state, c.action, 'pass')) return fail('Passen ist in den Einstellungen für diese Phase abgeschaltet.');
+      if (c.action === 'defense' && !c.pending) { log(state, side.name + ' reagiert nicht.', side.ctrl); return endReaction(state); }
       if (c.action === 'defense') return execDefense(state, true);
       side.deck.marks = []; side.passed = (side.passed || 0) + 1; log(state, side.name + ' passt.', side.ctrl);   // passed: Passen-Züge in Folge (die KI greift dann eher an)
       passAttackTurn(state); return { ok: true, combatEnd: finishStep(state) };
@@ -521,6 +538,7 @@ function applyCombat(state, a) {
       const gain = recoverGain(state);
       side.stats.mana = Math.min(side.stats.maxMana, side.stats.mana + gain);
       side.deck.marks = [];
+      if (c.action === 'defense' && !c.pending) { log(state, side.name + ' erholt sich in der Reaktion: +' + gain + ' Mana.', side.ctrl, { kind: 'recover', who: side.ctrl }); return endReaction(state); }
       if (c.action === 'defense') return execDefense(state, true, 'recover');   // Verteidigungsphase: der Schaden wird hingenommen (das Protokoll steht in execDefense)
       log(state, side.name + ' erholt sich: +' + gain + ' Mana.', side.ctrl, { kind: 'recover', who: side.ctrl });   // Verteidigungsphase: der Schaden wird hingenommen
       passAttackTurn(state); return { ok: true, combatEnd: finishStep(state) };
@@ -531,6 +549,7 @@ function applyCombat(state, a) {
       if (side.stats.mana < dmc) return fail('Bei rotem Nachziehmarker kostet Nachziehen ' + dmc + ' Mana. Es ist nicht genug Mana da.');
       if (!drawPhase(state, side.deck)) return fail('Alle Karten sind gesperrt, es gibt nichts zu tauschen.');
       side.stats.mana -= dmc;
+      if (c.action === 'defense' && !c.pending) { log(state, side.name + ' zieht in der Reaktion Karten nach' + (dmc ? ' und zahlt bei rotem Marker ' + dmc + ' Mana' : '') + '.', side.ctrl); return endReaction(state); }
       if (c.action === 'defense') return execDefense(state, true, 'draw');
       log(state, side.name + ' zieht Karten nach (ersetzt den Angriff)' + (dmc ? ' und zahlt bei rotem Marker ' + dmc + ' Mana' : '') + '.', side.ctrl);
       passAttackTurn(state); return { ok: true, combatEnd: finishStep(state) };

@@ -6,7 +6,7 @@ const STATS = (o) => Object.assign({ mana: 9, maxMana: 9, mag: { F: 3, E: 3, W: 
 // Kampf gegen das Feuermonster mit vorgegebenen Handkarten; me = Seite des Spielers 0, op = Monsterseite
 function combatSetup(seed, hand, opts) {
   opts = opts || {};
-  const s = M.newGame({ seed: seed || 11, ai: [false, false], first: 0, rules: { surplusSp: 0 } });   // Kampftests setzen die Magie hoch; Überschusspunkte würden Siegpunkte verschieben
+  const s = M.newGame({ seed: seed || 11, ai: [false, false], first: 0, rules: Object.assign({ surplusSp: 0, allowDef: Object.assign({}, M.DEFAULT_RULES.allowDef, { recover: 0, draw: 0 }) }, opts.rules || {}) });   // seit 0.9.9.13: Erholen und Nachziehen in der Verteidigungsphase aus (wie bis 0.9.9.12), damit Kampftests ohne Reaktion ohne Angriff laufen   // Kampftests setzen die Magie hoch; Überschusspunkte würden Siegpunkte verschieben
   M.apply(s, { pid: 0, type: 'combat', elem: 'F' });
   const c = s.combat, me = c.sides.a, op = c.sides.b;
   me.stats.limit = opts.limit || 3; me.stats.mag = { F: 3, E: 3, W: 3 }; me.stats.mana = me.stats.maxMana = 9;
