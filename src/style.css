@@ -102,7 +102,6 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .sbody .statrow{gap:6px;margin:3px 0}.sbody .statrow img{width:22px;height:22px}.sbody .statrow b{min-width:33px}
 .bar.sb{flex:1;min-width:24px;height:9px}
 .bd{position:relative;flex:none}.bd img{width:100%;height:100%;display:block}
-.magcost{margin-top:2px;font-size:14px;line-height:1.15;text-align:center;color:var(--dim,#cbb98f);white-space:nowrap}.magcost b{color:#f2d27a;font-weight:600}.magcost.short b{color:#d98b7a}
 .bwrap{position:relative;flex:none;margin-right:-9px}   /* die Bögen dürfen ins Polster des Panels ragen */.bwrap .bd{position:absolute;top:0}
 .arcs{position:absolute;left:0;top:0;overflow:visible;pointer-events:none}.arcs path{fill:none}
 .arcs .arcbg{stroke:#141416;pointer-events:stroke}.arcs .arcv{stroke-linecap:butt}.arcs .arcv.hp{stroke:#e0653f}.arcs .arcv.mana{stroke:#4a9be0}.arcs .arcsep{stroke:#17171b}
@@ -201,7 +200,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 
 /* Tempel (seit 0.11, rechts): Stufenraster mit Holzsteinen */
 .tpanel{display:flex;flex-direction:column}
-.tpanel h3{flex:none;text-align:left}
+.tpanel h3{flex:none;text-align:left;display:flex;justify-content:space-between;align-items:baseline}.upts{font-size:15px;font-weight:bold}.upts small{font-size:11px;font-weight:normal;color:var(--dim,#cbb98f)}.upts .me{color:#e0b84a}.upts .op{color:#cfd2dc}
 .tboard{position:relative;flex:none;margin:2px auto 0}
 .tcell{position:absolute;box-sizing:border-box;border:1px solid rgba(255,255,255,.08);border-radius:4px;background:linear-gradient(180deg,rgba(0,0,0,.32),rgba(0,0,0,.16));color:var(--mute);overflow:hidden}
 .tcell i{position:absolute;left:2px;top:1px;font-style:normal;line-height:1.05;font-variant-numeric:tabular-nums}

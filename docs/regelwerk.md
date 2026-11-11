@@ -690,6 +690,10 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Tests:** Drei Tests angepasst (Nachziehmarker Weltphase, Nachziehlimit Kauf, Nachziehlimit Weltphase; der Marker-Reset läuft jetzt über den Händler), neuer Test „Magie kaufen und Upgrades sind keine Aktion mehr“. `tests/golden.json` ist neu erzeugt (absichtliche Regeländerung).
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
 
+## Änderung 0.11.0.5 (11.11.)
+
+- **Anzeige (keine Regeländerung):** Mittig im Magiekreis steht die römische Zahl (I bis VI) als Preis der nächsten Magiestufe in Upgrade-Punkten, in der Farbe des Spielers (eigener Spieler gold, Gegner silber, bei voller Magie „✓“). Die Zeile unter dem Magiekreis entfällt. Die aktuell verfügbaren Upgrade-Punkte beider Spieler stehen in der Überschrift des Tempels (eigene gold, gegnerische silber). Die Tempelpunkte stehen nur noch auf dem Raster des Tempels.
+
 ## Änderung 0.11.0.4 (11.11.)
 
 - **Preisanzeige (keine Regeländerung):** Statt „Nächste Magiestufe: n Upgrade-Punkt(e)“ steht unter dem Magiekreis „Magiestufe I“ bis „Magiestufe VI“; die römische Zahl ist der Preis der nächsten Magiestufe in Upgrade-Punkten (1 bis 6, zusammen 21 für den vollen Ausbau). Der Hover-Text nennt weiter Preis und Bestand. Der Name des Gegners ist silbern.

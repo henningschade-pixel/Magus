@@ -9,14 +9,14 @@ function discBox(gold, cx, cy, diam) {
 // Magie-Board (seit 0.6: dreifacher Ouroboros). Die Grafik ist 1254 × 1254 mit der Ringmitte in der Bildmitte; die Edelsteine (Stufe 1 innen, Stufe 3 außen) liegen bei diesen Bildpunkten, Radius 31. Erreichte Stufen leuchten, die übrigen sind abgedunkelt; die Siegpunkte stehen in der freien Mitte.
 const BOARD_GEMS = { F: [[627.6, 349.1], [628.7, 269.9], [627.3, 185.3]], E: [[853.7, 720.7], [925.3, 764.2], [997.3, 807.7]], W: [[401, 717.2], [331.2, 760.7], [259.5, 802.9]] };   // Mittelpunkte der Edelsteine der Grafik seit 0.7.3.1 (neue Ouroboros-Grafik)
 const BOARD_PX = 1254, BOARD_GEM_R = 36;
-function boardHTML(mag, size, tp, echo, mine) {
+function boardHTML(mag, size, lab, echo, mine) {
   const k = size / BOARD_PX, dr = BOARD_GEM_R * k;
   let h = '<div class="bd" style="width:' + size + 'px;height:' + size + 'px" title="Magie: Feuer oben, Erde rechts unten, Wasser links unten' + (echo ? '. Echo (' + NAMES[echo] + '): Die leuchtende Schlange zeigt das Echo. Der nächste Kombo mit einer Sekundärkarte in ' + NAMES[echo] + ' steigt um 1 Stufe (höchstens 3); jede Nutzung von Primärmagie erneuert das Echo (auch ohne Kombo).' : '') + '"><img src="' + IMG.board + '">' + (echo ? EchoWave.html(echo, size) : '');   // Echo (seit 0.9.4): Welle der Schlange in der Echo-Farbe
   for (const e of ['F', 'E', 'W']) BOARD_GEMS[e].forEach(([gx, gy], i) => {
     const lv = i + 1;
     h += '<i class="rg ' + (lv <= mag[e] ? 'on' : 'off') + '" data-e="' + e + '" data-lv="' + lv + '" style="left:' + (gx * k - dr).toFixed(1) + 'px;top:' + (gy * k - dr).toFixed(1) + 'px;width:' + (2 * dr).toFixed(1) + 'px;height:' + (2 * dr).toFixed(1) + 'px"></i>';
   });
-  if (tp != null) h += '<div class="bsp ' + (mine ? 'me' : 'op') + '" title="Tempelpunkte (' + (mine ? 'gold = du' : 'silber = Gegner') + ')" style="font-size:' + (size * 0.24).toFixed(1) + 'px"><b>' + tp + '</b></div>';   // Mitte des Magiekreises (seit 0.11.0.3): Tempelpunkte, eigener Spieler golden, Gegner silbern
+  if (lab) h += '<div class="bsp ' + (mine ? 'me' : 'op') + '" title="' + lab.tip + '" style="font-size:' + (size * 0.24).toFixed(1) + 'px"><b>' + lab.txt + '</b></div>';   // Mitte des Magiekreises (seit 0.11.0.3): Tempelpunkte, eigener Spieler golden, Gegner silbern
   return h + '</div>';
 }
 // HP (links, rot) und Mana (rechts, blau) als gebogene Linien neben der Magiescheibe: je ein Bogen von 90 Grad, von unten nach oben gefüllt; feine Kerben trennen die einzelnen Punkte.
@@ -33,13 +33,13 @@ function arcsHTML(s, bsz, pad, R) {
     arc(135, 225, 1, Math.max(0, s.hp), s.maxHp, 'hp', 'HP ' + Math.max(0, s.hp) + '/' + s.maxHp) +
     arc(45, -45, 0, s.mana, s.maxMana, 'mana', 'Mana ' + s.mana + '/' + s.maxMana) + '</svg>';
 }
-// Unter der Magiegrafik (eigenes Brett in der Weltphase): was die nächste Magiestufe kostet (seit 0.7.6.4)
-function magCostHTML(s, p, up) {
-  if (!p || !up) return '';
+// Mitte des Magiekreises (seit 0.11.0.5): römische Zahl = Preis der nächsten Magiestufe in Upgrade-Punkten, in Spielerfarbe
+function magLevelLabel(s, p, mine) {
+  if (!p) return null;
   const MF = M.magicField(G), mc = M.magicCost(G, 0, s), maxed = M.ELEMENTS.every(e => s.mag[e] >= M.MAX_MAGIC);
-  const txt = maxed ? 'Magie auf Maximum' : 'Magiestufe <b>' + (['I', 'II', 'III', 'IV', 'V', 'VI'][mc - 1] || mc) + '</b>'   // die römische Zahl ist zugleich der Preis der nächsten Magiestufe in Upgrade-Punkten (seit 0.11.0.4);
-  const tip = maxed ? 'Alle drei Magien stehen auf der Höchststufe.' : 'Magiestufe I bis VI: Die Zahl ist der Preis der nächsten Magiestufe (egal welche Farbe): ' + M.payTxt(G, MF, mc) + '. Du hast ' + s[MF] + (MF === 'gold' ? ' Gold' : ' Upgrade-Punkte') + '. Jeder weitere Kauf macht die folgende Stufe teurer.';
-  return '<div class="magcost' + (!maxed && s[MF] < mc ? ' short' : '') + '" data-pv="magcost" title="' + tip + '">' + txt + '</div>';
+  const txt = maxed ? '✓' : (['I', 'II', 'III', 'IV', 'V', 'VI'][mc - 1] || String(mc));
+  const tip = maxed ? 'Alle drei Magien stehen auf der Höchststufe.' : 'Nächste Magiestufe: ' + txt + '. Die Zahl ist der Preis der nächsten Magiestufe (egal welche Farbe): ' + M.payTxt(G, MF, mc) + '. ' + (mine ? 'Du hast ' : 'Der Gegner hat ') + s[MF] + (MF === 'gold' ? ' Gold' : ' Upgrade-Punkte') + '. Jeder weitere Kauf macht die folgende Stufe teurer.';
+  return { txt, tip };
 }
 function statsBlock(name, s, p, size, up, full) {
   const img = k => '<img src="' + IMG[k] + '">', compact = !full;
@@ -79,7 +79,7 @@ function statsBlock(name, s, p, size, up, full) {
   }
   h = h.replace('@@G@@', '').replace('@@T@@', '');
   const bsz = size || 140;
-  let bd = boardHTML(s.mag, bsz, p ? templeTotal(p) : null, s.echo, p === G.players[ME]);
+  let bd = boardHTML(s.mag, bsz, magLevelLabel(s, p, p === G.players[ME]), s.echo, p === G.players[ME]);
   if (up && my) {
     const dir = { F: -90, E: 30, W: 150 }, diam = 26;   // Richtung wie die Ringe auf dem Brett (Linie von der Mitte durch die Magie); die Scheibe misst 26 px und liegt ganz auf dem äußeren Randband des Bretts (Band von 0,431 bis 0,475 der Bildgröße)
     let btn = '';
@@ -92,7 +92,7 @@ function statsBlock(name, s, p, size, up, full) {
     bd = bd.replace(/<\/div>$/, btn + '</div>');
   }
   const aR = compact ? bsz / 2 + 11 : bsz / 2 + 23, aPad = Math.ceil(aR - bsz / 2 + 4);   // Bögen: beim Spieler außerhalb der Magie-Knöpfe, beim Gegner dicht am Brett
-  h += '</div><div class="bcol"><div class="bwrap" style="width:' + (bsz + 2 * aPad) + 'px;height:' + bsz + 'px">' + arcsHTML(s, bsz, aPad, aR) + bd.replace('<div class="bd" style="', '<div class="bd" style="left:' + aPad + 'px;') + '</div>' + magCostHTML(s, p, up) + '</div></div>';
+  h += '</div><div class="bcol"><div class="bwrap" style="width:' + (bsz + 2 * aPad) + 'px;height:' + bsz + 'px">' + arcsHTML(s, bsz, aPad, aR) + bd.replace('<div class="bd" style="', '<div class="bd" style="left:' + aPad + 'px;') + '</div>' + '</div></div>';
   return h;
 }
 // Monstername mit Besonderheit; die Beschreibung erscheint beim Darüberfahren, für beide Spieler.
