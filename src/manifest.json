@@ -93,6 +93,12 @@
   "file": "ai/30-kampf.js"
  },
  {
+  "file": "ai/40-suche.js"
+ },
+ {
+  "file": "ai/90-schnittstelle.js"
+ },
+ {
   "literal": "</script>"
  },
  {

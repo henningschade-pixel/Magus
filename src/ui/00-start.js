@@ -5,6 +5,7 @@ document.documentElement.style.setProperty('--plusg','url('+IMG.plusg+')');docum
 (function () {
 'use strict';
 const M = Magus, AI = MagusAI;
+AI.setSearch({ ms: 500 });   // Vorausschau des Computergegners (seit 0.13): höchstens eine halbe Sekunde Bedenkzeit je Entscheidung, damit auch langsame Geräte flüssig bleiben
 let ME = 0, OPP = 1;   // Blickrichtung: im Mehrspielermodus sitzt der Gast auf Platz 1
 const NAMES = M.NAMES;
 const $ = id => document.getElementById(id);

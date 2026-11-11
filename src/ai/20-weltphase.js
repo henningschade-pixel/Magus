@@ -196,7 +196,12 @@ function worldPlan(state, pid) {
     const alive = M.ELEMENTS.filter(e => M.monsterAlive(state.monsters[e]));
     if (alive.length && s.hp >= Q.minHp && s.mana >= Q.minMana && normals.length >= 1) {
       let bestC = null;
+      // Seit 0.13: Probekämpfe statt Schätzformel. Jedes Monster wird einige Male durchgespielt; angegriffen wird das mit dem besten Ausgang, wenn der Kampf im Mittel mindestens die Schwelle wert ist (sie sinkt mit den Zügen seit dem letzten Kampf).
+      const nSim = SV(pid, 'world'), odds = {};
+      let simOk = null;
+      if (nSim > 0) { simOk = new Set(); let top = null; for (const e of alive) { const o = combatOdds(state, pid, e, nSim); odds[e] = o; if (o && (!top || o.v > odds[top].v)) top = e; } if (top && odds[top].v >= SV(pid, 'thr') - SV(pid, 'thrWt') * state.worldTurns) simOk.add(top); }
       for (const target of alive) {
+        if (simOk && !simOk.has(target)) continue;
         const m = state.monsters[target], net = outlook(state, pid, target), hits = net > 0 ? m.stats.hp / net : 99;
         // Zeitdruck: Monster sind gemeinsam und die Beute geht an den Sieger. Kann der Gegner dieses Monster bald besiegen, lohnt es sich, ihm zuvorzukommen; wenige Monster übrig und hohe Beute erhöhen die Eile.
         const o = state.players[1 - pid].stats, oNet = o.hp >= Q.minHp && o.mana >= Q.minMana ? outlook(state, 1 - pid, target) : 0, oHits = oNet > 0 ? m.stats.hp / oNet : 99;
@@ -212,7 +217,7 @@ function worldPlan(state, pid) {
         const score = broke - doom - risk - steal - Q.oHits * Math.max(0, hits - Q.oFree) + Q.cBase + Q.cHp * (s.hp - 1) + Q.cMana * (s.mana - 2) + state.worldTurns * Q.cWt - m.stats.hp * Q.cMon + press + (p.drawRed ? Q.rAtk : 0) + R();
         if (!bestC || score > bestC.score) bestC = { score, acts: [A({ type: 'combat', elem: target })] };
       }
-      cands.push(bestC);
+      if (bestC) cands.push(bestC);
     }
   }
   if (!cands.length) return [A({ type: 'draw' })];

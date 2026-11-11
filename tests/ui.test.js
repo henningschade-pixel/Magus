@@ -469,6 +469,7 @@ test('Endbildschirm: Sieg und Niederlage zeigen Rückblick, Klick überspringt, 
     // KI-Partie simulieren, in der der Computer gewinnt, und als Endstand übernehmen (Du verlierst)
     const seed = await p.evaluate(() => {
       const M = window.Magus, AI = window.MagusAI, G = window.__magus.state;
+      AI.setSearch({ sim: 0, world: 0 });   // Partien schnell mit der Basis-KI durchspielen (die Vorausschau bräuchte je Partie mehrere Sekunden)
       for (let seed = 1; seed < 80; seed++) {
         const s = M.newGame({ seed, ai: [true, true], names: ['Du', 'Computer'] });
         let n = 0; while (!s.over && n < 20000) { if (!AI.runTurn(s, M.actor(s)).ok) break; n++; }

@@ -690,6 +690,15 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Tests:** Drei Tests angepasst (Nachziehmarker Weltphase, Nachziehlimit Kauf, Nachziehlimit Weltphase; der Marker-Reset läuft jetzt über den Händler), neuer Test „Magie kaufen und Upgrades sind keine Aktion mehr“. `tests/golden.json` ist neu erzeugt (absichtliche Regeländerung).
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
 
+## Änderung 0.13 (11.11.)
+
+- **Computergegner plant voraus (keine Regeländerung):** Bisher bewertete der Computer im Kampf jeden Zug einzeln mit festen Gewichten; was ein Kombo später bringt, steckte nur als Schätzwert darin, und er nutzte Kombos kaum sinnvoll. Jetzt stellt er alle Züge zusammen, die ihm die Regeln gerade erlauben (jede Kartenfolge samt Kombos und Ultimates, Erholen, Nachziehen mit gesperrten Karten, jede Verteidigung, die Wahl bei Falle und Hellsicht), spielt jeden davon in vielen möglichen Kampfverläufen bis zum Kampfende durch und wählt den Zug mit dem besten mittleren Ausgang, gemessen in Siegpunkten (`src/ai/40-suche.js`).
+- **Fair:** Verdecktes kennt er nicht. Handkarten, Zugstapel und Fallen des Gegners und die Reihenfolge des eigenen Zugstapels werden für jeden Durchlauf neu gemischt; bekannt ist nur, was auch ein Mensch am Tisch weiß (welche Karten der Gegner besitzt, was offen liegt oder abgelegt wurde). Ein Test prüft, dass die Entscheidung nicht von der wirklichen Verteilung der verdeckten Karten abhängt.
+- **Bedenkzeit:** 120 Durchläufe je Entscheidung (im Mittel etwa 60 ms, gemessen in Node), im Spiel höchstens eine halbe Sekunde.
+- **Messung:** Gegen die bisherige KI (gleiche Regeln, Plätze und Beginner gewechselt) gewann die Vorausschau 96 von 96 Partien (48 mit 120, 48 mit 240 Durchläufen) und 106 von 114 entschiedenen Showdowns; sie wirkte dabei 893 Kombos, die bisherige KI 121 (Ultimates 54 gegen 92). Mehr Durchläufe brachten keinen messbaren Gewinn (240 gegen 60: 35 von 64 Partien, innerhalb der Fehlerspanne von ±12 Punkten). Probekämpfe vor dem Angriff auf ein Monster in der Weltphase (Schalter `world`) brachten in 160 Partien genau 50 % und bleiben abgeschaltet. Gegen Menschen ist die Stärke nicht gemessen.
+- Tests, Referenzpartien (`golden.json`, unverändert) und Balance-Werkzeuge spielen weiter mit der bisherigen, schnellen Basis-KI; `MAGUS_SIM=120` schaltet dort die Vorausschau ein. Neu: `tests/suche.test.js`, `tools/balance/duell.js`.
+- Die Versionsbeschreibung im Spiel nennt die Änderung.
+
 ## Änderung 0.12.1.4 (11.11.)
 
 - **Anzeige (keine Regeländerung):** Stehen alle drei Magien auf der Höchststufe (3 je Element, Summe 9), zeigt der Magiekreis „IX“ statt eines Hakens; die Zahlenreihe reicht bis IX.

@@ -162,3 +162,24 @@ Befunde und Änderungen (je 2000 Partien gegen den Stand davor, ±2,2 Punkte):
 - `opt2.js` (zwei Läufe, 400 Partien je Test) übernahm `oHits` 2, `cWt` 3,5, `aCost` 2,3, `aDmg` 0,7, `aThr` 0,8.
 - **Patt-Schleifen:** Mit den neuen Werten stiegen die Fluchten auf 44 je Partie (Median 1500 Aktionen). `fleeIdle` 4 (nach vier Weltzügen ohne entschiedenen Kampf flieht die KI nicht mehr) bringt sie auf 4,7 je Partie (Median 1009, Maximum 1422) bei 4 Punkten weniger gegen die fliehende Fassung; `pasDec` 2, damit sie einen Dauerpasser nach höchstens 3 Zügen angreift (Test).
 Ergebnis: 86,6 % gegen die KI von 0.7.3.3 (2000 Partien). Selbstspiel (2000 Partien): Beginner 53,9 / Zweiter 45,6 / Remis 0,5 %, Median 984, P90 1187, Maximum 1624 Aktionen, keine festgefahrene Partie; Showdown 1 gewinnt der Beginner zu 60,5 %.
+
+## Vorausschau im Kampf (Version 0.13, 11.11.)
+
+Anlass: Die Gewichte der Basis-KI reichen für taktische Entscheidungen nicht, vor allem nicht für Kombos (ihr Nutzen zeigt sich erst Züge später). Neu ist eine Vorausschau (`src/ai/40-suche.js`), die auf der Basis-KI aufsetzt:
+
+- **Kandidaten:** alle unterscheidbaren Züge der Lage (Angriffe mit jeder Primär- und Sekundärfarbe, Erholen, Nachziehen mit 0 bis 2 gesperrten Karten, Gratis-Nachziehen, jede Verteidigung, Passen, die Wahl bei Falle und Hellsicht); der Zug der Basis-KI ist immer dabei.
+- **Welten:** Für jeden Durchlauf wird das Verdeckte neu gemischt (Hand, Zugstapel und Fallen des Gegners, eigener Zugstapel). Alle Kandidaten sehen dieselben Welten.
+- **Durchspielen:** Nach dem Kandidaten führen beide Seiten ihre Züge nach der Basis-KI aus, bis der Kampf endet (höchstens `steps` 90 Schritte, dann Schätzung aus den HP). Wert = Verschiebung der Siegpunkte, dazu ein kleiner Anteil für die verbliebenen HP und das Mana des Angreifers im Monsterkampf.
+- **Verteilung der Durchläufe:** Ausscheidungsverfahren (nach jeder Runde fällt die schwächere Hälfte weg). Standard `sim` 120 Durchläufe je Entscheidung (240 brauchen in Node im Mittel etwa 110 ms, Maximum etwa 420 ms; 120 etwa die Hälfte); im Spiel begrenzt `ms` 500 die Bedenkzeit.
+
+Schalter: `AI.setSearch({ sim, ms, steps, cands, world, thr, thrWt })` für alle Plätze, je Platz `AI.setParams(pid, { sim: 120 })`. `load.js` stellt für Werkzeuge und Tests `sim` 0 ein (Basis-KI, etwa 300-mal schneller); `MAGUS_SIM=120 node tools/balance/report.js 40 '{}'` misst mit Vorausschau.
+
+    node tools/balance/duell.js 96 '{"sim":120}' '{"sim":0}'     # Vorausschau gegen Basis-KI, Plätze und Beginner wechseln
+
+Messung:
+
+- Vorausschau gegen Basis-KI: `sim` 120: 48 von 48 Partien (Showdowns 53 : 1, Kombos 428 : 61, Ultimates 16 : 37); `sim` 240: 48 von 48 (Showdowns 53 : 7, Kombos 465 : 60, Ultimates 38 : 55). Fehlerspanne bei 48 Partien ±14 Punkte.
+- Mehr Durchläufe: `sim` 240 gegen `sim` 60 gewann 35 von 64 Partien (54,7 % ±12), also kein messbarer Unterschied. Die Grenze liegt nicht in der Zahl der Durchläufe, sondern darin, dass im Durchspielen beide Seiten nach der Basis-KI ziehen.
+- Probekämpfe in der Weltphase (`world` 12: vor dem Angriff wird jedes Monster zwölfmal durchgespielt, angegriffen wird nur ab dem Mindestwert `thr`, der je Zug seit dem letzten Kampf um `thrWt` sinkt), beide Seiten mit `sim` 60: `thr` −0,3: 20 von 40, `thr` 0: 24 von 40 und danach 80 von 160, `thr` 0,3: 16 von 40. Kein messbarer Gewinn, deshalb `world` 0 (aus); der Schalter bleibt zum Weiterprüfen.
+- Nicht gemessen: Stärke gegen Menschen. Offen bleibt die Weltphase (Ausbaureihenfolge, Zeitpunkt der Angriffe), die weiter mit den Gewichten der Basis-KI entscheidet.
+

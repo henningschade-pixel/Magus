@@ -7,7 +7,7 @@ Engine, KI und Oberfläche sind drei getrennte Schichten; die Oberfläche kennt 
 00 Rahmen · 10 Karten · 20 Werte · 30 Monster · 40 Flüche (Lähmung, Todesmarker) · 50 Bibliothek · 60 Kampfberechnung · 65 Kampfablauf · 70 Weltphase · 80 Start/Schnittstelle (`DEFAULT_RULES`, `newGame`, `apply`)
 
 ## ai/ – Computergegner
-10 Stellschrauben (`DEFAULTS`) · 20 Weltphase · 30 Kampf
+10 Stellschrauben (`DEFAULTS`) · 20 Weltphase · 30 Kampf (zusammen die Basis-KI: bewertet jeden Zug einzeln mit festen Gewichten) · 40 Suche (seit 0.13 Vorausschau im Kampf: spielt jeden möglichen Zug in vielen Kampfverläufen durch, `setSearch`) · 90 Schnittstelle (`plan`, `runTurn`)
 
 ## ui/ – Oberfläche (eine IIFE, Dateien werden nacheinander verkettet)
 - Grundlage: 00 Start/Zustand · 10 Layout · 11 Skalierung · 12 Hilfen · 14 Sound
@@ -17,4 +17,4 @@ Engine, KI und Oberfläche sind drei getrennte Schichten; die Oberfläche kennt 
 - Mehrspieler: 28 PeerJS · 29 Mehrspieler
 
 Regeln: Die Engine hält allen Spielzustand (`G`); die Oberfläche rendert ihn nur und schickt Aktionen über `M.apply`.
-Tests: `tests/` (Regeln, Referenzpartien `golden.json`, Browser). Änderungen am Verhalten der Engine/KI müssen den Golden-Test bewusst neu erzeugen (`npm run golden`).
+Tests: `tests/` (Regeln, Referenzpartien `golden.json`, Vorausschau `suche.test.js`, Browser). Tests und Balance-Werkzeuge spielen mit der Basis-KI (`tools/balance/load.js` schaltet die Vorausschau ab; `MAGUS_SIM=120` schaltet sie ein), im Spiel plant der Computer voraus. Änderungen am Verhalten der Engine/KI müssen den Golden-Test bewusst neu erzeugen (`npm run golden`).

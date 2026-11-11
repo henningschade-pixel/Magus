@@ -6,4 +6,6 @@ const eng = scripts.find(s => s.includes('Regelkern (Teil 1)')), ai = scripts.fi
 if (!eng || !ai) throw new Error('Regelkern oder KI in index.html nicht gefunden.');
 function run(src, req) { const m = { exports: {} }; new Function('module', 'exports', 'require', src)(m, m.exports, req); return m.exports; }
 const M = run(eng, require), AI = run(ai, id => id === './engine.js' ? M : require(id));
+// Simulationen und Tests spielen mit der schnellen Basis-KI (ohne Vorausschau, etwa 300-mal schneller). MAGUS_SIM=120 schaltet die Vorausschau mit so vielen Durchläufen je Entscheidung ein, MAGUS_WORLD=12 die Probekämpfe der Weltphase.
+AI.setSearch({ sim: +process.env.MAGUS_SIM || 0, world: +process.env.MAGUS_WORLD || 0, ms: 0 });
 module.exports = { M, AI };

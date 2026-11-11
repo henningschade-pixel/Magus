@@ -7,6 +7,6 @@
 - `tools/build-wuerfel-werkstatt.js` – baut `werkstatt/wuerfel-werkstatt.html` aus der Vorlage `tools/wuerfel-werkstatt.template.html` und dem `DiceKit` aus `src/ui/31a-wuerfel.js` (`--check` prüft nur).
 - `tools/build-werkstatt.js` – baut `dist/ton-werkstatt.html` (Ton-Werkstatt mit allen Sounds eingebettet).
 - `tools/ton-rendern.js` – rendert ein Rezept der Ton-Werkstatt zu mp3 (Playwright, Pegel wie bei den anderen Sounds).
-- `tools/balance/ – KI-gegen-KI-Simulationen (`node tools/balance/report.js N '{regeln}'`).
+- `tools/balance/` – KI-gegen-KI-Simulationen (`node tools/balance/report.js N '{regeln}'`); sie spielen mit der schnellen Basis-KI, `MAGUS_SIM=120` schaltet die Vorausschau ein. `node tools/balance/duell.js 96` lässt die Vorausschau gegen die Basis-KI antreten.
 
 Assets liegen in `assets/img`, `assets/audio`, `assets/cursor`. Das Spiel muss über http(s) laufen (GitHub Pages, lokaler Server), weil Sounds per `fetch` geladen werden.
