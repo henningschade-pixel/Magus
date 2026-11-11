@@ -42,7 +42,7 @@ function shieldSvg(who) {
   return '<svg viewBox="0 0 40 52"><defs><linearGradient id="rbw' + id + '" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e8352c"/><stop offset=".25" stop-color="#f2b61a"/><stop offset=".5" stop-color="#2fb844"/><stop offset=".75" stop-color="#2b84ec"/><stop offset="1" stop-color="#8d4fe0"/></linearGradient><clipPath id="rbi' + id + 'c"><path d="M20 2 L37 9 V26 C37 38 29 46 20 50 C11 46 3 38 3 26 V9 Z"/></clipPath><filter id="rbi' + id + 'b" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="1.3"/></filter></defs><path d="M20 2 L37 9 V26 C37 38 29 46 20 50 C11 46 3 38 3 26 V9 Z" fill="url(#rbw' + id + ')"/><g clip-path="url(#rbi' + id + 'c)"><path d="M20 2 L37 9 V26 C37 38 29 46 20 50 C11 46 3 38 3 26 V9 Z" fill="none" stroke="#000" stroke-width="5" stroke-opacity=".85" filter="url(#rbi' + id + 'b)"/></g><path d="M20 2 L37 9 V26 C37 38 29 46 20 50 C11 46 3 38 3 26 V9 Z" fill="none" stroke="#b9c0cc" stroke-width="2.2" stroke-opacity=".6"/><path d="M20 2 L37 9 V26 C37 38 29 46 20 50 Z" fill="#000" fill-opacity=".3"/></svg>';
 }
 function mirrorStack(s, x, y, who) {
-  if (!(s.rainbow > 0) && !s.trap) return '';
+  if (!(s.rainbow > 0) && !(s.traps && s.traps.length)) return '';
   const L = who ? lfCtx() : null;
   let t = '', idx = 0;
   const mc = markCounts(s);   // Schild und Falle bilden das Ende der Markerreihe vor den Handkarten (seit 0.7.2.10)
@@ -54,17 +54,17 @@ function mirrorStack(s, x, y, who) {
     t += wrap(L ? '<button class="msh R lf' + (sel ? ' sel' : '') + '" data-act="lfm" data-k="' + who + 'r" title="Läuterung: Schildladungen wählen (Klick: eine mehr, nach dem Maximum wieder alle weg). ' + sel + ' von ' + n + ' gewählt.">' + svg + mul + (sel ? '<i class="lfb">✓' + sel + '</i>' : '') + '</button>'
       : '<div class="msh R" title="' + tip + '">' + svg + mul + '</div>');
   }
-  if (s.trap) {   // Falle: verdeckte Karte; der Besitzer sieht seine Karte, der Gegner nur den Rücken. Sie ist kein Marker (die Läuterung erreicht sie nicht).
-    const mine = who === 's', tr = s.trap, id = mine && tr.card && tr.card.id, lvl = tr.lvl || 1;
+  (s.traps || []).forEach((tr, ti) => {   // Fallen (seit 0.12.1.1 stapelnd, je Falle eine Karte in der Reihenfolge des Legens): verdeckte Karte; der Besitzer sieht seine Karte, der Gegner nur den Rücken. Sie ist kein Marker (die Läuterung erreicht sie nicht).
+    const mine = who === 's', id = mine && tr.card && tr.card.id, lvl = tr.lvl || 1;
     const tip = mine ? 'Deine Falle (' + NAMES[tr.el] + ', Stufe ' + lvl + '): Wenn Schaden in ' + NAMES[tr.el] + ' eingeht, wirft sie ' + lvl + ' unblockbaren Schaden auf den Angreifer zurück (vor der Verteidigung, höchstens der eingehende Schaden). Sie wird bei jedem eingehenden Schaden aufgedeckt und danach abgelegt.' : 'Verdeckte Falle des Gegners: Sie wird aufgedeckt, sobald Schaden eingeht. Entspricht die Farbe des Schadens der Farbe der Karte, wirft sie Schaden zurück.';
     t += wrap('<div class="trapcard' + (mine ? ' mine' : '') + '" data-who="' + who + '" title="' + tip + '"><img src="' + (id && IMG[id] ? IMG[id] : IMG.back) + '"><b class="mul">×' + lvl + '</b></div>');   // Stufe als Zähler wie bei den Markern; für den Gegner liegt die Karte umgedreht (Rückseite)
-  }
+  });
   return '<div class="mirstack" data-who="' + (who || '') + '">' + t + '</div>';
 }
 // Marker: einzelne Tokens, leicht verdreht und versetzt (Verteilung: deathPos).
 const TOK = 50, TOK_ROT = [-11, 7, -4, 12, -8, 5, 10, -6], TOK_DX = [-4, 5, -2, 6, 3, -5, 4, -3], TOK_DY = [0, -5, 3, -3, 4, -2, 2, -4];
 function markCounts(s) {   // dargestellte Marker je Art (Todes-, Heil- und Manamarker je ein Token mit Zähler; Schild und Falle) und Gesamtzahl für die Reihe vor den Handkarten
-  const nd = s.death > 0 ? 1 : 0, nh = s.heal > 0 ? 1 : 0, nm = s.manaflow > 0 ? 1 : 0, ns = (s.rainbow > 0 ? 1 : 0) + (s.trap ? 1 : 0);
+  const nd = s.death > 0 ? 1 : 0, nh = s.heal > 0 ? 1 : 0, nm = s.manaflow > 0 ? 1 : 0, ns = (s.rainbow > 0 ? 1 : 0) + (s.traps ? s.traps.length : 0);
   return { nd, nh, nm, ns, total: nd + nh + nm + ns };
 }
 // seit 0.7.2.10 liegen alle Marker (Todes-, Heil-, Mana- und Schildmarker, seit 0.8 auch die Falle) in einer lockeren Reihe mittig direkt vor den Handkarten ihres Spielers (eigene oberhalb, die des Gegners unterhalb der Hand), jeder leicht verdreht und versetzt; so verdecken sie weder Karten noch Anzeigen. i: laufende Nummer in der Reihe (Todesmarker, Heil-, Mana-, dann Schildmarker und Falle), total: Anzahl aller Marker der Seite.

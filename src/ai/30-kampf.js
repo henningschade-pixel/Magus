@@ -8,14 +8,14 @@ function threatScores(opp) {
   }
   return out;
 }
-// Wert einer Falle der Stufe lvl (Blau + Rot seit 0.9.9; seit 0.8 als Kombo): Sie wirft S (1/2/3) unblockbaren Schaden zurück, wenn der Gegner in ihrer Farbe angreift. Die KI legt die Farbe an, mit der der Gegner nach seinem Deck am ehesten angreift; wq.wTrap gewichtet den erwarteten Rückwurf. Eine schon liegende Falle wird ersetzt, das mindert den Wert.
+// Wert einer Falle der Stufe lvl (Blau + Rot seit 0.9.9; seit 0.8 als Kombo): Sie wirft S (1/2/3) unblockbaren Schaden zurück, wenn der Gegner in ihrer Farbe angreift. Die KI legt die Farbe an, mit der der Gegner nach seinem Deck am ehesten angreift; wq.wTrap gewichtet den erwarteten Rückwurf. Seit 0.12.1.1 stapeln die Fallen, eine schon liegende mindert den Wert nicht mehr. (Früher: Eine schon liegende Falle wird ersetzt, das mindert den Wert.
 function trapWorth(side, opp, Q, lvl) {
   if (!(lvl > 0)) return 0;
   const sc = threatScores(opp), tot = sc.F + sc.E + sc.W, top = Math.max(sc.F, sc.E, sc.W), p = tot > 0 ? top / tot : 1 / 3;
-  return lvl * p * Q.wTrap * (side.stats.trap ? 0.3 : 1);
+  return lvl * p * Q.wTrap;
 }
-// Wert eines Schilds der Stufe lvl (Grün + Blau seit 0.9.9; seit 0.8 als Kombo): Es bringt die Ladungen auf die Stufe, gewertet wird nur der Zugewinn gegenüber den Ladungen, die schon liegen.
-function shieldWorth(side, Q, lvl) { return lvl > 0 ? Math.max(0, lvl - (side.stats.rainbow || 0)) * Q.wFW : 0; }
+// Wert eines Schilds der Stufe lvl (Grün + Blau seit 0.9.9; seit 0.8 als Kombo): Seit 0.12.1.1 addieren sich die Ladungen, jede neue zählt voll.
+function shieldWorth(side, Q, lvl) { return lvl > 0 ? lvl * Q.wFW : 0; }
 // Wert eines geordneten Kombos (ohne Ultimate) für die KI; gleiche Gewichte wie im Angriff
 // Läuterung gegen den eigenen Todesfluss (seit 0.7.4): Jeder entfernte eigene Todesmarker erspart einen HP-Verlust je Angriffsphase bis Kampfende; lfDeath ist der Wert je Marker.
 function purgeDeath(side, Q, lvl) { return Q.lfDeath > 0 && lvl > 0 ? Math.min(lvl, side.stats.death || 0) * Q.lfDeath : 0; }
@@ -24,12 +24,12 @@ function ordComboWorth(side, opp, Q, rules, lvs, ev) {
   const wEw = oMir > 0 ? 1.2 + oMir * Math.max(0.3, Q.lfOppW || 0) : 0.1;
   return lvs.hs * 0.5 + trapWorth(side, opp, Q, lvs.tr) + shieldWorth(side, Q, lvs.sh) + lvs.fe * Q.wFE + lvs.ew * wEw + purgeDeath(side, Q, lvs.ew) + Math.min(lvs.gh * (rules.lifeflowHeal || 1), hurt) * Q.wEW + (lvs.gh > 0 && hurt === 0 ? 0.1 : 0);
 }
-// Wert einer Ultimate der Stufe lvl nach der Sekundärfarbe, der zweiten Karte (seit 0.11.0.9; 0.9.9 bis 0.11.0.8 die letzte Karte): Feuer Todesfluss beim Gegner, Erde Heilfluss und Wasser Manafluss bei mir selbst (seit 0.8). Liegt schon ein Marker gleicher oder höherer Stufe, bringt sie kaum etwas.
+// Wert einer Ultimate der Stufe lvl nach der Sekundärfarbe, der zweiten Karte (seit 0.11.0.9; 0.9.9 bis 0.11.0.8 die letzte Karte): Feuer Todesfluss beim Gegner, Erde Heilfluss und Wasser Manafluss bei mir selbst (seit 0.8). Seit 0.12.1.1 stapeln die Marker, ein schon liegender mindert den Wert nicht mehr.
 function ultiWorth(side, opp, Q, el, lvl) {
   if (!(lvl > 0)) return 0;
-  if (el === 'E') return lvl * Q.wEW * Q.uHeal * ((side.stats.heal || 0) >= lvl ? 0.1 : 1) * (side.stats.maxHp > side.stats.hp ? 1 : 0.6);
-  if (el === 'W') return lvl * Q.aCost * Q.uMana * ((side.stats.manaflow || 0) >= lvl ? 0.1 : 1) * (side.stats.maxMana > side.stats.mana ? 1 : 0.6);   // Manafluss: +S Mana je eigener Angriffsphase, jedes Mana ist etwa so viel wert wie sein Preis im Angriff
-  return lvl * Q.wDeath * (opp.stats.death >= lvl ? 0.1 : 1) * (Q.smart ? Math.max(0.4, Math.min(1.4, opp.stats.hp / 4)) : 1);
+  if (el === 'E') return lvl * Q.wEW * Q.uHeal * (side.stats.maxHp > side.stats.hp ? 1 : 0.6);
+  if (el === 'W') return lvl * Q.aCost * Q.uMana * (side.stats.maxMana > side.stats.mana ? 1 : 0.6);   // Manafluss: +S Mana je eigener Angriffsphase, jedes Mana ist etwa so viel wert wie sein Preis im Angriff
+  return lvl * Q.wDeath * (Q.smart ? Math.max(0.4, Math.min(1.4, opp.stats.hp / 4)) : 1);
 }
 function bestAttack(side, opp, hand, Q, state0, reserve) {
   const stats = side.stats, lim = Math.max(1, stats.limit);
@@ -225,7 +225,7 @@ function combatPlan(state, pid) {
     let score = left * (lethal ? Q.dLeth : Q.dPend) + (ev.cost || 0) * Q.dCost + (sub.length - nCurse) * Q.dKeep - nCurse * 0.6;
     if (lvM > 0) score += absorbed * Q.mirKeep;   // jede geminderte Einheit Schaden kostet eine Schildladung
     if (ev.ord) { const o = c.sides[c.turn === 'a' ? 'b' : 'a'], lvD = Object.assign({}, M.levelsFor(ev)); if (left >= s.hp) lvD.gh = 0; score -= ordComboWorth(side, o, Q, state.rules, lvD, ev); }   // tödlicher Restschaden: die Heilung nach dem Schaden verfällt
-    if (Q.dU > 0 && ev.levels && ev.levels.ulti > 0) { const o = c.sides[c.turn === 'a' ? 'b' : 'a']; score -= Q.dU * (ev.ultiEl === 'F' ? ev.levels.ulti * Q.wDeath * (o.stats.death >= ev.levels.ulti ? 0.1 : 1) * Math.max(0.4, Math.min(1.4, o.stats.hp / 4)) : ultiWorth(side, o, Q, ev.ultiEl, ev.levels.ulti)); }   // Ultimate in der Verteidigung: Feuer Todesfluss für den Angreifer, Erde Heilfluss, Wasser Manafluss
+    if (Q.dU > 0 && ev.levels && ev.levels.ulti > 0) { const o = c.sides[c.turn === 'a' ? 'b' : 'a']; score -= Q.dU * (ev.ultiEl === 'F' ? ev.levels.ulti * Q.wDeath * Math.max(0.4, Math.min(1.4, o.stats.hp / 4)) : ultiWorth(side, o, Q, ev.ultiEl, ev.levels.ulti)); }   // Ultimate in der Verteidigung: Feuer Todesfluss für den Angreifer, Erde Heilfluss, Wasser Manafluss
     if (score < best.score) best = { score, ord: sub };
   }
   if (!best.ord.length) return [A({ type: 'pass' })];

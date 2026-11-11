@@ -75,9 +75,9 @@ function endCombat(state, end) {
   if (state.keepSnap) res.snap = JSON.parse(JSON.stringify(c));   // Oberfläche: Endstand des Kampfes (vor Zurücksetzen und Rückkehr in die Weltphase)
   if (c.forced && c.forced.cards) { const fs = c.sides.a.ctrl === c.forced.pid ? c.sides.a : c.sides.b; if (fs.kind === 'player') c.forced.cards.forEach(cd => fs.deck.discard.push(cd)); c.forced = null; }
   [c.sides.a, c.sides.b].forEach(sd => { if (sd.deck) dropSight(sd.deck); });   // übrige offene Hellsichtkarten auf den Ablagestapel
-  state.players.forEach(p => { if (p.stats.trap) p.deck.discard.push(p.stats.trap.card); p.stats.freeDraws = 0; p.deck.marks = []; ['death', 'deathPhase', 'heal', 'healPhase', 'manaflow', 'manaPhase', 'rainbow', 'trap', 'echo'].forEach(k => { delete p.stats[k]; }); });   // die Fallenkarte kehrt in den Ablagestapel zurück (wird gleich mit gemischt)
+  state.players.forEach(p => { (p.stats.traps || []).forEach(t => p.deck.discard.push(t.card)); p.stats.freeDraws = 0; p.deck.marks = []; ['death', 'deathPhase', 'heal', 'healPhase', 'manaflow', 'manaPhase', 'rainbow', 'traps', 'echo'].forEach(k => { delete p.stats[k]; }); });   // die Fallenkarte kehrt in den Ablagestapel zurück (wird gleich mit gemischt)
   state.players.forEach(p => stripCurseCards(state, p.deck));
-  ['healPhase', 'death', 'deathPhase', 'heal', 'manaflow', 'manaPhase', 'rainbow', 'trap', 'echo'].forEach(k => { delete c.sides.b.stats[k]; });
+  ['healPhase', 'death', 'deathPhase', 'heal', 'manaflow', 'manaPhase', 'rainbow', 'traps', 'echo'].forEach(k => { delete c.sides.b.stats[k]; });
   const A = state.players[c.att], B = state.players[c.def];
   if (c.mode === 'monster') {
     const m = c.sides.b.monster;
@@ -162,14 +162,14 @@ function finishStep(state, info) {
 }
 // Angriffszug endet ohne Schaden: die Gegenseite greift an (Verteidigung entfällt).
 const MAX_LVL = 3;   // höchste Kombostufe und Höchstzahl der Schildladungen
-// Schild (Blau + Grün, seit 0.8; stats.rainbow, Grafik des früheren Multischilds): Ladungen 1/2/3. Er mindert eingehenden, nicht geblockten Schaden gegen jede Farbe und verliert je gemindertem Schaden eine Ladung. Ein neues Schild bringt die Ladungen auf die Stufe (nicht addiert, höchstens 3).
+// Schild (Blau + Grün, seit 0.8; stats.rainbow, Grafik des früheren Multischilds): Ladungen 1/2/3. Er mindert eingehenden, nicht geblockten Schaden gegen jede Farbe und verliert je gemindertem Schaden eine Ladung. Ein neues Schild addiert seine Ladungen zu den liegenden (seit 0.12.1.1 ohne Höchstgrenze; zuvor galt die höhere Zahl, höchstens 3).
 // Das Schild wirkt vor jeder Schadensquelle (seit 0.8.3.2): auch gegen den Rückwurf der Falle, den Todesfluss und die Erschöpfung. Es mindert den Schaden um höchstens seine Ladungen und verliert je gemindertem Schaden eine Ladung. Gibt den tatsächlich verlorenen Schaden zurück; absorbed (optional) meldet die Minderung.
 function shieldHit(stats, dmg) {
   const ab = Math.min(stats.rainbow || 0, Math.max(0, dmg));
   if (ab > 0) { stats.rainbow -= ab; if (!stats.rainbow) delete stats.rainbow; }
   return { hit: dmg - ab, absorbed: ab };
 }
-function shieldAdd(stats, n) { stats.rainbow = Math.max(stats.rainbow || 0, Math.min(n, MAX_LVL)); }
+function shieldAdd(stats, n) { stats.rainbow = (stats.rainbow || 0) + n; }   // seit 0.12.1.1 stapeln die Ladungen (vorher: höchster Wert, höchstens 3)
 // Ultimates (seit 0.9.9 nach der Farbe der zuletzt markierten Karte, vorher der ersten): Feuer = Todesfluss (stats.death, Marker beim Gegner), Erde = Heilfluss (stats.heal, +1 HP je Marker am Ende der eigenen Angriffsphase), Wasser = Manafluss (seit 0.8, stats.manaflow: +1 Mana je Marker am Ende der eigenen Angriffsphase). Alle drei Marker entfernt nur die Läuterung.
 // Läuterung: gewählte Marker (sm/om Manamarker, sd/od Todesmarker, sh/oh Heilmarker, sr/or Schildmarker, st/ot Nachziehtokens), höchstens S; ohne Wahl automatisch eigene Todesmarker, dann Schild-, Mana- und Heilmarker des Gegners.
 function lifeflowPicks(state, side, opp, lvl) {
@@ -222,9 +222,9 @@ function deathTick(state, side, done) {   // done: Nummer des Angriffszugs (1, 2
 // Ultimate wirken lassen: die Farbe der Schlusskarte (el, seit 0.9.9; vorher der ersten Karte) bestimmt die Marker. who legt sie bei sich (Erde, Wasser) oder beim Gegner (Feuer).
 function castUltimate(side, opp, el, lvl) {
   lvl = Math.max(1, Math.min(MAX_LVL, lvl));
-  if (el === 'E') { side.stats.heal = Math.max(side.stats.heal || 0, lvl); return { text: 'Ultimate ' + lvl + ' (Erde): Heilfluss, ' + side.stats.heal + ' HP am Ende jeder eigenen Angriffsphase bis Kampfende', fx: { kind: 'ultimate', who: side.ctrl, to: side.ctrl, el: 'E', n: lvl } }; }
-  if (el === 'W') { side.stats.manaflow = Math.max(side.stats.manaflow || 0, lvl); return { text: 'Ultimate ' + lvl + ' (Wasser): Manafluss, ' + side.stats.manaflow + ' Mana am Ende jeder eigenen Angriffsphase bis Kampfende', fx: { kind: 'ultimate', who: side.ctrl, to: side.ctrl, el: 'W', n: lvl } }; }
-  opp.stats.death = Math.max(opp.stats.death || 0, lvl);
+  if (el === 'E') { side.stats.heal = (side.stats.heal || 0) + lvl; return { text: 'Ultimate ' + lvl + ' (Erde): Heilfluss, ' + side.stats.heal + ' HP am Ende jeder eigenen Angriffsphase bis Kampfende', fx: { kind: 'ultimate', who: side.ctrl, to: side.ctrl, el: 'E', n: lvl } }; }
+  if (el === 'W') { side.stats.manaflow = (side.stats.manaflow || 0) + lvl; return { text: 'Ultimate ' + lvl + ' (Wasser): Manafluss, ' + side.stats.manaflow + ' Mana am Ende jeder eigenen Angriffsphase bis Kampfende', fx: { kind: 'ultimate', who: side.ctrl, to: side.ctrl, el: 'W', n: lvl } }; }
+  opp.stats.death = (opp.stats.death || 0) + lvl;   // seit 0.12.1.1 stapeln alle drei Flüsse (vorher: höchster Wert)
   return { text: 'Ultimate ' + lvl + ' (Feuer): Todesfluss für ' + opp.name + ' (' + opp.stats.death + ' HP am Ende jeder seiner Angriffsphasen bis Kampfende)', fx: { kind: 'ultimate', who: side.ctrl, to: opp.ctrl, el: 'F', n: lvl } };
 }
 function passAttackTurn(state, wasAttack) {   // wasAttack: Die Aktion war ein Angriff (auch ohne Schaden); sonst „ohne Angriff“
@@ -272,7 +272,7 @@ function sightResolve(state, side, cards, pick) {
   addSight(d, keep);
   return { k: keep.length, a: cards.length - keep.length };
 }
-// Falle (Blau + Rot seit 0.9.9; zuvor Rot + Blau seit 0.8.0.1, davor Blau + Rot seit 0.8): Die Seite zieht drei Karten vom Zugstapel (seit 0.8.0.5 nicht mehr in die Hand) und legt eine davon verdeckt vor sich; die übrigen kommen auf den Ablagestapel (stats.trap = { card, el, tier, lvl }; kein Marker, die Läuterung erreicht sie nicht). Welche, wählt der Spieler (c.forced mit kind 'trap'; ohne Wahlmöglichkeit gleich). Fluchkarten kommen nicht in Frage.
+// Falle (Blau + Rot seit 0.9.9; zuvor Rot + Blau seit 0.8.0.1, davor Blau + Rot seit 0.8): Die Seite zieht drei Karten vom Zugstapel (seit 0.8.0.5 nicht mehr in die Hand) und legt eine davon verdeckt vor sich; die übrigen kommen auf den Ablagestapel (stats.traps = Liste von { card, el, tier, lvl }, seit 0.12.1.1 stapelnd; kein Marker, die Läuterung erreicht sie nicht). Welche, wählt der Spieler (c.forced mit kind 'trap'; ohne Wahlmöglichkeit gleich). Fluchkarten kommen nicht in Frage.
 function trapDraw(state, side, lvl) {
   const d = side.deck, cards = [];
   for (let i = 0; i < 3; i++) {   // drei Karten direkt vom Zugstapel (der Ablagestapel wird bei Bedarf gemischt); sie ersetzen keine Handkarten
@@ -289,19 +289,26 @@ function trapDraw(state, side, lvl) {
 function trapSet(state, side, card, lvl) {
   const pc = parseCard(card.id);
   card.locked = false;
-  if (side.stats.trap) side.deck.discard.push(side.stats.trap.card);   // eine liegende Falle wird durch eine neue ersetzt (die alte kommt in den Ablagestapel)
-  side.stats.trap = { card, el: pc.el, tier: pc.tier, lvl };
+  (side.stats.traps = side.stats.traps || []).push({ card, el: pc.el, tier: pc.tier, lvl });   // seit 0.12.1.1 stapeln die Fallen (vorher ersetzte eine neue die liegende)
 }
-// Die Falle wird aufgedeckt, sobald Schaden eingeht (vor der Verteidigung). Entspricht die Farbe des Schadens der Farbe der Karte, wirft sie 1/2/3 (Stufe 1/2/3) unblockbaren Schaden auf den Angreifer zurück (höchstens der eingehende Schaden, der entsprechend sinkt). Danach kommt die Karte auf den Ablagestapel, auch ohne Rückwurf.
-function springTrap(state, owner, att, color, dmg, fxs, texts) {
-  const t = owner.stats.trap; if (!t) return 0;
-  delete owner.stats.trap; owner.deck.discard.push(t.card);
-  const hit = t.el === color, refl = hit ? Math.min(t.lvl, dmg) : 0;
-  const sh = refl > 0 ? shieldHit(att.stats, refl) : { hit: 0, absorbed: 0 };   // das Schild des Angreifers mindert auch den Rückwurf (er bleibt unblockbar, das Schild ist aber kein Block)
-  if (sh.hit > 0) att.stats.hp = Math.max(0, att.stats.hp - sh.hit);
-  texts.push('Falle von ' + owner.name + ' (' + NAMES[t.el] + (hit ? ') trifft: ' + refl + ' unblockbarer Schaden zurück' + (sh.absorbed ? ', Schild von ' + att.name + ' mindert um ' + sh.absorbed : '') : '), Angriff in ' + NAMES[color] + ': keine Wirkung'));
-  fxs.push({ kind: 'trap', who: owner.ctrl, to: att.ctrl, el: t.el, card: t.card.id, attElem: color, hit, refl, abs: sh.absorbed, lvl: t.lvl, dmg0: dmg });
-  return refl;
+// Die Fallen werden aufgedeckt, sobald Schaden eingeht (vor der Verteidigung), alle liegenden in der Reihenfolge, in der sie gelegt wurden (seit 0.12.1.1 können mehrere liegen). Entspricht die Farbe des Schadens der Farbe einer Karte, wirft sie 1/2/3 (Stufe 1/2/3) unblockbaren Schaden auf den Angreifer zurück; zusammen höchstens der eingehende Schaden, der entsprechend sinkt (eine spätere Falle wirft nur noch, was übrig ist). Danach kommen alle Karten auf den Ablagestapel, auch ohne Rückwurf.
+function springTraps(state, owner, att, color, dmg, fxs, texts) {
+  const list = owner.stats.traps; if (!list || !list.length) return 0;
+  delete owner.stats.traps;
+  let left = dmg, total = 0, absTotal = 0; const items = [];
+  for (const t of list) {
+    owner.deck.discard.push(t.card);
+    const refl = t.el === color ? Math.min(t.lvl, left) : 0, hit = refl > 0;
+    left -= refl; total += refl;
+    const sh = refl > 0 ? shieldHit(att.stats, refl) : { hit: 0, absorbed: 0 };   // das Schild des Angreifers mindert auch den Rückwurf (er bleibt unblockbar, das Schild ist aber kein Block)
+    if (sh.hit > 0) att.stats.hp = Math.max(0, att.stats.hp - sh.hit);
+    absTotal += sh.absorbed;
+    texts.push('Falle von ' + owner.name + ' (' + NAMES[t.el] + (hit ? ') trifft: ' + refl + ' unblockbarer Schaden zurück' + (sh.absorbed ? ', Schild von ' + att.name + ' mindert um ' + sh.absorbed : '') : t.el === color ? '), Angriff in ' + NAMES[color] + ': der Schaden ist schon zurückgeworfen, keine Wirkung' : '), Angriff in ' + NAMES[color] + ': keine Wirkung'));
+    items.push({ card: t.card.id, el: t.el, lvl: t.lvl, hit, refl, abs: sh.absorbed });
+  }
+  const first = items.find(x => x.hit) || items[0];   // die Summe steuert die Angriffsanimation; die einzelnen Karten stehen in list
+  fxs.push({ kind: 'trap', who: owner.ctrl, to: att.ctrl, el: first.el, card: first.card, attElem: color, hit: total > 0, refl: total, abs: absTotal, lvl: first.lvl, dmg0: dmg, list: items });
+  return total;
 }
 // Wirkung der Kombos (Angriff und nach der Verteidigung): plan = [[Schlüssel, Stufe], ...]
 function applyComboPlan(state, side, opp, plan, ev, texts, fxs) {
@@ -314,7 +321,6 @@ function applyComboPlan(state, side, opp, plan, ev, texts, fxs) {
       texts.push('Hellsicht ' + lvl + ': ' + (r.drawn ? 'zieht ' + r.drawn + ' Karte' + (r.drawn === 1 ? '' : 'n') + (r.choose ? ' und wählt ' + r.n + ' davon' : r.n ? ', ' + r.n + ' bleibt offen liegen' : ', keine brauchbar') : 'keine Karte zum Ziehen'));
     }
     if (k === 'tr') {
-      if (side.stats.trap) { side.deck.discard.push(side.stats.trap.card); delete side.stats.trap; }
       const r = trapDraw(state, side, lvl);
       fxs.push({ kind: 'trapcast', who: side.ctrl, to: opp.ctrl, n: lvl });
       texts.push('Falle ' + lvl + ': zieht ' + r.drawn + ' Karte' + (r.drawn === 1 ? '' : 'n') + (r.none ? ', keine eignet sich als Falle' : r.choose ? ' und legt eine davon verdeckt vor sich (Wahl)' : ' und legt eine davon verdeckt vor sich'));
@@ -372,7 +378,7 @@ function execAttack(state) {
   c.lfp = null;
   const dmg0 = ev.prim ? ev.damage : 0;
   let dmg = dmg0;
-  if (dmg0 > 0 && opp.stats.trap) dmg = dmg0 - springTrap(state, opp, side, ev.prim, dmg0, fxs, texts);   // die Falle wird aufgedeckt, sobald Schaden eingeht, vor der Verteidigung
+  if (dmg0 > 0 && opp.stats.traps) dmg = dmg0 - springTraps(state, opp, side, ev.prim, dmg0, fxs, texts);   // die Falle wird aufgedeckt, sobald Schaden eingeht, vor der Verteidigung
   if (dmg > 0) fxs.push({ kind: 'attack', who: side.ctrl, to: opp.ctrl, elem: ev.prim, n: dmg });
   log(state, side.name + ' greift an' + (ev.prim ? ' (' + NAMES[ev.prim] + ', Schaden ' + dmg0 + ')' : ' (nur Flüche)') + (texts.length ? ' – ' + texts.join(', ') : '') + '.', side.ctrl, fxs.length ? fxs : undefined);
   if (hpDecided(state)) { c.turn = c.turn === 'a' ? 'b' : 'a'; c.action = 'attack'; c.color = null; c.pending = 0; c.atkTurns = (c.atkTurns || 0) + 1; }   // Stufe 1: Der Rückwurf der Falle hat den Angreifer auf 0 HP gebracht. Er ist besiegt, noch bevor der Verteidiger verteidigt oder Schaden nimmt; kein Fluss wirkt mehr

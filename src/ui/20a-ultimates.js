@@ -129,12 +129,16 @@ const TrapFx = (() => {
   const off = () => FAST || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
   // Bruchstücke der umgedrehten Karte (Splitter als Polygone, in Prozent der Kartenfläche)
   const SHARDS = [['0% 0%,55% 0%,46% 40%,0% 52%', -46, -30, -24], ['55% 0%,100% 0%,100% 48%,62% 55%,46% 40%', 40, -44, 19], ['0% 52%,46% 40%,62% 55%,40% 100%,0% 100%', -36, 56, -17], ['62% 55%,100% 48%,100% 100%,40% 100%', 48, 62, 28]];
-  function play(f, o) {
+  function play(f, o) {   // seit 0.12.1.1 können mehrere Fallen liegen: f.list hat je Falle einen Eintrag, alle Karten liegen nebeneinander und lösen gleichzeitig aus
     if (off()) return;
+    const items = f.list && f.list.length ? f.list : [f];
+    items.forEach((it, i) => playOne(Object.assign({}, f, it, { list: null }), o, i, items.length));
+  }
+  function playOne(f, o, idx, cnt) {
     const mid = (o && o.mid) || { x: SW / 2, y: 400 }, ownSide = f.who === ME ? 1 : -1, attSide = f.to === ME ? 1 : -1;
-    const tc = stage.querySelector('.trapcard[data-who="' + (f.who === ME ? 's' : 'o') + '"]');
+    const tc = stage.querySelectorAll('.trapcard[data-who="' + (f.who === ME ? 's' : 'o') + '"]')[idx];
     const from = pos(tc || panelOf(f.who), { x: SW / 2, y: f.who === ME ? 560 : 240 }), to = pos(panelOf(f.to), { x: SW / 2, y: f.to === ME ? 560 : 240 });
-    const rest = { x: mid.x, y: mid.y + ownSide * 112 }, w = 112, h = 157;   // die Karte liegt auf der Seite ihres Besitzers, damit die Angriffsgeschosse sichtbar bleiben
+    const sp = Math.min(120, 440 / cnt), w = Math.min(112, sp - 8), h = Math.round(w * 1.4), rest = { x: mid.x + (idx - (cnt - 1) / 2) * sp, y: mid.y + ownSide * 112 };   // die Karte liegt auf der Seite ihres Besitzers, damit die Angriffsgeschosse sichtbar bleiben
     const el = document.createElement('div');
     el.className = 'trapfx';
     el.style.cssText = 'left:' + (from.x - 20) + 'px;top:' + (from.y - 28) + 'px;width:40px;height:56px;transition:left .4s ease-out,top .4s ease-out,width .4s ease-out,height .4s ease-out';

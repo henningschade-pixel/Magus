@@ -88,13 +88,48 @@ test('Schild wirkt gegen jede Farbe und wirft nichts zurück', () => {
     assert.equal(op.stats.hp, 9, att); assert.equal(op.stats.rainbow || 0, 0, att); assert.equal(me.stats.hp, 9, att + ': kein Rückwurf');
   }
 });
-test('Ein neues Schild bringt die Ladungen auf die Stufe, es addiert nicht (höchstens 3)', () => {
-  const st = {}; M.shieldAdd ? null : null;
-  const { s, me } = combatSetup(11, ['E2', 'W2']);
-  me.stats.rainbow = 1;
+test('Stapeln (0.12.1.1): Ein neues Schild addiert seine Ladungen zu den liegenden, ohne Obergrenze', () => {
+  for (const [have, add] of [[1, 2], [3, 2], [5, 1]]) {
+    const { s, me } = combatSetup(11, ['E2', 'W2']);
+    me.stats.rainbow = have;
+    M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
+    assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+    assert.equal(me.stats.rainbow, have + (add === 1 ? 2 : add), 'Schild-Stufe 2 addiert sich zu ' + have);
+  }
+});
+test('Stapeln (0.12.1.1): Ultimates addieren Heil-, Mana- und Todesmarker zu den liegenden, ohne Obergrenze', () => {
+  let t = combatSetup(11, ['F2', 'E2', 'W2']); t.me.stats.heal = 2;   // Sekundärfarbe Erde: Heilfluss
+  [0, 1, 2].forEach(i => M.apply(t.s, { pid: 0, type: 'mark', slot: i })); assert.ok(M.apply(t.s, { pid: 0, type: 'attack' }).ok);
+  assert.equal(t.me.stats.heal, 4, 'Heilmarker: 2 + 2');
+  t = combatSetup(11, ['F2', 'W2', 'E2']); t.me.stats.manaflow = 3;
+  [0, 1, 2].forEach(i => M.apply(t.s, { pid: 0, type: 'mark', slot: i })); assert.ok(M.apply(t.s, { pid: 0, type: 'attack' }).ok);
+  assert.equal(t.me.stats.manaflow, 5, 'Manamarker: 3 + 2');
+  t = combatSetup(11, ['W2', 'F2', 'E2']); t.op.stats.death = 3;
+  [0, 1, 2].forEach(i => M.apply(t.s, { pid: 0, type: 'mark', slot: i })); assert.ok(M.apply(t.s, { pid: 0, type: 'attack' }).ok);
+  assert.equal(t.op.stats.death, 5, 'Todesmarker des Gegners: 3 + 2');
+});
+test('Stapeln (0.12.1.1): Mehrere Fallen liegen nebeneinander, bei Schaden werden alle aufgedeckt und ihre Rückwürfe addieren sich (zusammen höchstens der eingehende Schaden)', () => {
+  const run = (traps, att) => {
+    const { s, me, op } = combatSetup(11, [att]);
+    op.stats.hp = op.stats.maxHp = 9; me.stats.hp = me.stats.maxHp = 9;
+    op.stats.traps = traps.map((t, i) => ({ card: { id: t[0] + '1', uid: 9001 + i }, el: t[0], tier: 1, lvl: t[1] }));
+    M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
+    return { me, op, s };
+  };
+  let r = run([['F', 1], ['F', 1]], 'F3'); assert.equal(r.me.stats.hp, 7, 'zwei Rückwürfe à 1'); assert.equal(r.op.stats.traps, undefined);
+  assert.ok(r.op.deck.discard.some(x => x.uid === 9001) && r.op.deck.discard.some(x => x.uid === 9002), 'beide Karten abgelegt');
+  r = run([['F', 2], ['F', 2]], 'F3'); assert.equal(r.me.stats.hp, 6, 'zusammen höchstens der eingehende Schaden (3)');
+  r = run([['F', 1], ['W', 3], ['F', 2]], 'F3'); assert.equal(r.me.stats.hp, 6, 'nur passende Fallen werfen (1 + 2); die falsche Farbe wird trotzdem abgelegt');
+  assert.ok(r.op.deck.discard.some(x => x.uid === 9002), 'auch die nicht passende Falle ist abgelegt');
+  r = run([['E', 2], ['E', 2]], 'F3'); assert.equal(r.me.stats.hp, 9, 'falsche Farbe: kein Rückwurf');
+});
+test('Stapeln (0.12.1.1): Eine neue Falle ersetzt die liegende nicht mehr', () => {
+  const { s, me } = combatSetup(11, ['W2', 'F2']);
+  me.stats.traps = [{ card: { id: 'F1', uid: 9001 }, el: 'F', tier: 1, lvl: 1 }];
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
   assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
-  assert.equal(me.stats.rainbow, 2);
+  if (s.combat.forced && s.combat.forced.kind === 'trap') assert.ok(M.apply(s, { pid: 0, type: 'fd', slots: [0] }).ok);
+  assert.equal(me.stats.traps.length, 2, 'beide Fallen liegen');
 });
 
 test('Monsterwerte je Stufe: Grundform ohne Würfel, mit Würfeln höchstens die Ausschläge der Seiten', () => {
@@ -330,21 +365,21 @@ test('Läuterung Stufe 3 entfernt beliebig gemischt eigene und gegnerische Mana-
 function trapFall(el, lvl, att, dmgHp) {
   const { s, me, op } = combatSetup(11, [att]);
   op.stats.hp = op.stats.maxHp = 9; me.stats.hp = me.stats.maxHp = 9;
-  op.stats.trap = { card: { id: el + '1', uid: 9001 }, el, tier: 1, lvl };
+  op.stats.traps = [{ card: { id: el + '1', uid: 9001 }, el, tier: 1, lvl }];
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
   return { s, me, op, disc: op.deck.discard };
 }
 test('Falle: Passt die Farbe des Schadens, werden 1/2/3 unblockbar zurückgeworfen und der eingehende Schaden sinkt entsprechend', () => {
   const { me, op, s } = trapFall('F', 1, 'F3');
   assert.equal(me.stats.hp, 8, 'Stufe 1 wirft 1 zurück');
-  assert.equal(op.stats.trap, undefined, 'die Karte ist aufgedeckt und liegt nicht mehr');
+  assert.equal(op.stats.traps, undefined, 'die Karte ist aufgedeckt und liegt nicht mehr');
   assert.ok(op.deck.discard.some(x => x.uid === 9001), 'Karte auf dem Ablagestapel');
   assert.ok(s.combat.pending <= 2, 'eingehender Schaden um den Rückwurf gemindert');
   const t = trapFall('F', 3, 'F3'); assert.equal(t.me.stats.hp, 6, 'Stufe 3 wirft 3 zurück (der eingehende Schaden ist 3)');
 });
 test('Falle: Andere Farbe wirkt nicht, die Karte kommt trotzdem auf den Ablagestapel', () => {
   const { me, op, disc } = trapFall('F', 3, 'W2');
-  assert.equal(me.stats.hp, 9); assert.equal(op.stats.trap, undefined); assert.ok(disc.some(x => x.uid === 9001));
+  assert.equal(me.stats.hp, 9); assert.equal(op.stats.traps, undefined); assert.ok(disc.some(x => x.uid === 9001));
 });
 test('Falle: Stufe S wirft S zurück (1/2/3), gedeckelt durch den eingehenden Schaden', () => {
   assert.equal(trapFall('F', 2, 'F3').me.stats.hp, 7);   // Schaden 3, Rückwurf 2
@@ -362,7 +397,7 @@ test('Falle legen: Blau + Rot zieht drei Karten vom Stapel (nicht in die Hand), 
   assert.equal(me.deck.hand.filter(Boolean).length, handN, 'die gezogenen Karten ersetzen die Hand nicht');
   assert.equal(M.apply(s, { pid: 0, type: 'attack' }).ok, false, 'vorher keine andere Aktion');
   assert.ok(M.apply(s, { pid: 0, type: 'fd', slots: [1] }).ok);
-  assert.ok(me.stats.trap && me.stats.trap.el === 'W' && me.stats.trap.lvl === 2, 'Falle liegt: W1, Stufe 2');
+  assert.ok(me.stats.traps && me.stats.traps.length === 1 && me.stats.traps[0].el === 'W' && me.stats.traps[0].lvl === 2, 'Falle liegt: W1, Stufe 2');
   assert.deepEqual(me.deck.discard.slice(d0 + 2).map(x => x.id).sort(), ['E2', 'F1'], 'die nicht gewählten kommen auf den Ablagestapel (nach den zwei Kombokarten)');
   assert.equal(me.deck.hand.filter(Boolean).length, handN);
   assert.equal(JSON.stringify(me.deck.marks), '[]');
@@ -1230,7 +1265,7 @@ test('Niederlagenprüfung 1: Der Rückwurf der Falle entscheidet vor der Verteid
   const { s, me, op } = combatSetup(11, ['F3']);
   me.stats.hp = 1; me.stats.maxHp = 9; op.stats.hp = op.stats.maxHp = 9;
   me.stats.heal = 5; me.stats.healPhase = 5;   // ein Heilfluss darf den Angreifer nicht mehr retten
-  op.stats.trap = { card: { id: 'F1', uid: 9001 }, el: 'F', tier: 1, lvl: 1 };
+  op.stats.traps = [{ card: { id: 'F1', uid: 9001 }, el: 'F', tier: 1, lvl: 1 }];
   s.keepSnap = true; M.apply(s, { pid: 0, type: 'mark', slot: 0 });
   const r = M.apply(s, { pid: 0, type: 'attack' });
   assert.ok(r.ok && r.combatEnd, 'der Kampf endet sofort');
@@ -1263,7 +1298,7 @@ test('Niederlagenprüfung 3: Der Todesfluss am Phasenende besiegt den Angreifer;
 test('Schild mindert den Rückwurf der Falle (und verliert je geminderten Schaden eine Ladung); der eingehende Schaden sinkt trotzdem um den vollen Rückwurf', () => {
   const { s, me, op } = combatSetup(11, ['F3']);
   me.stats.hp = me.stats.maxHp = 9; op.stats.hp = op.stats.maxHp = 9; me.stats.rainbow = 3;
-  op.stats.trap = { card: { id: 'F1', uid: 9001 }, el: 'F', tier: 1, lvl: 2 };
+  op.stats.traps = [{ card: { id: 'F1', uid: 9001 }, el: 'F', tier: 1, lvl: 2 }];
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
   assert.equal(me.stats.hp, 9, 'der Rückwurf von 2 wurde vom Schild geschluckt');
   assert.equal(me.stats.rainbow, 1, 'zwei Ladungen verbraucht');
@@ -1272,7 +1307,7 @@ test('Schild mindert den Rückwurf der Falle (und verliert je geminderten Schade
 test('Schild mindert nur so viel des Rückwurfs, wie es Ladungen hat; der Rest geht auf die HP', () => {
   const { s, me, op } = combatSetup(11, ['F3']);
   me.stats.hp = me.stats.maxHp = 9; op.stats.hp = op.stats.maxHp = 9; me.stats.rainbow = 1;
-  op.stats.trap = { card: { id: 'F1', uid: 9001 }, el: 'F', tier: 1, lvl: 3 };
+  op.stats.traps = [{ card: { id: 'F1', uid: 9001 }, el: 'F', tier: 1, lvl: 3 }];
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
   assert.equal(me.stats.hp, 7); assert.equal(me.stats.rainbow, undefined);
 });
