@@ -170,7 +170,7 @@ Anlass: Die Gewichte der Basis-KI reichen für taktische Entscheidungen nicht, v
 - **Kandidaten:** alle unterscheidbaren Züge der Lage (Angriffe mit jeder Primär- und Sekundärfarbe, Erholen, Nachziehen mit 0 bis 2 gesperrten Karten, Gratis-Nachziehen, jede Verteidigung, Passen, die Wahl bei Falle und Hellsicht); der Zug der Basis-KI ist immer dabei.
 - **Welten:** Für jeden Durchlauf wird das Verdeckte neu gemischt (Hand, Zugstapel und Fallen des Gegners, eigener Zugstapel). Alle Kandidaten sehen dieselben Welten.
 - **Durchspielen:** Nach dem Kandidaten führen beide Seiten ihre Züge nach der Basis-KI aus, bis der Kampf endet (höchstens `steps` 90 Schritte, dann Schätzung aus den HP). Wert = Verschiebung der Siegpunkte, dazu ein kleiner Anteil für die verbliebenen HP und das Mana des Angreifers im Monsterkampf.
-- **Verteilung der Durchläufe:** Ausscheidungsverfahren (nach jeder Runde fällt die schwächere Hälfte weg). Standard `sim` 120 Durchläufe je Entscheidung (240 brauchen in Node im Mittel etwa 110 ms, Maximum etwa 420 ms; 120 etwa die Hälfte); im Spiel begrenzt `ms` 500 die Bedenkzeit.
+- **Verteilung der Durchläufe:** Ausscheidungsverfahren (nach jeder Runde fällt die schwächere Hälfte weg). Standard `sim` 120 Durchläufe je Entscheidung (240 brauchen in Node im Mittel etwa 110 ms, Maximum etwa 420 ms; 120 im Mittel 67 ms, Maximum 252 ms); im Spiel begrenzt `ms` 500 die Bedenkzeit.
 
 Schalter: `AI.setSearch({ sim, ms, steps, cands, world, thr, thrWt })` für alle Plätze, je Platz `AI.setParams(pid, { sim: 120 })`. `load.js` stellt für Werkzeuge und Tests `sim` 0 ein (Basis-KI, etwa 300-mal schneller); `MAGUS_SIM=120 node tools/balance/report.js 40 '{}'` misst mit Vorausschau.
 
