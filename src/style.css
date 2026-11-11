@@ -214,6 +214,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .mk.me{background:radial-gradient(circle at 35% 30%,#fff0b8,#e0b84a 55%,#b8902f);border:1.5px solid #6b5016}
 .mk.op{background:radial-gradient(circle at 35% 30%,#e4e4ea,#a0a0aa 55%,#74747e);border:1.5px solid #3c3c44}
 .mk.gh{border:2px dashed #bff3c8;background:rgba(127,208,138,.5);box-shadow:0 0 8px rgba(127,208,138,.85);animation:mkpulse 1.4s ease-in-out infinite}
+.mk.glide,.dmark.glide{transition:left .5s ease-in-out,top .5s ease-in-out,width .5s ease-in-out,height .5s ease-in-out,background .2s}   /* Marker gleiten an ihren neuen Platz (0.11.1) */
 @keyframes mkpulse{0%,100%{opacity:1}50%{opacity:.55}}
 @media (prefers-reduced-motion:reduce){.mk.gh{animation:none}}
 

@@ -4,6 +4,27 @@ let FAST = FAST_URL;   // ohne Animationen, Töne und Wartezeiten (Testlauf per 
 const setFast = () => { FAST = FAST_URL || (typeof SPEC !== 'undefined' && SPEC && specSpeed > 1); };
 const sleep = ms => new Promise(r => setTimeout(r, FAST_URL ? 4 : ms));
 function toast(t) { toastEl.textContent = t; toastEl.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => toastEl.classList.remove('show'), 2200); }
+// Marker sind physische Objekte und springen nicht: Ebenen werden bei jedem Zeichnen neu geschrieben, deshalb startet der neue Marker an der alten Position (auch mitten in einer Bewegung) und gleitet an die neue.
+// root: Container, sel: Marker-Selektor, keyOf: Schlüssel je Marker (Spieler), write: schreibt den neuen Inhalt. Ohne Änderung, mit ?fast und bei reduzierter Bewegung wird nichts animiert.
+let glideUntil = 0;
+function glideSet(root, sel, keyOf, write) {
+  const live = Date.now() < glideUntil, old = {};
+  root.querySelectorAll(sel).forEach(e => { const cs = live ? getComputedStyle(e) : e.style; old[keyOf(e)] = { l: cs.left, t: cs.top, w: cs.width, h: cs.height, red: e.classList.contains('red') }; });
+  write();
+  if (FAST || (window.matchMedia && matchMedia('(prefers-reduced-motion:reduce)').matches)) return;
+  const mv = [];
+  root.querySelectorAll(sel).forEach(e => {
+    const o = old[keyOf(e)], red = e.classList.contains('red'), dm = e.classList.contains('dmark'); if (!o) return;
+    const n = { l: e.style.left, t: e.style.top, w: e.style.width, h: e.style.height, red };
+    if (o.l === n.l && o.t === n.t && o.w === n.w && o.h === n.h && (!dm || o.red === red)) return;
+    mv.push([e, n, dm]); e.style.left = o.l; e.style.top = o.t; e.style.width = o.w; e.style.height = o.h;
+    if (dm) { e.classList.toggle('red', o.red); e.classList.toggle('green', !o.red); }
+  });
+  if (!mv.length) return;
+  void root.offsetWidth;
+  mv.forEach(([e, n, dm]) => { e.classList.add('glide'); e.style.left = n.l; e.style.top = n.t; e.style.width = n.w; e.style.height = n.h; if (dm) { e.classList.toggle('red', n.red); e.classList.toggle('green', !n.red); } });
+  glideUntil = Date.now() + 520;
+}
 function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 function dots(n, max) { max = Math.max(max || 3, n); let s = ''; for (let i = 0; i < max; i++) s += i < n ? '●' : '○'; return s; }
 function thumb(id) { return '<span class="thumb" style="background-image:url(' + IMG[id] + ')"></span>'; }

@@ -690,6 +690,11 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Tests:** Drei Tests angepasst (Nachziehmarker Weltphase, Nachziehlimit Kauf, Nachziehlimit Weltphase; der Marker-Reset läuft jetzt über den Händler), neuer Test „Magie kaufen und Upgrades sind keine Aktion mehr“. `tests/golden.json` ist neu erzeugt (absichtliche Regeländerung).
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
 
+## Änderung 0.11.1 (11.11.)
+
+- **Marker gleiten statt zu springen (Oberfläche, keine Regeländerung):** Alle Objekte sind physisch, ihre Marker bewegen sich deshalb sichtbar. Die Steine im Tempel (eigener, Gegner und der grüne Vorschau-Stein des eingestellten Opfers) und der Nachziehmarker beim Stapel (Feld und Grün/Rot) sprangen bei jedem Neuzeichnen, weil die Ebene neu geschrieben wurde. Neue Hilfsfunktion `glideSet` in `src/ui/12-hilfen.js`: Der neue Marker startet an der alten Position (auch mitten in einer Bewegung) und gleitet in 0,5 s an die neue (`.mk.glide`, `.dmark.glide` in `src/style.css`). Ohne Änderung, mit `?fast`, beim Zuschauen ab Tempo ×3 und bei reduzierter Bewegung (`prefers-reduced-motion`) bleibt alles wie bisher.
+- Die Versionsbeschreibung im Spiel nennt die Änderung.
+
 ## Änderung 0.11.0.9 (11.11.)
 
 - **Regeländerung Ultimate:** Die Ultimate hängt wie jede Kombo an der Sekundärfarbe (zweite Farbe) statt an der zuletzt markierten Karte; die dritte Farbe löst nur aus und hat sonst keine Funktion. Das Echo verstärkt die Ultimate bei Sekundärfarbe (vorher Schlusskarte). Die KI probiert die Karten entsprechend mit jeder möglichen Karte an zweiter Stelle.
