@@ -202,15 +202,16 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 /* Tempel (seit 0.11, rechts): Stufenraster mit Holzsteinen */
 .tpanel{display:flex;flex-direction:column}
 .tpanel h3{flex:none;text-align:left}
-.tlab{position:absolute;display:flex;align-items:center;gap:7px;white-space:nowrap;font-size:15px;height:22px}.tlab b{color:var(--gold)}
+.tlegend{flex:none;display:flex;justify-content:space-between;gap:6px;font-size:14.5px;height:22px;margin-bottom:4px}
+.tlab{display:flex;align-items:center;gap:6px;white-space:nowrap}.tlab b{color:var(--gold)}
 .tboard{position:relative;flex:none;margin:2px auto 0}
 .tcell{position:absolute;box-sizing:border-box;border:1px solid rgba(255,255,255,.08);border-radius:4px;background:linear-gradient(180deg,rgba(0,0,0,.32),rgba(0,0,0,.16));color:var(--mute);overflow:hidden}
-.tcell i{position:absolute;left:3px;top:1px;font-style:normal;line-height:1.05;font-variant-numeric:tabular-nums}
+.tcell i{position:absolute;left:2px;top:1px;font-style:normal;line-height:1.05;font-variant-numeric:tabular-nums}
 .tcell.lv{border-color:var(--gold);color:#f6dc8c;font-weight:700;background:linear-gradient(180deg,rgba(210,173,79,.32),rgba(210,173,79,.12));box-shadow:0 0 7px rgba(210,173,79,.55),inset 0 0 5px rgba(255,214,110,.22)}
 .tcell.z{color:var(--bone)}
 .tcell.gain{border-color:var(--good);border-style:dashed;background:linear-gradient(180deg,rgba(127,208,138,.3),rgba(127,208,138,.1));color:#d4f7da}
 .tcell.gain.lv{border:1px solid var(--gold);color:#f6dc8c;box-shadow:0 0 8px rgba(210,173,79,.6),inset 0 0 9px rgba(127,208,138,.55)}
-.tinfo{flex:1;min-height:0;margin-top:8px;padding-top:6px;border-top:1px solid var(--line);font-size:15.5px;line-height:1.25;color:var(--mute)}
+.tinfo{flex:1;min-height:0;margin-top:auto;padding-top:5px;font-size:15.5px;line-height:1.25;color:var(--mute)}
 .tinfo b{color:var(--bone)}.tinfo b.pg{color:var(--good)}
 .stone{position:absolute;width:var(--w);height:var(--w);pointer-events:none;z-index:3}
 .stone.static{position:relative;flex:none;display:inline-block}

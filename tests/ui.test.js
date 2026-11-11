@@ -78,6 +78,10 @@ test('Weltphase: Bibliothek links, Tempel rechts mit Raster, Holzsteinen und Opf
     assert.equal(await p.locator('.tpanel .stone.gh').count(), 1, 'Vorschau-Stein bei eingestelltem Opfer');
     assert.equal(await p.locator('.tpanel .tcell.gain').count(), 3, 'Felder 1 bis 3 sind als Gewinn markiert');
     assert.match(await p.textContent('.tinfo'), /2 Gold opfern: \+3 Punkte \(gesamt 3\)/);
+    assert.ok(await p.locator('.tpanel .tcell').count() >= 56, 'das Raster reicht mindestens bis Stufe 10 (55 Punkte)');
+    assert.doesNotMatch(await p.textContent('.tinfo'), /stellst du ein/, 'kein Hinweistext zum Einstellen des Golds');
+    await p.evaluate(() => { const G = window.__magus.state; G.players[1].temple = { level: 21, points: 0 }; window.__magus.pump(); });
+    assert.equal(await p.locator('.tpanel .tcell').count(), 232, 'voller Magieausbau = Stufe 21 = 231 Punkte, Felder 0 bis 231');
     assert.deepEqual(errs, []);
   } finally { await b.close(); }
 });

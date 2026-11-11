@@ -690,6 +690,12 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Tests:** Drei Tests angepasst (Nachziehmarker Weltphase, Nachziehlimit Kauf, Nachziehlimit Weltphase; der Marker-Reset läuft jetzt über den Händler), neuer Test „Magie kaufen und Upgrades sind keine Aktion mehr“. `tests/golden.json` ist neu erzeugt (absichtliche Regeländerung).
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
 
+## Änderung 0.11.0.1 (11.11.)
+
+- **Tempel-Raster bis zum vollen Magieausbau (keine Regeländerung):** Magie auf Stufe 3 in allen drei Farben braucht 6 Käufe; der Preis steigt je Kauf um 1 (`priceRise`), also 1 + 2 + 3 + 4 + 5 + 6 = **21 Upgrade-Punkte**. Jede Tempelstufe gibt einen Upgrade-Punkt, also ist **Tempelstufe 21** nötig, das sind 21·22/2 = **231 Tempelpunkte** (HP, Mana und Limit kommen noch dazu). Das Raster zeigt deshalb die Felder 0 bis 231 zeilenweise, aber nur so viele, wie die Steine brauchen (mindestens bis 55 = Stufe 10, sonst bis zur Schwelle von drei Stufen über dem weitesten Stein); die Spaltenzahl wird so gewählt, dass die Felder möglichst groß bleiben. Die Reihen entsprechen keinen Stufen mehr; die goldenen Zahlen k(k+1)/2 bleiben hervorgehoben.
+- **Opfer-Vorschau:** Der Hinweis zum Einstellen mit ◀ ▶ entfällt (Platz); beim Einstellen zeigen der durchscheinende Stein und die grün gestrichelten Felder den Fortschritt, darunter stehen Punkte, Gesamtzahl und neue Stufe.
+- Die Versionsbeschreibung im Spiel nennt die Änderung.
+
 ## Änderung 0.11 (11.11.; 0.10 ist durch eine experimentelle Entwicklung belegt)
 
 - **Neues Layout der Weltphase (keine Regeländerung):** Das **Protokoll** liegt hinter einem runden Knopf oben links neben dem Statistik-Knopf (`#logbtn`, 36 px). Es öffnet als Fenster (`#logpop`, ganze Partie, mit Export-Knopf) und schließt mit dem Knopf, mit Esc oder durch einen Klick daneben; der Knopf gilt in Weltphase und Kampf, der Kampflog links im Kampf bleibt. Im frei gewordenen linken Fenster steht die **Bibliothek** (größere Karten, Anzahl darunter), das bisherige Bibliotheksfenster rechts ist der **Tempel**.
