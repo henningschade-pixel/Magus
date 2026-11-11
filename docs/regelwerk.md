@@ -690,6 +690,13 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Tests:** Drei Tests angepasst (Nachziehmarker Weltphase, Nachziehlimit Kauf, Nachziehlimit Weltphase; der Marker-Reset läuft jetzt über den Händler), neuer Test „Magie kaufen und Upgrades sind keine Aktion mehr“. `tests/golden.json` ist neu erzeugt (absichtliche Regeländerung).
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
 
+## Änderung 0.12.1.2 (11.11.)
+
+- **Standardwerte „Erlaubte Aktionen“ (Regeländerung der Voreinstellung):** `DEFAULT_RULES.allowDef` (`src/engine/80-start.js`) steht jetzt auf Verteidigen *nach Angriff* (2), Erholen *aus*, Nachziehen *aus*, Passen *an*, Echo setzen *aus*, Kombo wirken *an* (vorher Erholen und Nachziehen *ohne Angriff* (3), Echo *an*). Die Angriffsphase bleibt unverändert (alles an). Übernommen aus den Einstellungen des Spielers (Screenshot); der Passen-Schalter war dort verdeckt und bleibt auf *an*.
+- **Wirkung:** In der Verteidigungsphase setzt das Echo nicht mehr; da die Verteidigung nur nach einem Angriff entsteht, ändert die Voreinstellung bei Erholen und Nachziehen am Spielverlauf nichts. Selbst gewählte Einstellungen im Browser bleiben erhalten.
+- **Tests:** Standard-Test angepasst; `tests/golden.json` ist neu erzeugt.
+- Die Versionsbeschreibung im Spiel nennt die Änderung.
+
 ## Änderung 0.12.1.1 (11.11.)
 
 - **Regeländerung: Alle Marker stapeln, die Höchstgrenzen entfallen.** Die Kombo-Effekte addieren sich jetzt zu dem, was schon liegt:

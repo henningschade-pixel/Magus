@@ -1418,7 +1418,7 @@ test('Echo: Auch Angriff und Verteidigung ohne Kombo hinterlassen ein Echo der P
 });
 
 test('Echo: Eine Verteidigung ohne Kombo hinterlässt ein Echo, Passen lässt es stehen (0.9.6)', () => {
-  const { s, c, op } = combatSetup(11, ['W1']);
+  const { s, c, op } = combatSetup(11, ['W1'], { rules: { allowDef: Object.assign({}, M.DEFAULT_RULES.allowDef, { echo: 1 }) } });   // Echo in der Verteidigung ausdrücklich an (Standard seit 0.12.1.2: aus)
   op.deck.hand[0] = Object.assign({}, op.deck.hand[0], { id: 'W1' });
   op.stats.echo = 'E'; op.stats.mana = 9;
   M.apply(s, { pid: 0, type: 'mark', slot: 0 });
@@ -1452,12 +1452,12 @@ test('Zermürbung: Rundenzähler der Weltphase, ab Runde exhaustRounds + 1 schen
   assert.equal(M.worldWear(t), false); assert.ok(!t.log.some(l => /Zermürbung/.test(l.txt)));
 });
 
-test('Erlaubte Aktionen je Phase (0.9.9.5): Standard – Erholen und Nachziehen nur in der Angriffsphase, alles andere erlaubt', () => {
+test('Erlaubte Aktionen je Phase (0.9.9.5, Standard seit 0.12.1.2): Erholen, Nachziehen und Echo setzen nur in der Angriffsphase, alles andere erlaubt', () => {
   const { s, c } = combatSetup(11, ['F3']); s.rules.allowDef = Object.assign({}, M.DEFAULT_RULES.allowDef);
-  assert.deepEqual(M.DEFAULT_RULES.allowDef, { defend: 2, recover: 3, draw: 3, pass: 1, echo: 1, combo: 1 }, 'Standard der Verteidigung'); c.pending = 3; c.afterAtk = true;
+  assert.deepEqual(M.DEFAULT_RULES.allowDef, { defend: 2, recover: 0, draw: 0, pass: 1, echo: 0, combo: 1 }, 'Standard der Verteidigung'); c.pending = 3; c.afterAtk = true;
   for (const k of ['attack', 'recover', 'draw', 'pass', 'echo', 'combo']) assert.equal(M.allowed(s, 'attack', k), true, 'Angriff ' + k);
-  for (const k of ['defend', 'pass', 'echo', 'combo']) assert.equal(M.allowed(s, 'defense', k), true, 'Verteidigung ' + k);
-  for (const k of ['recover', 'draw']) assert.equal(M.allowed(s, 'defense', k), false, 'Verteidigung ' + k);
+  for (const k of ['defend', 'pass', 'combo']) assert.equal(M.allowed(s, 'defense', k), true, 'Verteidigung ' + k);
+  for (const k of ['recover', 'draw', 'echo']) assert.equal(M.allowed(s, 'defense', k), false, 'Verteidigung ' + k);
   s.rules.allowAtk = { pass: 0, recover: 0 }; assert.equal(M.allowed(s, 'attack', 'pass'), true, 'sind Erholen und Passen aus, gilt Passen');
 });
 
@@ -1516,7 +1516,7 @@ test('Erlaubte Aktionen: Verteidigung „nach Angriff“ (2) und „ohne Angriff
 });
 
 test('Reaktion ohne Angriff (0.9.9.13): Nach einer Aktion ohne Angriff reagiert die Gegenseite, wenn Erholen oder Nachziehen „ohne Angriff“ erlaubt sind', () => {
-  const dflt = { allowDef: Object.assign({}, M.DEFAULT_RULES.allowDef) };
+  const dflt = { allowDef: Object.assign({}, M.DEFAULT_RULES.allowDef, { recover: 3, draw: 3 }) };   // seit 0.12.1.2 sind Erholen und Nachziehen in der Verteidigungsphase standardmäßig aus: hier ausdrücklich „ohne Angriff“
   let { s, c, me, op } = combatSetup(11, ['F3'], { rules: dflt });
   me.stats.mana = 5; op.stats.mana = 2;
   assert.ok(M.apply(s, { pid: 0, type: 'recover' }).ok);   // Aktion ohne Angriff
@@ -1558,7 +1558,7 @@ test('Reaktion ohne Angriff (0.9.9.14): „ohne Angriff“ hängt am Angriff, ni
 });
 
 test('KI in der Reaktion ohne Angriff: Nachziehen bei schwacher Hand und vorhandenem Mana, sonst Erholen oder Passen (0.9.9.14)', () => {
-  const dflt = { allowDef: Object.assign({}, M.DEFAULT_RULES.allowDef) };
+  const dflt = { allowDef: Object.assign({}, M.DEFAULT_RULES.allowDef, { recover: 3, draw: 3 }) };   // Erholen und Nachziehen ausdrücklich „ohne Angriff“ (Standard seit 0.12.1.2: aus)
   let { s, c, me, op } = combatSetup(11, ['F3', 'E3', 'W3'], { rules: dflt });
   me.stats.mana = 5; op.stats.mana = 3; me.stats.maxMana = op.stats.maxMana = 6;
   M.apply(s, { pid: 0, type: 'pass' }); assert.equal(c.action, 'defense');
