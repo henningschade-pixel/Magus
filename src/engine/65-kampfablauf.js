@@ -227,11 +227,12 @@ function castUltimate(side, opp, el, lvl) {
   opp.stats.death = Math.max(opp.stats.death || 0, lvl);
   return { text: 'Ultimate ' + lvl + ' (Feuer): Todesfluss für ' + opp.name + ' (' + opp.stats.death + ' HP am Ende jeder seiner Angriffsphasen bis Kampfende)', fx: { kind: 'ultimate', who: side.ctrl, to: opp.ctrl, el: 'F', n: lvl } };
 }
-function passAttackTurn(state) {
+function passAttackTurn(state, wasAttack) {   // wasAttack: Die Aktion war ein Angriff (auch ohne Schaden); sonst „ohne Angriff“
   const c = state.combat;
   deathTick(state, c.sides[c.turn], (c.atkTurns || 0) + 1);
   c.turn = c.turn === 'a' ? 'b' : 'a'; c.action = 'attack'; c.color = null; c.pending = 0; c.lfp = null;
   c.atkTurns = (c.atkTurns || 0) + 1;   // ein Angriffszug ist vorbei (Angriff ohne Schaden, Passen, Erholen, Nachziehen)
+  c.afterAtk = !!wasAttack;
   if (!hpDecided(state) && reactionUseful(state)) c.action = 'defense';   // seit 0.9.9.13: Auch ohne Angriff reagiert die Gegenseite (Reaktion ohne Angriff, pending 0); danach folgt ihre eigene Aktion
 }
 // Reaktion ohne Angriff (seit 0.9.9.13): Sie entsteht nur, wenn die Einstellungen für die Verteidigungsphase (allowDef, Stufen an / ohne Angriff) dort Erholen oder Nachziehen erlauben und beides etwas bewirken kann; sonst beginnt die Gegenseite gleich mit ihrer Aktion. Verteidigen gibt es ohne Angriff nicht
@@ -344,7 +345,7 @@ function applyComboPlan(state, side, opp, plan, ev, texts, fxs) {
 // Erlaubte Aktionen je Phase (Einstellungen seit 0.9.9.5): rules.allowAtk (Angriffsphase: attack, recover, draw, pass, echo, combo) und rules.allowDef (Verteidigungsphase: defend, recover, draw, pass, echo, combo), Werte 1/0 (allowDef zusätzlich 2 = nur nach einem Angriff, 3 = nur ohne vorausgegangenen Angriff). echo: die Magie der Phase setzt ein Echo; combo: Karten einer zweiten Farbe lösen eine Kombo aus. Erholen oder Passen bleibt immer erlaubt (sind beide abgeschaltet, gilt Passen).
 function allowed(state, phase, k) {
   const key = phase === 'defense' ? 'allowDef' : 'allowAtk', o = (state.rules && state.rules[key]) || {}, dflt = DEFAULT_RULES[key];
-  const atkBefore = !!(state.combat && state.combat.pending > 0);   // Verteidigungsphase: ein Angriff mit Schaden ging voraus
+  const cb = state.combat, atkBefore = !!(cb && (cb.afterAtk === undefined ? cb.pending > 0 : cb.afterAtk));   // Verteidigungsphase: ein Angriff ging voraus (auch ein Angriff ohne Schaden; Todesmarker-Schaden ohne Angriff zählt nicht)
   const on = x => { const v = o[x] !== undefined && o[x] !== null ? +o[x] : +dflt[x]; return key === 'allowDef' && v >= 2 ? (v === 2 ? atkBefore : !atkBefore) : !!v; };   // Verteidigung: 1 an, 0 aus, 2 nur nach Angriff, 3 nur ohne Angriff
   if (k === 'pass') return on('pass') || !on('recover');   // Erholen oder Passen bleibt immer möglich, damit keine Phase ohne ausführbare Aktion bleibt
   return on(k);
@@ -375,8 +376,8 @@ function execAttack(state) {
   if (dmg > 0) fxs.push({ kind: 'attack', who: side.ctrl, to: opp.ctrl, elem: ev.prim, n: dmg });
   log(state, side.name + ' greift an' + (ev.prim ? ' (' + NAMES[ev.prim] + ', Schaden ' + dmg0 + ')' : ' (nur Flüche)') + (texts.length ? ' – ' + texts.join(', ') : '') + '.', side.ctrl, fxs.length ? fxs : undefined);
   if (hpDecided(state)) { c.turn = c.turn === 'a' ? 'b' : 'a'; c.action = 'attack'; c.color = null; c.pending = 0; c.atkTurns = (c.atkTurns || 0) + 1; }   // Stufe 1: Der Rückwurf der Falle hat den Angreifer auf 0 HP gebracht. Er ist besiegt, noch bevor der Verteidiger verteidigt oder Schaden nimmt; kein Fluss wirkt mehr
-  else if (dmg > 0) { c.color = ev.prim; c.pending = dmg; c.turn = c.turn === 'a' ? 'b' : 'a'; c.action = 'defense'; c.atkTurns = (c.atkTurns || 0) + 1; }
-  else passAttackTurn(state);
+  else if (dmg > 0) { c.color = ev.prim; c.pending = dmg; c.afterAtk = true; c.turn = c.turn === 'a' ? 'b' : 'a'; c.action = 'defense'; c.atkTurns = (c.atkTurns || 0) + 1; }
+  else passAttackTurn(state, true);
   const res = finishStep(state, { k: 'A', who: side.key === 'a' ? 0 : 1, v: dmg0 });
   return { ok: true, combatEnd: res };
 }

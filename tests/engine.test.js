@@ -1458,11 +1458,11 @@ test('Erlaubte Aktionen: Verteidigung „nach Angriff“ (2) und „ohne Angriff
   assert.equal(M.allowed(t.s, 'defense', 'recover'), true, 'nach Angriff: ein Angriff ging voraus');
   assert.equal(M.allowed(t.s, 'defense', 'draw'), false, 'ohne Angriff: nicht nach einem Angriff');
   assert.equal(M.apply(t.s, { pid: t.op.ctrl, type: 'defend' }).ok, false, 'Verteidigen nur ohne Angriff');
-  t.c.pending = 0;
+  t.c.pending = 0; t.c.afterAtk = false;
   assert.equal(M.allowed(t.s, 'defense', 'recover'), false); assert.equal(M.allowed(t.s, 'defense', 'draw'), true);
   t.s.rules.allowDef = Object.assign({}, M.DEFAULT_RULES.allowDef, { pass: 3, recover: 2 });
   assert.equal(M.allowed(t.s, 'defense', 'pass'), true, 'ohne Angriff und Passen erlaubt');
-  t.c.pending = 3; assert.equal(M.allowed(t.s, 'defense', 'pass'), false, 'Passen nur ohne Angriff, Erholen nur nach Angriff');
+  t.c.pending = 3; t.c.afterAtk = true; assert.equal(M.allowed(t.s, 'defense', 'pass'), false, 'Passen nur ohne Angriff, Erholen nur nach Angriff');
 });
 
 test('Reaktion ohne Angriff (0.9.9.13): Nach einer Aktion ohne Angriff reagiert die Gegenseite, wenn Erholen oder Nachziehen „ohne Angriff“ erlaubt sind', () => {
@@ -1489,4 +1489,35 @@ test('Reaktion ohne Angriff (0.9.9.13): Nach einer Aktion ohne Angriff reagiert 
   // volles Mana und kein Nachziehen: Erholen ist sinnlos, keine Reaktion
   ({ s, c, me, op } = combatSetup(11, ['F3'], { rules: { allowDef: Object.assign({}, M.DEFAULT_RULES.allowDef, { draw: 0 }) } })); op.stats.mana = op.stats.maxMana;
   M.apply(s, { pid: 0, type: 'pass' }); assert.equal(c.action, 'attack');
+});
+
+test('Reaktion ohne Angriff (0.9.9.14): „ohne Angriff“ hängt am Angriff, nicht am Schaden (Todesfluss, Angriff ohne Schaden)', () => {
+  const dflt = { allowDef: Object.assign({}, M.DEFAULT_RULES.allowDef, { recover: 3, draw: 2 }) };
+  // Todesfluss: Der Fluch trifft den Passenden am Ende seiner Aktion, bleibt aber ein Zug ohne Angriff
+  let { s, c, me, op } = combatSetup(11, ['F3'], { rules: dflt });
+  me.stats.death = 1; me.stats.mana = 5; op.stats.mana = 2; const hp = me.stats.hp;
+  assert.ok(M.apply(s, { pid: 0, type: 'pass' }).ok);
+  assert.ok(me.stats.hp < hp, 'der Todesfluss wirkt');
+  assert.equal(c.action, 'defense'); assert.equal(c.afterAtk, false); assert.equal(c.pending, 0);
+  assert.equal(M.allowed(s, 'defense', 'recover'), true, 'ohne Angriff: Erholen erlaubt, obwohl Schaden eintrat');
+  assert.equal(M.allowed(s, 'defense', 'draw'), false, 'nach Angriff: Nachziehen gilt hier nicht');
+  // Angriff ohne Schaden: ein Angriff ging voraus
+  ({ s, c, me, op } = combatSetup(11, ['F3'], { rules: dflt })); op.stats.mana = 2;
+  c.afterAtk = true; c.action = 'defense'; c.pending = 0; c.turn = op.key;
+  assert.equal(M.allowed(s, 'defense', 'recover'), false, 'nach einem Angriff gilt „ohne Angriff“ nicht'); assert.equal(M.allowed(s, 'defense', 'draw'), true);
+});
+
+test('KI in der Reaktion ohne Angriff: Nachziehen bei schwacher Hand und vorhandenem Mana, sonst Erholen oder Passen (0.9.9.14)', () => {
+  const dflt = { allowDef: Object.assign({}, M.DEFAULT_RULES.allowDef) };
+  let { s, c, me, op } = combatSetup(11, ['F3', 'E3', 'W3'], { rules: dflt });
+  me.stats.mana = 5; op.stats.mana = 3; me.stats.maxMana = op.stats.maxMana = 6;
+  M.apply(s, { pid: 0, type: 'pass' }); assert.equal(c.action, 'defense');
+  op.deck.hand.forEach((_, i) => { op.deck.hand[i] = null; });   // leere Hand, Mana 3 von 6
+  assert.equal(AI.plan(s, op.ctrl)[0].type, 'draw', 'leere Hand, Mana vorhanden: nachziehen');
+  op.stats.mana = 0;
+  assert.equal(AI.plan(s, op.ctrl)[0].type, 'recover', 'kein Mana zum Spielen: erst erholen');
+  op.stats.mana = 6; assert.equal(AI.plan(s, op.ctrl)[0].type, 'draw', 'leere Hand, Mana voll: nachziehen');
+  ['F3', 'E3', 'W3'].forEach((id, i) => { op.deck.hand[i] = Object.assign({}, op.deck.hand[i], { id }); });
+  assert.equal(AI.plan(s, op.ctrl)[0].type, 'pass', 'gute Hand, Mana voll: nichts zu tun');
+  const r = M.apply(s, { pid: op.ctrl, type: 'pass' }); assert.ok(r.ok);
 });

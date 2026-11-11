@@ -106,7 +106,10 @@ function combatPlan(state, pid) {
   const d = side.deck, hand = handList(d), A = a => Object.assign({ pid }, a);
   const s = side.stats, Q = P(pid);
   const canFlee = M.canFlee(state, pid) && (state.idleTurns || 0) < Q.fleeIdle;   // lange kein Kampf entschieden: nicht mehr fliehen, damit der Kampf einen Sieger bekommt (sonst Patt-Schleife Angreifen–Fliehen)
-  if (c.action === 'defense' && !c.pending) {   // Reaktion ohne Angriff (seit 0.9.9.13): Erholen, wenn erlaubt und Mana fehlt, sonst Passen; Nachziehen wählt die KI hier nicht (die Aktion folgt gleich)
+  if (c.action === 'defense' && !c.pending) {   // Reaktion ohne Schaden (ohne oder nach Angriff): Aktionspotenzial aufbauen
+    // Nachziehen, wenn die Hand schwach ist (leer, höchstens eine Karte oder kein sinnvoller Angriff) und nach den Kosten noch Mana zum Spielen bleibt; sonst Erholen, wenn Mana fehlt; sonst Passen
+    const dcost = M.drawManaCost(state, pid), weak = hand.length <= 1 || !(bestAttack(side, opp, hand, Q, state, null) || { dmg: 0 }).dmg;
+    if (M.allowed(state, 'defense', 'draw') && weak && s.mana - dcost >= 1) return [A({ type: 'draw' })];
     if (M.allowed(state, 'defense', 'recover') && s.mana < s.maxMana) return [A({ type: 'recover' })];
     return [A({ type: 'pass' })];
   }
