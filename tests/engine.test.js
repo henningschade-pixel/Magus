@@ -46,12 +46,12 @@ test('Läuterung entfernt auch eigene Manamarker und gibt dafür ein Nachziehtok
   assert.equal(me.stats.freeDraws, 1);
 });
 
-test('Ultimate in der Verteidigung: alle drei Farben erlaubt, mit Feuer als letzter Karte Todesfluss für den Angreifer', () => {
+test('Ultimate in der Verteidigung: alle drei Farben erlaubt, mit Feuer als zweiter Karte Todesfluss für den Angreifer', () => {
   const { s, me, op } = combatSetup(11, ['F1']);
   op.stats.limit = 3; op.stats.mana = 9;
   op.deck.hand.forEach((x, i) => { if (x) op.deck.hand[i] = Object.assign({}, x, { id: ['F3', 'W2', 'E2'][i] || x.id }); });
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
-  [1, 2, 0].forEach(i => assert.ok(M.apply(s, { pid: op.ctrl, type: 'mark', slot: i }).ok));   // erste Karte W2 verteidigt, letzte Karte F3: Feuer-Ultimate (seit 0.9.9 entscheidet die Schlusskarte)
+  [1, 0, 2].forEach(i => assert.ok(M.apply(s, { pid: op.ctrl, type: 'mark', slot: i }).ok));   // erste Karte W2 verteidigt, zweite Karte F3: Feuer-Ultimate (seit 0.11.0.9 entscheidet die Sekundärfarbe, die zweite Farbe)
   assert.ok(M.apply(s, { pid: op.ctrl, type: 'defend' }).ok);
   assert.ok(me.stats.death >= 1, 'Angreifer trägt einen Todesmarker');
   assert.equal(me.stats.deathPhase, undefined, 'Der frisch gesprochene Fluch hat in dieser Phase nicht getickt (Marker verbraucht)');
@@ -684,11 +684,12 @@ test('Zuordnung (0.9.9): Die Sekundärfarbe bestimmt den Charakter, die Primärf
   assert.deepEqual([key(['F1', 'E1']), key(['W1', 'E1'])], ['gr', 'gh'], 'Sekundär Grün: Läuterung (Rot + Grün), Heilung (Blau + Grün)');
 });
 
-test('Ultimate (0.9.9): Die zuletzt markierte Karte bestimmt sie (Rot Todesfluss, Blau Manafluss, Grün Heilfluss), die Reihenfolge der Basis zählt nicht', () => {
+test('Ultimate (0.11.0.9): Die Sekundärfarbe (zweite Farbe) bestimmt sie (Rot Todesfluss, Blau Manafluss, Grün Heilfluss), die dritte Farbe löst nur aus', () => {
   const st = { mag: { F: 3, E: 3, W: 3 }, mana: 9 }, el = ids => M.evalAttack(st, ids.map(id => Object.assign({ id }, M.parseCard(id)))).ultiEl;
-  assert.equal(el(['W1', 'E1', 'F1']), 'F'); assert.equal(el(['E1', 'W1', 'F1']), 'F');
-  assert.equal(el(['F1', 'E1', 'W1']), 'W'); assert.equal(el(['E1', 'F1', 'W1']), 'W');
-  assert.equal(el(['F1', 'W1', 'E1']), 'E'); assert.equal(el(['W1', 'F1', 'E1']), 'E');
+  assert.equal(el(['W1', 'F1', 'E1']), 'F'); assert.equal(el(['E1', 'F1', 'W1']), 'F');
+  assert.equal(el(['F1', 'W1', 'E1']), 'W'); assert.equal(el(['E1', 'W1', 'F1']), 'W');
+  assert.equal(el(['F1', 'E1', 'W1']), 'E'); assert.equal(el(['W1', 'E1', 'F1']), 'E');
+  assert.equal(el(['F1', 'F1', 'W1', 'E1']), 'W', 'weitere Karten der Primärfarbe ändern die Sekundärfarbe nicht');
 });
 
 test('Ultimate: mehrere Karten einer Farbe ergeben zusammen die Stufe (E2, F2, W1, W1 = Ultimate 2)', () => {
@@ -712,7 +713,7 @@ test('Todesfluss aus der Verteidigung wirkt nicht sofort, sondern erst in der n�
   op.deck.hand.forEach((x, i) => { if (x) op.deck.hand[i] = Object.assign({}, x, { id: ['F3', 'W2', 'E2'][i] || x.id }); });
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
   const hp0 = me.stats.hp;
-  [1, 2, 0].forEach(i => assert.ok(M.apply(s, { pid: op.ctrl, type: 'mark', slot: i }).ok));   // letzte Karte F3: Feuer-Ultimate
+  [1, 0, 2].forEach(i => assert.ok(M.apply(s, { pid: op.ctrl, type: 'mark', slot: i }).ok));   // zweite Karte F3: Feuer-Ultimate
   assert.ok(M.apply(s, { pid: op.ctrl, type: 'defend' }).ok);
   assert.ok(me.stats.death >= 1);
   assert.ok(me.stats.hp >= hp0 - 5 && !s.log.slice(-6).some(e => /Todesfluss: /.test(e.txt)), 'kein Fluchschaden am Ende dieser Phase');
@@ -914,8 +915,8 @@ test('Gold opfern ohne Obergrenze (0.7): auch 9 Gold auf einmal', () => {
   assert.equal(me.stats.gold, 0); assert.ok(me.temple.level >= 4, 'Tempelstufe wächst mit der großen Spende');
 });
 
-test('Ultimate im Angriff nach Farbe der letzten Karte: Erde legt Heilmarker, der am Ende der eigenen Angriffsphase heilt', () => {
-  const { s, me, op } = combatSetup(11, ['F2', 'W2', 'E2']);
+test('Ultimate im Angriff nach Sekundärfarbe: Erde legt Heilmarker, der am Ende der eigenen Angriffsphase heilt', () => {
+  const { s, me, op } = combatSetup(11, ['F2', 'E2', 'W2']);
   me.stats.maxHp = 9; me.stats.hp = 2;
   [0, 1, 2].forEach(i => assert.ok(M.apply(s, { pid: 0, type: 'mark', slot: i }).ok));
   assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
@@ -931,7 +932,7 @@ test('Ultimate im Angriff nach Farbe der letzten Karte: Erde legt Heilmarker, de
 });
 
 test('Ultimate im Angriff: Wasser legt Manamarker der Stufe S bei mir', () => {
-  const { s, me, op } = combatSetup(11, ['F2', 'E2', 'W2']);
+  const { s, me, op } = combatSetup(11, ['F2', 'W2', 'E2']);
   [0, 1, 2].forEach(i => assert.ok(M.apply(s, { pid: 0, type: 'mark', slot: i }).ok));
   assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
   assert.equal(me.stats.manaflow, 2); assert.equal(op.stats.death || 0, 0);
@@ -950,7 +951,7 @@ test('Manafluss: am Ende der eigenen Angriffsphase +S Mana (höchstens bis zum M
 });
 
 test('Ultimate in der Verteidigung: Erde legt Heilmarker, Wasser Manamarker (jeweils beim Verteidiger)', () => {
-  for (const [att, def, key] of [['E1', ['F3', 'W2', 'E2'], 'heal'], ['F1', ['F3', 'E2', 'W2'], 'manaflow']]) {
+  for (const [att, def, key] of [['E1', ['F3', 'E2', 'W2'], 'heal'], ['F1', ['F3', 'W2', 'E2'], 'manaflow']]) {
     const { s, me, op } = combatSetup(11, [att]);
     op.stats.limit = 3; op.stats.mana = 9;
     op.deck.hand.forEach((x, i) => { if (x) op.deck.hand[i] = Object.assign({}, x, { id: def[i] || x.id }); });
@@ -1294,12 +1295,12 @@ test('Echo: Eine Sekundärkarte in der Farbe des Echos erhöht die Kombostufe um
   assert.ok(!cap.levels.echo, 'bei Stufe 3 steigt nichts, also kein Echo-Hinweis');
 });
 
-test('Echo: Die Ultimate wird durch ein Echo der Schlusskartenfarbe um 1 Stufe erhöht, das Echo der Basisfarben wirkt nicht (0.9.9)', () => {
-  const u = (echo) => M.evalAttack(STATS({ echo }), cards(['F1', 'E1', 'W1'])).levels;   // Schlusskarte Blau: Manafluss, Basis Rot + Grün
+test('Echo: Die Ultimate wird durch ein Echo der Sekundärfarbe um 1 Stufe erhöht, das Echo der übrigen Farben wirkt nicht (0.11.0.9)', () => {
+  const u = (echo) => M.evalAttack(STATS({ echo }), cards(['F1', 'W1', 'E1'])).levels;   // zweite Karte Blau: Manafluss
   assert.equal(u(undefined).ulti, 1);
-  assert.equal(u('W').ulti, 2, 'Blau ist die Sekundärfarbe (Schlusskarte)');
-  assert.equal(u('E').ulti, 1, 'Grün gehört zur Basis');
-  assert.equal(u('F').ulti, 1, 'Rot gehört zur Basis');
+  assert.equal(u('W').ulti, 2, 'Blau ist die Sekundärfarbe (zweite Karte)');
+  assert.equal(u('E').ulti, 1, 'Grün ist nur die dritte Farbe (löst aus)');
+  assert.equal(u('F').ulti, 1, 'Rot ist die Primärfarbe');
 });
 
 test('Echo: Auch in der Verteidigung verstärkt das Echo einen Kombo (0.9)', () => {

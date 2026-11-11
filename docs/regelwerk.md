@@ -85,17 +85,17 @@ Die Farbe der ersten markierten Karte (**Primärfarbe**) liefert den Schaden und
 |---|---|---|---|
 | Rot (Schaden) | Falle | Blau + Rot | ziehe drei Karten vom Stapel, lege eine davon verdeckt vor dich, die übrigen kommen auf den Ablagestapel (Stufe S, kein Marker) |
 | Rot (Schaden) | Lähmung | Grün + Rot | **2·S Fluchkarten** (2 / 4 / 6) auf den Ablagestapel der Gegenseite |
-| Rot (Schaden) | Todesfluss (Ultimate) | Blau + Grün, zuletzt Rot | Todesfluss (Stufe S) |
+| Rot (Schaden) | Todesfluss (Ultimate) | alle drei Farben, Rot als zweite Karte | Todesfluss (Stufe S) |
 | Blau (variabel) | Hellsicht | Rot + Blau | ziehe 3 Karten, wähle S davon aus und lege sie offen vor dich (ohne Manakosten nutzbar, danach abgelegt); die übrigen kommen auf den Ablagestapel |
 | Blau (variabel) | Schild | Grün + Blau | Schild mit S Ladungen (nicht addiert, höchstens 3) |
-| Blau (variabel) | Manafluss (Ultimate) | Rot + Grün, zuletzt Blau | Manafluss (Stufe S) |
+| Blau (variabel) | Manafluss (Ultimate) | alle drei Farben, Blau als zweite Karte | Manafluss (Stufe S) |
 | Grün (Heilung) | Heilung | Blau + Grün | S HP heilen |
 | Grün (Heilung) | Läuterung | Rot + Grün | S beliebige Marker vom Brett entfernen, je entferntem Marker ein Nachziehtoken |
-| Grün (Heilung) | Heilfluss (Ultimate) | Rot + Blau, zuletzt Grün | Heilfluss (Stufe S) |
+| Grün (Heilung) | Heilfluss (Ultimate) | alle drei Farben, Grün als zweite Karte | Heilfluss (Stufe S) |
 
-**Ultimate (seit 0.9.9):** Sie entsteht mit allen drei Farben; die **zuletzt markierte Karte** bestimmt ihre Wirkung (Rot Todesfluss, Blau Manafluss, Grün Heilfluss), die beiden anderen Farben bilden die Basis in beliebiger Reihenfolge. Bis 0.9.8 bestimmte die erste Karte die Ultimate. Der Schaden kommt weiter von der Primärfarbe (erste Karte).
+**Ultimate (seit 0.11.0.9):** Sie entsteht mit allen drei Farben und hängt wie jede Kombo an der **Sekundärfarbe**, der Farbe der ersten Karte, die nicht der Primärfarbe entspricht (Rot Todesfluss, Blau Manafluss, Grün Heilfluss). Die dritte Farbe hat keine Wirkung und löst die Ultimate nur aus. Die Reihenfolge der Karten ist damit Primär-, Sekundär-, dritte Farbe; zu jeder Primärfarbe gibt es zwei Ultimates (je nach Sekundärfarbe). Bis 0.11.0.8 bestimmte die zuletzt markierte Karte die Ultimate (0.9.9), bis 0.9.8 die erste. Der Schaden kommt weiter von der Primärfarbe (erste Karte); die Stufe S bleibt das Minimum der drei Kartensummen (höchstens 3). Das Echo verstärkt die Ultimate, wenn es die Sekundärfarbe hat.
 
-**Echo (seit 0.9):** Jede Nutzung von Primärmagie (seit 0.9.6 auch Angriffe und Verteidigungen **ohne** Kombo; davor nur die sechs Zwei-Farben-Kombos und die Ultimate) hinterlässt bei der Seite, die sie wirkt, ein **Echo in der Farbe der ersten Karte (Primärmagie)**. Jede neue Nutzung **erneuert** das Echo (neue Farbe); Passen, Erholen und Spielzüge ohne farbige erste Karte (nur Fluchkarten) lassen es stehen. Enthält der **nächste Kombo** eine **Sekundärkarte in der Farbe des Echos**, steigt seine Stufe um **1 (höchstens 3)**; das gilt auch, wenn er das Echo gleichzeitig durch seine eigene Primärfarbe erneuert. Bei der Ultimate ist (seit 0.9.9) nur die **Schlusskarte** die Sekundärkarte (bis 0.9.8 beide Farben außer der ersten); das Echo, das sie hinterlässt, hat weiter die Farbe der ersten Karte. Das Echo ist **kein Marker im Sinne der Läuterung** (nicht läuterbar), gilt nur bis Kampfende und wird digital seit 0.9.4 auf dem Magie-Brett gezeigt: Die Schlange der Echo-Farbe leuchtet pulsierend und sendet Wellen nach außen (beim Gegner genauso). Der Echo-Marker (neutraler Stein mit hellen Ringen) gehört nur zum analogen Spiel.
+**Echo (seit 0.9):** Jede Nutzung von Primärmagie (seit 0.9.6 auch Angriffe und Verteidigungen **ohne** Kombo; davor nur die sechs Zwei-Farben-Kombos und die Ultimate) hinterlässt bei der Seite, die sie wirkt, ein **Echo in der Farbe der ersten Karte (Primärmagie)**. Jede neue Nutzung **erneuert** das Echo (neue Farbe); Passen, Erholen und Spielzüge ohne farbige erste Karte (nur Fluchkarten) lassen es stehen. Enthält der **nächste Kombo** eine **Sekundärkarte in der Farbe des Echos**, steigt seine Stufe um **1 (höchstens 3)**; das gilt auch, wenn er das Echo gleichzeitig durch seine eigene Primärfarbe erneuert. Bei der Ultimate ist (seit 0.11.0.9) nur die **zweite Karte (Sekundärfarbe)** die Sekundärkarte; 0.9.9 bis 0.11.0.8 war es die Schlusskarte (bis 0.9.8 beide Farben außer der ersten); das Echo, das sie hinterlässt, hat weiter die Farbe der ersten Karte. Das Echo ist **kein Marker im Sinne der Läuterung** (nicht läuterbar), gilt nur bis Kampfende und wird digital seit 0.9.4 auf dem Magie-Brett gezeigt: Die Schlange der Echo-Farbe leuchtet pulsierend und sendet Wellen nach außen (beim Gegner genauso). Der Echo-Marker (neutraler Stein mit hellen Ringen) gehört nur zum analogen Spiel.
 
 **Fluchkarten:** Sie kommen erst in den Zugstapel, wenn der Ablagestapel gemischt wird. Auf der Hand belegen sie einen Platz und wirken nicht. Beim Nachziehen werden sie dauerhaft verworfen, am Kampfende verschwinden alle.
 
@@ -689,6 +689,11 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **KI:** `runTurn` (`src/ai/30-kampf.js`) führt alle Wirtschaftsschritte (`ecoStep`, höchstens 12) vor der eigentlichen Aktion im selben Zug aus; bisher beendete jeder Schritt außer dem Opfern den Zug. Die Stellschrauben bleiben unverändert und sind für die neue Regel nicht nachtrainiert (Messung mit `npm run balance` offen).
 - **Tests:** Drei Tests angepasst (Nachziehmarker Weltphase, Nachziehlimit Kauf, Nachziehlimit Weltphase; der Marker-Reset läuft jetzt über den Händler), neuer Test „Magie kaufen und Upgrades sind keine Aktion mehr“. `tests/golden.json` ist neu erzeugt (absichtliche Regeländerung).
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
+
+## Änderung 0.11.0.9 (11.11.)
+
+- **Regeländerung Ultimate:** Die Ultimate hängt wie jede Kombo an der Sekundärfarbe (zweite Farbe) statt an der zuletzt markierten Karte; die dritte Farbe löst nur aus und hat sonst keine Funktion. Das Echo verstärkt die Ultimate bei Sekundärfarbe (vorher Schlusskarte). Die KI probiert die Karten entsprechend mit jeder möglichen Karte an zweiter Stelle.
+- **Kombo-Übersicht:** Alle Kombos und Ultimates sind nach Primärfarbe sortiert (je Primärfarbe zwei Kombos und zwei Ultimates, Reihenfolge Primär, Sekundär, dritte Farbe); die Farbmarkierung zeigt die Sekundärfarbe.
 
 ## Änderung 0.11.0.8 (11.11.)
 

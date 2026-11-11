@@ -24,7 +24,7 @@ function ordComboWorth(side, opp, Q, rules, lvs, ev) {
   const wEw = oMir > 0 ? 1.2 + oMir * Math.max(0.3, Q.lfOppW || 0) : 0.1;
   return lvs.hs * 0.5 + trapWorth(side, opp, Q, lvs.tr) + shieldWorth(side, Q, lvs.sh) + lvs.fe * Q.wFE + lvs.ew * wEw + purgeDeath(side, Q, lvs.ew) + Math.min(lvs.gh * (rules.lifeflowHeal || 1), hurt) * Q.wEW + (lvs.gh > 0 && hurt === 0 ? 0.1 : 0);
 }
-// Wert einer Ultimate der Stufe lvl nach der Farbe der letzten Karte (seit 0.9.9, vorher der ersten): Feuer Todesfluss beim Gegner, Erde Heilfluss und Wasser Manafluss bei mir selbst (seit 0.8). Liegt schon ein Marker gleicher oder höherer Stufe, bringt sie kaum etwas.
+// Wert einer Ultimate der Stufe lvl nach der Sekundärfarbe, der zweiten Karte (seit 0.11.0.9; 0.9.9 bis 0.11.0.8 die letzte Karte): Feuer Todesfluss beim Gegner, Erde Heilfluss und Wasser Manafluss bei mir selbst (seit 0.8). Liegt schon ein Marker gleicher oder höherer Stufe, bringt sie kaum etwas.
 function ultiWorth(side, opp, Q, el, lvl) {
   if (!(lvl > 0)) return 0;
   if (el === 'E') return lvl * Q.wEW * Q.uHeal * ((side.stats.heal || 0) >= lvl ? 0.1 : 1) * (side.stats.maxHp > side.stats.hp ? 1 : 0.6);
@@ -37,13 +37,13 @@ function bestAttack(side, opp, hand, Q, state0, reserve) {
   let best = null;
   for (const sub of subsets(hand, lim)) {
     const firsts = sub.filter(h => !h.curse);
-    // Reihenfolgen: jede Karte kann erste sein; bei drei Farben bestimmt seit 0.9.9 die zuletzt markierte Karte die Ultimate, deshalb auch jede andere Karte als letzte
+    // Reihenfolgen: jede Karte kann erste sein; bei drei Farben bestimmt seit 0.11.0.9 die zweite Karte (Sekundärfarbe) die Ultimate, deshalb auch jede andere Karte als zweite
     const orders = [];
     if (!firsts.length) orders.push(sub);
     else for (const f of firsts) {
       const rest = sub.filter(x => x !== f);
       if (rest.length < 2) { orders.push([f, ...rest]); continue; }
-      for (const l of rest) orders.push([f, ...rest.filter(x => x !== l), l]);
+      for (const l of rest) orders.push([f, l, ...rest.filter(x => x !== l)]);   // seit 0.11.0.9 steht die Karte der Sekundärfarbe an zweiter Stelle
     }
     for (const ord of orders) {
       const ev = M.evalAttack(stats, ord, state0 ? { combo: M.allowed(state0, 'attack', 'combo') } : undefined);
@@ -211,10 +211,10 @@ function combatPlan(state, pid) {
   for (const sub0 of subsets(cand, Math.max(1, s.limit))) {
     const firsts = [...new Set(sub0.filter(h => !h.curse).map(h => h.el))];
     if (firsts.length <= 1) variants.push(sub0);
-    else firsts.forEach(f => {   // die erste Karte bestimmt die Verteidigungsfarbe; bei drei Farben bestimmt die Schlusskarte die Ultimate (seit 0.9.9)
+    else firsts.forEach(f => {   // die erste Karte bestimmt die Verteidigungsfarbe; bei drei Farben bestimmt die Sekundärfarbe (zweite Farbe) die Ultimate (seit 0.11.0.9)
       const lasts = firsts.filter(l => l !== f);
       if (firsts.length < 3) variants.push(sub0.filter(h => h.el === f).concat(sub0.filter(h => h.el !== f)));
-      else lasts.forEach(l => variants.push(sub0.filter(h => h.el === f).concat(sub0.filter(h => h.el !== f && h.el !== l), sub0.filter(h => h.el === l))));
+      else lasts.forEach(l => variants.push(sub0.filter(h => h.el === f).concat(sub0.filter(h => h.el === l), sub0.filter(h => h.el !== f && h.el !== l))));
     });
   }
   for (const sub of variants) {

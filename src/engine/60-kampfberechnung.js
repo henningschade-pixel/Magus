@@ -3,6 +3,8 @@
    Kombos aus zwei Elementen (seit 0.9.9 bestimmt die Sekundärfarbe, die zweite Farbe, ihren Charakter: Rot Schaden, Blau variabel, Grün Heilung/Verbesserung); alle drei Farben ergeben eine Ultimate, deren Wirkung die Farbe der zuletzt markierten Karte bestimmt (Feuer Todesfluss, Erde Heilfluss, Wasser Manafluss; bis 0.9.8 bestimmte die erste Karte die Ultimate). */
 
 /* ---------- Kampfberechnung ---------- */
+// Sekundärfarbe (seit 0.11.0.9): die Farbe der ersten markierten Karte, die nicht der Primärfarbe (Farbe der ersten Karte) entspricht
+function secondaryEl(normals, prim) { const c = normals.find(x => x.el !== prim); return c ? c.el : null; }
 function comboLevels(tiers, mag, prim) {
   const pair = (a, b) => {
     if (!tiers[a].length || !tiers[b].length) return 0;
@@ -43,7 +45,7 @@ const MAX_LVL_ECHO = 3;
 function evalAttack(stats, cards, opt) {
   if (!cards.length) return { valid: false, reason: 'Keine Karte gewählt.' };
   const curses = cards.filter(c => c.curse), normals = cards.filter(c => !c.curse);
-  const prim = normals.length ? normals[0].el : null, lastEl = normals.length ? normals[normals.length - 1].el : null;   // lastEl: Farbe der zuletzt markierten Karte (bestimmt die Ultimate, seit 0.9.9)
+  const prim = normals.length ? normals[0].el : null, lastEl = secondaryEl(normals, prim);   // lastEl (seit 0.11.0.9: Sekundärfarbe, die Farbe der ersten Karte, die nicht der Primärfarbe entspricht) bestimmt die Ultimate; die dritte Farbe löst sie nur aus
   if (opt && opt.combo === false && normals.some(c => c.el !== prim)) return { valid: false, reason: 'Kombos sind in dieser Phase abgeschaltet (Einstellungen): nur Karten einer Farbe.' };
   const same = prim ? normals.filter(c => c.el === prim) : [];
   const cost = normals.filter(c => !c.free).length + curses.reduce((n, c) => n + c.tier, 0);
@@ -58,7 +60,7 @@ function evalAttack(stats, cards, opt) {
 function evalDefense(stats, cards, color, opt) {
   if (!cards.length) return { valid: true, cost: 0, block: 0, empty: true };
   const curses = cards.filter(c => c.curse), normals = cards.filter(c => !c.curse);
-  const el = normals.length ? normals[0].el : null, lastEl = normals.length ? normals[normals.length - 1].el : null;   // lastEl bestimmt die Ultimate (seit 0.9.9)
+  const el = normals.length ? normals[0].el : null, lastEl = secondaryEl(normals, el);   // lastEl = Sekundärfarbe bestimmt die Ultimate (seit 0.11.0.9)
   const same = normals.filter(c => c.el === el), other = normals.filter(c => c.el !== el);
   if (opt && opt.combo === false && other.length) return { valid: false, reason: 'Kombos sind in dieser Phase abgeschaltet (Einstellungen): nur Karten einer Farbe.' };
   const ulti = other.length && new Set(other.map(c => c.el)).size > 1;   // alle drei Farben: Ultimate auch in der Verteidigung
