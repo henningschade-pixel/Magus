@@ -200,7 +200,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 
 /* Tempel (seit 0.11, rechts): Stufenraster mit Holzsteinen */
 .tpanel{display:flex;flex-direction:column}
-.tpanel h3{flex:none;text-align:left;display:flex;justify-content:space-between;align-items:baseline}.upts{font-size:15px;font-weight:bold}.upts small{font-size:11px;font-weight:normal;color:var(--dim,#cbb98f)}.upts .me{color:#e0b84a}.upts .op{color:#cfd2dc}
+.tpanel h3{flex:none;text-align:left}
 .tboard{position:relative;flex:none;margin:2px auto 0}
 .tcell{position:absolute;box-sizing:border-box;border:1px solid rgba(255,255,255,.08);border-radius:4px;background:linear-gradient(180deg,rgba(0,0,0,.32),rgba(0,0,0,.16));color:var(--mute);overflow:hidden}
 .tcell i{position:absolute;left:2px;top:1px;font-style:normal;line-height:1.05;font-variant-numeric:tabular-nums}
@@ -538,3 +538,5 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 #logpop .logl div{opacity:.62;padding:2px 0 2px 8px;border-left:2px solid transparent;line-height:1.25}
 #logpop .logl div.me{border-left-color:var(--gold)}#logpop .logl div.op{border-left-color:var(--mute)}
 #logpop .logl div:last-child{opacity:1}
+
+.tup{margin-top:auto;padding-top:6px;border-top:1px solid rgba(203,185,143,.25);font-size:15px}.tup>div{display:flex;align-items:baseline;gap:6px}.tup span{flex:1}.tup b{font-size:17px}.tup .me{color:#e0b84a}.tup .op{color:#cfd2dc}

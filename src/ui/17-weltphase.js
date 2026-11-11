@@ -55,8 +55,8 @@ function templePanel() {
   const info = n === 0 ? '' : '<b>' + n + ' Gold</b> opfern: <b class="pg">+' + pv.points + ' Punkt' + (pv.points === 1 ? '' : 'e') + '</b> (gesamt ' + tNew + ')<br>' +
     (pv.gained > 0 ? 'Stufe ' + me.temple.level + ' → <b class="pg">' + pv.level + '</b> (+' + pv.gained + ' Upgrade-Punkt' + (pv.gained === 1 ? '' : 'e') + ')' : 'Keine neue Stufe, noch ' + need + ' Punkt' + (need === 1 ? '' : 'e') + ' bis Stufe ' + (pv.level + 1));
   const tip = 'Tempel: Die goldenen Zahlen (1, 3, 6, 10, 15, 21 …) sind der Eintritt in die nächste Tempelstufe und geben je einen Upgrade-Punkt. Opfern von n Gold ergibt n(n+1)/2 Punkte. Die Magie ganz auszubauen kostet 21 Upgrade-Punkte (1 + 2 + … + 6), also Tempelstufe 21 = 231 Punkte.';
-  return '<div class="panel tpanel" title="' + tip + '" style="' + box(LAYOUT.temple) + '"><h3>Tempel<span class="upts" title="Verfügbare Upgrade-Punkte (gold = du, silber = Gegner)"><span class="me">' + (me.stats.pending || 0) + '</span> <span class="op">' + (op.stats.pending || 0) + '</span> <small>Upgrade-Punkte</small></span></h3>' +
-    '<div class="tboard" style="width:' + cols * cs + 'px;height:' + rows * cs + 'px">' + cells + stones + '</div><div class="tinfo">' + info + '</div></div>';
+  return '<div class="panel tpanel" title="' + tip + '" style="' + box(LAYOUT.temple) + '"><h3>Tempel</h3>' +
+    '<div class="tboard" style="width:' + cols * cs + 'px;height:' + rows * cs + 'px">' + cells + stones + '</div><div class="tinfo">' + info + '</div><div class="tup" title="Verfügbare Upgrade-Punkte je Spieler"><div class="me"><span>' + me.name + '</span><b>' + (me.stats.pending || 0) + '</b> Upgrade-Punkte</div><div class="op"><span>' + op.name + '</span><b>' + (op.stats.pending || 0) + '</b> Upgrade-Punkte</div></div></div>';
 }
 function monsterCards() {
   let h = '';
