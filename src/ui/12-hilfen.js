@@ -68,10 +68,27 @@ function markCounts(s) {   // dargestellte Marker je Art (Todes-, Heil- und Mana
   return { nd, nh, nm, ns, total: nd + nh + nm + ns };
 }
 // seit 0.7.2.10 liegen alle Marker (Todes-, Heil-, Mana- und Schildmarker, seit 0.8 auch die Falle) in einer lockeren Reihe mittig direkt vor den Handkarten ihres Spielers (eigene oberhalb, die des Gegners unterhalb der Hand), jeder leicht verdreht und versetzt; so verdecken sie weder Karten noch Anzeigen. i: laufende Nummer in der Reihe (Todesmarker, Heil-, Mana-, dann Schildmarker und Falle), total: Anzahl aller Marker der Seite.
+const OPEN_SPAN = { s: null, o: null };   // seit 0.12.1: x-Bereich {x1, x2} der offenen Hellsichtkarten je Seite (setzt layoutDeck vor dem Zeichnen der Marker); null ohne Hellsichtkarten
 function deathPos(who, i, total) {
-  const L = who === 's' ? L_MY : L_OP, T = Math.max(1, total || 1, i + 1), sx = Math.min(62, 400 / T), k = i % 8;
-  const cy = who === 's' ? L.y - 80 : L.y + CH * L.s + 51;   // so hoch bzw. tief, dass auch die angehobenen (markierten) Karten (L.raise) und der Zähler (ragt unten ca. 10 px über den Token) frei bleiben
-  const x = Math.max(4, L.cx - ((T - 1) * sx) / 2 - TOK / 2 + i * sx + TOK_DX[k]);
+  const L = who === 's' ? L_MY : L_OP, T = Math.max(1, total || 1, i + 1), k = i % 8;
+  let sx = Math.min(62, 400 / T);
+  const cy = who === 's' ? L.y - 80 : L.y + CH * L.s + 51;
+  let left = L.cx - ((T - 1) * sx) / 2 - TOK / 2;   // linker Rand des ersten Tokens
+  const sp = OPEN_SPAN[who];
+  if (sp) {   // Die offenen Hellsichtkarten liegen auf Höhe der Markerreihe: Die Reihe (Marker, Schild, Falle) rückt neben sie, rechts, sonst links, nötigenfalls enger gesetzt, und wird nie verdeckt
+    const GAP = 14, RMAX = SW - 374, LMIN = 8, rowW = (T - 1) * sx + TOK;   // RMAX: Rand der rechten Blöcke (Bühnenbreite SW)
+    if (left < sp.x2 + GAP && left + rowW > sp.x1 - GAP) {
+      const xr = sp.x2 + GAP, xl = sp.x1 - GAP - rowW;
+      if (xr + rowW <= RMAX) left = xr;
+      else if (xl >= LMIN) left = xl;
+      else {
+        const availR = RMAX - xr, availL = sp.x1 - GAP - LMIN, useR = availR >= availL, avail = useR ? availR : availL;
+        if (T > 1) sx = Math.max(36, (avail - TOK) / (T - 1));
+        left = useR ? xr : Math.max(LMIN, sp.x1 - GAP - ((T - 1) * sx + TOK));
+      }
+    }
+  }   // so hoch bzw. tief, dass auch die angehobenen (markierten) Karten (L.raise) und der Zähler (ragt unten ca. 10 px über den Token) frei bleiben
+  const x = Math.max(4, left + i * sx + TOK_DX[k]);
   return { x, y: cy - TOK / 2 + TOK_DY[k] * 1.4, rot: TOK_ROT[k] };
 }
 // Heilmarker (Erd-Ultimate): grüne Tokens mit Plus; +1 HP je Marker am Ende der eigenen Angriffsphase. Sie liegen in der Reihe hinter den Todesmarkern derselben Seite.

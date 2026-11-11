@@ -72,6 +72,9 @@ function layoutDeck(deck, L, mine) {
   deck.draw.forEach((c, i) => place(c, { x: L.draw.x + Math.min(i, 5) * 0.8, y: L.draw.y - Math.min(i, 5) * 0.8, sc: L.ps, down: true, z: 1 + i, spawn, zone: 'draw' }));
   deck.discard.forEach((c, i) => place(c, { x: L.disc.x + jit(c.uid, 4), y: L.disc.y + jit(c.uid + 7, 3), rot: jit(c.uid + 3, 6), sc: L.ps, down: false, z: 1 + i, spawn, zone: 'disc' }));
   const n = deck.hand.length, nb = M.baseLen(deck);   // Hellsichtkarten (Plätze ab nb) liegen offen in einer eigenen Reihe über der Hand
+  { const ne0 = n - nb, os0 = mine ? 0.6 : 0.7;   // x-Bereich dieser Reihe merken: Die Markerreihe samt Falle weicht ihm aus (deathPos, seit 0.12.1)
+    if (ne0 > 0) { const Lo = Object.assign({}, L, { s: L.s * os0, gap: L.gap * 0.62, span: L.span * 0.7 }); OPEN_SPAN[mine ? 's' : 'o'] = { x1: slotX(0, ne0, Lo), x2: slotX(ne0 - 1, ne0, Lo) + CW * Lo.s }; }
+    else OPEN_SPAN[mine ? 's' : 'o'] = null; }
   deck.hand.forEach((c, i) => {
     if (!c) return;
     if (!forcedMe()) { fdSel.clear(); sightSel = []; }

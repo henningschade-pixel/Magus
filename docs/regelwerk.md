@@ -690,6 +690,12 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Tests:** Drei Tests angepasst (Nachziehmarker Weltphase, Nachziehlimit Kauf, Nachziehlimit Weltphase; der Marker-Reset läuft jetzt über den Händler), neuer Test „Magie kaufen und Upgrades sind keine Aktion mehr“. `tests/golden.json` ist neu erzeugt (absichtliche Regeländerung).
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
 
+## Änderung 0.12.1 (11.11.)
+
+- **Anzeige (keine Regeländerung):** Die Markerreihe vor den Handkarten (Todes-, Heil-, Manamarker, Schild und Falle) lag auf derselben Höhe wie die offenen Hellsichtkarten und verschwand dahinter. `deathPos` (`src/ui/12-hilfen.js`) rückt die Reihe jetzt neben die offenen Karten: rechts davon, wenn sie dort bis zum Rand der rechten Blöcke passt, sonst links, im Extremfall (viele offene Karten) mit engerem Abstand (mindestens 36 px). `layoutDeck` (`src/ui/15-karten.js`) merkt dafür den x-Bereich der offenen Karten je Seite in `OPEN_SPAN`. Ohne Hellsichtkarten bleibt die Reihe mittig wie bisher.
+- Das Spiel selbst (Regeln, KI, Referenzpartien) ist unverändert; `tests/golden.json` bleibt gleich.
+- Die Versionsbeschreibung im Spiel nennt die Änderung.
+
 ## Änderung 0.12 (11.11.)
 
 - **Regeländerung: Nachziehmarker aus.** Der Regelschalter `drawMarker` (`DEFAULT_RULES`, `src/engine/80-start.js`) steht jetzt auf 0. Damit entfallen für beide Spieler: der grün/rote Nachziehmarker, die Strafe bei rotem Marker (Gold in der Weltphase, Mana im Kampf), das Nachziehlimit mit seinem Upgrade (`drawlimit` ist ohne Marker nicht möglich, die KI kauft es nicht) und die Warnung vor dem Nachziehen. Nachziehen ist **uneingeschränkt** (nur die Phaseneinstellungen `allowAtk`/`allowDef` gelten weiter); Gratis-Nachziehen durch Läuterung (Nachziehtokens) bleibt unverändert.
