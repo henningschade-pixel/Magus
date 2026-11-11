@@ -690,6 +690,11 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Tests:** Drei Tests angepasst (Nachziehmarker Weltphase, Nachziehlimit Kauf, Nachziehlimit Weltphase; der Marker-Reset läuft jetzt über den Händler), neuer Test „Magie kaufen und Upgrades sind keine Aktion mehr“. `tests/golden.json` ist neu erzeugt (absichtliche Regeländerung).
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
 
+## Änderung 0.9.9.15 (11.11.)
+
+- **Vereinfachung „nach Angriff / ohne Angriff“:** Allein die Aktion des Spielers davor entscheidet: War sie ein Angriff, gilt für den Gegner in der Verteidigungsphase *nach Angriff*; war sie etwas anderes (Erholen, Nachziehen, Passen), gilt *ohne Angriff*. Die Höhe des Schadens (auch 0) ist unerheblich; nur *Verteidigen* setzt eingehenden Schaden voraus. Die Plakette zeigt „nach Angriff“ bzw. „ohne Angriff“ (der Schaden steht im Hover-Text).
+- **KI-Schwelle beim Nachziehen:** In der Reaktion zieht die KI nur nach, wenn nach den Nachziehkosten mindestens so viel Mana bleibt wie das Ausspiellimit (1 Mana je Karte, höchstens Maximum − Nachziehkosten). Sonst erholt sie sich zuerst (Nachziehen folgt in einer späteren Reaktion). Zuvor genügte 1 Mana.
+
 ## Änderung 0.9.9.14 (11.11.)
 
 - **„Ohne Angriff“ ist nicht „ohne Schaden“ (Klarstellung, Regeländerung bei Angriffen ohne Schaden):** Welche Stufe der Verteidigungs-Einstellungen gilt, richtet sich danach, ob die vorausgegangene Aktion ein Angriff war. *Ohne Angriff* gilt nach Erholen, Nachziehen und Passen, auch wenn dabei Schaden eintrat (Todesfluss trifft am Ende der Aktion und ist nicht blockbar). *Nach Angriff* gilt nach jedem Angriff, auch einem Angriff ohne Schaden (Reaktion ohne Schaden, kein Verteidigen). Zuvor wurde ein Angriff ohne Schaden wie „ohne Angriff“ behandelt.

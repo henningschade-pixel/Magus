@@ -337,7 +337,7 @@ test('Vorschau beim Überfahren: Nachziehstapel bei rotem Marker (Gold des Gegne
     // Kampf: Verteidigung gegen 3 Schaden
     await p.evaluate(() => {
       const G = window.__magus.state, M = window.Magus; M.apply(G, { pid: 0, type: 'combat', elem: 'F' });
-      const c = G.combat, me = c.sides.a; me.stats.hp = 6; me.stats.mana = me.stats.maxMana = 9; c.turn = 'a'; c.action = 'defense'; c.color = 'F'; c.pending = 3; window.__magus.pump();
+      const c = G.combat, me = c.sides.a; me.stats.hp = 6; me.stats.mana = me.stats.maxMana = 9; c.turn = 'a'; c.action = 'defense'; c.afterAtk = true; c.color = 'F'; c.pending = 3; window.__magus.pump();
     });
     await p.hover('[data-act="pass"]');
     assert.equal(await p.locator('.sbody[data-lead] [data-pv="hp"] .pvdn').textContent(), '3', 'HP nach dem Passen in Rot');
@@ -430,7 +430,7 @@ test('Endbildschirm: Sieg und Niederlage zeigen Rückblick, Klick überspringt, 
   try {
     const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
     p.on('pageerror', e => errs.push(e.message));
-    await p.goto(url); await p.waitForTimeout(500);
+    await p.goto(url + '?fast'); await p.waitForTimeout(500);
     await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(500);
     // KI-Partie simulieren, in der der Computer gewinnt, und als Endstand übernehmen (Du verlierst)
     const seed = await p.evaluate(() => {
@@ -443,9 +443,9 @@ test('Endbildschirm: Sieg und Niederlage zeigen Rückblick, Klick überspringt, 
       return 0;
     });
     assert.ok(seed > 0, 'Partie mit Computersieg gefunden');
-    await p.waitForSelector('.box.finale.lose', { timeout: 5000 });
+    await p.waitForSelector('.box.finale.lose', { timeout: 30000 });   // der übernommene Endstand spielt das gesamte Protokoll mit Animationen ab
     assert.match(await p.textContent('.box.finale .ftitle'), /Niederlage/);
-    await p.waitForFunction(() => document.querySelectorAll('.box.finale .fcard').length >= 3, null, { timeout: 5000 });
+    await p.waitForFunction(() => document.querySelectorAll('.box.finale .fcard').length >= 3, null, { timeout: 30000 });
     assert.match(await p.textContent('.box.finale .fhl'), /Höhepunkte/);
     assert.ok(await p.$('.box.finale [data-act="stend"]') && await p.$('.box.finale [data-act="logdl"]') && await p.$('.box.finale [data-act="newgame"]'), 'Knöpfe vorhanden');
     await p.click('.box.finale .ftitle');   // Klick überspringt die Animation
@@ -453,10 +453,10 @@ test('Endbildschirm: Sieg und Niederlage zeigen Rückblick, Klick überspringt, 
     // Karte anklicken: Kampfverlauf, zurück über die Statistik, Schließen -> Endbildschirm ohne erneute Animation
     await p.click('.box.finale .fcard[data-act="finfight"]'); await p.waitForSelector('[data-act="stfightback"]', { timeout: 5000 });
     await p.click('[data-act="stfightback"]'); await p.click('[data-act="stclose"]');
-    await p.waitForSelector('.box.finale.seen', { timeout: 5000 });
+    await p.waitForSelector('.box.finale.seen', { timeout: 30000 });
     // dieselbe Partie als Sieg
     await p.evaluate(() => { const G = window.__magus.state; G.winner = 0; window.__magus.pump(); });
-    await p.waitForSelector('.box.finale.win', { timeout: 5000 });
+    await p.waitForSelector('.box.finale.win', { timeout: 30000 });
     assert.match(await p.textContent('.box.finale .ftitle'), /Sieg/);
     assert.doesNotMatch(await p.textContent('.box.finale .freason'), /Du hat /);
     assert.deepEqual(errs, []);

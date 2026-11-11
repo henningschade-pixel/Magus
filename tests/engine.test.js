@@ -720,7 +720,7 @@ test('Todesfluss aus der Verteidigung wirkt nicht sofort, sondern erst in der n�
 
 test('Pluswürfel „Magie“: eine Magiestufe mehr auf der Folgemagie des Monsters (das überlegene Element: Feuer → Wasser, Erde → Feuer, Wasser → Erde), mit passender Karte', () => {
   const D = M.MONSTER.variants.dice, st = M.newGame({ seed: 9, ai: [true, true] });
-  const save = D.plus.slice(), mag = D.plus.find(f => f.k === 'mag'), none = D.minus.find(f => f.k === 'none');
+  const save = D.plus.slice(), saveMinus = D.minus.slice(), mag = D.plus.find(f => f.k === 'mag'), none = D.minus.find(f => f.k === 'none');
   D.plus.fill(mag); D.minus.fill(none);
   try {
     for (const stage of [1, 2]) {
@@ -732,7 +732,7 @@ test('Pluswürfel „Magie“: eine Magiestufe mehr auf der Folgemagie des Monst
         assert.equal(m.stats.limit, b.stats.limit, 'das Limit bleibt unberührt');
       }
     }
-  } finally { D.plus.splice(0, 6, ...save); }
+  } finally { D.plus.splice(0, D.plus.length, ...save); D.minus.splice(0, D.minus.length, ...saveMinus); }
 });
 
 test('Monster-Hand ist höchstens so groß wie die der Spieler (Stufe III: Limit 4, Hand 5, 7 HP)', () => {
@@ -742,18 +742,18 @@ test('Monster-Hand ist höchstens so groß wie die der Spieler (Stufe III: Limit
 
 test('Monsterkarte (Weltphase): die Standardwerte base enthalten auch die Magie ohne Würfelbonus', () => {
   const D = M.MONSTER.variants.dice, st = M.newGame({ seed: 9, ai: [true, true] });
-  const save = D.plus.slice(), mag = D.plus.find(f => f.k === 'mag'), none = D.minus.find(f => f.k === 'none');
+  const save = D.plus.slice(), saveMinus = D.minus.slice(), mag = D.plus.find(f => f.k === 'mag'), none = D.minus.find(f => f.k === 'none');
   D.plus.fill(mag); D.minus.fill(none);
   try {
     const r = M.spawnMonsters(2, st.rng);
     for (const k of Object.keys(r)) { const m = r[k], S = M.MONSTER.profile[m.el].secondary; assert.equal(m.stats.mag[S], m.base.mag[S] + 1, 'mit Würfel +1'); assert.deepEqual(m.base.mag, { F: m.el === 'F' ? 3 : m.el === 'E' ? 2 : 1, E: m.el === 'E' ? 3 : m.el === 'W' ? 2 : 1, W: m.el === 'W' ? 3 : m.el === 'F' ? 2 : 1 }); }   // Haupt 3, Nebenelement (überlegen) 2, drittes 1
-  } finally { D.plus.splice(0, 6, ...save); }
+  } finally { D.plus.splice(0, D.plus.length, ...save); D.minus.splice(0, D.minus.length, ...saveMinus); }
 });
 
 test('Vorschau Verteidigung (Verteidigen/Passen) stimmt mit der tatsächlichen Ausführung überein, auch mit Spiegel und Rückwurf', () => {
   for (const [mode, mirror, hand, mark] of [['defend', 0, ['W2'], 0], ['pass', 0, ['W2'], 0], ['pass', 2, ['W2'], 0], ['defend', 2, ['W3'], 0], ['defend', 0, [], -1]]) {
     const { s, c, me, op } = combatSetup(11, hand);
-    me.stats.hp = 6; op.stats.hp = 6; c.turn = 'a'; c.action = 'defense'; c.color = 'F'; c.pending = mode === 'defend' && mirror ? 1 : 3;
+    me.stats.hp = 6; op.stats.hp = 6; c.turn = 'a'; c.action = 'defense'; c.afterAtk = true; c.color = 'F'; c.pending = mode === 'defend' && mirror ? 1 : 3;
     if (mirror) me.stats.mirrorEl = { F: mirror }, me.stats.mirror = mirror;
     if (mark >= 0) M.apply(s, { pid: 0, type: 'mark', slot: 0 });
     const pv = M.previewDefense(s, mode === 'pass'), mana0 = me.stats.mana;
@@ -768,7 +768,7 @@ test('Vorschau Verteidigung (Verteidigen/Passen) stimmt mit der tatsächlichen A
 test('Vorschau Verteidigung: nur im Verteidigungszug, nicht bei zu wenig Mana', () => {
   const { s, c, me } = combatSetup(11, ['W2', 'F1']);
   assert.equal(M.previewDefense(s, false), null, 'Angriffszug: keine Verteidigungsvorschau');
-  c.turn = 'a'; c.action = 'defense'; c.color = 'F'; c.pending = 2;
+  c.turn = 'a'; c.action = 'defense'; c.afterAtk = true; c.color = 'F'; c.pending = 2;
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });   // Wasser + Feuer: Kombokarte kostet 1 Mana
   me.stats.mana = 0;
   assert.equal(M.previewDefense(s, false), null, 'ohne Mana nicht ausführbar');
@@ -804,7 +804,7 @@ test('Monster: Das Nebenelement (Folgemagie) ist das überlegene Element (Feuer 
 
 test('Heilung der Verteidigung wirkt nach dem Schaden (seit 0.5.4, nur bis zum Maximum)', () => {
   const { s, c, me } = combatSetup(11, ['W3', 'E3']);   // gegen Feuer verteidigt Wasser (überlegen, gratis), Erde ist Kombokarte: Heilung 3 (Blau + Grün)
-  me.stats.hp = 8; me.stats.maxHp = 9; c.turn = 'a'; c.action = 'defense'; c.color = 'F'; c.pending = 6;
+  me.stats.hp = 8; me.stats.maxHp = 9; c.turn = 'a'; c.action = 'defense'; c.afterAtk = true; c.color = 'F'; c.pending = 6;
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
   const pv = M.previewDefense(s, false);
   assert.ok(M.apply(s, { pid: 0, type: 'defend' }).ok);
@@ -818,7 +818,7 @@ test('Heilung der Verteidigung wirkt nach dem Schaden (seit 0.5.4, nur bis zum M
 
 test('Heilung nach dem Schaden verfällt, wenn der Verteidiger durch den Schaden auf 0 HP fällt (seit 0.7.6.2)', () => {
   const { s, c, me } = combatSetup(11, ['F3', 'E3']);
-  me.stats.hp = 1; me.stats.maxHp = 9; c.turn = 'a'; c.action = 'defense'; c.color = 'E'; c.pending = 4;
+  me.stats.hp = 1; me.stats.maxHp = 9; c.turn = 'a'; c.action = 'defense'; c.afterAtk = true; c.color = 'E'; c.pending = 4;
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
   assert.equal(M.previewDefense(s, false).hpAfter, 0, 'Vorschau: tot, keine Heilung');
   assert.ok(M.apply(s, { pid: 0, type: 'defend' }).ok);
@@ -828,7 +828,7 @@ test('Heilung nach dem Schaden verfällt, wenn der Verteidiger durch den Schaden
 
 test('Heilung nach dem Schaden greift, wenn der Verteidiger den Schaden überlebt (seit 0.7.6.2)', () => {
   const { s, c, me } = combatSetup(11, ['W3', 'E3']);
-  me.stats.hp = 2; me.stats.maxHp = 9; c.turn = 'a'; c.action = 'defense'; c.color = 'F'; c.pending = 4;
+  me.stats.hp = 2; me.stats.maxHp = 9; c.turn = 'a'; c.action = 'defense'; c.afterAtk = true; c.color = 'F'; c.pending = 4;
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
   assert.ok(M.apply(s, { pid: 0, type: 'defend' }).ok);
   assert.ok(s.combat, 'der Kampf geht weiter');
@@ -837,7 +837,7 @@ test('Heilung nach dem Schaden greift, wenn der Verteidiger den Schaden überleb
 
 test('Läuterung in der Verteidigung: Wahl per lfp (eigener Spiegelmarker, eigenes Nachziehtoken), danach wieder frei', () => {
   const { s, c, me, op } = combatSetup(11, ['F1', 'E1']);   // Feuer + Erde: Läuterung 1
-  c.turn = 'a'; c.action = 'defense'; c.color = 'F'; c.pending = 1;
+  c.turn = 'a'; c.action = 'defense'; c.afterAtk = true; c.color = 'F'; c.pending = 1;
   me.stats.mirrorEl = { F: 1, E: 0, W: 0 }; me.stats.mirror = 1; me.stats.freeDraws = 1; op.stats.mirrorEl = { F: 0, E: 1, W: 0 }; op.stats.mirror = 1;
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
   assert.ok(M.apply(s, { pid: 0, type: 'lfp', pick: ['st'] }).ok, 'Wahl ist in der Verteidigung erlaubt');
@@ -849,7 +849,7 @@ test('Läuterung in der Verteidigung: Wahl per lfp (eigener Spiegelmarker, eigen
 
 test('Schild der Verteidigung wirkt erst nach ihr (wie die Heilung, seit 0.7.2.23; Schild seit 0.8)', () => {
   const { s, c, me } = combatSetup(11, ['E3', 'W3']);   // Erde verteidigt gegen Wasser (überlegen), Blau als Kombokarte: Schild 3
-  me.stats.hp = 9; c.turn = 'a'; c.action = 'defense'; c.color = 'W'; c.pending = 5;
+  me.stats.hp = 9; c.turn = 'a'; c.action = 'defense'; c.afterAtk = true; c.color = 'W'; c.pending = 5;
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); M.apply(s, { pid: 0, type: 'mark', slot: 1 });
   const pv = M.previewDefense(s, false);
   assert.ok(M.apply(s, { pid: 0, type: 'defend' }).ok);
@@ -1124,7 +1124,7 @@ test('Vorzeitiges Ende: bei 4 : 1 (Vorsprung 3) geht es weiter, bei 5 : 1 und 4 
     let steps = 0; while (!s.over && !(s.phase === 'combat' && s.combat.mode === 'showdown') && steps++ < 20000) if (!AI.runTurn(s, M.actor(s)).ok) break;
     const c = s.combat, w = c.sides.b.ctrl, l = c.sides.a.ctrl;
     s.players[w].sp = before[0]; s.players[l].sp = before[1];
-    c.sides.a.stats.hp = 1; c.turn = 'a'; c.action = 'defense'; c.color = 'F'; c.pending = 99; c.sides.a.stats.mirror = 0;
+    c.sides.a.stats.hp = 1; c.turn = 'a'; c.action = 'defense'; c.afterAtk = true; c.color = 'F'; c.pending = 99; c.sides.a.stats.mirror = 0;
     c.sides.a.stats.mirrorEl = undefined; c.sides.a.stats.rainbow = 0;
     assert.ok(M.apply(s, { pid: l, type: 'pass' }).ok);
     assert.equal(s.lastCombat.winner, 'b');
@@ -1404,7 +1404,7 @@ test('Zermürbung: Rundenzähler der Weltphase, ab Runde exhaustRounds + 1 schen
 
 test('Erlaubte Aktionen je Phase (0.9.9.5): Standard – Erholen und Nachziehen nur in der Angriffsphase, alles andere erlaubt', () => {
   const { s, c } = combatSetup(11, ['F3']); s.rules.allowDef = Object.assign({}, M.DEFAULT_RULES.allowDef);
-  assert.deepEqual(M.DEFAULT_RULES.allowDef, { defend: 2, recover: 3, draw: 3, pass: 1, echo: 1, combo: 1 }, 'Standard der Verteidigung'); c.pending = 3;
+  assert.deepEqual(M.DEFAULT_RULES.allowDef, { defend: 2, recover: 3, draw: 3, pass: 1, echo: 1, combo: 1 }, 'Standard der Verteidigung'); c.pending = 3; c.afterAtk = true;
   for (const k of ['attack', 'recover', 'draw', 'pass', 'echo', 'combo']) assert.equal(M.allowed(s, 'attack', k), true, 'Angriff ' + k);
   for (const k of ['defend', 'pass', 'echo', 'combo']) assert.equal(M.allowed(s, 'defense', k), true, 'Verteidigung ' + k);
   for (const k of ['recover', 'draw']) assert.equal(M.allowed(s, 'defense', k), false, 'Verteidigung ' + k);

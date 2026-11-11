@@ -108,8 +108,9 @@ function combatPlan(state, pid) {
   const canFlee = M.canFlee(state, pid) && (state.idleTurns || 0) < Q.fleeIdle;   // lange kein Kampf entschieden: nicht mehr fliehen, damit der Kampf einen Sieger bekommt (sonst Patt-Schleife Angreifen–Fliehen)
   if (c.action === 'defense' && !c.pending) {   // Reaktion ohne Schaden (ohne oder nach Angriff): Aktionspotenzial aufbauen
     // Nachziehen, wenn die Hand schwach ist (leer, höchstens eine Karte oder kein sinnvoller Angriff) und nach den Kosten noch Mana zum Spielen bleibt; sonst Erholen, wenn Mana fehlt; sonst Passen
-    const dcost = M.drawManaCost(state, pid), weak = hand.length <= 1 || !(bestAttack(side, opp, hand, Q, state, null) || { dmg: 0 }).dmg;
-    if (M.allowed(state, 'defense', 'draw') && weak && s.mana - dcost >= 1) return [A({ type: 'draw' })];
+    // Mana-Schwelle: nach dem Nachziehen muss ein Zug mit voller Kartenzahl bezahlbar sein (1 Mana je Karte, höchstens das Ausspiellimit), sonst sind Kombos nicht möglich; fehlt das Mana, erholt sie sich zuerst
+    const dcost = M.drawManaCost(state, pid), need = Math.min(s.limit, s.maxMana - dcost), weak = hand.length <= 1 || !(bestAttack(side, opp, hand, Q, state, null) || { dmg: 0 }).dmg;
+    if (M.allowed(state, 'defense', 'draw') && weak && s.mana - dcost >= need) return [A({ type: 'draw' })];
     if (M.allowed(state, 'defense', 'recover') && s.mana < s.maxMana) return [A({ type: 'recover' })];
     return [A({ type: 'pass' })];
   }
