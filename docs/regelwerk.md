@@ -690,6 +690,10 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Tests:** Drei Tests angepasst (Nachziehmarker Weltphase, Nachziehlimit Kauf, Nachziehlimit Weltphase; der Marker-Reset läuft jetzt über den Händler), neuer Test „Magie kaufen und Upgrades sind keine Aktion mehr“. `tests/golden.json` ist neu erzeugt (absichtliche Regeländerung).
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
 
+## Änderung 0.9.9.16 (11.11.)
+
+- **Plakette:** Sie zeigt nur noch „Du/<Name> Aktion“ oder „Du/<Name> Reaktion“. Der Zusatz („nach Angriff“, „ohne Angriff“, Schaden) entfällt; er steht weiterhin im Hover-Text der Plakette (Schaden, Angriff). Keine Regeländerung.
+
 ## Änderung 0.9.9.15 (11.11.)
 
 - **Vereinfachung „nach Angriff / ohne Angriff“:** Allein die Aktion des Spielers davor entscheidet: War sie ein Angriff, gilt für den Gegner in der Verteidigungsphase *nach Angriff*; war sie etwas anderes (Erholen, Nachziehen, Passen), gilt *ohne Angriff*. Die Höhe des Schadens (auch 0) ist unerheblich; nur *Verteidigen* setzt eingehenden Schaden voraus. Die Plakette zeigt „nach Angriff“ bzw. „ohne Angriff“ (der Schaden steht im Hover-Text).
