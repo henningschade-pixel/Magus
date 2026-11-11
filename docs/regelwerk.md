@@ -690,6 +690,11 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Tests:** Drei Tests angepasst (Nachziehmarker Weltphase, Nachziehlimit Kauf, Nachziehlimit Weltphase; der Marker-Reset läuft jetzt über den Händler), neuer Test „Magie kaufen und Upgrades sind keine Aktion mehr“. `tests/golden.json` ist neu erzeugt (absichtliche Regeländerung).
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
 
+## Änderung 0.11.2 (11.11.)
+
+- **Anzeige (keine Regeländerung):** Die römische Zahl in der Mitte des Magiekreises ist bei beiden Spielern auf die Ringmitte zentriert. Gemessen im Browser (Alegreya, Ring-Mittelpunkt aus den Edelsteinen der Grafik bei 50,2 % | 48,2 % der Bildgröße): Die Tinte der Zahl lag bei 50,1 % | 47,6 %, also etwa 0,7 % der Brettgröße zu hoch; `.bsp` sitzt jetzt bei `left:50.2%; top:48.4%`. Eigener Spieler und Gegner hatten denselben Versatz.
+- Die Versionsbeschreibung im Spiel nennt die Änderung.
+
 ## Änderung 0.11.1 (11.11.)
 
 - **Marker gleiten statt zu springen (Oberfläche, keine Regeländerung):** Alle Objekte sind physisch, ihre Marker bewegen sich deshalb sichtbar. Die Steine im Tempel (eigener, Gegner und der grüne Vorschau-Stein des eingestellten Opfers) und der Nachziehmarker beim Stapel (Feld und Grün/Rot) sprangen bei jedem Neuzeichnen, weil die Ebene neu geschrieben wurde. Neue Hilfsfunktion `glideSet` in `src/ui/12-hilfen.js`: Der neue Marker startet an der alten Position (auch mitten in einer Bewegung) und gleitet in 0,5 s an die neue (`.mk.glide`, `.dmark.glide` in `src/style.css`). Ohne Änderung, mit `?fast`, beim Zuschauen ab Tempo ×3 und bei reduzierter Bewegung (`prefers-reduced-motion`) bleibt alles wie bisher.
