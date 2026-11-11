@@ -70,7 +70,7 @@ function monsterCards() {
       h += '<div class="sm">HP ' + hpNow + '/' + b.maxHp + '</div><div class="bar"><i style="width:' + hpNow / b.maxHp * 100 + '%"></i></div>' +
         '<div class="sm">Mana ' + manaNow + '/' + b.maxMana + '</div><div class="bar mana"><i style="width:' + manaNow / b.maxMana * 100 + '%"></i></div>' +
         '<div class="sm"><span class="dots F">' + dots(b.mag ? b.mag.F : st.mag.F) + '</span> <span class="dots E">' + dots(b.mag ? b.mag.E : st.mag.E) + '</span> <span class="dots W">' + dots(b.mag ? b.mag.W : st.mag.W) + '</span></div>' +
-        '<div class="sm vals" style="font-size:15px;white-space:nowrap" title="Standardwerte ohne Würfel: Ausspiellimit, Handkarten, Nachziehlimit. Im Kampf gelten die Werte mit den Würfeln.">Limit ' + b.limit + ' · Hand ' + b.hand + ' · Ziehen ' + b.drawLimit + '</div>' +
+        '<div class="sm vals" style="font-size:15px;white-space:nowrap" title="Standardwerte ohne Würfel: Ausspiellimit, Handkarten, Nachziehlimit. Im Kampf gelten die Werte mit den Würfeln.">Limit ' + b.limit + ' · Hand ' + b.hand + (G.rules.drawMarker ? ' · Ziehen ' + b.drawLimit : '') + '</div>' +
         '<button class="btn small" data-act="combat" data-e="' + e + '" ' + (my ? '' : 'disabled') + '>Kämpfen</button>';
     } else h += '<div class="sm" style="margin-top:12px">' + (gone ? 'hat gewonnen und sich zurückgezogen' : 'besiegt') + '</div>';
     h += '</div>';

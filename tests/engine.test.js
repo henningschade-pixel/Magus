@@ -443,6 +443,7 @@ function vendF2(s, pid) {
 
 test('Nachziehmarker Weltphase: Nachziehen bei rotem Marker gibt dem Gegner 1 Gold, jede andere Aktion (Bibliothek, Kampf) stellt auf grün zurück, Upgrades nicht', () => {
   const s = M.newGame({ seed: 5, ai: [false, false], first: 0 }), g1 = () => s.players[1].stats.gold;
+  s.rules.drawMarker = 1;   // 0.12: der Nachziehmarker ist standardmäßig aus; dieser Test prüft die Regel
   const base = g1();
   assert.ok(M.apply(s, { pid: 0, type: 'draw' }).ok);          // grün -> rot, keine Strafe
   assert.equal(s.players[0].drawRed, true); assert.equal(g1(), base);
@@ -466,6 +467,7 @@ test('Nachziehmarker Weltphase: Nachziehen bei rotem Marker gibt dem Gegner 1 Go
 
 test('Nachziehmarker Kampf: Nachziehen bei rotem Marker kostet 1 Mana, der Gegner bekommt kein Token', () => {
   const { s, me, op } = combatSetup(11, ['F1']);
+  s.rules.drawMarker = 1;   // 0.12: der Nachziehmarker ist standardmäßig aus; dieser Test prüft die Regel
   const m0 = me.stats.mana;
   assert.equal(op.stats.freeDraws || 0, 0);
   assert.ok(M.apply(s, { pid: 0, type: 'draw' }).ok);   // grün -> rot: gratis
@@ -479,6 +481,7 @@ test('Nachziehmarker Kampf: Nachziehen bei rotem Marker kostet 1 Mana, der Gegne
 
 test('Nachziehmarker Kampf: bei rotem Marker ohne Mana ist Nachziehen nicht möglich', () => {
   const { s, me } = combatSetup(11, ['F1']);
+  s.rules.drawMarker = 1;   // 0.12: der Nachziehmarker ist standardmäßig aus; dieser Test prüft die Regel
   assert.ok(M.apply(s, { pid: 0, type: 'draw' }).ok);
   assert.ok(M.apply(s, { pid: 1, type: 'draw' }).ok);
   me.stats.mana = 0;
@@ -515,6 +518,7 @@ test('KI meidet Nachziehen bei rotem Nachziehmarker (Weltphase: Gold opfern stat
 test('KI zieht im Kampf bei rotem Marker ohne Mana nicht nach (leere Hand eingeschlossen)', () => {
   for (let k = 0; k < 4; k++) {
     const { s, me } = combatSetup(11 + k, ['F1']);
+    s.rules.drawMarker = 1;   // 0.12: der Nachziehmarker ist standardmäßig aus; dieser Test prüft die Regel
     s.players[0].drawRed = true; me.stats.mana = 0; me.deck.hand.fill(null);
     const ca = AI.plan(s, 0).map(a => a.type);
     assert.ok(!ca.includes('draw'), 'Kampf bei Rot ohne Mana: ' + ca.join(','));
@@ -523,6 +527,7 @@ test('KI zieht im Kampf bei rotem Marker ohne Mana nicht nach (leere Hand einges
 
 test('Nachziehlimit: Kauf kostet Gold (1, dann 2, keine Upgrade-Punkte), ist keine Aktion mehr (0.9.3), höchstens Stufe 3', () => {
   const s = M.newGame({ seed: 5, ai: [false, false], first: 0 }), me = s.players[0].stats;
+  s.rules.drawMarker = 1;   // 0.12: der Nachziehmarker ist standardmäßig aus; dieser Test prüft die Regel
   assert.equal(me.drawLimit, 1);
   me.gold = 0; me.pending = 5; assert.equal(M.apply(s, { pid: 0, type: 'drawlimit' }).ok, false, 'ohne Gold nicht möglich, auch mit Upgrade-Punkten');
   me.gold = 5;
@@ -535,6 +540,7 @@ test('Nachziehlimit: Kauf kostet Gold (1, dann 2, keine Upgrade-Punkte), ist kei
 
 test('Nachziehlimit Weltphase: so viele Nachziehvorgänge hintereinander sind frei, danach wird der Marker rot und das nächste Nachziehen kostet Gold', () => {
   const s = M.newGame({ seed: 5, ai: [false, false], first: 0 }), p0 = s.players[0], g1 = () => s.players[1].stats.gold;
+  s.rules.drawMarker = 1;   // 0.12: der Nachziehmarker ist standardmäßig aus; dieser Test prüft die Regel
   p0.stats.drawLimit = 3;
   const base = g1(), other = () => assert.ok(M.apply(s, { pid: 1, type: 'draw' }).ok);
   for (let i = 1; i <= 3; i++) {
@@ -553,6 +559,7 @@ test('Nachziehlimit Weltphase: so viele Nachziehvorgänge hintereinander sind fr
 
 test('Nachziehlimit Kampf: erst das Nachziehen über dem Limit kostet Mana', () => {
   const { s, me, op } = combatSetup(11, ['F1']);
+  s.rules.drawMarker = 1;   // 0.12: der Nachziehmarker ist standardmäßig aus; dieser Test prüft die Regel
   s.players[0].stats.drawLimit = 2;
   const m0 = me.stats.mana;
   for (let i = 0; i < 2; i++) { assert.ok(M.apply(s, { pid: 0, type: 'draw' }).ok); assert.ok(M.apply(s, { pid: 1, type: 'draw' }).ok); }
@@ -563,6 +570,7 @@ test('Nachziehlimit Kampf: erst das Nachziehen über dem Limit kostet Mana', () 
 
 test('KI: Stellschraube dlMax kauft das Nachziehlimit mit Gold bis zur gewählten Stufe, nicht weiter', () => {
   const s = M.newGame({ seed: 5, ai: [true, true], first: 0 }), p = s.players[0];
+  s.rules.drawMarker = 1;   // 0.12: der Nachziehmarker ist standardmäßig aus; dieser Test prüft die Regel
   p.stats.gold = 1; p.stats.pending = 0;
   AI.setParams(0, { dlMax: 0, dlPos: 0 });
   try { assert.notEqual(AI.ecoStep(s, 0).type, 'drawlimit', 'dlMax 0: kauft nicht'); } finally { AI.setParams(0, null); }
@@ -576,6 +584,7 @@ test('KI: Stellschraube dlMax kauft das Nachziehlimit mit Gold bis zur gewählte
 
 test('KI: Passt der Gegner im Showdown immer, greift sie sofort an und gewinnt, statt endlos nachzuziehen und zu erholen', () => {
   const s = M.newGame({ seed: 301, ai: [false, true], first: 0 });
+  s.rules.drawMarker = 1;   // 0.12: der Nachziehmarker ist standardmäßig aus; dieser Test prüft die Regel
   s.monsters.E.stats.hp = 0; s.monsters.W.stats.hp = 0;
   M.apply(s, { pid: 0, type: 'combat', elem: 'F' });
   const me = s.combat.sides.a, op = s.combat.sides.b; me.stats.limit = 2; me.stats.mag = { F: 3, E: 3, W: 3 }; op.stats.hp = 1; op.deck.hand = op.deck.hand.map(() => null);   // ohne Handkarten kann das Monster nicht blocken (seit 0.3.1 hat es Limit 2)
@@ -778,11 +787,12 @@ test('Vorschau Verteidigung: nur im Verteidigungszug, nicht bei zu wenig Mana', 
 
 test('Vorschau Nachziehen: Strafe nur bei rotem Marker (Weltphase Gold für den Gegner, Kampf Mana für den Nachziehenden)', () => {
   const s = M.newGame({ seed: 5, ai: [false, false], first: 0 });
+  s.rules.drawMarker = 1;   // 0.12: der Nachziehmarker ist standardmäßig aus; dieser Test prüft die Regel
   assert.equal(M.drawGoldPenalty(s, 0), 0, 'grüner Marker: keine Strafe');
   assert.equal(M.drawManaCost(s, 0), 0, 'Weltphase: keine Manakosten');
   assert.ok(M.apply(s, { pid: 0, type: 'draw' }).ok);
   assert.equal(M.drawGoldPenalty(s, 0), 1, 'roter Marker: der Gegner bekäme 1 Gold');
-  const { s: k, me } = combatSetup(11, ['F1']);
+  const { s: k, me } = combatSetup(11, ['F1']); k.rules.drawMarker = 1;
   assert.equal(M.drawGoldPenalty(k, 0), 0, 'im Kampf nie Gold');
   assert.ok(M.apply(k, { pid: 0, type: 'draw' }).ok); assert.ok(M.apply(k, { pid: 1, type: 'draw' }).ok);
   assert.equal(M.drawManaCost(k, 0), 1, 'roter Marker im Kampf: 1 Mana');
@@ -884,6 +894,7 @@ test('Abschnittsbonus: 3 Gold (Abschnitt 1), 6 (2), 9 (3) und keine Upgrade-Punk
 
 test('Jede Entwicklung der Spieler ist auf Stufe 3 begrenzt (zwei Ausbauten), Kosten 1 und 2 Gold (0.5.1)', () => {
   const s = M.newGame({ seed: 5, ai: [false, false], first: 0 }), p = s.players[0], st = p.stats;
+  s.rules.drawMarker = 1;   // 0.12: der Nachziehmarker ist standardmäßig aus; dieser Test prüft die Regel
   assert.deepEqual([M.MAX_LIMIT, M.MAX_SLOTS, M.MAX_DRAW_LIMIT, M.MAX_UPGRADES, M.MAX_MAGIC], [3, 5, 3, 2, 3]);
   st.gold = 40;
   const run = what => { const out = []; for (let i = 0; i < 3; i++) { s.turn = 0; const g = st.gold, r = M.apply(s, { pid: 0, type: what === 'drawlimit' ? 'drawlimit' : 'spend', what }); out.push(r.ok ? g - st.gold : null); } return out; };
@@ -984,6 +995,7 @@ test('Läuterung entfernt Heilmarker und Prismen des Gegners', () => {
 
 test('Strafe des Nachziehmarkers wächst mit der Spielstufe (0.7): Grundwert mal Abschnitt, für Gold und Mana', () => {
   const s = M.newGame({ seed: 9, ai: [false, false], first: 0 });
+  s.rules.drawMarker = 1;   // 0.12: der Nachziehmarker ist standardmäßig aus; dieser Test prüft die Regel
   s.players[0].drawRed = true;
   for (const st of [1, 2, 3]) {
     s.stage = st;
@@ -1010,6 +1022,7 @@ test('Fallenwahl (zuvor Abwerfen nach Zerrüttung) ist kein Zug: Zugzähler, Pas
 
 test('Magie kaufen und Upgrades sind keine Aktion mehr: der Spieler bleibt am Zug, der Marker ändert sich nicht (0.9.3)', () => {
   const s = M.newGame({ seed: 5, ai: [false, false], first: 0 }), p = s.players[0], st = p.stats;
+  s.rules.drawMarker = 1;   // 0.12: der Nachziehmarker ist standardmäßig aus; dieser Test prüft die Regel
   st.gold = 12; st.pending = 6; st.mag.F = 1;
   assert.ok(M.apply(s, { pid: 0, type: 'draw' }).ok); assert.ok(M.apply(s, { pid: 1, type: 'draw' }).ok);   // Marker von Spieler 0 rot
   assert.equal(s.turn, 0); assert.equal(p.drawRed, true);
@@ -1025,6 +1038,7 @@ test('Magie kaufen und Upgrades sind keine Aktion mehr: der Spieler bleibt am Zu
 
 test('Opfern im Tempel ist kein Zug: der Spieler bleibt am Zug, der Nachziehmarker ändert sich nicht (0.7.6.4)', () => {
   const s = M.newGame({ seed: 5, ai: [false, false], first: 0 }), p = s.players[0];
+  s.rules.drawMarker = 1;   // 0.12: der Nachziehmarker ist standardmäßig aus; dieser Test prüft die Regel
   p.stats.gold = 6; assert.ok(M.apply(s, { pid: 0, type: 'draw' }).ok);   // Spieler 0 zieht nach (Marker rot), dann Spieler 1
   assert.ok(M.apply(s, { pid: 1, type: 'draw' }).ok);
   assert.equal(s.turn, 0); assert.equal(p.drawRed, true);

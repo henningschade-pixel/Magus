@@ -216,6 +216,8 @@ test('Nachziehlimit: drei Kreise am Stapel, Plus-Knopf erscheint erst mit Gold u
     p.on('pageerror', e => errs.push(e.message));
     await p.goto(url); await p.waitForTimeout(500);
     await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
+    assert.equal(await p.locator('.dlc, .dmark').count(), 0, 'seit 0.12 standardmäßig ohne Nachziehmarker und ohne Kreise');
+    await p.evaluate(() => { window.__magus.state.rules.drawMarker = 1; window.__magus.pump(); });   // die Regel bleibt per Schalter testbar
     await p.evaluate(() => { const st = window.__magus.state.players[0].stats; st.gold = 0; st.pending = 3; window.__magus.pump(); });
     assert.equal(await p.locator('[data-act="drawlimit"]').count(), 0, 'ohne Gold kein Plus-Knopf, auch mit Upgrade-Punkten');
     await p.evaluate(() => { window.__magus.state.players[0].stats.gold = 3; window.__magus.pump(); });
@@ -361,7 +363,7 @@ test('Vorschau beim Überfahren: Nachziehstapel bei rotem Marker (Gold des Gegne
     await p.goto(url); await p.waitForTimeout(500);
     await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
     // Weltphase: roter Nachziehmarker, Mensch am Zug
-    await p.evaluate(() => { const G = window.__magus.state; G.turn = 0; G.players[0].drawRed = true; G.players[0].drawN = G.players[0].stats.drawLimit || 1; window.__magus.pump(); });
+    await p.evaluate(() => { const G = window.__magus.state; G.rules.drawMarker = 1; G.turn = 0; G.players[0].drawRed = true; G.players[0].drawN = G.players[0].stats.drawLimit || 1; window.__magus.pump(); });
     await p.hover('.pilehit[data-act="draw"]');
     assert.equal(await p.locator('.sbody:not([data-lead]) [data-pv="gold"] .pvnew').count(), 1, 'Gold des Gegners in Grün');
     await p.mouse.move(5, 5);
