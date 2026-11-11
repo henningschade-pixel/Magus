@@ -208,7 +208,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .tcell.z{color:var(--bone)}
 .tcell.gain{border-color:var(--good);border-style:dashed;background:linear-gradient(180deg,rgba(127,208,138,.3),rgba(127,208,138,.1));color:#d4f7da}
 .tcell.gain.lv{border:1px solid var(--gold);color:#f6dc8c;box-shadow:0 0 8px rgba(210,173,79,.6),inset 0 0 9px rgba(127,208,138,.55)}
-.tinfo{flex:1;min-height:0;margin-top:auto;padding-top:5px;font-size:15.5px;line-height:1.25;color:var(--mute)}
+.tinfo{flex:none;min-height:24px;padding-top:5px;font-size:15.5px;line-height:1.25;color:var(--mute)}
 .tinfo b{color:var(--bone)}.tinfo b.pg{color:var(--good)}
 .mk{position:absolute;box-sizing:border-box;border-radius:50%;pointer-events:none;z-index:3;box-shadow:0 1px 3px rgba(0,0,0,.7)}
 .mk.me{background:radial-gradient(circle at 35% 30%,#fff0b8,#e0b84a 55%,#b8902f);border:1.5px solid #6b5016}

@@ -690,6 +690,10 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Tests:** Drei Tests angepasst (Nachziehmarker Weltphase, Nachziehlimit Kauf, Nachziehlimit Weltphase; der Marker-Reset läuft jetzt über den Händler), neuer Test „Magie kaufen und Upgrades sind keine Aktion mehr“. `tests/golden.json` ist neu erzeugt (absichtliche Regeländerung).
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
 
+## Änderung 0.11.0.7 (11.11.)
+
+- **Anzeige (keine Regeländerung):** Die Vorschau beim Opfern von Gold zeigt nur noch die Zeile „n Gold opfern: +X Punkte (gesamt T)“. Die Zeile mit Stufenwechsel und Upgrade-Punkten entfällt; die Markierung auf dem Raster bleibt. Die Vorschau überlagert die Upgrade-Punkte am unteren Rand nicht mehr.
+
 ## Änderung 0.11.0.6 (11.11.)
 
 - **Anzeige (keine Regeländerung):** Die verfügbaren Upgrade-Punkte stehen nicht mehr in der Tempel-Überschrift, sondern am unteren Rand des Tempels, je Spieler in einer eigenen Zeile (eigener Spieler gold, Gegner silber).
