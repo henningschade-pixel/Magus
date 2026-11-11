@@ -425,7 +425,7 @@ test('Unter der Magiegrafik steht der Preis der nächsten Magiestufe; Opfern im 
     await p.goto(url); await p.waitForTimeout(500);
     await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
     const t0 = await p.evaluate(() => { const G = window.__magus.state; return { turn: G.turn, txt: (document.querySelector('.magcost') || {}).textContent || '', cost: window.Magus.magicCost(G, 0, G.players[0].stats) }; });
-    assert.match(t0.txt, /Nächste Magiestufe/); assert.ok(t0.txt.includes(String(t0.cost)));
+    assert.match(t0.txt, /^Magiestufe (I|II|III|IV|V|VI)$/); assert.equal(t0.txt.replace('Magiestufe ', ''), ['I', 'II', 'III', 'IV', 'V', 'VI'][t0.cost - 1], 'die römische Zahl ist der Preis');
     if (t0.turn === 0) {
       const after = await p.evaluate(() => { const G = window.__magus.state; G.players[0].stats.gold = 3; window.__magus.act({ type: 'temple', amount: 1 }); return { turn: G.turn, gold: G.players[0].stats.gold }; });
       assert.equal(after.turn, 0); assert.equal(after.gold, 2);

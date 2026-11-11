@@ -37,8 +37,8 @@ function arcsHTML(s, bsz, pad, R) {
 function magCostHTML(s, p, up) {
   if (!p || !up) return '';
   const MF = M.magicField(G), mc = M.magicCost(G, 0, s), maxed = M.ELEMENTS.every(e => s.mag[e] >= M.MAX_MAGIC);
-  const txt = maxed ? 'Magie auf Maximum' : 'Nächste Magiestufe: <b>' + M.payTxt(G, MF, mc) + '</b>';
-  const tip = maxed ? 'Alle drei Magien stehen auf der Höchststufe.' : 'Preis der nächsten Magiestufe (egal welche Farbe): ' + M.payTxt(G, MF, mc) + '. Du hast ' + s[MF] + (MF === 'gold' ? ' Gold' : ' Upgrade-Punkte') + '. Jeder weitere Kauf macht die folgende Stufe teurer.';
+  const txt = maxed ? 'Magie auf Maximum' : 'Magiestufe <b>' + (['I', 'II', 'III', 'IV', 'V', 'VI'][mc - 1] || mc) + '</b>'   // die römische Zahl ist zugleich der Preis der nächsten Magiestufe in Upgrade-Punkten (seit 0.11.0.4);
+  const tip = maxed ? 'Alle drei Magien stehen auf der Höchststufe.' : 'Magiestufe I bis VI: Die Zahl ist der Preis der nächsten Magiestufe (egal welche Farbe): ' + M.payTxt(G, MF, mc) + '. Du hast ' + s[MF] + (MF === 'gold' ? ' Gold' : ' Upgrade-Punkte') + '. Jeder weitere Kauf macht die folgende Stufe teurer.';
   return '<div class="magcost' + (!maxed && s[MF] < mc ? ' short' : '') + '" data-pv="magcost" title="' + tip + '">' + txt + '</div>';
 }
 function statsBlock(name, s, p, size, up, full) {
@@ -115,5 +115,5 @@ function sidePanels(cx) {
     op = statsBlock(esc(G.players[OPP].name), G.players[OPP].stats, G.players[OPP], LAYOUT.boardOpp);
   }
   return '<div class="panel" style="' + box(LAYOUT.mePanel, 'padding:6px 12px') + '">' + me + '</div>' +
-    '<div class="panel" style="' + box(LAYOUT.oppPanel, 'padding:6px 12px;font-size:16px') + '">' + op.replace(/<h3>/, '<h3 style="font-size:17px;margin-bottom:2px">') + '</div>';
+    '<div class="panel" style="' + box(LAYOUT.oppPanel, 'padding:6px 12px;font-size:16px') + '">' + op.replace(/<h3>/, '<h3 style="font-size:17px;margin-bottom:2px;color:#cfd2dc">') + '</div>';
 }
