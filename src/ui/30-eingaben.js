@@ -133,13 +133,9 @@ function pvShow(b) {
       if (pd.leftover > 0 || pd.heal > 0) set(ME, 'hp', (pd.hpAfter < cst.hp ? dn(pd.hpAfter) : pd.hpAfter > cst.hp ? up(pd.hpAfter) : pd.hpAfter) + '/' + cst.maxHp);   // Heilung wirkt nach dem Schaden (seit 0.5.4) vor dem Schaden (Kombo zuerst)
       if (pd.refl > 0) { const cs = G.combat.sides.a.ctrl === pd.att ? G.combat.sides.a : G.combat.sides.b; set(pd.att, 'hp', dn(pd.attHpAfter) + '/' + cs.stats.maxHp); }
     }
-  } else if (act === 'temple') {   // Opfern: Gold sinkt (rot), Upgrade-Punkte steigen (grün)
-    const n = +b.dataset.n, pv = M.previewTemple(G.players[ME], n);
+  } else if (act === 'temple') {   // Opfern: Gold sinkt (rot)
+    const n = +b.dataset.n;
     redo('gold', n);
-    const el = stage.querySelector('[data-pv="pts"]');
-    if (el && pv.gained > 0) { const old = el.innerHTML, oldT = el.textContent; el.innerHTML = '<span class="pvnew">' + (st.pending + pv.gained) + '</span>'; undos.push(() => { el.innerHTML = old; }); ArcFx.mark(el, oldT, undos); }
-    const fr = stage.querySelector('[data-pv="frac"]');
-    if (fr) { const old = fr.innerHTML; fr.innerHTML = '<span class="pvnew">' + fracHTML(pv.pool, pv.level) + '</span>'; undos.push(() => { fr.innerHTML = old; }); }
   } else if (act === 'magic') redo(M.magicField(G) === 'gold' ? 'gold' : 'pts', M.magicCost(G, st.mag[b.dataset.e], st));
   else if (act === 'drawlimit') redo(UK, M.drawLimitCost(G, st));
   else if (act === 'spend') redo(UK, w === 'limit' ? M.limitStepCost(G, st) : w === 'mana' ? M.manaStepCost(G, st) : w === 'hp' ? M.hpStepCost(G, st) : w === 'slot' ? M.slotStepCost(G, st) : 1);

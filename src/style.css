@@ -118,14 +118,14 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .pvnew{color:var(--good);font-weight:700}
 .pvfl{position:absolute;z-index:270;pointer-events:none;color:var(--good);font-weight:700;font-size:18px;background:rgba(14,10,22,.92);border:1px solid var(--good);border-radius:8px;padding:3px 9px;white-space:nowrap}
 .rg.on{border:1.5px solid #ffe9a8;box-shadow:0 0 5px 1px #ffd873,0 0 12px 3px #f2c850aa}
-.bsp{position:absolute;left:50%;top:47.7%;transform:translate(-50%,-50%);text-align:center;line-height:1;pointer-events:auto;cursor:help;text-shadow:0 0 4px #000,0 0 2px #000}.bsp b{display:block;color:var(--gold);font-weight:700}
+.bsp{position:absolute;left:50%;top:47.7%;transform:translate(-50%,-50%);text-align:center;line-height:1;pointer-events:auto;cursor:help;text-shadow:0 0 4px #000,0 0 2px #000}.bsp b{display:block;color:var(--gold);font-weight:700}.bsp.me b{color:#e0b84a}.bsp.op b{color:#cfd2dc}
+.spstar{margin-left:auto;white-space:nowrap;font-size:19px;font-variant-numeric:tabular-nums}.spstar b{font-size:21px}.spstar.me{color:#e0b84a}.spstar.op{color:#cfd2dc}
 .lfsel{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;flex-basis:100%}.lfsel .mini{font-size:13px;padding:2px 7px}.mini{font:700 14px Alegreya,serif;padding:2px 8px;border-radius:10px;border:1px solid #8a7a50;background:#2b2b30;color:#d8c9a0;cursor:var(--cp)}.mini.on{background:#e8c35a;color:#2a1a05}
 .mr{color:#7fd4ff;font-size:18px;font-weight:700;margin-left:8px;white-space:nowrap;cursor:help}
 .lead{display:inline-flex;flex:none;width:0;overflow:hidden;margin-right:-6px;justify-content:center;transition:width .28s ease,margin .28s ease}   /* alle Knöpfe der Spalte sitzen mittig auf einer senkrechten Linie unter dem Münzknopf */
 .sbody.hasup .lead{width:30px;margin-right:0;overflow:visible}
 .lead .up{margin:0}
 .sbody .statrow .plcol{margin-left:auto;display:flex}
-.pendhdr{float:right;color:var(--gold);font-size:15px;font-weight:400}.pendhdr b{font-size:19px;font-weight:700}
 
 /* Plus-Knöpfe (Upgrade-Punkte ausgeben): goldenes Plus, auch fürs Nachziehlimit; was Gold kostet (Magie), zeigt die goldene Münz-Scheibe (.mg.gd) */
 .up{width:24px;height:26px;padding:0;border:0;background:var(--plusg) center/contain no-repeat;cursor:var(--cp);margin-left:4px;flex:none}
@@ -236,8 +236,6 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 /* Kopfzeile des Spielerstatus: Name, Tempelfortschritt, Punkte, Siegpunkte (rechtsbündig) */
 .hdr{display:flex;align-items:center;gap:8px;width:100%}
 .hn{white-space:nowrap}
-.pendhdr{float:none;white-space:nowrap;font-size:17px;font-variant-numeric:tabular-nums;color:var(--good)}.pendhdr b{color:#a9efb8}.pendhdr .pvnew{color:#e2ffe8;text-shadow:0 0 6px rgba(120,230,145,.8)}.pendhdr .gneed{color:var(--mute);font-size:14px}
-.pendhdr .pl{color:#5fa872}.pendhdr .mx{color:var(--good)}.pendhdr .mx.nw{color:#c4f7cf;text-shadow:0 0 6px rgba(120,230,145,.6)}.pendhdr .mx .w{font-weight:700;font-size:19px}
 .temple{display:flex;align-items:center;gap:5px;flex:1;min-width:0;font-family:'Alegreya',serif;font-weight:400;font-size:14px;color:var(--mute)}
 .temple .tl{white-space:nowrap}
 .temple .bar.sb{flex:1;min-width:20px}

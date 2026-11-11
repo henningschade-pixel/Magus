@@ -690,6 +690,11 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Tests:** Drei Tests angepasst (Nachziehmarker Weltphase, Nachziehlimit Kauf, Nachziehlimit Weltphase; der Marker-Reset läuft jetzt über den Händler), neuer Test „Magie kaufen und Upgrades sind keine Aktion mehr“. `tests/golden.json` ist neu erzeugt (absichtliche Regeländerung).
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
 
+## Änderung 0.11.0.3 (11.11.)
+
+- **Spielerfenster (keine Regeländerung):** Die **Siegpunkte** stehen wieder oben rechts im Fenster mit einem Stern (★). Die **Tempelpunkte** (Summe `Stufe·(Stufe+1)/2 + Pool`, wie auf dem Tempel-Raster) stehen in der Mitte des Magiekreises, ohne Bruch und ohne den Hinweis auf die nächste Stufe. Die grüne Kopfzeile („Punkte <Upgrade-Punkte> <Bruch> (<n> Gold)“) entfällt, ebenso die zugehörige Vorschau beim Opfern; die offenen Upgrade-Punkte stehen nicht mehr als Zahl im Fenster (Kosten und Bestand nennt der Hover-Text der Magie-Knöpfe und die Zeile „Nächste Magiestufe“).
+- **Farben:** Der eigene Spieler ist golden, der Gegner silbern (Stern, Tempelpunkte, Marker im Tempel).
+
 ## Änderung 0.11.0.2 (11.11.)
 
 - **Tempel schlichter (keine Regeländerung):** Die Legendenzeile unter der Überschrift entfällt, die Spieler stehen als einfache runde Marker auf dem Raster (eigener golden, Gegner grau, Opfer-Vorschau grün gestrichelt) statt als Holzzylinder; Name, Punkte und Stufe stehen im Hover-Text des Markers. Das Raster nutzt die frei gewordene Höhe.

@@ -9,14 +9,14 @@ function discBox(gold, cx, cy, diam) {
 // Magie-Board (seit 0.6: dreifacher Ouroboros). Die Grafik ist 1254 × 1254 mit der Ringmitte in der Bildmitte; die Edelsteine (Stufe 1 innen, Stufe 3 außen) liegen bei diesen Bildpunkten, Radius 31. Erreichte Stufen leuchten, die übrigen sind abgedunkelt; die Siegpunkte stehen in der freien Mitte.
 const BOARD_GEMS = { F: [[627.6, 349.1], [628.7, 269.9], [627.3, 185.3]], E: [[853.7, 720.7], [925.3, 764.2], [997.3, 807.7]], W: [[401, 717.2], [331.2, 760.7], [259.5, 802.9]] };   // Mittelpunkte der Edelsteine der Grafik seit 0.7.3.1 (neue Ouroboros-Grafik)
 const BOARD_PX = 1254, BOARD_GEM_R = 36;
-function boardHTML(mag, size, sp, echo) {
+function boardHTML(mag, size, tp, echo, mine) {
   const k = size / BOARD_PX, dr = BOARD_GEM_R * k;
   let h = '<div class="bd" style="width:' + size + 'px;height:' + size + 'px" title="Magie: Feuer oben, Erde rechts unten, Wasser links unten' + (echo ? '. Echo (' + NAMES[echo] + '): Die leuchtende Schlange zeigt das Echo. Der nächste Kombo mit einer Sekundärkarte in ' + NAMES[echo] + ' steigt um 1 Stufe (höchstens 3); jede Nutzung von Primärmagie erneuert das Echo (auch ohne Kombo).' : '') + '"><img src="' + IMG.board + '">' + (echo ? EchoWave.html(echo, size) : '');   // Echo (seit 0.9.4): Welle der Schlange in der Echo-Farbe
   for (const e of ['F', 'E', 'W']) BOARD_GEMS[e].forEach(([gx, gy], i) => {
     const lv = i + 1;
     h += '<i class="rg ' + (lv <= mag[e] ? 'on' : 'off') + '" data-e="' + e + '" data-lv="' + lv + '" style="left:' + (gx * k - dr).toFixed(1) + 'px;top:' + (gy * k - dr).toFixed(1) + 'px;width:' + (2 * dr).toFixed(1) + 'px;height:' + (2 * dr).toFixed(1) + 'px"></i>';
   });
-  if (sp != null) h += '<div class="bsp" title="Siegpunkte" style="font-size:' + (size * 0.24).toFixed(1) + 'px"><b>' + sp + '</b></div>';
+  if (tp != null) h += '<div class="bsp ' + (mine ? 'me' : 'op') + '" title="Tempelpunkte (' + (mine ? 'gold = du' : 'silber = Gegner') + ')" style="font-size:' + (size * 0.24).toFixed(1) + 'px"><b>' + tp + '</b></div>';   // Mitte des Magiekreises (seit 0.11.0.3): Tempelpunkte, eigener Spieler golden, Gegner silbern
   return h + '</div>';
 }
 // HP (links, rot) und Mana (rechts, blau) als gebogene Linien neben der Magiescheibe: je ein Bogen von 90 Grad, von unten nach oben gefüllt; feine Kerben trennen die einzelnen Punkte.
@@ -65,11 +65,7 @@ function statsBlock(name, s, p, size, up, full) {
   const mana = '<div class="statrow">' + lead(manaPl) + img('mana') + '<b data-pv="mana">' + s.mana + '/' + s.maxMana + '</b></div>';
   let h = '<h3><span class="hdr"><span class="hn">' + name + '</span>@@T@@@@G@@</span></h3><div class="sbody' + (hasUp ? ' hasup' : '') + (sacCoin ? ' hassac' : '') + '"' + (compact ? '' : ' data-lead="1"') + '><div class="scol">';
   let ptsHdr = '';
-  if (p) {   // offene Upgrade-Punkte, dahinter als Bruch der Fortschritt zur nächsten Tempelstufe; das Ergebnis eines Opfers zeigt die Vorschau beim Überfahren des Opfern-Knopfes
-    const lvl = p.temple.level;
-    const tip = 'Offene Upgrade-Punkte (aufgespart). Der Bruch ist der Fortschritt zur nächsten Tempelstufe: ' + p.temple.points + ' von ' + M.nextLevelCost(lvl) + ' Punkten (Tempelstufe ' + lvl + ').';
-    ptsHdr = '<span class="pendhdr" title="' + tip + '">Punkte <b data-pv="pts">' + s.pending + '</b> <span class="mx" data-pv="frac">' + fracHTML(p.temple.points, lvl) + '</span></span>';
-  }
+  if (p) ptsHdr = '<span class="spstar ' + (p === G.players[ME] ? 'me' : 'op') + '" title="Siegpunkte">★ <b>' + p.sp + '</b></span>';   // oben rechts im Spielerfenster: Siegpunkte mit Stern (seit 0.11.0.3; die Tempelpunkte stehen in der Mitte des Magiekreises)
   h = h.replace('@@G@@', ptsHdr);
   if (compact) {
     h += '<div class="statrow">' + img('gold') + '<b data-pv="gold">' + s.gold + '</b></div>' + hp + mana;   // gleiche Reihenfolge wie beim Spieler: Gold, HP, Mana, Limit
@@ -83,7 +79,7 @@ function statsBlock(name, s, p, size, up, full) {
   }
   h = h.replace('@@G@@', '').replace('@@T@@', '');
   const bsz = size || 140;
-  let bd = boardHTML(s.mag, bsz, p ? p.sp : null, s.echo);
+  let bd = boardHTML(s.mag, bsz, p ? templeTotal(p) : null, s.echo, p === G.players[ME]);
   if (up && my) {
     const dir = { F: -90, E: 30, W: 150 }, diam = 26;   // Richtung wie die Ringe auf dem Brett (Linie von der Mitte durch die Magie); die Scheibe misst 26 px und liegt ganz auf dem äußeren Randband des Bretts (Band von 0,431 bis 0,475 der Bildgröße)
     let btn = '';
