@@ -58,7 +58,7 @@ test('Statistikseite öffnet, zeigt den Verlauf und lässt sich filtern und schl
   } finally { await b.close(); }
 });
 
-test('Weltphase: Bibliothek links, Tempel rechts mit Raster, Holzsteinen und Opfer-Vorschau; Protokoll hinter dem runden Knopf', { skip: !chromium && 'Playwright nicht installiert', timeout: 60000 }, async () => {
+test('Weltphase: Bibliothek links, Tempel rechts mit Raster, Markern und Opfer-Vorschau; Protokoll hinter dem runden Knopf', { skip: !chromium && 'Playwright nicht installiert', timeout: 60000 }, async () => {
   const b = await chromium.launch({ executablePath: exe });
   try {
     const p = await b.newPage({ viewport: { width: 1280, height: 800 } }), errs = [];
@@ -72,10 +72,10 @@ test('Weltphase: Bibliothek links, Tempel rechts mit Raster, Holzsteinen und Opf
     const sb = await box('#statsbtn'), lb = await box('#logbtn');
     assert.ok(lb.x > sb.x && Math.abs(lb.y - sb.y) < 2 && Math.abs(lb.width - lb.height) < 1, 'runder Knopf neben der Statistik');
     assert.deepEqual(await p.$$eval('.tcell.lv i', els => els.map(e => +e.textContent)).then(a => a.slice(0, 6)), [1, 3, 6, 10, 15, 21], 'Stufen-Zahlen sind hervorgehoben');
-    assert.equal(await p.locator('.tpanel .stone.me:not(.static)').count(), 1); assert.equal(await p.locator('.tpanel .stone.op:not(.static)').count(), 1);
-    assert.equal(await p.locator('.tpanel .stone.gh').count(), 0, 'ohne eingestelltes Opfer keine Vorschau');
+    assert.equal(await p.locator('.tpanel .mk.me').count(), 1); assert.equal(await p.locator('.tpanel .mk.op').count(), 1);
+    assert.equal(await p.locator('.tpanel .mk.gh').count(), 0, 'ohne eingestelltes Opfer keine Vorschau');
     await p.click('[data-act="sacup"]'); await p.click('[data-act="sacup"]');   // 2 Gold = 3 Punkte
-    assert.equal(await p.locator('.tpanel .stone.gh').count(), 1, 'Vorschau-Stein bei eingestelltem Opfer');
+    assert.equal(await p.locator('.tpanel .mk.gh').count(), 1, 'Vorschau-Stein bei eingestelltem Opfer');
     assert.equal(await p.locator('.tpanel .tcell.gain').count(), 3, 'Felder 1 bis 3 sind als Gewinn markiert');
     assert.match(await p.textContent('.tinfo'), /2 Gold opfern: \+3 Punkte \(gesamt 3\)/);
     assert.ok(await p.locator('.tpanel .tcell').count() >= 56, 'das Raster reicht mindestens bis Stufe 10 (55 Punkte)');

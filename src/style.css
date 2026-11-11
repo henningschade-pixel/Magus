@@ -202,8 +202,6 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 /* Tempel (seit 0.11, rechts): Stufenraster mit Holzsteinen */
 .tpanel{display:flex;flex-direction:column}
 .tpanel h3{flex:none;text-align:left}
-.tlegend{flex:none;display:flex;justify-content:space-between;gap:6px;font-size:14.5px;height:22px;margin-bottom:4px}
-.tlab{display:flex;align-items:center;gap:6px;white-space:nowrap}.tlab b{color:var(--gold)}
 .tboard{position:relative;flex:none;margin:2px auto 0}
 .tcell{position:absolute;box-sizing:border-box;border:1px solid rgba(255,255,255,.08);border-radius:4px;background:linear-gradient(180deg,rgba(0,0,0,.32),rgba(0,0,0,.16));color:var(--mute);overflow:hidden}
 .tcell i{position:absolute;left:2px;top:1px;font-style:normal;line-height:1.05;font-variant-numeric:tabular-nums}
@@ -213,17 +211,12 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .tcell.gain.lv{border:1px solid var(--gold);color:#f6dc8c;box-shadow:0 0 8px rgba(210,173,79,.6),inset 0 0 9px rgba(127,208,138,.55)}
 .tinfo{flex:1;min-height:0;margin-top:auto;padding-top:5px;font-size:15.5px;line-height:1.25;color:var(--mute)}
 .tinfo b{color:var(--bone)}.tinfo b.pg{color:var(--good)}
-.stone{position:absolute;width:var(--w);height:var(--w);pointer-events:none;z-index:3}
-.stone.static{position:relative;flex:none;display:inline-block}
-.stone i{position:absolute;display:block}
-.stone .ss{left:-10%;right:-10%;bottom:-14%;height:calc(var(--w) * .34);border-radius:50%;background:rgba(0,0,0,.55);filter:blur(2px)}
-.stone .sb{left:0;right:0;top:calc(var(--w) * .18);bottom:0;border-radius:0 0 50% 50% / 0 0 calc(var(--w) * .18) calc(var(--w) * .18);background:linear-gradient(90deg,var(--d) 0%,var(--m) 30%,var(--l) 52%,var(--m) 78%,var(--d) 100%)}
-.stone .st{left:0;top:0;width:100%;height:calc(var(--w) * .36);border-radius:50%;box-shadow:0 0 0 1px rgba(0,0,0,.4);background:repeating-radial-gradient(ellipse at 52% 50%,rgba(0,0,0,.14) 0 1px,transparent 1px 3px),radial-gradient(ellipse at 38% 34%,var(--hi),var(--l) 60%,var(--m))}
-.stone.me{--hi:#f6deaa;--l:#d9aa63;--m:#b58443;--d:#6c4721}
-.stone.op{--hi:#907159;--l:#654532;--m:#4b3220;--d:#22140a}
-.stone.gh{--hi:#e9f7c8;--l:#a8de9a;--m:#6cb26f;--d:#2f6a3c;opacity:.72;animation:stbob 1.6s ease-in-out infinite;filter:drop-shadow(0 0 4px rgba(127,208,138,.9))}
-@keyframes stbob{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
-@media (prefers-reduced-motion:reduce){.stone.gh{animation:none}}
+.mk{position:absolute;box-sizing:border-box;border-radius:50%;pointer-events:none;z-index:3;box-shadow:0 1px 3px rgba(0,0,0,.7)}
+.mk.me{background:radial-gradient(circle at 35% 30%,#fff0b8,#e0b84a 55%,#b8902f);border:1.5px solid #6b5016}
+.mk.op{background:radial-gradient(circle at 35% 30%,#e4e4ea,#a0a0aa 55%,#74747e);border:1.5px solid #3c3c44}
+.mk.gh{border:2px dashed #bff3c8;background:rgba(127,208,138,.5);box-shadow:0 0 8px rgba(127,208,138,.85);animation:mkpulse 1.4s ease-in-out infinite}
+@keyframes mkpulse{0%,100%{opacity:1}50%{opacity:.55}}
+@media (prefers-reduced-motion:reduce){.mk.gh{animation:none}}
 
 .vrow img.ar{width:26px}
 

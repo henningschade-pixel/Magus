@@ -690,6 +690,11 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Tests:** Drei Tests angepasst (Nachziehmarker Weltphase, Nachziehlimit Kauf, Nachziehlimit Weltphase; der Marker-Reset läuft jetzt über den Händler), neuer Test „Magie kaufen und Upgrades sind keine Aktion mehr“. `tests/golden.json` ist neu erzeugt (absichtliche Regeländerung).
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
 
+## Änderung 0.11.0.2 (11.11.)
+
+- **Tempel schlichter (keine Regeländerung):** Die Legendenzeile unter der Überschrift entfällt, die Spieler stehen als einfache runde Marker auf dem Raster (eigener golden, Gegner grau, Opfer-Vorschau grün gestrichelt) statt als Holzzylinder; Name, Punkte und Stufe stehen im Hover-Text des Markers. Das Raster nutzt die frei gewordene Höhe.
+- **Nachrechnung Magieausbau:** Zwei Ausbauten in allen drei Magien sind 6 Käufe; die Preise steigen je Kauf um 1 und gelten für alle Farben gemeinsam (`bought(s, 'mag')`). Eine Simulation mit der Engine bestätigt 1 + 2 + 3 + 4 + 5 + 6 = **21 Upgrade-Punkte**, also Tempelstufe 21 = 231 Punkte; das Raster reicht bis Feld 231. Weitere Upgrade-Punkte wandeln sich danach in Siegpunkte um (`surplusSp`); ein Stein darüber bleibt auf Feld 231 stehen.
+
 ## Änderung 0.11.0.1 (11.11.)
 
 - **Tempel-Raster bis zum vollen Magieausbau (keine Regeländerung):** Magie auf Stufe 3 in allen drei Farben braucht 6 Käufe; der Preis steigt je Kauf um 1 (`priceRise`), also 1 + 2 + 3 + 4 + 5 + 6 = **21 Upgrade-Punkte**. Jede Tempelstufe gibt einen Upgrade-Punkt, also ist **Tempelstufe 21** nötig, das sind 21·22/2 = **231 Tempelpunkte** (HP, Mana und Limit kommen noch dazu). Das Raster zeigt deshalb die Felder 0 bis 231 zeilenweise, aber nur so viele, wie die Steine brauchen (mindestens bis 55 = Stufe 10, sonst bis zur Schwelle von drei Stufen über dem weitesten Stein); die Spaltenzahl wird so gewählt, dass die Felder möglichst groß bleiben. Die Reihen entsprechen keinen Stufen mehr; die goldenen Zahlen k(k+1)/2 bleiben hervorgehoben.
