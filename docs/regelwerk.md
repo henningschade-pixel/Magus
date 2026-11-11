@@ -690,6 +690,14 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Tests:** Drei Tests angepasst (Nachziehmarker Weltphase, Nachziehlimit Kauf, Nachziehlimit Weltphase; der Marker-Reset läuft jetzt über den Händler), neuer Test „Magie kaufen und Upgrades sind keine Aktion mehr“. `tests/golden.json` ist neu erzeugt (absichtliche Regeländerung).
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
 
+## Änderung 0.11 (11.11.; 0.10 ist durch eine experimentelle Entwicklung belegt)
+
+- **Neues Layout der Weltphase (keine Regeländerung):** Das **Protokoll** liegt hinter einem runden Knopf oben links neben dem Statistik-Knopf (`#logbtn`, 36 px). Es öffnet als Fenster (`#logpop`, ganze Partie, mit Export-Knopf) und schließt mit dem Knopf, mit Esc oder durch einen Klick daneben; der Knopf gilt in Weltphase und Kampf, der Kampflog links im Kampf bleibt. Im frei gewordenen linken Fenster steht die **Bibliothek** (größere Karten, Anzahl darunter), das bisherige Bibliotheksfenster rechts ist der **Tempel**.
+- **Tempel-Raster:** Reihe *k* ist Tempelstufe *k* und enthält die Punktzahlen k(k+1)/2 bis k(k+1)/2 + k; die erste Zahl jeder Reihe (**1, 3, 6, 10, 15, 21 …**) ist der Eintritt in die nächste Stufe und golden hervorgehoben. Die Position eines Spielers ist `Stufe·(Stufe+1)/2 + Punkte im Pool` (`templeTotal`). **Holzsteine** (Zylinder) zeigen beide Spieler; stehen sie auf demselben Feld, liegen sie nebeneinander. Das Raster zeigt mindestens 7 Reihen (bis 21 Punkte) und wächst mit dem weitesten Stein (höchstens 14 Reihen).
+- **Opfer-Vorschau:** Unter dem Raster steht, wie viele Punkte das mit ◀ ▶ eingestellte Gold bringt, die neue Gesamtpunktzahl und ob eine Stufe (mit Upgrade-Punkten) erreicht wird. Der durchscheinende grüne Stein und die grün gestrichelten Felder markieren diesen Fortschritt auf der Tafel.
+- **Umsetzung:** `libraryPanel` und `templePanel` in `src/ui/17-weltphase.js`; Layout-Schlüssel `library`, `temple`, `logPop` (`src/ui/10-layout.js`); Protokoll-Fenster in `renderInner` (`src/ui/26a-darstellung.js`), Knopf in `src/ui/30-eingaben.js`. Tempo-Knopf (Zuschauen) und Mehrspieler-Chip rücken nach rechts.
+- Die Versionsbeschreibung im Spiel nennt die Änderung.
+
 ## Änderung 0.9.9.16 (11.11.)
 
 - **Plakette:** Sie zeigt nur noch „Du/<Name> Aktion“ oder „Du/<Name> Reaktion“. Der Zusatz („nach Angriff“, „ohne Angriff“, Schaden) entfällt; er steht weiterhin im Hover-Text der Plakette (Schaden, Angriff). Keine Regeländerung.

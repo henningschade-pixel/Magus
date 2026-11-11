@@ -31,14 +31,18 @@ test('Spiel startet, Kampf endet mit Ergebnis-Bildschirm, Klick führt zurück i
   } finally { await b.close(); }
 });
 
-test('Statistikseite öffnet, zeigt den Verlauf und lässt sich filtern und schließen; Export-Knopf sitzt im Log', { skip: !chromium && 'Playwright nicht installiert', timeout: 60000 }, async () => {
+test('Statistikseite öffnet, zeigt den Verlauf und lässt sich filtern und schließen; Export-Knopf sitzt im Protokoll-Fenster', { skip: !chromium && 'Playwright nicht installiert', timeout: 60000 }, async () => {
   const b = await chromium.launch({ executablePath: exe });
   try {
     const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
     p.on('pageerror', e => errs.push(e.message));
     await p.goto(url); await p.waitForTimeout(500);
     await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
-    assert.equal(await p.locator('#log .logdl').count(), 1);
+    assert.equal(await p.locator('#logpop .logdl').count(), 0, 'das Protokoll ist zu, solange der runde Knopf nicht gedrückt ist');
+    await p.click('#logbtn');
+    assert.equal(await p.locator('#logpop.open .logdl').count(), 1, 'Export-Knopf im Protokoll-Fenster');
+    assert.ok((await p.textContent('#logpop .logl')).length > 0, 'das Protokoll zeigt die Einträge');
+    await p.click('#logbtn'); assert.equal(await p.locator('#logpop.open').count(), 0, 'der Knopf schließt das Fenster wieder');
     await p.click('#statsbtn');
     await p.waitForSelector('.box.stats svg');
     assert.ok(await p.locator('.box.stats polyline, .box.stats circle').count() > 0);
@@ -50,6 +54,30 @@ test('Statistikseite öffnet, zeigt den Verlauf und lässt sich filtern und schl
     await p.dblclick('#stsvg'); assert.equal(await p.locator('#stsvg').innerHTML(), before);   // Doppelklick: zurück zur automatischen Ansicht
     await p.click('text=Schließen');   // direkt zurück ins Spiel (kein Menü dazwischen)
     assert.equal(await p.evaluate(() => document.getElementById('overlay').style.display), 'none');
+    assert.deepEqual(errs, []);
+  } finally { await b.close(); }
+});
+
+test('Weltphase: Bibliothek links, Tempel rechts mit Raster, Holzsteinen und Opfer-Vorschau; Protokoll hinter dem runden Knopf', { skip: !chromium && 'Playwright nicht installiert', timeout: 60000 }, async () => {
+  const b = await chromium.launch({ executablePath: exe });
+  try {
+    const p = await b.newPage({ viewport: { width: 1280, height: 800 } }), errs = [];
+    p.on('pageerror', e => errs.push(e.message));
+    await p.goto(url); await p.waitForTimeout(500);
+    await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
+    const box = async sel => p.locator(sel).first().boundingBox();
+    const lib = await box('.libpanel'), tmp = await box('.tpanel');
+    assert.ok(lib.x < 100 && tmp.x > 800, 'Bibliothek links, Tempel rechts');
+    assert.equal(await p.locator('#log .logl').count(), 0, 'kein festes Protokoll mehr in der Weltphase');
+    const sb = await box('#statsbtn'), lb = await box('#logbtn');
+    assert.ok(lb.x > sb.x && Math.abs(lb.y - sb.y) < 2 && Math.abs(lb.width - lb.height) < 1, 'runder Knopf neben der Statistik');
+    assert.deepEqual(await p.$$eval('.tcell.lv i', els => els.map(e => +e.textContent)).then(a => a.slice(0, 6)), [1, 3, 6, 10, 15, 21], 'Stufen-Zahlen sind hervorgehoben');
+    assert.equal(await p.locator('.tpanel .stone.me:not(.static)').count(), 1); assert.equal(await p.locator('.tpanel .stone.op:not(.static)').count(), 1);
+    assert.equal(await p.locator('.tpanel .stone.gh').count(), 0, 'ohne eingestelltes Opfer keine Vorschau');
+    await p.click('[data-act="sacup"]'); await p.click('[data-act="sacup"]');   // 2 Gold = 3 Punkte
+    assert.equal(await p.locator('.tpanel .stone.gh').count(), 1, 'Vorschau-Stein bei eingestelltem Opfer');
+    assert.equal(await p.locator('.tpanel .tcell.gain').count(), 3, 'Felder 1 bis 3 sind als Gewinn markiert');
+    assert.match(await p.textContent('.tinfo'), /2 Gold opfern: \+3 Punkte \(gesamt 3\)/);
     assert.deepEqual(errs, []);
   } finally { await b.close(); }
 });

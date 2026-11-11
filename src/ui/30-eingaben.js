@@ -193,7 +193,7 @@ function homeSettings() {
 }
 // Klickton für Menü- und Bedienknöpfe (Aktionen mit eigenem Ton ausgenommen)
 const CLICK_ACTS = new Set(['sacdn', 'sacup', 'deckview', 'home', 'resume', 'restart', 'leave', 'newgame', 'newspec', 'specspeed', 'stend', 'finfight', 'logdl', 'stclose', 'stopen', 'sndtoggle', 'rule', 'rulephase', 'menu', 'quit', 'homeset', 'homeback', 'stfit', 'stwho', 'stser', 'dismiss']);
-stage.addEventListener('pointerdown', e => { const b = e.target.closest('button'); if (b && (b.id === 'homebtn' || b.id === 'statsbtn' || b.classList.contains('logdl') || CLICK_ACTS.has(b.dataset.act))) Snd.play('ui_click'); }, true);
+stage.addEventListener('pointerdown', e => { const b = e.target.closest('button'); if (b && (b.id === 'homebtn' || b.id === 'statsbtn' || b.id === 'logbtn' || b.classList.contains('logdl') || CLICK_ACTS.has(b.dataset.act))) Snd.play('ui_click'); }, true);
 const homeBtn = document.createElement('button');
 homeBtn.id = 'homebtn'; homeBtn.title = 'Hauptmenü (die Partie bleibt erhalten)'; homeBtn.textContent = '⌂';
 homeBtn.addEventListener('click', e => { e.stopPropagation(); if (!G || !started || overlay.style.display === 'flex') return; if (MP) homeMenu(); else { clearTimeout(aiTimer); showStart(); } });   // Mehrspieler: Partie-Menü (Verlassen), sonst direkt das Hauptmenü mit „Spiel fortsetzen“
@@ -203,12 +203,23 @@ statsBtn.id = 'statsbtn'; statsBtn.title = 'Statistik: Verlauf der Partie'; stat
 statsBtn.innerHTML = '<svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true"><path d="M3 17V3M3 17h14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M5.5 13l3.5-4 3 2.5 4-6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 statsBtn.addEventListener('click', e => { e.stopPropagation(); statsOpen(false); });
 statsBtn.style.display = 'none'; stage.appendChild(statsBtn);
+// Protokoll (seit 0.11): runder Knopf neben der Statistik öffnet und schließt das Protokoll-Fenster; es schließt auch bei Klick daneben und mit Esc
+const logBtn = document.createElement('button');
+logBtn.id = 'logbtn'; logBtn.title = 'Protokoll: Verlauf der Partie als Text'; logBtn.setAttribute('aria-label', 'Protokoll');
+logBtn.innerHTML = '<svg viewBox="0 0 20 20" width="20" height="20" aria-hidden="true"><path d="M7.5 5h9M7.5 10h9M7.5 15h9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="3.5" cy="5" r="1.3" fill="currentColor"/><circle cx="3.5" cy="10" r="1.3" fill="currentColor"/><circle cx="3.5" cy="15" r="1.3" fill="currentColor"/></svg>';
+logBtn.addEventListener('click', e => { e.stopPropagation(); logOpen = !logOpen; if (G) render(); });
+logBtn.style.display = 'none'; stage.appendChild(logBtn);
+function closeLogPop() {   // ohne neu zu zeichnen: ein Neuzeichnen zwischen Mausdruck und Loslassen würde den Klick auf das Spielfeld verschlucken
+  if (!logOpen) return; logOpen = false; logBtn.classList.remove('on'); logPop.className = ''; logPop.style.cssText = ''; logPop.innerHTML = '';
+}
+document.addEventListener('pointerdown', e => { if (logOpen && !e.target.closest('#logpop, #logbtn')) closeLogPop(); }, true);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLogPop(); });
 // Tempo-Knopf auf dem Spielfeld, nur beim Zuschauen einer Computerpartie; bei „maximal“ wird der Ton selbst ausgeschaltet und danach wiederhergestellt
 const specBtn = document.createElement('button');
 specBtn.id = 'specbtn'; specBtn.dataset.act = 'specspeed'; specBtn.title = 'Tempo der Computerzüge; ab ×3 ohne Animationen und Töne, bei maximal zusätzlich ohne Ton';
 stage.appendChild(specBtn);
 let specMuted = false;
-function specBtnSync() { statsBtn.style.display = G && started ? '' : 'none'; specBtn.style.display = SPEC && started && G && !G.over ? '' : 'none'; specBtn.textContent = '⏩ ' + (specSpeed === 1 ? 'normal' : specSpeed === 3 ? '×3' : 'maximal'); }
+function specBtnSync() { statsBtn.style.display = logBtn.style.display = G && started ? '' : 'none'; specBtn.style.display = SPEC && started && G && !G.over ? '' : 'none'; specBtn.textContent = '⏩ ' + (specSpeed === 1 ? 'normal' : specSpeed === 3 ? '×3' : 'maximal'); }
 function setSpecSpeed(v) {
   specSpeed = v; setFast();
   if (v === 99 && Snd.on) { Snd.toggle(); specMuted = true; }
