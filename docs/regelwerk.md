@@ -690,6 +690,11 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Tests:** Drei Tests angepasst (Nachziehmarker Weltphase, Nachziehlimit Kauf, Nachziehlimit Weltphase; der Marker-Reset läuft jetzt über den Händler), neuer Test „Magie kaufen und Upgrades sind keine Aktion mehr“. `tests/golden.json` ist neu erzeugt (absichtliche Regeländerung).
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
 
+## Änderung 0.12.1.4 (11.11.)
+
+- **Anzeige (keine Regeländerung):** Stehen alle drei Magien auf der Höchststufe (3 je Element, Summe 9), zeigt der Magiekreis „IX“ statt eines Hakens; die Zahlenreihe reicht bis IX.
+- Die Versionsbeschreibung im Spiel nennt die Änderung.
+
 ## Änderung 0.12.1.3 (11.11.)
 
 - **Anzeige (keine Regeländerung):** Nach der Vorgabe des Spielers (farbige Rechtecke im Screenshot) liegen **Marker** (Todes-, Heil-, Manamarker, Schild) und **Fallen** auf breiter Bühne in der freien Spalte rechts neben dem Kampffenster, zwischen Kampfmitte und den rechten Blöcken: die des Gegners oben auf Höhe seines Ablagestapels, meine unten auf Höhe meiner Hand. Sie liegen dort in einem Raster (`markBox`, `deathPos` in `src/ui/12-hilfen.js`; Spaltenbreite = halber Bühnenüberstand, mindestens 100 px, sonst gilt die bisherige Reihe vor den Handkarten samt Ausweichen vor den offenen Karten).

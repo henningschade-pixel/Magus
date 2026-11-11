@@ -37,8 +37,8 @@ function arcsHTML(s, bsz, pad, R) {
 function magLevelLabel(s, p, mine) {
   if (!p) return null;
   const MF = M.magicField(G), mc = M.magicCost(G, 0, s), maxed = M.ELEMENTS.every(e => s.mag[e] >= M.MAX_MAGIC);
-  const txt = maxed ? '✓' : (['I', 'II', 'III', 'IV', 'V', 'VI'][mc - 1] || String(mc));
-  const tip = maxed ? 'Alle drei Magien stehen auf der Höchststufe.' : 'Nächste Magiestufe: ' + txt + '. Die Zahl ist der Preis der nächsten Magiestufe (egal welche Farbe): ' + M.payTxt(G, MF, mc) + '. ' + (mine ? 'Du hast ' : 'Der Gegner hat ') + s[MF] + (MF === 'gold' ? ' Gold' : ' Upgrade-Punkte') + '. Jeder weitere Kauf macht die folgende Stufe teurer.';
+  const txt = maxed ? 'IX' : (['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX'][mc - 1] || String(mc));
+  const tip = maxed ? 'Alle drei Magien stehen auf der Höchststufe (IX).' : 'Nächste Magiestufe: ' + txt + '. Die Zahl ist der Preis der nächsten Magiestufe (egal welche Farbe): ' + M.payTxt(G, MF, mc) + '. ' + (mine ? 'Du hast ' : 'Der Gegner hat ') + s[MF] + (MF === 'gold' ? ' Gold' : ' Upgrade-Punkte') + '. Jeder weitere Kauf macht die folgende Stufe teurer.';
   return { txt, tip };
 }
 function statsBlock(name, s, p, size, up, full) {
