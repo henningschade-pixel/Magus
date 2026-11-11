@@ -407,7 +407,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 @keyframes edgeopp-r{0%,100%{box-shadow:inset 0 3px 0 rgba(110,170,230,.7),inset 0 40px 40px -34px rgba(110,170,230,.22)}50%{box-shadow:inset 0 4px 0 #9cc7f0,inset 0 60px 60px -34px rgba(156,199,240,.45)}}
 .phasebadge{align-self:center;display:inline-flex;gap:6px;align-items:baseline;padding:2px 14px;margin:2px 0 0;border-radius:14px;font-size:17px;border:1px solid var(--gold);color:var(--gold);background:rgba(210,173,79,.1);cursor:help}
 .phasebadge b{font-family:'Alegreya SC',serif;letter-spacing:.06em;font-size:19px}
-.phasebadge .pbsub{font-size:15px;opacity:.85}.phasebadge .pbwho{opacity:.85}
+.phasebadge .pbsub{font-size:15px;opacity:.85}
 .phasebadge.react{border-color:#6eaae6;color:#9cc7f0;background:rgba(110,170,230,.12)}
 @media (prefers-reduced-motion:reduce){#stage.turn-me::after,#stage.turn-opp::after{animation:none}}
 /* Startseite */

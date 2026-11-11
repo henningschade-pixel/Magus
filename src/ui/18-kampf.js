@@ -64,7 +64,7 @@ function lfSummary(cx, lvl) {
 function phaseBadge(c, my) {
   const react = c.action === 'defense', who = my ? 'Du' : esc(c.sides[c.turn].name);
   const tip = react ? who + (my ? ' reagierst' : ' reagiert') + (c.afterAtk ? ' auf den Angriff' + (c.pending > 0 ? ' (' + c.pending + ' Schaden): Verteidigen oder eine andere erlaubte Reaktion' : ' (ohne Schaden): Erholen, Nachziehen oder Passen, soweit für „nach Angriff“ erlaubt') + '.' : ', denn es erfolgte kein Angriff: Erholen, Nachziehen oder Passen, soweit in den Einstellungen für „ohne Angriff“ erlaubt.') + ' Danach folgt die eigene Aktion.' : who + (my ? ' bist' : ' ist') + ' in der Aktion: Angriff oder eine andere erlaubte Aktion. Danach reagiert der andere Spieler.';
-  return '<div class="phasebadge ' + (react ? 'react' : 'act') + '" title="' + tip + '"><span class="pbwho">' + who + '</span> <b>' + (react ? 'Reaktion' : 'Aktion') + '</b>' + '</div>';
+  return '<div class="phasebadge ' + (react ? 'react' : 'act') + '" title="' + tip + '"><b>' + (react ? 'Reaktion' : 'Aktion') + '</b>' + '</div>';
 }
 let manaPv = 0;   // Manakosten der markierten Karten, als rote Vorschau am Mana-Wert
 function combatCenter(cx) {
