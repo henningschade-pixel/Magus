@@ -72,15 +72,15 @@ function layoutDeck(deck, L, mine) {
   deck.draw.forEach((c, i) => place(c, { x: L.draw.x + Math.min(i, 5) * 0.8, y: L.draw.y - Math.min(i, 5) * 0.8, sc: L.ps, down: true, z: 1 + i, spawn, zone: 'draw' }));
   deck.discard.forEach((c, i) => place(c, { x: L.disc.x + jit(c.uid, 4), y: L.disc.y + jit(c.uid + 7, 3), rot: jit(c.uid + 3, 6), sc: L.ps, down: false, z: 1 + i, spawn, zone: 'disc' }));
   const n = deck.hand.length, nb = M.baseLen(deck);   // Hellsichtkarten (Plätze ab nb) liegen offen in einer eigenen Reihe über der Hand
-  { const ne0 = n - nb, os0 = mine ? 0.6 : 0.7;   // x-Bereich dieser Reihe merken: Die Markerreihe samt Falle weicht ihm aus (deathPos, seit 0.12.1)
+  { const ne0 = n - nb, os0 = mine ? 0.5 : 0.7;   // x-Bereich dieser Reihe merken: Die Markerreihe samt Falle weicht ihm aus (deathPos, seit 0.12.1)
     if (ne0 > 0) { const Lo = Object.assign({}, L, { s: L.s * os0, gap: L.gap * 0.62, span: L.span * 0.7 }); OPEN_SPAN[mine ? 's' : 'o'] = { x1: slotX(0, ne0, Lo), x2: slotX(ne0 - 1, ne0, Lo) + CW * Lo.s }; }
     else OPEN_SPAN[mine ? 's' : 'o'] = null; }
   deck.hand.forEach((c, i) => {
     if (!c) return;
     if (!forcedMe()) { fdSel.clear(); sightSel = []; }
     const fdm = mine && forcedMe() && fdSel.has(i), marked = deck.marks.includes(i) || fdm;
-    const open = i >= nb, ne = n - nb, os = mine ? 0.6 : 0.7, ox = open ? slotX(i - nb, ne, Object.assign({}, L, { s: L.s * os, gap: L.gap * 0.62, span: L.span * 0.7 })) : 0;
-    place(c, open ? { x: ox, y: (mine ? 490 : 112) + (marked ? (mine ? -24 : 16) : 0), sc: L.s * os, down: false, z: 60 + i + (marked ? 30 : 0), marked, free: true, mine, slot: i, spawn, zone: 'hand', first: mine && marked && isFirstAtk(deck, i) } : { x: slotX(i, nb, L), y: L.y + (marked ? L.raise : 0), sc: L.s, down: !mine, z: 20 + i + (marked ? 30 : 0), marked, fd: fdm, locked: mine && c.locked, mine, slot: i, spawn, zone: 'hand', first: mine && marked && !fdm && isFirstAtk(deck, i)});
+    const open = i >= nb, ne = n - nb, os = mine ? 0.5 : 0.7, ox = open ? slotX(i - nb, ne, Object.assign({}, L, { s: L.s * os, gap: L.gap * 0.62, span: L.span * 0.7 })) : 0;
+    place(c, open ? { x: ox, y: (mine ? 497 : 112) + (marked ? (mine ? -14 : 8) : 0), sc: L.s * os, down: false, z: 60 + i + (marked ? 30 : 0), marked, free: true, mine, slot: i, spawn, zone: 'hand', first: mine && marked && isFirstAtk(deck, i) } : { x: slotX(i, nb, L), y: L.y + (marked ? L.raise : 0), sc: L.s, down: !mine, z: 20 + i + (marked ? 30 : 0), marked, fd: fdm, locked: mine && c.locked, mine, slot: i, spawn, zone: 'hand', first: mine && marked && !fdm && isFirstAtk(deck, i)});
   });
 }
 // Nachziehlimit: drei Kreise unter dem Nachziehstapel (beide Spieler), der rot/grüne Marker liegt auf der Stufe des nächsten freien Nachziehens; Stufen über dem Limit sind abgedunkelt, auf der nächsten sitzt der Plus-Knopf (Upgrade-Punkte)

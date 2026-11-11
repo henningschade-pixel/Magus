@@ -69,8 +69,21 @@ function markCounts(s) {   // dargestellte Marker je Art (Todes-, Heil- und Mana
 }
 // seit 0.7.2.10 liegen alle Marker (Todes-, Heil-, Mana- und Schildmarker, seit 0.8 auch die Falle) in einer lockeren Reihe mittig direkt vor den Handkarten ihres Spielers (eigene oberhalb, die des Gegners unterhalb der Hand), jeder leicht verdreht und versetzt; so verdecken sie weder Karten noch Anzeigen. i: laufende Nummer in der Reihe (Todesmarker, Heil-, Mana-, dann Schildmarker und Falle), total: Anzahl aller Marker der Seite.
 const OPEN_SPAN = { s: null, o: null };   // seit 0.12.1: x-Bereich {x1, x2} der offenen Hellsichtkarten je Seite (setzt layoutDeck vor dem Zeichnen der Marker); null ohne Hellsichtkarten
+// Marker-Spalte (seit 0.12.1.3): Auf breiter Bühne liegen Marker, Schild und Fallen in der freien Spalte rechts neben dem Kampffenster (zwischen Kampfmitte und den rechten Blöcken): die des Gegners oben auf Höhe seines Ablagestapels, meine unten auf Höhe meiner Hand. Ist die Spalte zu schmal (schmale Bühne), gilt die Reihe vor den Handkarten (unten).
+function markBox(who) {
+  const x1 = LAYOUT.combat.left + LAYOUT.combat.w + 4, x2 = LAYOUT.oppPanel.left - 4;
+  if (x2 - x1 < 100) return null;
+  return who === 's' ? { x1, x2, y1: 424, y2: 582 } : { x1, x2, y1: 90, y2: 246 };
+}
 function deathPos(who, i, total) {
-  const L = who === 's' ? L_MY : L_OP, T = Math.max(1, total || 1, i + 1), k = i % 8;
+  const L = who === 's' ? L_MY : L_OP, T = Math.max(1, total || 1, i + 1), k = i % 8, bx = markBox(who);
+  if (bx) {   // Raster in der Spalte: Zeilen von oben nach unten (Gegner) bzw. von unten nach oben (ich), jede Zeile mittig
+    const bw = bx.x2 - bx.x1, cols = Math.max(2, Math.floor(bw / 54)), cw = bw / cols, rows = Math.ceil(T / cols), rh = Math.min(60, (bx.y2 - bx.y1) / rows);
+    const row = Math.floor(i / cols), col = i % cols, inRow = Math.min(cols, T - row * cols);
+    const left = bx.x1 + (bw - inRow * cw) / 2 + col * cw + (cw - TOK) / 2 + TOK_DX[k] * 0.5;
+    const top = who === 's' ? bx.y2 - (row + 1) * rh + (rh - TOK) / 2 : bx.y1 + row * rh + (rh - TOK) / 2;
+    return { x: Math.max(4, left), y: top + TOK_DY[k] * 0.8, rot: TOK_ROT[k] };
+  }
   let sx = Math.min(62, 400 / T);
   const cy = who === 's' ? L.y - 80 : L.y + CH * L.s + 51;
   let left = L.cx - ((T - 1) * sx) / 2 - TOK / 2;   // linker Rand des ersten Tokens

@@ -690,6 +690,12 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Tests:** Drei Tests angepasst (Nachziehmarker Weltphase, Nachziehlimit Kauf, Nachziehlimit Weltphase; der Marker-Reset läuft jetzt über den Händler), neuer Test „Magie kaufen und Upgrades sind keine Aktion mehr“. `tests/golden.json` ist neu erzeugt (absichtliche Regeländerung).
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
 
+## Änderung 0.12.1.3 (11.11.)
+
+- **Anzeige (keine Regeländerung):** Nach der Vorgabe des Spielers (farbige Rechtecke im Screenshot) liegen **Marker** (Todes-, Heil-, Manamarker, Schild) und **Fallen** auf breiter Bühne in der freien Spalte rechts neben dem Kampffenster, zwischen Kampfmitte und den rechten Blöcken: die des Gegners oben auf Höhe seines Ablagestapels, meine unten auf Höhe meiner Hand. Sie liegen dort in einem Raster (`markBox`, `deathPos` in `src/ui/12-hilfen.js`; Spaltenbreite = halber Bühnenüberstand, mindestens 100 px, sonst gilt die bisherige Reihe vor den Handkarten samt Ausweichen vor den offenen Karten).
+- **Hellsichtkarten** liegen weiter in ihrer Reihe zwischen Hand und Kampffenster (meine etwas kleiner, Maßstab 0,5, damit sie die Hand nicht berühren; markierte Karten heben sich weniger). **Nachziehtokens** bleiben neben dem jeweiligen Nachziehstapel.
+- Die Versionsbeschreibung im Spiel nennt die Änderung.
+
 ## Änderung 0.12.1.2 (11.11.)
 
 - **Standardwerte „Erlaubte Aktionen“ (Regeländerung der Voreinstellung):** `DEFAULT_RULES.allowDef` (`src/engine/80-start.js`) steht jetzt auf Verteidigen *nach Angriff* (2), Erholen *aus*, Nachziehen *aus*, Passen *an*, Echo setzen *aus*, Kombo wirken *an* (vorher Erholen und Nachziehen *ohne Angriff* (3), Echo *an*). Die Angriffsphase bleibt unverändert (alles an). Übernommen aus den Einstellungen des Spielers (Screenshot); der Passen-Schalter war dort verdeckt und bleibt auf *an*.
