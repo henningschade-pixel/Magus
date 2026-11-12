@@ -100,109 +100,127 @@ function forcedPick(state, pid) {
   const cards = d.hand.map((h, slot) => h ? { slot, v: (M.parseCard(h.id).curse ? -5 : M.parseCard(h.id).tier + 0.15 * (mag[M.parseCard(h.id).el] || 0)) + (h.locked ? 4 : 0) } : null).filter(Boolean).sort((x, y) => x.v - y.v || x.slot - y.slot);
   return cards.slice(0, Math.min(c.forced.n, cards.length)).map(x => x.slot);
 }
+// Kampfplan (seit 0.13.1 in Teilfunktionen zerlegt, Entscheidungen und Reihenfolge unverändert): Reaktion ohne Schaden (planReaction), Angriffszug (planAttack, darin Flucht nach Kampfprognose: fleeByForecast), Verteidigung (planDefense).
 function combatPlan(state, pid) {
   if (state.combat.forced && state.combat.forced.pid === pid) return [forcedAct(state, pid)];
   const c = state.combat, side = c.sides[c.turn], opp = c.sides[c.turn === 'a' ? 'b' : 'a'];
   const d = side.deck, hand = handList(d), A = a => Object.assign({ pid }, a);
   const s = side.stats, Q = P(pid);
   const canFlee = M.canFlee(state, pid) && (state.idleTurns || 0) < Q.fleeIdle;   // lange kein Kampf entschieden: nicht mehr fliehen, damit der Kampf einen Sieger bekommt (sonst Patt-Schleife Angreifen–Fliehen)
-  if (c.action === 'defense' && !c.pending) {   // Reaktion ohne Schaden (ohne oder nach Angriff): Aktionspotenzial aufbauen
-    // Nachziehen, wenn die Hand schwach ist (leer, höchstens eine Karte oder kein sinnvoller Angriff) und nach den Kosten noch Mana zum Spielen bleibt; sonst Erholen, wenn Mana fehlt; sonst Passen
-    // Mana-Schwelle: nach dem Nachziehen muss ein Zug mit voller Kartenzahl bezahlbar sein (1 Mana je Karte, höchstens das Ausspiellimit), sonst sind Kombos nicht möglich; fehlt das Mana, erholt sie sich zuerst
-    const dcost = M.drawManaCost(state, pid), need = Math.min(s.limit, s.maxMana - dcost), weak = hand.length <= 1 || !(bestAttack(side, opp, hand, Q, state, null) || { dmg: 0 }).dmg;
-    if (M.allowed(state, 'defense', 'draw') && weak && s.mana - dcost >= need) return [A({ type: 'draw' })];
-    if (M.allowed(state, 'defense', 'recover') && s.mana < s.maxMana) return [A({ type: 'recover' })];
-    return [A({ type: 'pass' })];
+  const X = { c, side, opp, d, hand, A, s, Q, canFlee };   // gemeinsamer Blick auf die Lage für die Teilpläne
+  if (c.action === 'defense' && !c.pending) return planReaction(state, pid, X);
+  if (c.action === 'attack') return planAttack(state, pid, X);
+  return planDefense(state, pid, X);
+}
+// Reaktion ohne Schaden (ohne oder nach Angriff): Aktionspotenzial aufbauen
+function planReaction(state, pid, X) {
+  const { c, side, opp, d, hand, A, s, Q, canFlee } = X;
+  // Nachziehen, wenn die Hand schwach ist (leer, höchstens eine Karte oder kein sinnvoller Angriff) und nach den Kosten noch Mana zum Spielen bleibt; sonst Erholen, wenn Mana fehlt; sonst Passen
+  // Mana-Schwelle: nach dem Nachziehen muss ein Zug mit voller Kartenzahl bezahlbar sein (1 Mana je Karte, höchstens das Ausspiellimit), sonst sind Kombos nicht möglich; fehlt das Mana, erholt sie sich zuerst
+  const dcost = M.drawManaCost(state, pid), need = Math.min(s.limit, s.maxMana - dcost), weak = hand.length <= 1 || !(bestAttack(side, opp, hand, Q, state, null) || { dmg: 0 }).dmg;
+  if (M.allowed(state, 'defense', 'draw') && weak && s.mana - dcost >= need) return [A({ type: 'draw' })];
+  if (M.allowed(state, 'defense', 'recover') && s.mana < s.maxMana) return [A({ type: 'recover' })];
+  return [A({ type: 'pass' })];
+}
+// Angriffszug: fliehen, angreifen (mit Läuterung), Gratis-Nachziehen, erholen oder nachziehen (mit gesperrten Kombo-Bausteinen).
+function planAttack(state, pid, X) {
+  const { c, side, opp, d, hand, A, s, Q, canFlee } = X;
+  if (Q.fleeHits > 0 && side.kind === 'monster' && canFlee) {   // Ich führe das Monster, der Angreifer hat kein Mana mehr: Fliehe ich, bleibt das angeschlagene Monster stehen, und ich bin als Nächster dran, es selbst zu besiegen (die Beute geht an mich)
+    const me = state.players[pid].stats, net = outlook(state, pid, c.slot);
+    if (net > 0 && side.stats.hp / net <= Q.fleeHits && me.hp >= Q.minHp && me.mana >= Q.minMana) return [A({ type: 'flee' })];
   }
-  if (c.action === 'attack') {
-    if (Q.fleeHits > 0 && side.kind === 'monster' && canFlee) {   // Ich führe das Monster, der Angreifer hat kein Mana mehr: Fliehe ich, bleibt das angeschlagene Monster stehen, und ich bin als Nächster dran, es selbst zu besiegen (die Beute geht an mich)
-      const me = state.players[pid].stats, net = outlook(state, pid, c.slot);
-      if (net > 0 && side.stats.hp / net <= Q.fleeHits && me.hp >= Q.minHp && me.mana >= Q.minMana) return [A({ type: 'flee' })];
-    }
-    if (Q.fleeSafe > 0 && side.kind === 'monster' && canFlee && state.players[pid].sp > 0) {   // Als Monsterführer: Besiegt der Angreifer das Monster bald, kostet mich das 1 Siegpunkt; die Flucht lässt das angeschlagene Monster stehen, und ich bin als Nächster dran
-      const net = outlook(state, opp.ctrl, c.slot);
-      if (net > 0 && side.stats.hp / net <= Q.fleeSafe) return [A({ type: 'flee' })];
-    }
-    if (Q.fleeHp > 0 && side.kind !== 'monster' && c.mode === 'monster' && canFlee && state.players[pid].sp > 0 && s.hp <= Q.fleeHp) return [A({ type: 'flee' })];   // Als Angreifer mit wenig HP: lieber fliehen als 1 Siegpunkt verlieren
-    // Wer das Rennen anführt, behält 1 Mana: Fliehen darf nur, wessen Gegner kein Mana hat (der unterlegene Angreifer rettet so seinen Siegpunkt, der Monsterführer stiehlt die Beute)
-    // Nur wo die Flucht dem Gegner etwas bringt: Als Angreifer, wenn das Monster nach meinem Angriff höchstens mResHp HP hat (der Führer flieht und besiegt es selbst); als Monster, wenn der Angreifer einen Siegpunkt zu retten hat.
-    let reserve = null;
-    const resV = side.kind === 'monster' ? (state.players[opp.ctrl].sp > 0 ? Q.mResL : 0) : Q.mRes;
-    if (resV > 0 && c.mode === 'monster' && raceTurns(state, side, opp) < raceTurns(state, opp, side)) reserve = { v: resV, hp: side.kind === 'monster' ? 99 : Q.mResHp, blk: Q.mResBlk };
-    const best = bestAttack(side, opp, hand, Q, state, reserve), gain = M.recoverGain ? M.recoverGain(state) : 1;
-    if (c.mode === 'monster' && canFlee && !(best && best.dmg >= opp.stats.hp)) {   // Kampfprognose: Wer braucht weniger Züge, um den anderen zu besiegen? (ein sofort tödlicher Angriff geht vor)
-      const tMe = raceTurns(state, side, opp), tOpp = raceTurns(state, opp, side);
-      // Angreifer: Liegt das Monster in der Prognose mindestens fleeA (ohne Siegpunkte fleeA0) Züge vorn, droht eine Niederlage (−1 Siegpunkt, alle HP). Die Flucht behält beides; der bis dahin angerichtete Schaden bleibt am Monster.
-      // Erst fliehen, wenn sich im Kampf schon etwas getan hat: Sonst greift dieselbe Lage gleich wieder an, und die Partie tritt auf der Stelle.
-      const hp0 = c.trace && c.trace.steps[0] ? c.trace.steps[0].hp : null, moved = !hp0 || hp0[0] !== c.sides.a.stats.hp || hp0[1] !== c.sides.b.stats.hp;
-      const thr = state.players[pid].sp > 0 ? Q.fleeA : Q.fleeA0;   // ohne Siegpunkte kostet die Niederlage nur HP: dann nur bei klarer Lage fliehen (die Siegchance ist zwei Punkte wert)
-      if (thr > 0 && side.kind !== 'monster' && moved && tMe - tOpp >= thr) return [A({ type: 'flee' })];
-      // Monsterführer: Gewinnt der Angreifer das Rennen oder ist das Monster fast besiegt, bekommt er bald +1 und ich verliere 1. Die Flucht lässt das angeschlagene Monster stehen, und ich bin als Nächster am Zug, um es selbst zu besiegen.
-      if (side.kind === 'monster' && ((Q.fleeL > 0 && tOpp < tMe * Q.fleeL) || s.hp <= Q.fleeLHp)) {
-        const me = state.players[pid].stats;
-        if (me.hp >= Q.minHp && me.mana >= Q.fleeLMana) return [A({ type: 'flee' })];
-      }
-      // Bewertung der Ausgänge (Sieg > Flucht > Niederlage), in Siegpunkten gerechnet: Weiterkämpfen bringt P(Sieg) × Wert des Siegs + P(Niederlage) × Wert der Niederlage.
-      if (Q.fleeEV) {
-        const odds = fightOdds(tOpp - tMe, side.kind === 'monster'), mySp = state.players[pid].sp, oppSp = state.players[1 - pid].sp;
-        if (side.kind !== 'monster') {
-          if (!(Q.fleeEV & 1)) {} else {
-          // Gegner des Monsters: Sieg +1 für mich (und −1 für den Monsterführer, wenn er Siegpunkte hat) plus Beute; Niederlage −1 (wenn ich Siegpunkte habe) und alle HP. Die Flucht wendet nur die Niederlage ab.
-          const vWin = 1 + (oppSp > 0 ? 1 : 0) + Q.evLoot, vLose = -(mySp > 0 ? 1 : 0) - Q.evHp * s.hp / Math.max(1, s.maxHp);
-          if (moved && Q.fleeVA > odds.win * vWin + odds.lose * vLose) return [A({ type: 'flee' })];
-          }
-        } else if (Q.fleeEV & 2) {
-          // Monsterführer: Gewinnt der Angreifer, bekommt er +1 und ich verliere 1; gewinnt das Monster, verliert der Angreifer 1. Die Flucht ist lukrativer („Monster sind feige“):
-          // Das angeschlagene Monster bleibt stehen, ich bin als Nächster am Zug und kann es selbst besiegen (Prognose aus meiner Sicht als Angreifer).
-          const me = state.players[pid], mf = monsterFighter(state.monsters[c.slot]), pf = playerFighter(me);
-          mf.stats = side.stats;
-          const ready = me.stats.hp >= Q.minHp && me.stats.mana >= 1;
-          const kill = ready ? fightOdds(raceTurns(state, mf, pf) - raceTurns(state, pf, mf), false) : { win: 0, lose: 0 };
-          const vFlee = Q.fleeVL * (kill.win * (1 + (oppSp > 0 ? 1 : 0) + Q.evLoot) - kill.lose * (mySp > 0 ? 1 : 0));
-          const vStay = odds.win * (oppSp > 0 ? 1 : 0) - odds.lose * ((mySp > 0 ? 1 : 0) + 1 + Q.evLoot);
-          if (vFlee > vStay) return [A({ type: 'flee' })];
-        }
-      }
-    }
-    if (reserve && s.mana < s.maxMana && Q.mResRec) {   // Hält die Reserve einen brauchbaren Angriff zurück, erst Mana sammeln (Erholen), statt nachzuziehen und später doch mit dem letzten Mana anzugreifen
-      const raw = bestAttack(side, opp, hand, Q, state);
-      if (raw && raw.value > Q.aThr && (!best || best.value <= Q.aThr)) return [A({ type: 'recover' })];
-    }
-    const red = !!M.markerOf(state, pid).h.drawRed, payOk = s.mana >= M.drawManaCost(state, pid);   // roter Nachziehmarker: Nachziehen kostet Mana (ohne Mana nicht möglich)
-    const lowMana = Q.rW * gain * Math.max(0, Q.rRef - s.mana) - (red ? Q.cRedA : 0);   // wenig Mana: nur noch starke Angriffe, sonst lieber erholen; roter Marker: auch schwächere Angriffe statt nachzuziehen
-    if (best && best.value > Q.aThr + lowMana - Q.pasDec * (opp.passed || 0) - Q.stallDec * Math.max(0, Math.floor(((c.turns || 0) - Q.stallFrom) / 2))) {   // Passt der Gegner im Angriffszug, bleibt er ohne Druck: dann lohnt auch ein knapper Angriff (sonst wartet die KI, bis die Anti-Stillstands-Schwelle sinkt)   // lange ohne Angriff: Schwelle sinkt, damit die KI nicht endlos nachzieht
-      const acts = best.ord.map(h => A({ type: 'mark', slot: h.slot }));
-      const lvB = M.levelsFor(best.ev);
-      if (best.ev.levels.ulti <= 0 && lvB.ew > 0) {   // Läuterung: eigene Todesmarker, dann Schild und Manamarker des Gegners, zuletzt dessen Nachziehtokens
-        const lvl = lvB.ew, pick = [];
-        for (let i = 0; pick.length < lvl && i < (s.death || 0); i++) pick.push('sd');
-        for (let i = 0; pick.length < lvl && i < (opp.stats.rainbow || 0); i++) pick.push('or');
-        for (let i = 0; pick.length < lvl && i < (opp.stats.manaflow || 0); i++) pick.push('om');
-        for (let i = 0; pick.length < lvl && i < (opp.stats.heal || 0); i++) pick.push('oh');
-        for (let i = 0; pick.length < lvl && i < (opp.stats.freeDraws || 0); i++) pick.push('ot');
-        acts.push(A({ type: 'lfp', pick }));
-      }
-      acts.push(A({ type: 'attack' }));
-      return acts;
-    }
-    if (canFlee && (c.turns || 0) >= Q.fleeT && (!best || best.value <= Q.aThr)) return [A({ type: 'flee' })];   // lange ohne brauchbaren Angriff gegen ein Monster ohne Mana: abbrechen statt endlos nachzuziehen
-    if (s.freeDraws > 0 && canDraw(d) && hand.length < d.hand.length) return [A({ type: 'freeDraw' })];
-    if (s.freeDraws > 0 && canDraw(d) && (!best || best.value <= Q.aThr)) return [A({ type: 'freeDraw' })];
-    if (s.mana <= 0 || !hand.length) { if (hand.length === 0 && canDraw(d) && payOk && !(Q.cRedE && red)) return [A({ type: 'draw' })]; return [A({ type: 'recover' })]; }
-    if (Q.rW > 0 && s.mana < Q.rRef && s.mana < s.maxMana) return [A({ type: 'recover' })];
-    if (canDraw(d) && payOk) {
-      if (Q.cRed && red) return [A({ type: 'recover' })];
-      const acts = [];
-      if (Q.keepOn) {   // (bei schwachem Angriff) Kombo-Bausteine behalten
-        const keep = keepLocks(state, side, opp, hand, Q);
-        d.hand.forEach((c, slot) => { if (c && !!c.locked !== keep.includes(slot)) acts.push(A({ type: 'lock', slot })); });
-      }
-      acts.push(A({ type: 'draw' }));
-      return acts;
-    }
-    return [A({ type: 'recover' })];
+  if (Q.fleeSafe > 0 && side.kind === 'monster' && canFlee && state.players[pid].sp > 0) {   // Als Monsterführer: Besiegt der Angreifer das Monster bald, kostet mich das 1 Siegpunkt; die Flucht lässt das angeschlagene Monster stehen, und ich bin als Nächster dran
+    const net = outlook(state, opp.ctrl, c.slot);
+    if (net > 0 && side.stats.hp / net <= Q.fleeSafe) return [A({ type: 'flee' })];
   }
-  // Verteidigung
+  if (Q.fleeHp > 0 && side.kind !== 'monster' && c.mode === 'monster' && canFlee && state.players[pid].sp > 0 && s.hp <= Q.fleeHp) return [A({ type: 'flee' })];   // Als Angreifer mit wenig HP: lieber fliehen als 1 Siegpunkt verlieren
+  // Wer das Rennen anführt, behält 1 Mana: Fliehen darf nur, wessen Gegner kein Mana hat (der unterlegene Angreifer rettet so seinen Siegpunkt, der Monsterführer stiehlt die Beute)
+  // Nur wo die Flucht dem Gegner etwas bringt: Als Angreifer, wenn das Monster nach meinem Angriff höchstens mResHp HP hat (der Führer flieht und besiegt es selbst); als Monster, wenn der Angreifer einen Siegpunkt zu retten hat.
+  let reserve = null;
+  const resV = side.kind === 'monster' ? (state.players[opp.ctrl].sp > 0 ? Q.mResL : 0) : Q.mRes;
+  if (resV > 0 && c.mode === 'monster' && raceTurns(state, side, opp) < raceTurns(state, opp, side)) reserve = { v: resV, hp: side.kind === 'monster' ? 99 : Q.mResHp, blk: Q.mResBlk };
+  const best = bestAttack(side, opp, hand, Q, state, reserve), gain = M.recoverGain ? M.recoverGain(state) : 1;
+  if (c.mode === 'monster' && canFlee && !(best && best.dmg >= opp.stats.hp)) { const fl = fleeByForecast(state, pid, X, best); if (fl) return fl; }   // Kampfprognose: Wer braucht weniger Züge, um den anderen zu besiegen? (ein sofort tödlicher Angriff geht vor)
+  if (reserve && s.mana < s.maxMana && Q.mResRec) {   // Hält die Reserve einen brauchbaren Angriff zurück, erst Mana sammeln (Erholen), statt nachzuziehen und später doch mit dem letzten Mana anzugreifen
+    const raw = bestAttack(side, opp, hand, Q, state);
+    if (raw && raw.value > Q.aThr && (!best || best.value <= Q.aThr)) return [A({ type: 'recover' })];
+  }
+  const red = !!M.markerOf(state, pid).h.drawRed, payOk = s.mana >= M.drawManaCost(state, pid);   // roter Nachziehmarker: Nachziehen kostet Mana (ohne Mana nicht möglich)
+  const lowMana = Q.rW * gain * Math.max(0, Q.rRef - s.mana) - (red ? Q.cRedA : 0);   // wenig Mana: nur noch starke Angriffe, sonst lieber erholen; roter Marker: auch schwächere Angriffe statt nachzuziehen
+  if (best && best.value > Q.aThr + lowMana - Q.pasDec * (opp.passed || 0) - Q.stallDec * Math.max(0, Math.floor(((c.turns || 0) - Q.stallFrom) / 2))) {   // Passt der Gegner im Angriffszug, bleibt er ohne Druck: dann lohnt auch ein knapper Angriff (sonst wartet die KI, bis die Anti-Stillstands-Schwelle sinkt)   // lange ohne Angriff: Schwelle sinkt, damit die KI nicht endlos nachzieht
+    const acts = best.ord.map(h => A({ type: 'mark', slot: h.slot }));
+    const lvB = M.levelsFor(best.ev);
+    if (best.ev.levels.ulti <= 0 && lvB.ew > 0) acts.push(A({ type: 'lfp', pick: purifyPicks(s, opp, lvB.ew) }));   // Läuterung: eigene Todesmarker, dann Schild und Manamarker des Gegners, zuletzt dessen Nachziehtokens
+    acts.push(A({ type: 'attack' }));
+    return acts;
+  }
+  if (canFlee && (c.turns || 0) >= Q.fleeT && (!best || best.value <= Q.aThr)) return [A({ type: 'flee' })];   // lange ohne brauchbaren Angriff gegen ein Monster ohne Mana: abbrechen statt endlos nachzuziehen
+  if (s.freeDraws > 0 && canDraw(d) && hand.length < d.hand.length) return [A({ type: 'freeDraw' })];
+  if (s.freeDraws > 0 && canDraw(d) && (!best || best.value <= Q.aThr)) return [A({ type: 'freeDraw' })];
+  if (s.mana <= 0 || !hand.length) { if (hand.length === 0 && canDraw(d) && payOk && !(Q.cRedE && red)) return [A({ type: 'draw' })]; return [A({ type: 'recover' })]; }
+  if (Q.rW > 0 && s.mana < Q.rRef && s.mana < s.maxMana) return [A({ type: 'recover' })];
+  if (canDraw(d) && payOk) {
+    if (Q.cRed && red) return [A({ type: 'recover' })];
+    const acts = [];
+    if (Q.keepOn) {   // (bei schwachem Angriff) Kombo-Bausteine behalten
+      const keep = keepLocks(state, side, opp, hand, Q);
+      d.hand.forEach((c, slot) => { if (c && !!c.locked !== keep.includes(slot)) acts.push(A({ type: 'lock', slot })); });
+    }
+    acts.push(A({ type: 'draw' }));
+    return acts;
+  }
+  return [A({ type: 'recover' })];
+}
+// Flucht nach Kampfprognose im Monsterkampf; liefert die Fluchtaktion oder null (dann wird weitergekämpft).
+function fleeByForecast(state, pid, X, best) {
+  const { c, side, opp, d, hand, A, s, Q, canFlee } = X;
+  const tMe = raceTurns(state, side, opp), tOpp = raceTurns(state, opp, side);
+  // Angreifer: Liegt das Monster in der Prognose mindestens fleeA (ohne Siegpunkte fleeA0) Züge vorn, droht eine Niederlage (−1 Siegpunkt, alle HP). Die Flucht behält beides; der bis dahin angerichtete Schaden bleibt am Monster.
+  // Erst fliehen, wenn sich im Kampf schon etwas getan hat: Sonst greift dieselbe Lage gleich wieder an, und die Partie tritt auf der Stelle.
+  const hp0 = c.trace && c.trace.steps[0] ? c.trace.steps[0].hp : null, moved = !hp0 || hp0[0] !== c.sides.a.stats.hp || hp0[1] !== c.sides.b.stats.hp;
+  const thr = state.players[pid].sp > 0 ? Q.fleeA : Q.fleeA0;   // ohne Siegpunkte kostet die Niederlage nur HP: dann nur bei klarer Lage fliehen (die Siegchance ist zwei Punkte wert)
+  if (thr > 0 && side.kind !== 'monster' && moved && tMe - tOpp >= thr) return [A({ type: 'flee' })];
+  // Monsterführer: Gewinnt der Angreifer das Rennen oder ist das Monster fast besiegt, bekommt er bald +1 und ich verliere 1. Die Flucht lässt das angeschlagene Monster stehen, und ich bin als Nächster am Zug, um es selbst zu besiegen.
+  if (side.kind === 'monster' && ((Q.fleeL > 0 && tOpp < tMe * Q.fleeL) || s.hp <= Q.fleeLHp)) {
+    const me = state.players[pid].stats;
+    if (me.hp >= Q.minHp && me.mana >= Q.fleeLMana) return [A({ type: 'flee' })];
+  }
+  // Bewertung der Ausgänge (Sieg > Flucht > Niederlage), in Siegpunkten gerechnet: Weiterkämpfen bringt P(Sieg) × Wert des Siegs + P(Niederlage) × Wert der Niederlage.
+  if (Q.fleeEV) {
+    const odds = fightOdds(tOpp - tMe, side.kind === 'monster'), mySp = state.players[pid].sp, oppSp = state.players[1 - pid].sp;
+    if (side.kind !== 'monster') {
+      if (!(Q.fleeEV & 1)) {} else {
+      // Gegner des Monsters: Sieg +1 für mich (und −1 für den Monsterführer, wenn er Siegpunkte hat) plus Beute; Niederlage −1 (wenn ich Siegpunkte habe) und alle HP. Die Flucht wendet nur die Niederlage ab.
+      const vWin = 1 + (oppSp > 0 ? 1 : 0) + Q.evLoot, vLose = -(mySp > 0 ? 1 : 0) - Q.evHp * s.hp / Math.max(1, s.maxHp);
+      if (moved && Q.fleeVA > odds.win * vWin + odds.lose * vLose) return [A({ type: 'flee' })];
+      }
+    } else if (Q.fleeEV & 2) {
+      // Monsterführer: Gewinnt der Angreifer, bekommt er +1 und ich verliere 1; gewinnt das Monster, verliert der Angreifer 1. Die Flucht ist lukrativer („Monster sind feige“):
+      // Das angeschlagene Monster bleibt stehen, ich bin als Nächster am Zug und kann es selbst besiegen (Prognose aus meiner Sicht als Angreifer).
+      const me = state.players[pid], mf = monsterFighter(state.monsters[c.slot]), pf = playerFighter(me);
+      mf.stats = side.stats;
+      const ready = me.stats.hp >= Q.minHp && me.stats.mana >= 1;
+      const kill = ready ? fightOdds(raceTurns(state, mf, pf) - raceTurns(state, pf, mf), false) : { win: 0, lose: 0 };
+      const vFlee = Q.fleeVL * (kill.win * (1 + (oppSp > 0 ? 1 : 0) + Q.evLoot) - kill.lose * (mySp > 0 ? 1 : 0));
+      const vStay = odds.win * (oppSp > 0 ? 1 : 0) - odds.lose * ((mySp > 0 ? 1 : 0) + 1 + Q.evLoot);
+      if (vFlee > vStay) return [A({ type: 'flee' })];
+    }
+  }
+  return null;
+}
+// Läuterung: eigene Todesmarker, dann Schild und Manamarker des Gegners, zuletzt dessen Nachziehtokens
+function purifyPicks(s, opp, lvl) {
+  const pick = [];
+  for (let i = 0; pick.length < lvl && i < (s.death || 0); i++) pick.push('sd');
+  for (let i = 0; pick.length < lvl && i < (opp.stats.rainbow || 0); i++) pick.push('or');
+  for (let i = 0; pick.length < lvl && i < (opp.stats.manaflow || 0); i++) pick.push('om');
+  for (let i = 0; pick.length < lvl && i < (opp.stats.heal || 0); i++) pick.push('oh');
+  for (let i = 0; pick.length < lvl && i < (opp.stats.freeDraws || 0); i++) pick.push('ot');
+  return pick;
+}
+// Verteidigung: alle Kartenfolgen bewerten (Restschaden, Kosten, Kombo-Wert), sonst passen.
+function planDefense(state, pid, X) {
+  const { c, side, opp, d, hand, A, s, Q, canFlee } = X;
   const color = c.color, pend = c.pending, shield = s.rainbow || 0, lethal = pend - Math.min(shield, pend) >= s.hp;
   const cand = hand.filter(h => !h.curse);
   const abs0 = Math.min(shield, pend);   // ohne Verteidigung mindert das Schild bis zu seinen Ladungen
