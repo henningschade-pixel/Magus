@@ -690,6 +690,18 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Tests:** Drei Tests angepasst (Nachziehmarker Weltphase, Nachziehlimit Kauf, Nachziehlimit Weltphase; der Marker-Reset läuft jetzt über den Händler), neuer Test „Magie kaufen und Upgrades sind keine Aktion mehr“. `tests/golden.json` ist neu erzeugt (absichtliche Regeländerung).
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
 
+## Änderung 0.13.1 (12.11.)
+
+- **Interner Umbau des Codes (keine Regeländerung, kein geändertes Verhalten):** `tests/golden.json` bleibt unverändert, alle Tests laufen wie zuvor.
+- **Versionsbeschreibung:** `MAGUS_VERSION` und die Versionstexte stehen in `src/ui/01-versionen.js` (Liste `VERSIONEN`, ein Eintrag je Version, neueste zuerst).
+- **Kampfablauf:** `src/engine/65-kampfablauf.js` ist aufgeteilt in `61-kampfstart.js`, `62-kampfende.js`, `63-kampfeffekte.js`, `64-angriff.js`, `66-verteidigung.js` und `67-kampfaktionen.js`. `endCombat`, `execDefense` und `applyCombat` rufen benannte Teilfunktionen auf (z. B. `settleMonsterCombat`, `settleShowdown`, `finishGame`, `beginNextStage`, `defenseEarlyCombos`, `applyForcedChoice`). Ältere Einträge dieses Regelwerks nennen noch `65-kampfablauf.js`.
+- **Nachziehmarker:** Die abgeschaltete Mechanik (Schalter `drawMarker`) liegt gebündelt in `src/engine/45-nachziehmarker.js`.
+- **Computergegner:** `combatPlan` (`src/ai/30-kampf.js`) ist in `planReaction`, `planAttack`, `fleeByForecast`, `purifyPicks` und `planDefense` zerlegt.
+- **Oberfläche:** Menüs, Einstellungen und Startseite (`showStart`) liegen in `src/ui/26c-startseite.js`; `combatCenter` ruft `combatRoundNote`, `combatForcedNote` und `combatPreview` auf.
+- **Lange Zeilen:** Zeilen über 300 Zeichen sind an Anweisungsgrenzen umgebrochen (nur Zeilenumbrüche).
+- **Werkzeuge:** `tools/build-werkstaetten.js` ersetzt die vier einzelnen Build-Skripte der Werkstätten; die Arbeitsregeln stehen in `CLAUDE.md`.
+- Die Versionsbeschreibung im Spiel nennt die Änderung.
+
 ## Änderung 0.13.0.2 (12.11.)
 
 - **Ultimates umbenannt (nur Namen, Wirkung unverändert):** Heilfluss heißt **Meditation**, Manafluss **Erleuchtung**, Todesfluss **Todesfluch**. Die neuen Namen stehen im Spiel (Kombo-Übersicht, Hilfen, Protokoll, Versionsbeschreibung), im Code, in den Tests, in der Werkstatt und in diesem Regelwerk, auch in den älteren Einträgen der Änderungsliste.

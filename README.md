@@ -7,7 +7,7 @@ Duellspiel aus Magie, Monstern und Showdowns für zwei Personen (gegen den Compu
 ## Aufbau
 
 - `index.html` – die spielbare Datei. **Wird gebaut, nicht von Hand bearbeitet.**
-- `src/` – die Quellen: `engine/` (Regelkern), `ai/` (Computergegner), `ui/` (Oberfläche und Animationen), `style.css`, `head.html`, `body.html`, `assets-*.js`. Die Reihenfolge steht in `src/manifest.json`.
+- `src/` – die Quellen: `engine/` (Regelkern), `ai/` (Computergegner), `ui/` (Oberfläche und Animationen), `style.css`, `head.html`, `body.html`, `assets-*.js`. Die Reihenfolge steht in `src/manifest.json`. Versionsnummer und Versionsbeschreibung stehen in `src/ui/01-versionen.js`.
 - `assets/` – Bilder, Sounds, Cursor.
 - `docs/` – Regelwerk (`regelwerk.md`), QR-Code.
 - `tools/` – Build, Einzeldatei-Version, Balance-Simulation und KI-Abstimmung (`tools/README.md`).
@@ -15,6 +15,8 @@ Duellspiel aus Magie, Monstern und Showdowns für zwei Personen (gegen den Compu
 - `werkstatt/` – Werkstätten zum Einstellen von Effekten.
 
 ## Arbeiten
+
+Die Arbeitsregeln (Versionszählung, Branches, Ablauf eines Schritts) stehen in `CLAUDE.md`.
 
     npm run build      # src/ -> index.html
     npm test           # prüft, dass index.html zu src/ passt, und führt alle Tests aus
