@@ -77,7 +77,8 @@ test('Weltphase: Bibliothek links, Tempel rechts mit Raster, Markern und Opfer-V
     await p.click('[data-act="sacup"]'); await p.click('[data-act="sacup"]');   // 2 Gold = 3 Punkte
     assert.equal(await p.locator('.tpanel .mk.gh').count(), 1, 'Vorschau-Stein bei eingestelltem Opfer');
     assert.equal(await p.locator('.tpanel .tcell.gain').count(), 3, 'Felder 1 bis 3 sind als Gewinn markiert');
-    assert.match(await p.textContent('.tinfo'), /2 Gold opfern: \+3 Punkte \(gesamt 3\)/);
+    assert.match(await p.textContent('.tinfo'), /2 Gold opfern: \+3 Tempelpunkte \(gesamt 3\)/);
+    assert.equal(await p.locator('.tpanel .tup .me [data-pv="pts"] .pvnew').count(), 1, 'Upgrade-Punkte zeigen das Opfer in Grün (0.13.3)');
     assert.ok(await p.locator('.tpanel .tcell').count() >= 56, 'das Raster reicht mindestens bis Stufe 10 (55 Punkte)');
     assert.doesNotMatch(await p.textContent('.tinfo'), /stellst du ein/, 'kein Hinweistext zum Einstellen des Golds');
     await p.evaluate(() => { const G = window.__magus.state; G.players[1].temple = { level: 21, points: 0 }; window.__magus.pump(); });

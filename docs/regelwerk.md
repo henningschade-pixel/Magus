@@ -690,6 +690,10 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Tests:** Drei Tests angepasst (Nachziehmarker Weltphase, Nachziehlimit Kauf, Nachziehlimit Weltphase; der Marker-Reset läuft jetzt über den Händler), neuer Test „Magie kaufen und Upgrades sind keine Aktion mehr“. `tests/golden.json` ist neu erzeugt (absichtliche Regeländerung).
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
 
+## Änderung 0.13.3 (12.11.)
+
+- Keine Regeländerung, nur Anzeige: Die Upgrade-Punkte im Tempel zeigen die Veränderung durch ein eingestelltes Opfer in Grün und durch einen Kauf in Rot (wie die anderen Werte). Der Hinweis unter dem Raster nennt die Zahl „Tempelpunkte“ statt „Punkte“.
+
 ## Änderung 0.13.2.3 (12.11.)
 
 - **Wieder zwei Ausbauten je Wert:** `maxUpgrades` 2 (in 0.13.2.2: 0). Damit gilt eine einheitliche Regel: HP, Mana, Ausspiellimit und Handplätze lassen sich je zweimal ausbauen, der erste Schritt kostet 1 Gold, der zweite 2. Der Schalter bleibt (0 = ohne Obergrenze für HP und Mana).

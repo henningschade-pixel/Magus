@@ -51,11 +51,12 @@ function templePanel() {
     const off = g.length === 1 ? 0 : (i - (g.length - 1) / 2) * md * 0.7;
     stones += markerHTML(m.cls, md, m.c * cs + cs / 2 + off, m.r * cs + cs * 0.6, m.tip);
   }));
+  const pend = me.stats.pending || 0, pendHTML = pv.gained > 0 ? '<span class="pvnew">' + (pend + pv.gained) + '</span>' : pend;   // eingestelltes Opfer: neue Upgrade-Punkte in Grün (wie die übrigen Vorschauwerte; sinkende Werte beim Ausgeben rot über data-pv="pts")
   const need = M.nextLevelCost(pv.level) - pv.pool;
-  const info = n === 0 ? '' : '<b>' + n + ' Gold</b> opfern: <b class="pg">+' + pv.points + ' Punkt' + (pv.points === 1 ? '' : 'e') + '</b> (gesamt ' + tNew + ')';   // seit 0.11.0.7 nur noch eine Zeile (die Stufenzeile entfiel)
+  const info = n === 0 ? '' : '<b>' + n + ' Gold</b> opfern: <b class="pg">+' + pv.points + ' Tempelpunkt' + (pv.points === 1 ? '' : 'e') + '</b> (gesamt ' + tNew + ')';   // seit 0.11.0.7 nur noch eine Zeile (die Stufenzeile entfiel)
   const tip = 'Tempel: Die goldenen Zahlen (1, 3, 6, 10, 15, 21 …) sind der Eintritt in die nächste Tempelstufe und geben je einen Upgrade-Punkt. Opfern von n Gold ergibt n(n+1)/2 Punkte. Die Magie ganz auszubauen kostet 21 Upgrade-Punkte (1 + 2 + … + 6), also Tempelstufe 21 = 231 Punkte.';
   return '<div class="panel tpanel" title="' + tip + '" style="' + box(LAYOUT.temple) + '"><h3>Tempel</h3>' +
-    '<div class="tboard" style="width:' + cols * cs + 'px;height:' + rows * cs + 'px">' + cells + stones + '</div><div class="tinfo">' + info + '</div><div class="tup" title="Verfügbare Upgrade-Punkte je Spieler"><div class="me"><span>' + me.name + '</span><b>' + (me.stats.pending || 0) + '</b> Upgrade-Punkte</div><div class="op"><span>' + op.name + '</span><b>' + (op.stats.pending || 0) + '</b> Upgrade-Punkte</div></div></div>';
+    '<div class="tboard" style="width:' + cols * cs + 'px;height:' + rows * cs + 'px">' + cells + stones + '</div><div class="tinfo">' + info + '</div><div class="tup" title="Verfügbare Upgrade-Punkte je Spieler"><div class="me"><span>' + me.name + '</span><b data-pv="pts">' + pendHTML + '</b> Upgrade-Punkte</div><div class="op"><span>' + op.name + '</span><b>' + (op.stats.pending || 0) + '</b> Upgrade-Punkte</div></div></div>';
 }
 function monsterCards() {
   let h = '';
