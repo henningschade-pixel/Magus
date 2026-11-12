@@ -4,7 +4,7 @@
 - `tools/build.js` – baut `index.html` aus `src/` (`--check` prüft nur).
 - `tools/sounds-aufbereiten.sh` – bereitet neue Sounds auf (mono, Stille vorn weg, Pegel angleichen), siehe `docs/soundliste.md`.
 - `tools/sounds-synth.py` – synthetisiert `ultimate` und `curse` (siehe `docs/soundliste.md`).
-- `tools/build-wuerfel-werkstatt.js` – baut `werkstatt/wuerfel-werkstatt.html` aus der Vorlage `tools/wuerfel-werkstatt.template.html` und dem `DiceKit` aus `src/ui/31a-wuerfel.js` (`--check` prüft nur).
+- `tools/build-werkstaetten.js` – baut die Werkstätten `echo`, `kartendreh`, `runen` und `wuerfel` unter `werkstatt/` aus den Vorlagen `tools/<name>-werkstatt.template.html` und den Bausteinen des Spiels (`EchoWave`, `RuneGlow`, `DiceKit` aus `src/ui`); `node tools/build-werkstaetten.js [name] [--check]`, ohne Namen alle (`--check` prüft nur; läuft in `npm test`).
 - `tools/build-werkstatt.js` – baut `dist/ton-werkstatt.html` (Ton-Werkstatt mit allen Sounds eingebettet).
 - `tools/ton-rendern.js` – rendert ein Rezept der Ton-Werkstatt zu mp3 (Playwright, Pegel wie bei den anderen Sounds).
 - `tools/balance/` – KI-gegen-KI-Simulationen (`node tools/balance/report.js N '{regeln}'`); sie spielen mit der schnellen Basis-KI, `MAGUS_SIM=120` schaltet die Vorausschau ein. `node tools/balance/duell.js 96` lässt die Vorausschau gegen die Basis-KI antreten.
