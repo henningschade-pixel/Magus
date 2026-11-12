@@ -219,3 +219,9 @@ Frage: Sind die Monster zu Beginn einer Stufe kaum, mit den Mitteln der Stufe (G
 **Varianten:** Mit `hpPerPoint` 1 bleibt der beste Bau der Stufe I bei 76 %, ohne Magie und Bibliothek fällt er (Basis-KI) von 47 auf 31 %. Gleiche Bauten mit 6 statt 8 HP: Stufe II 67 statt 74 %, Stufe III 49 statt 59 %, Beginn der Stufe III 11 statt 21 %. Stufe-III-Monster mit 6 HP gegen Spieler mit 6 HP: Beginn 25 %, ausgebaut 61 %; mit 8 HP gegen Spieler mit 8 HP: Beginn 17 %, ausgebaut 49 %.
 
 **Grenzen:** Die Bibliothek folgt einer festen Regel und baut auf eine Hauptfarbe; Bauten mit zwei gleich starken Farben sind damit kaum untersucht. Stufe II und III hängen am gewählten Referenzbau der Stufe davor. Die Vorausschau spielt ihre Züge im Durchspielen nach der Basis-KI; gegen Menschen ist nichts gemessen.
+
+### Nachmessung mit 1 HP je Upgrade und ohne Obergrenze für HP und Mana (0.13.2.2)
+
+Kette neu gemessen (100 Kämpfe je Bau, ±10): Stufe I bester Bau 76 % (HP 5, Limit 2, Feuer 2). Stufe II ab dem Bau „HP, Limit, 1 Gold Tempel, 4 Bibliothekszüge“: 69 % (2× Hand, 3 Gold Tempel → Feuer 3; gegen Feuer-/Erd-/Wassermonster 59/100/44). Stufe III ab diesem Bau: 54 % (Mana, Limit, 5 Gold Tempel → Erde 2; 43/91/30) bzw. 51 % (HP, 2× Mana, Limit; 27/97/30). Zusätzliche HP über den zweiten Schritt hinaus tauchen in keinem der besten Bauten auf: gegen die Monster bringt die aufgehobene Grenze nichts Messbares, die Stufe III bleibt bei rund 50 % (passendes Monster über 90 %, die anderen 27 bis 43 %).
+
+KI-Ausbauziele (`hpB`, `manaB`, `hpA`) im Selbstspiel: siehe Kommentar in `src/ai/10-stellschrauben.js` und `docs/regelwerk.md`, Änderung 0.13.2.2.
