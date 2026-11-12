@@ -2,7 +2,7 @@
 // Alle Gewichte der KI an einer Stelle (abgestimmt per Selbstspiel: Änderungen wurden nur übernommen, wenn sie sich in 800 Partien mit getauschten Plätzen klar durchsetzten). Pro Platz überschreibbar (setParams), damit Varianten gegeneinander spielen können.
 const DEFAULTS = {
   // Ausbaureihenfolge der Upgrade-Punkte
-  limitA: 1, slotA: 5, manaA: 4, hpA: 6, limitB: 3, slotB: 5, hpB: 6, manaB: 6,   // hpB/manaB (seit 0.13.2.2): bis zu diesen Höchstwerten baut die KI HP und Mana aus (die Regel selbst kennt keine Grenze mehr; erst wenn alle Magie auf der Höchststufe steht, geht übriges Gold weiter in HP und Mana). Selbstspiel, 2000 Partien gegen 6/6/6: hpB 7 50,1 %, 8 46,5 %, 10 44,6 %, ohne Grenze 44,3 %; manaB 5 49,9 %, 7 48,9 %, 8 42,7 %, ohne Grenze 38,6 %; hpA 4 42,6 %, 5 39,7 %, 7 48,9 %, 8 45,7 %
+  limitA: 1, slotA: 5, manaA: 4, hpA: 6, limitB: 3, slotB: 5, hpB: 6, manaB: 6,   // hpB/manaB (seit 0.13.2.2): bis zu diesen Höchstwerten baut die KI HP und Mana aus (nur von Belang, wenn die Regel maxUpgrades die Grenze aufhebt; erst wenn alle Magie auf der Höchststufe steht, geht übriges Gold weiter in HP und Mana). Selbstspiel, 2000 Partien gegen 6/6/6: hpB 7 50,1 %, 8 46,5 %, 10 44,6 %, ohne Grenze 44,3 %; manaB 5 49,9 %, 7 48,9 %, 8 42,7 %, ohne Grenze 38,6 %; hpA 4 42,6 %, 5 39,7 %, 7 48,9 %, 8 45,7 %
   // Lust, ein Monster anzugreifen
   cBase: 34, cHp: 3, cMana: 1.5, cWt: 3.5, cMon: 0.8, minHp: 1, minMana: 2,
   // Nachziehmarker rot (Nachziehen schenkt dem Gegner Gold bzw. ein Nachziehtoken): dRed Abschlag auf das

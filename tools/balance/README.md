@@ -225,3 +225,5 @@ Frage: Sind die Monster zu Beginn einer Stufe kaum, mit den Mitteln der Stufe (G
 Kette neu gemessen (100 Kämpfe je Bau, ±10): Stufe I bester Bau 76 % (HP 5, Limit 2, Feuer 2). Stufe II ab dem Bau „HP, Limit, 1 Gold Tempel, 4 Bibliothekszüge“: 69 % (2× Hand, 3 Gold Tempel → Feuer 3; gegen Feuer-/Erd-/Wassermonster 59/100/44). Stufe III ab diesem Bau: 54 % (Mana, Limit, 5 Gold Tempel → Erde 2; 43/91/30) bzw. 51 % (HP, 2× Mana, Limit; 27/97/30). Zusätzliche HP über den zweiten Schritt hinaus tauchen in keinem der besten Bauten auf: gegen die Monster bringt die aufgehobene Grenze nichts Messbares, die Stufe III bleibt bei rund 50 % (passendes Monster über 90 %, die anderen 27 bis 43 %).
 
 KI-Ausbauziele (`hpB`, `manaB`, `hpA`) im Selbstspiel: siehe Kommentar in `src/ai/10-stellschrauben.js` und `docs/regelwerk.md`, Änderung 0.13.2.2.
+
+Seit 0.13.2.3 gilt wieder `maxUpgrades` 2 (höchstens zwei Ausbauten für HP und Mana); die Messung oben lässt sich mit der Regel `{"maxUpgrades":0}` wiederholen.

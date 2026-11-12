@@ -16,8 +16,8 @@ Eine Partie hat drei Abschnitte (1, 2, 3). Je Abschnitt gibt es drei Monster (St
 |---|---|---|
 | Gold | 0 | Abschnittsbonus siehe unten |
 | Siegpunkte | 3 | seit 0.3 (`startSp`, 0.3 bis 0.7.2.23: 2; seit 0.7.2.24: 3): schon die ersten Kämpfe kosten bei einer Niederlage etwas; nie unter 0 |
-| HP | 4 | seit 0.3.1 (`startHp`, vorher 3); jedes Upgrade +1 Maximum (seit 0.13.2.1, `hpPerPoint` 1; vorher +2), mit Gold bezahlt (1, dann 2 Gold), seit 0.13.2.2 ohne Obergrenze (jeder Schritt 1 Gold teurer: 1, 2, 3, 4 …) |
-| Mana | 4 | jedes Upgrade +1 Maximum, mit Gold bezahlt (1, 2, 3, 4 …), seit 0.13.2.2 ohne Obergrenze |
+| HP | 4 | seit 0.3.1 (`startHp`, vorher 3); jedes Upgrade +1 Maximum (seit 0.13.2.1, `hpPerPoint` 1; vorher +2), mit Gold bezahlt (1, dann 2 Gold), höchstens zwei Ausbauten, also höchstens 6 HP (`maxUpgrades` 2; nur in 0.13.2.2 ohne Obergrenze) |
+| Mana | 4 | jedes Upgrade +1 Maximum, mit Gold bezahlt (1, dann 2 Gold), höchstens zwei Ausbauten, also höchstens 6 Mana |
 | Magie Feuer / Erde / Wasser | je 1 | höchstens 3 |
 | Ausspiellimit | 1 | seit 0.5.1 (`startLimit`, 0.3 bis 0.4.1: 2); höchstens 3, die Schritte kosten 1 und 2 Gold (`limitCost` 1 mit `priceRise`) |
 | Handplätze | 3 | je Upgrade-Punkt ein weiterer, höchstens 5 |
@@ -689,6 +689,12 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **KI:** `runTurn` (`src/ai/30-kampf.js`) führt alle Wirtschaftsschritte (`ecoStep`, höchstens 12) vor der eigentlichen Aktion im selben Zug aus; bisher beendete jeder Schritt außer dem Opfern den Zug. Die Stellschrauben bleiben unverändert und sind für die neue Regel nicht nachtrainiert (Messung mit `npm run balance` offen).
 - **Tests:** Drei Tests angepasst (Nachziehmarker Weltphase, Nachziehlimit Kauf, Nachziehlimit Weltphase; der Marker-Reset läuft jetzt über den Händler), neuer Test „Magie kaufen und Upgrades sind keine Aktion mehr“. `tests/golden.json` ist neu erzeugt (absichtliche Regeländerung).
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
+
+## Änderung 0.13.2.3 (12.11.)
+
+- **Wieder zwei Ausbauten je Wert:** `maxUpgrades` 2 (in 0.13.2.2: 0). Damit gilt eine einheitliche Regel: HP, Mana, Ausspiellimit und Handplätze lassen sich je zweimal ausbauen, der erste Schritt kostet 1 Gold, der zweite 2. Der Schalter bleibt (0 = ohne Obergrenze für HP und Mana).
+- **Grund:** Das Spiel soll am Tisch spielbar sein, dafür zählt die einfache Regel (jede Leiste hat drei Felder). Die Nachmessung in 0.13.2.2 zeigte keinen Nutzen der aufgehobenen Grenze: zusätzliche HP kamen in keinem der besten Bauten vor, die Stufe III blieb bei rund 50 %.
+- Die Stellschrauben `hpB` und `manaB` der KI bleiben (6/6, ohne Wirkung, solange die Grenze gilt). `tests/golden.json` bleibt unverändert.
 
 ## Änderung 0.13.2.2 (12.11.)
 
