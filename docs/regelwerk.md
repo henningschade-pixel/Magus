@@ -690,6 +690,12 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Tests:** Drei Tests angepasst (Nachziehmarker Weltphase, Nachziehlimit Kauf, Nachziehlimit Weltphase; der Marker-Reset läuft jetzt über den Händler), neuer Test „Magie kaufen und Upgrades sind keine Aktion mehr“. `tests/golden.json` ist neu erzeugt (absichtliche Regeländerung).
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
 
+## Änderung 0.13.0.1 (12.11.)
+
+- **Kombo-Übersicht mit Farbverlauf (nur Darstellung):** Hintergrund und Rand jeder Zeile verlaufen von der Primärfarbe (links) zur Sekundärfarbe (rechts); die Tertiärfarbe einer Ultimate geht nicht in den Verlauf ein. Bisher war die ganze Zeile in der Sekundärfarbe getönt.
+- **Ausrichtung:** Primär-, Sekundär- und Tertiärfarbe stehen in festen Spalten, also in allen Zeilen untereinander. Die erreichte Stufe steht nicht mehr hinter den Farben, sondern vor dem Text der Kombo. Die markierte Kombo bleibt grün hervorgehoben.
+- Die Versionsbeschreibung im Spiel nennt die Änderung.
+
 ## Änderung 0.13 (11.11.)
 
 - **Computergegner plant voraus (keine Regeländerung):** Bisher bewertete der Computer im Kampf jeden Zug einzeln mit festen Gewichten; was ein Kombo später bringt, steckte nur als Schätzwert darin, und er nutzte Kombos kaum sinnvoll. Jetzt stellt er alle Züge zusammen, die ihm die Regeln gerade erlauben (jede Kartenfolge samt Kombos und Ultimates, Erholen, Nachziehen mit gesperrten Karten, jede Verteidigung, die Wahl bei Falle und Hellsicht), spielt jeden davon in vielen möglichen Kampfverläufen bis zum Kampfende durch und wählt den Zug mit dem besten mittleren Ausgang, gemessen in Siegpunkten (`src/ai/40-suche.js`).

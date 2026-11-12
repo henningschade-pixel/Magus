@@ -140,11 +140,13 @@ function comboRef(cx) {
     const normals = sel.filter(c => !c.curse), cols = [...new Set(normals.map(c => c.el))], prim = normals.length ? normals[0].el : null;
     const o = ev && ev.valid && ev.ord && !(ev.levels.ulti > 0) ? ev.ord : null, uS0 = Math.min(3, mag.F, mag.E, mag.W);
     let fs = 20;   // Schriftgrad der Zeilen: füllt die Höhe des Fensters (seit 0.7.1.1); Texte und Hinweise skalieren mit
-    const row = (name, els, lvl, text, on, tip, sec) => '<div' + (tip ? ' title="' + esc(tip) + '"' : '') + ' class="cref p' + (sec || els[els.length - 1]) + (on ? ' on' : '') + '" style="padding:0 8px;margin-bottom:0;font-size:' + fs + 'px;flex:1 1 0;display:flex;flex-direction:column;justify-content:center;gap:0"><div style="line-height:1.15"><b>' + name + '</b> ' + els.map(el).join(' + ') + (lvl ? ' <span class="note" style="font-size:.8em">· Stufe ' + lvl + '</span>' : '') + (text ? '<small style="font-size:' + Math.round(fs * 0.72) + 'px">' + text + '</small>' : '') + '</div></div>';
-    // Hintergrund nach der Sekundärfarbe (zuletzt markierte Karte, bestimmt den Charakter: Rot Schaden, Blau variabel, Grün Heilung); gleiche Sekundärfarbe = gleiche Tönung; die Liste ist seit 0.9.9.12 nach der Primärfarbe sortiert, die Primärfarbe steht in jeder Zeile vorn. Die Ultimate (alle drei Farben) steht unter der Farbe ihrer Schlusskarte: Rot Todesfluss, Blau Manafluss, Grün Heilfluss.
+    // Zeile der Übersicht (seit 0.13.0.1): Der Hintergrund verläuft von der Primärfarbe (links) zur Sekundärfarbe (rechts), die dritte Farbe einer Ultimate bleibt dabei außen vor. Primär-, Sekundär- und Tertiärfarbe stehen in festen Spalten, also in allen Zeilen untereinander; die erreichte Stufe steht vor dem Text.
+    const TINT = { F: '255,122,61', W: '82,166,245', E: '147,194,79' };
+    const row = (name, els, lvl, text, on, tip) => '<div' + (tip ? ' title="' + esc(tip) + '"' : '') + ' class="cref grad q' + els[0] + (on ? ' on' : '') + '" style="--c1:' + TINT[els[0]] + ';--c2:' + TINT[els[1] || els[0]] + ';padding:0 8px;margin-bottom:0;font-size:' + fs + 'px;flex:1 1 0;display:flex;flex-direction:column;justify-content:center;gap:0"><div class="chead"><b>' + name + '</b>' + els.map((e, i) => (i ? '<span class="cplus">+</span>' : '') + '<span class="cel ' + e + '">' + NAMES[e] + '</span>').join('') + '</div>' + (text || lvl ? '<small style="font-size:' + Math.round(fs * 0.72) + 'px">' + (lvl ? '<b>Stufe ' + lvl + '</b>' + (text ? ' · ' : '') : '') + (text || '') + '</small>' : '') + '</div>';
+    // Die Sekundärfarbe bestimmt den Charakter (Rot Schaden, Blau variabel, Grün Heilung); die Liste ist seit 0.9.9.12 nach der Primärfarbe sortiert, die Primärfarbe steht in jeder Zeile vorn. Die Ultimate (alle drei Farben) steht unter der Farbe ihrer Schlusskarte: Rot Todesfluss, Blau Manafluss, Grün Heilfluss.
     const ULTI_NAME = { F: 'Todesfluss', W: 'Manafluss', E: 'Heilfluss' }, SEC = ['F', 'W', 'E'];
     // Ultimate (seit 0.11.0.9): Reihenfolge Primär-, Sekundär-, Tertiärfarbe; die Sekundärfarbe bestimmt Namen, Wirkung und Tönung, die Tertiärfarbe löst sie nur aus
-    const ultiRow = (pc, sc, lvl, text, on, tip) => row(ULTI_NAME[sc], [pc, sc, SEC.find(x => x !== pc && x !== sc)], lvl, text, on, tip, sc);
+    const ultiRow = (pc, sc, lvl, text, on, tip) => row(ULTI_NAME[sc], [pc, sc, SEC.find(x => x !== pc && x !== sc)], lvl, text, on, tip);
     const secOf = normals.length ? normals.find(c => c.el !== prim) : null, secEl = secOf ? secOf.el : null;
     if (cols.length === 0) {   // noch nichts markiert: alle Kombos nach Sekundärfarbe, Wirkung als Tooltip
       fs = 14;
@@ -159,12 +161,12 @@ function comboRef(cx) {
         ORD_ROWS.filter(r => r[2] === prim && r[3] === sc).forEach(r => { h += row(r[1], [r[2], r[3]], 0, ORD_SHORT[r[0]], false, ordText(r[0], 'S')); });
         if (sc !== prim) h += ultiRow(prim, sc, 0, ULTI_SHORT[sc], false, 'Mit allen drei Farben, ' + NAMES[sc] + ' als zweite Karte; ersetzt die Kombo. ' + ultiText(sc, 'S'));
       });
-    } else if (cols.length === 2 && o) {   // zwei Farben: genau eine Kombo, mit erreichter Stufe
+    } else if (cols.length === 2 && o) { fs = 18;   // zwei Farben: genau eine Kombo, mit erreichter Stufe
       const r = ORD_ROWS.find(x => x[0] === o.key), third = M.ELEMENTS.find(x => !cols.includes(x));
       h += row(r[1], [r[2], r[3]], o.lvl, ordText(r[0], o.lvl), true);
       if (o.echo) h += '<div class="note" style="margin-top:2px;font-size:13px">Echo ' + el(o.other) + ': +1 Stufe</div>';
       h += '<div class="note" style="margin-top:4px;font-size:12px">Stufe = die kleinere der beiden Kartensummen (je Karte höchstens deine Magiestufe), höchstens 3. Mehrere Karten einer Farbe zählen zusammen. Kommt ' + el(third) + ' als dritte Farbe dazu, wird daraus die Ultimate ' + ULTI_NAME[o.other] + ' (die Sekundärfarbe ' + el(o.other) + ' bestimmt sie).</div>';
-    } else {   // alle drei Farben: Ultimate der Sekundärfarbe
+    } else { fs = 18;   // alle drei Farben: Ultimate der Sekundärfarbe
       const ue = (ev && ev.ultiEl) || secEl;
       h += ultiRow(prim, ue, lv.ulti, ultiText(ue, lv.ulti || 'S') + ' Die Kombos entfallen.', lv.ulti > 0);
       if (lv.echo) h += '<div class="note" style="margin-top:2px;font-size:13px">Echo ' + el(cx.myStats.echo) + ': +1 Stufe</div>';
