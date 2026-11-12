@@ -3906,49 +3906,10 @@ let manaPv = 0;   // Manakosten der markierten Karten, als rote Vorschau am Mana
 function combatCenter(cx) {
   manaPv = 0;
   const c = cx.c, my = myTurn(), atk = c.action === 'attack';
-  let h = '<div class="combatcenter"><div class="sc" style="font-size:22px;color:var(--gold)">' + (c.mode === 'showdown' ? 'Showdown' : 'Kampf gegen ' + esc(c.sides.b.name)) + '</div>' + (function () {   // Rundenzähler; mit Erschöpfung (seit 0.7.7.2) und optionalem Rundenlimit maxRounds (Standard aus)
-    const rd = Math.floor((c.atkTurns || 0) / 2) + 1, mr = G.rules.maxRounds, ex = G.rules.exhaustRounds || 0, lv = ex > 0 ? Math.floor((rd - 1) / ex) : 0;
-    const tip = 'Eine Kampfrunde ist ein Angriffszug jeder Seite.' + (ex > 0 ? ' Nach je ' + ex + ' Runden steigt die Erschöpfung um 1: Beide Seiten verlieren am Ende ihres Angriffszugs so viele HP, wie die Erschöpfung hoch ist.' : '') + (mr > 0 ? ' Nach ' + mr + ' Runden endet der Kampf unentschieden.' : '');
-    return '<div class="note" style="margin-top:-2px" title="' + tip + '">Runde <b>' + (mr > 0 ? Math.min(mr, rd) : rd) + '</b>' + (mr > 0 ? ' von ' + mr : '') + (lv > 0 ? ' · <b style="color:#e0605a">Erschöpfung ' + lv + '</b>' : (ex > 0 ? ' · Erschöpfung ab Runde ' + (ex + 1) : '')) + '</div>';
-  })();
+  let h = '<div class="combatcenter"><div class="sc" style="font-size:22px;color:var(--gold)">' + (c.mode === 'showdown' ? 'Showdown' : 'Kampf gegen ' + esc(c.sides.b.name)) + '</div>' + combatRoundNote(c);
   if (!(c.forced && (c.forced.kind === 'trap' || c.forced.kind === 'sight'))) h += phaseBadge(c, my);
-  if (c.forced && c.forced.kind === 'trap') {   // Falle: eine der gezogenen Karten wählen (ich, im Vordergrund) bzw. warten (Gegner)
-    const vs = c.sides.a.ctrl === c.forced.pid ? c.sides.a : c.sides.b;
-    h += c.forced.pid === ME
-      ? '<div class="preview"><b>Falle:</b> Wähle eine der gezogenen Karten, die du verdeckt vor dich legst (die Karten liegen im Vordergrund). Die übrigen kommen auf den Ablagestapel.</div>'
-      : '<div class="preview"><b>Falle:</b> ' + esc(vs.name) + ' wählt eine Karte für die Falle …</div>';
-    h += '</div>';
-    return '<div class="panel" style="' + box(LAYOUT.combat, 'padding:10px 14px') + '">' + h + '</div>';
-  }
-  if (c.forced && c.forced.kind === 'sight') {   // Hellsicht: je gezogener Karte Hand, Ablage oder Händler wählen (ich) bzw. warten (Gegner)
-    const vs = c.sides.a.ctrl === c.forced.pid ? c.sides.a : c.sides.b, cards = c.forced.cards;
-    if (c.forced.pid === ME) h += '<div class="preview"><b>Hellsicht:</b> Wähle ' + c.forced.n + ' Karte' + (c.forced.n === 1 ? '' : 'n') + ', die du offen vor dich legst (die Karten liegen im Vordergrund).</div>';
-    else h += '<div class="preview"><b>Hellsicht:</b> ' + esc(vs.name) + ' wählt ' + c.forced.n + ' von ' + cards.length + ' gezogenen Karten …</div>';
-    h += '</div>';
-    return '<div class="panel" style="' + box(LAYOUT.combat, 'padding:10px 14px') + '">' + h + '</div>';
-  }
-  let prev = '', canExec = false, val = 0;   // val: Wert der markierten Karten (Schaden bzw. Block) für den Knopf
-  if (my) {
-    const sel = M.selection(cx.mine.deck);
-    if (atk) {
-      if (!sel.length) prev = '';
-      else {
-        const ev = M.evalAttack(cx.myStats, sel, { combo: M.allowed(G, 'attack', 'combo') });
-        if (ev.valid) manaPv = ev.cost;
-        prev = '';
-        canExec = ev.valid && ev.affordable; val = ev.valid && ev.prim ? ev.damage : 0;
-        const lvC = ev.valid ? M.levelsFor(ev) : ev.levels;
-        if (ev.valid && ev.levels.echo) prev += '<div class="note">Echo (' + NAMES[cx.myStats.echo] + '): Kombo +1 Stufe</div>';
-        if (ev.valid && lvC.ew > 0 && !(ev.levels.ulti > 0)) prev += lfSummary(cx, lvC.ew);
-        if (!ev.affordable) prev += '<div class="bad">Zu wenig Mana.</div>';
-      }
-    } else {
-      const ev = c.pending > 0 ? M.evalDefense(cx.myStats, sel, c.color, { combo: M.allowed(G, 'defense', 'combo') }) : { valid: true };   // Reaktion ohne Angriff: nichts zu verteidigen
-      if (!sel.length || !c.pending) prev = '';
-      else if (!ev.valid) prev = '<span class="bad">' + esc(ev.reason) + '</span>';
-      else { if (ev.cost > 0) manaPv = ev.cost; prev = ''; canExec = ev.affordable; val = ev.block || 0; if (ev.ord) { const r = ORD_ROWS.find(x => x[0] === ev.ord.key), late = ev.ord.key === 'gh' || ev.ord.key === 'wt' || ev.ord.key === 'ws'; prev += '<div class="note"><b>' + r[1] + '</b> Stufe ' + ev.ord.lvl + (late ? ' nach' : ' vor') + ' der Verteidigung: ' + ordText(r[0], ev.ord.lvl) + '</div>'; if (ev.ord.key === 'gr') prev += lfSummary(cx, ev.ord.lvl); } if (!ev.affordable) prev += '<div class="bad">Zu wenig Mana.</div>'; }
-    }
-  }
+  if (c.forced && (c.forced.kind === 'trap' || c.forced.kind === 'sight')) return '<div class="panel" style="' + box(LAYOUT.combat, 'padding:10px 14px') + '">' + h + combatForcedNote(c) + '</div></div>';
+  const pv = my ? combatPreview(cx, c, atk) : { prev: '', canExec: false, val: 0 }, prev = pv.prev, canExec = pv.canExec, val = pv.val;   // val: Wert der markierten Karten (Schaden bzw. Block) für den Knopf
   h += '<div class="preview">' + prev + '</div><div class="btnrow">';
   const canFlee = my && M.canFlee(G, ME), rg = M.recoverGain(G), manaFull = cx.myStats.mana >= cx.myStats.maxMana, drawNoMana = cx.myStats.mana < M.drawManaCost(G, ME);   // Erholen bei vollem Mana und Nachziehen ohne das Mana für den roten Marker sind sinnlos: Knöpfe inaktiv
   if (!canFlee) fleeAsk = false;
@@ -3965,6 +3926,51 @@ function combatCenter(cx) {
   }
   h += '</div>';
   return '<div class="panel" style="' + box(LAYOUT.combat, 'padding:10px 14px') + '">' + h + '</div>';
+}
+// Rundenzähler; mit Erschöpfung (seit 0.7.7.2) und optionalem Rundenlimit maxRounds (Standard aus)
+function combatRoundNote(c) {
+  const rd = Math.floor((c.atkTurns || 0) / 2) + 1, mr = G.rules.maxRounds, ex = G.rules.exhaustRounds || 0, lv = ex > 0 ? Math.floor((rd - 1) / ex) : 0;
+  const tip = 'Eine Kampfrunde ist ein Angriffszug jeder Seite.' + (ex > 0 ? ' Nach je ' + ex + ' Runden steigt die Erschöpfung um 1: Beide Seiten verlieren am Ende ihres Angriffszugs so viele HP, wie die Erschöpfung hoch ist.' : '') + (mr > 0 ? ' Nach ' + mr + ' Runden endet der Kampf unentschieden.' : '');
+  return '<div class="note" style="margin-top:-2px" title="' + tip + '">Runde <b>' + (mr > 0 ? Math.min(mr, rd) : rd) + '</b>' + (mr > 0 ? ' von ' + mr : '') + (lv > 0 ? ' · <b style="color:#e0605a">Erschöpfung ' + lv + '</b>' : (ex > 0 ? ' · Erschöpfung ab Runde ' + (ex + 1) : '')) + '</div>';
+}
+// Falle oder Hellsicht steht zur Entscheidung an: Hinweis für mich (die Karten liegen im Vordergrund) bzw. Wartetext, während der Gegner wählt.
+function combatForcedNote(c) {
+  let h = '';
+  if (c.forced.kind === 'trap') {
+    const vs = c.sides.a.ctrl === c.forced.pid ? c.sides.a : c.sides.b;
+    h += c.forced.pid === ME
+      ? '<div class="preview"><b>Falle:</b> Wähle eine der gezogenen Karten, die du verdeckt vor dich legst (die Karten liegen im Vordergrund). Die übrigen kommen auf den Ablagestapel.</div>'
+      : '<div class="preview"><b>Falle:</b> ' + esc(vs.name) + ' wählt eine Karte für die Falle …</div>';
+  } else {
+    const vs = c.sides.a.ctrl === c.forced.pid ? c.sides.a : c.sides.b, cards = c.forced.cards;
+    if (c.forced.pid === ME) h += '<div class="preview"><b>Hellsicht:</b> Wähle ' + c.forced.n + ' Karte' + (c.forced.n === 1 ? '' : 'n') + ', die du offen vor dich legst (die Karten liegen im Vordergrund).</div>';
+    else h += '<div class="preview"><b>Hellsicht:</b> ' + esc(vs.name) + ' wählt ' + c.forced.n + ' von ' + cards.length + ' gezogenen Karten …</div>';
+  }
+  return h;
+}
+// Vorschau meines Zugs aus den markierten Karten: Hinweistext, ob der Zug ausführbar ist, und sein Wert (Schaden bzw. Block); setzt die Mana-Vorschau manaPv.
+function combatPreview(cx, c, atk) {
+  let prev = '', canExec = false, val = 0;
+  const sel = M.selection(cx.mine.deck);
+  if (atk) {
+    if (!sel.length) prev = '';
+    else {
+      const ev = M.evalAttack(cx.myStats, sel, { combo: M.allowed(G, 'attack', 'combo') });
+      if (ev.valid) manaPv = ev.cost;
+      prev = '';
+      canExec = ev.valid && ev.affordable; val = ev.valid && ev.prim ? ev.damage : 0;
+      const lvC = ev.valid ? M.levelsFor(ev) : ev.levels;
+      if (ev.valid && ev.levels.echo) prev += '<div class="note">Echo (' + NAMES[cx.myStats.echo] + '): Kombo +1 Stufe</div>';
+      if (ev.valid && lvC.ew > 0 && !(ev.levels.ulti > 0)) prev += lfSummary(cx, lvC.ew);
+      if (!ev.affordable) prev += '<div class="bad">Zu wenig Mana.</div>';
+    }
+  } else {
+    const ev = c.pending > 0 ? M.evalDefense(cx.myStats, sel, c.color, { combo: M.allowed(G, 'defense', 'combo') }) : { valid: true };   // Reaktion ohne Angriff: nichts zu verteidigen
+    if (!sel.length || !c.pending) prev = '';
+    else if (!ev.valid) prev = '<span class="bad">' + esc(ev.reason) + '</span>';
+    else { if (ev.cost > 0) manaPv = ev.cost; prev = ''; canExec = ev.affordable; val = ev.block || 0; if (ev.ord) { const r = ORD_ROWS.find(x => x[0] === ev.ord.key), late = ev.ord.key === 'gh' || ev.ord.key === 'wt' || ev.ord.key === 'ws'; prev += '<div class="note"><b>' + r[1] + '</b> Stufe ' + ev.ord.lvl + (late ? ' nach' : ' vor') + ' der Verteidigung: ' + ordText(r[0], ev.ord.lvl) + '</div>'; if (ev.ord.key === 'gr') prev += lfSummary(cx, ev.ord.lvl); } if (!ev.affordable) prev += '<div class="bad">Zu wenig Mana.</div>'; }
+  }
+  return { prev, canExec, val };
 }
 // Rechte Kampfseite: Übersicht der Kombos (statt einer Doppelanzeige des Gegners, der steht schon oben rechts).
 function comboRef(cx) {
@@ -5234,7 +5240,7 @@ function earthFormRaw(ctx, x, by, seed, i, t, tCrack, tRise, endAt, ending) {
   }
   return { attack, defense, reset() { queue = []; endEx(); }, busy() { return queue.length > 0 || !!(ex && (ex.def || performance.now() - ex.t0 < ex.tAe * 1000 + 50 || (ex.trap && performance.now() - ex.t0 < (ex.trapEnd + .1) * 1000))); }, remaining() { if (!ex || !ex.def) return 0; return Math.max(0, ex.def.T.end - (performance.now() - ex.t0) / 1000); } };
 })();
-/* ---------- Darstellung: Kampfeffekt-Ton, Cursor, render, Menüs, Start- und Ergebnis-Bildschirm ---------- */
+/* ---------- Darstellung: Kampfeffekt-Ton, Cursor, render und Ergebnis-Bildschirm (Menüs, Einstellungen und Startseite: 26c-startseite.js) ---------- */
 let leadPrev = null;
 let exSeen = null;   // Erschöpfungsstufe des Kampfes, wie zuletzt gezeichnet (für die Ankündigung beim Anstieg)
 function exhaustBanner(lv) {   // Erschöpfung setzt ein / steigt: Schriftzug mitten im Bild, dazu ein dunkler Ton
@@ -5474,97 +5480,6 @@ function renderInner() {
   if (G.over && !endView && !modal) { if (endSnd !== G) { endSnd = G; Snd.play(G.winner === ME ? 'win' : G.winner === null ? 'draw' : 'lose'); } showEnd(); }
   endTick(); specAdvance();
 }
-let menuView = null;   // zeichnet das gerade offene Menü neu (Ton-Schalter, Regler)
-function menuRedraw() {   // Menü neu zeichnen und die Scrollposition behalten (seit 0.9.9.8)
-  if (!menuView) return;
-  const b = overlay.querySelector('.box'), t = b ? b.scrollTop : 0;
-  menuView();
-  const n = overlay.querySelector('.box'); if (n) n.scrollTop = t;
-}
-const menuBtn = (act, txt, extra, cls) => '<button class="btn' + (cls ? ' ' + cls : '') + '" data-act="' + act + '"' + (extra || '') + '>' + txt + '</button>';
-const menuTo = (pg, txt, cls) => menuBtn('menu', txt, ' data-p="' + pg + '"', cls);
-// Spieleinstellungen (seit 0.8.1): Runden bis zum Erschöpfungsschaden und Siegpunktvorsprung für das vorzeitige Spielende (0 = aus); gelten für neue Partien, im Browser gespeichert
-const RULE_OPTS = [
-  { k: 'exhaustRounds', name: 'Runden bis Erschöpfung', min: 0, max: 30, tip: 'Nach so vielen Kampfrunden steigt die Erschöpfung um 1 (danach alle so viele Runden wieder): Beide Seiten verlieren am Ende ihres Angriffszugs entsprechend viele HP. Derselbe Wert gilt für die Zermürbung in der Weltphase: Nach so vielen Runden ohne Monsterkampf schenkt jeder, der seinen Zug ohne Monsterangriff beendet, dem Gegner Gold in Höhe der Spielstufe. 0 = beides aus.' },
-  { k: 'winLead', name: 'Siegpunkt-Vorsprung', min: 0, max: 10, tip: 'Hat ein Spieler nach einem Showdown mindestens so viele Siegpunkte Vorsprung, gewinnt er das Spiel sofort. 0 = das Spiel läuft immer bis zum dritten Showdown.' }
-];
-// Erlaubte Aktionen je Phase (seit 0.9.9.5): Schalter an/aus; Erholen oder Passen bleibt immer erlaubt (die Engine gibt Passen frei, wenn beide aus sind)
-const PHASE_OPTS = [
-  { ph: 'allowAtk', name: 'Angriffsphase', acts: [['attack', 'Angreifen', 'Magie als Angriff ausspielen'], ['recover', 'Erholen', 'Mana gewinnen statt anzugreifen'], ['draw', 'Nachziehen', 'Hand tauschen statt anzugreifen'], ['pass', 'Passen', 'Zug aussetzen'], ['echo', 'Echo setzen', 'Die Primärmagie des Angriffs hinterlässt ein Echo, das den nächsten Kombo verstärkt'], ['combo', 'Kombo wirken', 'Karten einer zweiten Farbe lösen einen Kombo aus (aus: nur Karten einer Farbe)']] },
-  { ph: 'allowDef', name: 'Verteidigungsphase', acts: [['defend', 'Verteidigen', 'Den eingehenden Schaden mit Magie blocken'], ['recover', 'Erholen', 'Mana gewinnen; der Schaden wird ohne Block hingenommen'], ['draw', 'Nachziehen', 'Hand tauschen; der Schaden wird ohne Block hingenommen'], ['pass', 'Passen', 'Den Schaden ohne Verteidigung hinnehmen'], ['echo', 'Echo setzen', 'Die Primärmagie der Verteidigung hinterlässt ein Echo'], ['combo', 'Kombo wirken', 'Karten einer zweiten Farbe lösen in der Verteidigung einen Kombo aus (aus: nur Karten einer Farbe)']] }
-];
-function phaseRules() {
-  let sv = {}; try { sv = JSON.parse(localStorage.getItem('magus_rules') || '{}') || {}; } catch (e) { sv = {}; }
-  const out = {};
-  PHASE_OPTS.forEach(po => { const o = {}; po.acts.forEach(([k]) => { const v = sv[po.ph] && sv[po.ph][k]; o[k] = v === undefined || v === null ? M.DEFAULT_RULES[po.ph][k] : (po.ph === 'allowDef' && [2, 3].includes(+v) ? +v : (+v ? 1 : 0)); }); out[po.ph] = o; });
-  return out;
-}
-function setPhaseRule(ph, k) {   // schaltet eine Aktion um; Erholen und Passen dürfen nicht gemeinsam ausgeschaltet werden
-  let sv = {}; try { sv = JSON.parse(localStorage.getItem('magus_rules') || '{}') || {}; } catch (e) { sv = {}; }
-  const pr = phaseRules(), o = pr[ph]; if (!o || o[k] === undefined) return;
-  let nv = o[k];
-  if (ph === 'allowDef') { const seq = [1, 0, 2, 3]; nv = seq[(seq.indexOf(nv) + 1) % 4]; }   // an, aus, nach Angriff, ohne Angriff
-  else nv = nv ? 0 : 1;
-  o[k] = nv; PHASE_OPTS.forEach(po => { sv[po.ph] = pr[po.ph]; });
-  try { localStorage.setItem('magus_rules', JSON.stringify(sv)); } catch (e) {}
-}
-function resetPhaseRules() { let sv = {}; try { sv = JSON.parse(localStorage.getItem('magus_rules') || '{}') || {}; } catch (e) { sv = {}; } PHASE_OPTS.forEach(po => { delete sv[po.ph]; }); try { localStorage.setItem('magus_rules', JSON.stringify(sv)); } catch (e) {} }
-function gameRules() {
-  let sv = {}; try { sv = JSON.parse(localStorage.getItem('magus_rules') || '{}') || {}; } catch (e) { sv = {}; }
-  const r = Object.assign({}, phaseRules());
-  RULE_OPTS.forEach(o => { const v = Math.round(+sv[o.k]); r[o.k] = isFinite(v) && sv[o.k] !== undefined && sv[o.k] !== null ? Math.min(o.max, Math.max(o.min, v)) : M.DEFAULT_RULES[o.k]; });
-  return r;
-}
-function setGameRule(k, d) {
-  const o = RULE_OPTS.find(x => x.k === k); if (!o) return;
-  const r = gameRules(); r[k] = d === 'def' ? M.DEFAULT_RULES[k] : Math.min(o.max, Math.max(o.min, r[k] + (+d || 0)));
-  const sv = (() => { try { return JSON.parse(localStorage.getItem('magus_rules') || '{}') || {}; } catch (e) { return {}; } })(); RULE_OPTS.forEach(x => { sv[x.k] = r[x.k]; });
-  try { localStorage.setItem('magus_rules', JSON.stringify(sv)); } catch (e) {}
-}
-function rulesHTML() {
-  const r = gameRules(), std = RULE_OPTS.every(o => r[o.k] === M.DEFAULT_RULES[o.k]) && PHASE_OPTS.every(po => po.acts.every(([k]) => r[po.ph][k] === M.DEFAULT_RULES[po.ph][k]));
-  const row = o => '<div class="rulerow" title="' + o.tip + '"><span>' + o.name + '</span><div class="stepper"><button class="btn" data-act="rule" data-k="' + o.k + '" data-d="-1" aria-label="weniger"' + (r[o.k] <= o.min ? ' disabled' : '') + '>−</button><output>' + (r[o.k] === 0 ? 'aus' : r[o.k]) + '</output><button class="btn" data-act="rule" data-k="' + o.k + '" data-d="1" aria-label="mehr"' + (r[o.k] >= o.max ? ' disabled' : '') + '>+</button></div></div>';
-  return '<section class="setgrp"><div class="sethead"><h3>Spiel</h3>' + menuBtn('rule', 'Standardwerte', ' data-k="all" data-d="def" title="Beide Werte auf den Standard setzen (10 Runden, 4 Siegpunkte)"' + (std ? ' disabled' : ''), 'small') + '</div>' +
-    '<div class="setbox">' + RULE_OPTS.map(row).join('') + '</div><p class="sethint">0 schaltet die Regel ab. Gilt für neue Spiele.</p></section>' +
-    '<section class="setgrp"><div class="sethead"><h3>Erlaubte Aktionen</h3></div>' + PHASE_OPTS.map(po => '<div class="setbox"><div class="phasehead">' + po.name + '</div>' + po.acts.map(([k, nm, tip]) => '<div class="rulerow" title="' + tip + '"><span>' + nm + '</span><button class="btn small tgl' + (r[po.ph][k] ? ' on' : '') + '" data-act="rulephase" data-ph="' + po.ph + '" data-k="' + k + '"' + (po.ph === 'allowDef' ? ' title="an: immer · aus: nie · nach Angriff: nur wenn ein Angriff vorausging · ohne Angriff: nur wenn kein Angriff vorausging"' : '') + '>' + ['aus', 'an', 'nach Angriff', 'ohne Angriff'][r[po.ph][k]] + '</button></div>').join('') + '</div>').join('') + '<p class="sethint">Sind Erholen und Passen beide aus, bleibt Passen als Notausgang erlaubt. In der Verteidigungsphase schaltet ein Klick weiter: an, aus, nach Angriff (Reaktion auf einen Angriff mit Schaden), ohne Angriff (Reaktion nach einer Aktion ohne Angriff). Gilt für neue Spiele.</p></section>';
-}
-function settingsHTML() {   // Einstellungen (Hauptmenü und Spielmenü): Gruppe Ton (Schalter, zwei Regler) und Gruppe Spiel (seit 0.8.1.1; Aufbau seit 0.8.4)
-  const si = Snd.info();
-  return '<section class="setgrp"><div class="sethead"><h3>Ton</h3>' + menuBtn('sndtoggle', si.on ? '🔊 an' : '🔇 aus', ' title="Ton an oder aus"', 'small') + '</div>' + volHTML() + '</section>' + rulesHTML();
-}
-function showStart(pg) {
-  pg = pg || 'main'; setCursor('human');
-  overlay.style.display = 'flex'; overlay.className = 'overlay';
-  menuView = () => showStart(pg);
-  const run = G && !G.over && !MP && started;
-  const back = menuTo('main', 'Zurück');
-  let h = '<div class="box start"><h1>Magus</h1>';
-  if (pg === 'main') {
-    h += '<img class="logo" alt="" src="assets/img/logo.webp"><div class="menulist">' +
-      (run ? menuBtn('resume', 'Spiel fortsetzen', '', 'primary') : '') +
-      menuTo('single', 'Einzelspieler', run ? '' : 'primary') + menuTo('multi', 'Mehrspieler') + menuTo('settings', 'Einstellungen') + menuTo('credits', 'Credits') + menuBtn('quit', 'Beenden') + '</div>' +
-      '<div class="menufoot">' + menuTo('about', 'Neu in Version ' + MAGUS_VERSION, 'link') + '</div>';
-  } else if (pg === 'single') {
-    h += '<h2>Einzelspieler</h2><div class="menulist">' +
-      menuBtn('newgame', run ? 'Neues Spiel gegen den Computer' : 'Gegen den Computer spielen', '', run ? '' : 'primary') +
-      menuBtn('newspec', 'Zwei Computern zuschauen', ' title="Zwei Computerspieler spielen gegeneinander, du schaust zu (für Spielablauf und Statistik)"') + back + '</div>';
-  } else if (pg === 'multi') {
-    offerTries = 0;
-    h += '<h2>Mehrspieler</h2><p class="note" style="text-align:center">Zwei Geräte, ein Raum</p><div class="menulist">' +
-      '<p id="mpna" class="note" style="text-align:center">Verbindung wird geprüft …</p>' +
-      '<div id="mpbox" class="mpbox" style="display:none"><div class="mprow">' + menuBtn('mphost', 'Raum erstellen') + '<input id="mpcode" maxlength="5" placeholder="Code" autocomplete="off" spellcheck="false">' + menuBtn('mpjoin', 'Beitreten') + '</div><div id="mpmsg" class="note"></div></div>' + back + '</div>';
-  } else if (pg === 'settings') {
-    h += '<h2>Einstellungen</h2><div class="menulist setpage">' + settingsHTML() + back + '</div>';
-  } else if (pg === 'about') {
-    h += '<p class="note intro" style="margin-top:-2px"><b>Danke, dass du Magus testest!</b> ' + versionenHTML() + '</p><div class="menulist">' + back + '</div>';
-  } else if (pg === 'credits') {
-    h += '<h2>Credits</h2><p class="note" style="text-align:center">Danke fürs Testspielen an</p><div class="menulist"><p class="note" style="text-align:center;font-size:21px;line-height:1.7"><b>DarkParladin</b><br><b>Deekixx</b><br><b>H5</b><br><b>Leon aka Tim</b><br><b>Zockerboy</b></p>' + back + '</div>';
-  } else if (pg === 'quit') {
-    h += '<p class="note" style="text-align:center;font-size:19px">Danke fürs Spielen!<br>Ein Browser-Tab lässt sich vom Spiel aus nicht immer schließen. Schließe diesen Tab oder dieses Fenster einfach selbst.</p><div class="menulist">' + back + '</div>';
-  }
-  overlay.innerHTML = h + '</div>';
-  if (pg === 'multi') mpOffer();
-}
 function endBasicHTML() {
   const w = G.winner, a = G.players[ME].sp, b = G.players[OPP].sp;
   return '<div class="box"><h1>' + (SPEC ? (w === null ? 'Unentschieden' : esc(G.players[w].name) + ' gewinnt') : w === ME ? 'Gewonnen' : w === null ? 'Unentschieden' : 'Verloren') + '</h1><p style="font-size:26px">' + a + ' : ' + b + ' Siegpunkte</p><p>' + (w === null ? 'Bei Gleichstand an Siegpunkten, Gold und Tempelstufe gibt es keinen Sieger.' : esc(G.players[w].name) + (G.templeWin ? ' hat bei gleichem Gold die höhere Tempelstufe (' + G.players[ME].temple.level + ' : ' + G.players[OPP].temple.level + ').' : G.goldWin ? ' hat bei Punktgleichstand das meiste Gold (' + G.players[ME].stats.gold + ' : ' + G.players[OPP].stats.gold + ').' : ' hat die meisten Siegpunkte.')) + '</p><div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap"><button class="btn" style="font-size:19px;padding:8px 18px" data-act="stend" title="Verlauf der Partie">📈 Statistik</button><button class="btn" style="font-size:19px;padding:8px 18px" data-act="logdl" title="Protokoll der Partie als Datei speichern">⬇ Protokoll</button></div><button class="btn primary" style="font-size:22px;padding:10px 28px" data-act="' + (MP ? 'mpexit' : SPEC ? 'leave' : 'newgame') + '">' + (MP ? 'Zum Startbildschirm' : SPEC ? 'Zum Hauptmenü' : 'Neues Spiel') + '</button></div>';
@@ -5698,6 +5613,98 @@ function finaleHTML() {
     (hl.length || spark ? '<div class="fhl fa" style="--dl:1.7s">' + esc(heading) + '</div><div class="fcards">' + cards + '</div>' : '') +
     (chips.length ? '<div class="fstats fa" style="--dl:' + (tEnd + .35).toFixed(2) + 's">' + chips.map(c => '<span class="fchip">' + c[0] + ' <b>' + c[1] + '</b></span>').join('') + '</div>' : '') +
     '<div class="fbtns fa" style="--dl:' + (tEnd + .7).toFixed(2) + 's">' + btn('stend', '📈 Statistik') + btn('logdl', '⬇ Protokoll') + btn(MP ? 'mpexit' : spec ? 'leave' : 'newgame', MP ? 'Zum Startbildschirm' : spec ? 'Zum Hauptmenü' : 'Neues Spiel', 'primary') + '</div></div>';
+}
+/* ---------- Menüs, Einstellungen (Regeln, erlaubte Aktionen) und Startseite (showStart), seit 0.13.1 aus 26a-darstellung.js ausgelagert ---------- */
+let menuView = null;   // zeichnet das gerade offene Menü neu (Ton-Schalter, Regler)
+function menuRedraw() {   // Menü neu zeichnen und die Scrollposition behalten (seit 0.9.9.8)
+  if (!menuView) return;
+  const b = overlay.querySelector('.box'), t = b ? b.scrollTop : 0;
+  menuView();
+  const n = overlay.querySelector('.box'); if (n) n.scrollTop = t;
+}
+const menuBtn = (act, txt, extra, cls) => '<button class="btn' + (cls ? ' ' + cls : '') + '" data-act="' + act + '"' + (extra || '') + '>' + txt + '</button>';
+const menuTo = (pg, txt, cls) => menuBtn('menu', txt, ' data-p="' + pg + '"', cls);
+// Spieleinstellungen (seit 0.8.1): Runden bis zum Erschöpfungsschaden und Siegpunktvorsprung für das vorzeitige Spielende (0 = aus); gelten für neue Partien, im Browser gespeichert
+const RULE_OPTS = [
+  { k: 'exhaustRounds', name: 'Runden bis Erschöpfung', min: 0, max: 30, tip: 'Nach so vielen Kampfrunden steigt die Erschöpfung um 1 (danach alle so viele Runden wieder): Beide Seiten verlieren am Ende ihres Angriffszugs entsprechend viele HP. Derselbe Wert gilt für die Zermürbung in der Weltphase: Nach so vielen Runden ohne Monsterkampf schenkt jeder, der seinen Zug ohne Monsterangriff beendet, dem Gegner Gold in Höhe der Spielstufe. 0 = beides aus.' },
+  { k: 'winLead', name: 'Siegpunkt-Vorsprung', min: 0, max: 10, tip: 'Hat ein Spieler nach einem Showdown mindestens so viele Siegpunkte Vorsprung, gewinnt er das Spiel sofort. 0 = das Spiel läuft immer bis zum dritten Showdown.' }
+];
+// Erlaubte Aktionen je Phase (seit 0.9.9.5): Schalter an/aus; Erholen oder Passen bleibt immer erlaubt (die Engine gibt Passen frei, wenn beide aus sind)
+const PHASE_OPTS = [
+  { ph: 'allowAtk', name: 'Angriffsphase', acts: [['attack', 'Angreifen', 'Magie als Angriff ausspielen'], ['recover', 'Erholen', 'Mana gewinnen statt anzugreifen'], ['draw', 'Nachziehen', 'Hand tauschen statt anzugreifen'], ['pass', 'Passen', 'Zug aussetzen'], ['echo', 'Echo setzen', 'Die Primärmagie des Angriffs hinterlässt ein Echo, das den nächsten Kombo verstärkt'], ['combo', 'Kombo wirken', 'Karten einer zweiten Farbe lösen einen Kombo aus (aus: nur Karten einer Farbe)']] },
+  { ph: 'allowDef', name: 'Verteidigungsphase', acts: [['defend', 'Verteidigen', 'Den eingehenden Schaden mit Magie blocken'], ['recover', 'Erholen', 'Mana gewinnen; der Schaden wird ohne Block hingenommen'], ['draw', 'Nachziehen', 'Hand tauschen; der Schaden wird ohne Block hingenommen'], ['pass', 'Passen', 'Den Schaden ohne Verteidigung hinnehmen'], ['echo', 'Echo setzen', 'Die Primärmagie der Verteidigung hinterlässt ein Echo'], ['combo', 'Kombo wirken', 'Karten einer zweiten Farbe lösen in der Verteidigung einen Kombo aus (aus: nur Karten einer Farbe)']] }
+];
+function phaseRules() {
+  let sv = {}; try { sv = JSON.parse(localStorage.getItem('magus_rules') || '{}') || {}; } catch (e) { sv = {}; }
+  const out = {};
+  PHASE_OPTS.forEach(po => { const o = {}; po.acts.forEach(([k]) => { const v = sv[po.ph] && sv[po.ph][k]; o[k] = v === undefined || v === null ? M.DEFAULT_RULES[po.ph][k] : (po.ph === 'allowDef' && [2, 3].includes(+v) ? +v : (+v ? 1 : 0)); }); out[po.ph] = o; });
+  return out;
+}
+function setPhaseRule(ph, k) {   // schaltet eine Aktion um; Erholen und Passen dürfen nicht gemeinsam ausgeschaltet werden
+  let sv = {}; try { sv = JSON.parse(localStorage.getItem('magus_rules') || '{}') || {}; } catch (e) { sv = {}; }
+  const pr = phaseRules(), o = pr[ph]; if (!o || o[k] === undefined) return;
+  let nv = o[k];
+  if (ph === 'allowDef') { const seq = [1, 0, 2, 3]; nv = seq[(seq.indexOf(nv) + 1) % 4]; }   // an, aus, nach Angriff, ohne Angriff
+  else nv = nv ? 0 : 1;
+  o[k] = nv; PHASE_OPTS.forEach(po => { sv[po.ph] = pr[po.ph]; });
+  try { localStorage.setItem('magus_rules', JSON.stringify(sv)); } catch (e) {}
+}
+function resetPhaseRules() { let sv = {}; try { sv = JSON.parse(localStorage.getItem('magus_rules') || '{}') || {}; } catch (e) { sv = {}; } PHASE_OPTS.forEach(po => { delete sv[po.ph]; }); try { localStorage.setItem('magus_rules', JSON.stringify(sv)); } catch (e) {} }
+function gameRules() {
+  let sv = {}; try { sv = JSON.parse(localStorage.getItem('magus_rules') || '{}') || {}; } catch (e) { sv = {}; }
+  const r = Object.assign({}, phaseRules());
+  RULE_OPTS.forEach(o => { const v = Math.round(+sv[o.k]); r[o.k] = isFinite(v) && sv[o.k] !== undefined && sv[o.k] !== null ? Math.min(o.max, Math.max(o.min, v)) : M.DEFAULT_RULES[o.k]; });
+  return r;
+}
+function setGameRule(k, d) {
+  const o = RULE_OPTS.find(x => x.k === k); if (!o) return;
+  const r = gameRules(); r[k] = d === 'def' ? M.DEFAULT_RULES[k] : Math.min(o.max, Math.max(o.min, r[k] + (+d || 0)));
+  const sv = (() => { try { return JSON.parse(localStorage.getItem('magus_rules') || '{}') || {}; } catch (e) { return {}; } })(); RULE_OPTS.forEach(x => { sv[x.k] = r[x.k]; });
+  try { localStorage.setItem('magus_rules', JSON.stringify(sv)); } catch (e) {}
+}
+function rulesHTML() {
+  const r = gameRules(), std = RULE_OPTS.every(o => r[o.k] === M.DEFAULT_RULES[o.k]) && PHASE_OPTS.every(po => po.acts.every(([k]) => r[po.ph][k] === M.DEFAULT_RULES[po.ph][k]));
+  const row = o => '<div class="rulerow" title="' + o.tip + '"><span>' + o.name + '</span><div class="stepper"><button class="btn" data-act="rule" data-k="' + o.k + '" data-d="-1" aria-label="weniger"' + (r[o.k] <= o.min ? ' disabled' : '') + '>−</button><output>' + (r[o.k] === 0 ? 'aus' : r[o.k]) + '</output><button class="btn" data-act="rule" data-k="' + o.k + '" data-d="1" aria-label="mehr"' + (r[o.k] >= o.max ? ' disabled' : '') + '>+</button></div></div>';
+  return '<section class="setgrp"><div class="sethead"><h3>Spiel</h3>' + menuBtn('rule', 'Standardwerte', ' data-k="all" data-d="def" title="Beide Werte auf den Standard setzen (10 Runden, 4 Siegpunkte)"' + (std ? ' disabled' : ''), 'small') + '</div>' +
+    '<div class="setbox">' + RULE_OPTS.map(row).join('') + '</div><p class="sethint">0 schaltet die Regel ab. Gilt für neue Spiele.</p></section>' +
+    '<section class="setgrp"><div class="sethead"><h3>Erlaubte Aktionen</h3></div>' + PHASE_OPTS.map(po => '<div class="setbox"><div class="phasehead">' + po.name + '</div>' + po.acts.map(([k, nm, tip]) => '<div class="rulerow" title="' + tip + '"><span>' + nm + '</span><button class="btn small tgl' + (r[po.ph][k] ? ' on' : '') + '" data-act="rulephase" data-ph="' + po.ph + '" data-k="' + k + '"' + (po.ph === 'allowDef' ? ' title="an: immer · aus: nie · nach Angriff: nur wenn ein Angriff vorausging · ohne Angriff: nur wenn kein Angriff vorausging"' : '') + '>' + ['aus', 'an', 'nach Angriff', 'ohne Angriff'][r[po.ph][k]] + '</button></div>').join('') + '</div>').join('') + '<p class="sethint">Sind Erholen und Passen beide aus, bleibt Passen als Notausgang erlaubt. In der Verteidigungsphase schaltet ein Klick weiter: an, aus, nach Angriff (Reaktion auf einen Angriff mit Schaden), ohne Angriff (Reaktion nach einer Aktion ohne Angriff). Gilt für neue Spiele.</p></section>';
+}
+function settingsHTML() {   // Einstellungen (Hauptmenü und Spielmenü): Gruppe Ton (Schalter, zwei Regler) und Gruppe Spiel (seit 0.8.1.1; Aufbau seit 0.8.4)
+  const si = Snd.info();
+  return '<section class="setgrp"><div class="sethead"><h3>Ton</h3>' + menuBtn('sndtoggle', si.on ? '🔊 an' : '🔇 aus', ' title="Ton an oder aus"', 'small') + '</div>' + volHTML() + '</section>' + rulesHTML();
+}
+function showStart(pg) {
+  pg = pg || 'main'; setCursor('human');
+  overlay.style.display = 'flex'; overlay.className = 'overlay';
+  menuView = () => showStart(pg);
+  const run = G && !G.over && !MP && started;
+  const back = menuTo('main', 'Zurück');
+  let h = '<div class="box start"><h1>Magus</h1>';
+  if (pg === 'main') {
+    h += '<img class="logo" alt="" src="assets/img/logo.webp"><div class="menulist">' +
+      (run ? menuBtn('resume', 'Spiel fortsetzen', '', 'primary') : '') +
+      menuTo('single', 'Einzelspieler', run ? '' : 'primary') + menuTo('multi', 'Mehrspieler') + menuTo('settings', 'Einstellungen') + menuTo('credits', 'Credits') + menuBtn('quit', 'Beenden') + '</div>' +
+      '<div class="menufoot">' + menuTo('about', 'Neu in Version ' + MAGUS_VERSION, 'link') + '</div>';
+  } else if (pg === 'single') {
+    h += '<h2>Einzelspieler</h2><div class="menulist">' +
+      menuBtn('newgame', run ? 'Neues Spiel gegen den Computer' : 'Gegen den Computer spielen', '', run ? '' : 'primary') +
+      menuBtn('newspec', 'Zwei Computern zuschauen', ' title="Zwei Computerspieler spielen gegeneinander, du schaust zu (für Spielablauf und Statistik)"') + back + '</div>';
+  } else if (pg === 'multi') {
+    offerTries = 0;
+    h += '<h2>Mehrspieler</h2><p class="note" style="text-align:center">Zwei Geräte, ein Raum</p><div class="menulist">' +
+      '<p id="mpna" class="note" style="text-align:center">Verbindung wird geprüft …</p>' +
+      '<div id="mpbox" class="mpbox" style="display:none"><div class="mprow">' + menuBtn('mphost', 'Raum erstellen') + '<input id="mpcode" maxlength="5" placeholder="Code" autocomplete="off" spellcheck="false">' + menuBtn('mpjoin', 'Beitreten') + '</div><div id="mpmsg" class="note"></div></div>' + back + '</div>';
+  } else if (pg === 'settings') {
+    h += '<h2>Einstellungen</h2><div class="menulist setpage">' + settingsHTML() + back + '</div>';
+  } else if (pg === 'about') {
+    h += '<p class="note intro" style="margin-top:-2px"><b>Danke, dass du Magus testest!</b> ' + versionenHTML() + '</p><div class="menulist">' + back + '</div>';
+  } else if (pg === 'credits') {
+    h += '<h2>Credits</h2><p class="note" style="text-align:center">Danke fürs Testspielen an</p><div class="menulist"><p class="note" style="text-align:center;font-size:21px;line-height:1.7"><b>DarkParladin</b><br><b>Deekixx</b><br><b>H5</b><br><b>Leon aka Tim</b><br><b>Zockerboy</b></p>' + back + '</div>';
+  } else if (pg === 'quit') {
+    h += '<p class="note" style="text-align:center;font-size:19px">Danke fürs Spielen!<br>Ein Browser-Tab lässt sich vom Spiel aus nicht immer schließen. Schließe diesen Tab oder dieses Fenster einfach selbst.</p><div class="menulist">' + back + '</div>';
+  }
+  overlay.innerHTML = h + '</div>';
+  if (pg === 'multi') mpOffer();
 }
 /* ---------- Ablauf ---------- */
 function helpTxt(res) { return res.help ? 'Ausgleich ' + (res.help.both ? 'für beide' : 'für den Verlierer') + ': ' + [res.help.points ? res.help.points + ' Upgrade-Punkt' + (res.help.points > 1 ? 'e' : '') : '', res.help.gold ? res.help.gold + ' Gold' : ''].filter(Boolean).join(' und ') : ''; }

@@ -70,49 +70,10 @@ let manaPv = 0;   // Manakosten der markierten Karten, als rote Vorschau am Mana
 function combatCenter(cx) {
   manaPv = 0;
   const c = cx.c, my = myTurn(), atk = c.action === 'attack';
-  let h = '<div class="combatcenter"><div class="sc" style="font-size:22px;color:var(--gold)">' + (c.mode === 'showdown' ? 'Showdown' : 'Kampf gegen ' + esc(c.sides.b.name)) + '</div>' + (function () {   // Rundenzähler; mit Erschöpfung (seit 0.7.7.2) und optionalem Rundenlimit maxRounds (Standard aus)
-    const rd = Math.floor((c.atkTurns || 0) / 2) + 1, mr = G.rules.maxRounds, ex = G.rules.exhaustRounds || 0, lv = ex > 0 ? Math.floor((rd - 1) / ex) : 0;
-    const tip = 'Eine Kampfrunde ist ein Angriffszug jeder Seite.' + (ex > 0 ? ' Nach je ' + ex + ' Runden steigt die Erschöpfung um 1: Beide Seiten verlieren am Ende ihres Angriffszugs so viele HP, wie die Erschöpfung hoch ist.' : '') + (mr > 0 ? ' Nach ' + mr + ' Runden endet der Kampf unentschieden.' : '');
-    return '<div class="note" style="margin-top:-2px" title="' + tip + '">Runde <b>' + (mr > 0 ? Math.min(mr, rd) : rd) + '</b>' + (mr > 0 ? ' von ' + mr : '') + (lv > 0 ? ' · <b style="color:#e0605a">Erschöpfung ' + lv + '</b>' : (ex > 0 ? ' · Erschöpfung ab Runde ' + (ex + 1) : '')) + '</div>';
-  })();
+  let h = '<div class="combatcenter"><div class="sc" style="font-size:22px;color:var(--gold)">' + (c.mode === 'showdown' ? 'Showdown' : 'Kampf gegen ' + esc(c.sides.b.name)) + '</div>' + combatRoundNote(c);
   if (!(c.forced && (c.forced.kind === 'trap' || c.forced.kind === 'sight'))) h += phaseBadge(c, my);
-  if (c.forced && c.forced.kind === 'trap') {   // Falle: eine der gezogenen Karten wählen (ich, im Vordergrund) bzw. warten (Gegner)
-    const vs = c.sides.a.ctrl === c.forced.pid ? c.sides.a : c.sides.b;
-    h += c.forced.pid === ME
-      ? '<div class="preview"><b>Falle:</b> Wähle eine der gezogenen Karten, die du verdeckt vor dich legst (die Karten liegen im Vordergrund). Die übrigen kommen auf den Ablagestapel.</div>'
-      : '<div class="preview"><b>Falle:</b> ' + esc(vs.name) + ' wählt eine Karte für die Falle …</div>';
-    h += '</div>';
-    return '<div class="panel" style="' + box(LAYOUT.combat, 'padding:10px 14px') + '">' + h + '</div>';
-  }
-  if (c.forced && c.forced.kind === 'sight') {   // Hellsicht: je gezogener Karte Hand, Ablage oder Händler wählen (ich) bzw. warten (Gegner)
-    const vs = c.sides.a.ctrl === c.forced.pid ? c.sides.a : c.sides.b, cards = c.forced.cards;
-    if (c.forced.pid === ME) h += '<div class="preview"><b>Hellsicht:</b> Wähle ' + c.forced.n + ' Karte' + (c.forced.n === 1 ? '' : 'n') + ', die du offen vor dich legst (die Karten liegen im Vordergrund).</div>';
-    else h += '<div class="preview"><b>Hellsicht:</b> ' + esc(vs.name) + ' wählt ' + c.forced.n + ' von ' + cards.length + ' gezogenen Karten …</div>';
-    h += '</div>';
-    return '<div class="panel" style="' + box(LAYOUT.combat, 'padding:10px 14px') + '">' + h + '</div>';
-  }
-  let prev = '', canExec = false, val = 0;   // val: Wert der markierten Karten (Schaden bzw. Block) für den Knopf
-  if (my) {
-    const sel = M.selection(cx.mine.deck);
-    if (atk) {
-      if (!sel.length) prev = '';
-      else {
-        const ev = M.evalAttack(cx.myStats, sel, { combo: M.allowed(G, 'attack', 'combo') });
-        if (ev.valid) manaPv = ev.cost;
-        prev = '';
-        canExec = ev.valid && ev.affordable; val = ev.valid && ev.prim ? ev.damage : 0;
-        const lvC = ev.valid ? M.levelsFor(ev) : ev.levels;
-        if (ev.valid && ev.levels.echo) prev += '<div class="note">Echo (' + NAMES[cx.myStats.echo] + '): Kombo +1 Stufe</div>';
-        if (ev.valid && lvC.ew > 0 && !(ev.levels.ulti > 0)) prev += lfSummary(cx, lvC.ew);
-        if (!ev.affordable) prev += '<div class="bad">Zu wenig Mana.</div>';
-      }
-    } else {
-      const ev = c.pending > 0 ? M.evalDefense(cx.myStats, sel, c.color, { combo: M.allowed(G, 'defense', 'combo') }) : { valid: true };   // Reaktion ohne Angriff: nichts zu verteidigen
-      if (!sel.length || !c.pending) prev = '';
-      else if (!ev.valid) prev = '<span class="bad">' + esc(ev.reason) + '</span>';
-      else { if (ev.cost > 0) manaPv = ev.cost; prev = ''; canExec = ev.affordable; val = ev.block || 0; if (ev.ord) { const r = ORD_ROWS.find(x => x[0] === ev.ord.key), late = ev.ord.key === 'gh' || ev.ord.key === 'wt' || ev.ord.key === 'ws'; prev += '<div class="note"><b>' + r[1] + '</b> Stufe ' + ev.ord.lvl + (late ? ' nach' : ' vor') + ' der Verteidigung: ' + ordText(r[0], ev.ord.lvl) + '</div>'; if (ev.ord.key === 'gr') prev += lfSummary(cx, ev.ord.lvl); } if (!ev.affordable) prev += '<div class="bad">Zu wenig Mana.</div>'; }
-    }
-  }
+  if (c.forced && (c.forced.kind === 'trap' || c.forced.kind === 'sight')) return '<div class="panel" style="' + box(LAYOUT.combat, 'padding:10px 14px') + '">' + h + combatForcedNote(c) + '</div></div>';
+  const pv = my ? combatPreview(cx, c, atk) : { prev: '', canExec: false, val: 0 }, prev = pv.prev, canExec = pv.canExec, val = pv.val;   // val: Wert der markierten Karten (Schaden bzw. Block) für den Knopf
   h += '<div class="preview">' + prev + '</div><div class="btnrow">';
   const canFlee = my && M.canFlee(G, ME), rg = M.recoverGain(G), manaFull = cx.myStats.mana >= cx.myStats.maxMana, drawNoMana = cx.myStats.mana < M.drawManaCost(G, ME);   // Erholen bei vollem Mana und Nachziehen ohne das Mana für den roten Marker sind sinnlos: Knöpfe inaktiv
   if (!canFlee) fleeAsk = false;
@@ -129,6 +90,51 @@ function combatCenter(cx) {
   }
   h += '</div>';
   return '<div class="panel" style="' + box(LAYOUT.combat, 'padding:10px 14px') + '">' + h + '</div>';
+}
+// Rundenzähler; mit Erschöpfung (seit 0.7.7.2) und optionalem Rundenlimit maxRounds (Standard aus)
+function combatRoundNote(c) {
+  const rd = Math.floor((c.atkTurns || 0) / 2) + 1, mr = G.rules.maxRounds, ex = G.rules.exhaustRounds || 0, lv = ex > 0 ? Math.floor((rd - 1) / ex) : 0;
+  const tip = 'Eine Kampfrunde ist ein Angriffszug jeder Seite.' + (ex > 0 ? ' Nach je ' + ex + ' Runden steigt die Erschöpfung um 1: Beide Seiten verlieren am Ende ihres Angriffszugs so viele HP, wie die Erschöpfung hoch ist.' : '') + (mr > 0 ? ' Nach ' + mr + ' Runden endet der Kampf unentschieden.' : '');
+  return '<div class="note" style="margin-top:-2px" title="' + tip + '">Runde <b>' + (mr > 0 ? Math.min(mr, rd) : rd) + '</b>' + (mr > 0 ? ' von ' + mr : '') + (lv > 0 ? ' · <b style="color:#e0605a">Erschöpfung ' + lv + '</b>' : (ex > 0 ? ' · Erschöpfung ab Runde ' + (ex + 1) : '')) + '</div>';
+}
+// Falle oder Hellsicht steht zur Entscheidung an: Hinweis für mich (die Karten liegen im Vordergrund) bzw. Wartetext, während der Gegner wählt.
+function combatForcedNote(c) {
+  let h = '';
+  if (c.forced.kind === 'trap') {
+    const vs = c.sides.a.ctrl === c.forced.pid ? c.sides.a : c.sides.b;
+    h += c.forced.pid === ME
+      ? '<div class="preview"><b>Falle:</b> Wähle eine der gezogenen Karten, die du verdeckt vor dich legst (die Karten liegen im Vordergrund). Die übrigen kommen auf den Ablagestapel.</div>'
+      : '<div class="preview"><b>Falle:</b> ' + esc(vs.name) + ' wählt eine Karte für die Falle …</div>';
+  } else {
+    const vs = c.sides.a.ctrl === c.forced.pid ? c.sides.a : c.sides.b, cards = c.forced.cards;
+    if (c.forced.pid === ME) h += '<div class="preview"><b>Hellsicht:</b> Wähle ' + c.forced.n + ' Karte' + (c.forced.n === 1 ? '' : 'n') + ', die du offen vor dich legst (die Karten liegen im Vordergrund).</div>';
+    else h += '<div class="preview"><b>Hellsicht:</b> ' + esc(vs.name) + ' wählt ' + c.forced.n + ' von ' + cards.length + ' gezogenen Karten …</div>';
+  }
+  return h;
+}
+// Vorschau meines Zugs aus den markierten Karten: Hinweistext, ob der Zug ausführbar ist, und sein Wert (Schaden bzw. Block); setzt die Mana-Vorschau manaPv.
+function combatPreview(cx, c, atk) {
+  let prev = '', canExec = false, val = 0;
+  const sel = M.selection(cx.mine.deck);
+  if (atk) {
+    if (!sel.length) prev = '';
+    else {
+      const ev = M.evalAttack(cx.myStats, sel, { combo: M.allowed(G, 'attack', 'combo') });
+      if (ev.valid) manaPv = ev.cost;
+      prev = '';
+      canExec = ev.valid && ev.affordable; val = ev.valid && ev.prim ? ev.damage : 0;
+      const lvC = ev.valid ? M.levelsFor(ev) : ev.levels;
+      if (ev.valid && ev.levels.echo) prev += '<div class="note">Echo (' + NAMES[cx.myStats.echo] + '): Kombo +1 Stufe</div>';
+      if (ev.valid && lvC.ew > 0 && !(ev.levels.ulti > 0)) prev += lfSummary(cx, lvC.ew);
+      if (!ev.affordable) prev += '<div class="bad">Zu wenig Mana.</div>';
+    }
+  } else {
+    const ev = c.pending > 0 ? M.evalDefense(cx.myStats, sel, c.color, { combo: M.allowed(G, 'defense', 'combo') }) : { valid: true };   // Reaktion ohne Angriff: nichts zu verteidigen
+    if (!sel.length || !c.pending) prev = '';
+    else if (!ev.valid) prev = '<span class="bad">' + esc(ev.reason) + '</span>';
+    else { if (ev.cost > 0) manaPv = ev.cost; prev = ''; canExec = ev.affordable; val = ev.block || 0; if (ev.ord) { const r = ORD_ROWS.find(x => x[0] === ev.ord.key), late = ev.ord.key === 'gh' || ev.ord.key === 'wt' || ev.ord.key === 'ws'; prev += '<div class="note"><b>' + r[1] + '</b> Stufe ' + ev.ord.lvl + (late ? ' nach' : ' vor') + ' der Verteidigung: ' + ordText(r[0], ev.ord.lvl) + '</div>'; if (ev.ord.key === 'gr') prev += lfSummary(cx, ev.ord.lvl); } if (!ev.affordable) prev += '<div class="bad">Zu wenig Mana.</div>'; }
+  }
+  return { prev, canExec, val };
 }
 // Rechte Kampfseite: Übersicht der Kombos (statt einer Doppelanzeige des Gegners, der steht schon oben rechts).
 function comboRef(cx) {

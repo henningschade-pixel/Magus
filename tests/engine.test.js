@@ -1201,14 +1201,14 @@ test('Echo digital: kein Marker mehr, die Schlange der Echo-Farbe bekommt Wellen
   assert.equal(EW.html('F', 120, { on: false }), '', 'abschaltbar');
   assert.equal((EW.html('E', 120, { waves: 0 }, 0).match(/class="ewv"/g) || []).length, 0, '0 Wellen: nur Leuchten');
   assert.notEqual(EW.html('F', 120, {}, 0), EW.html('E', 120, {}, 0), 'Ausschnitt und Farbe je Schlange');
-  const ui = ['12-hilfen.js', '16-seitenleisten.js', '18-kampf.js', '26a-darstellung.js'].map(f => fs.readFileSync(path.join(__dirname, '..', 'src', 'ui', f), 'utf8')).join('\n');
+  const ui = ['12-hilfen.js', '16-seitenleisten.js', '18-kampf.js', '26a-darstellung.js', '26c-startseite.js'].map(f => fs.readFileSync(path.join(__dirname, '..', 'src', 'ui', f), 'utf8')).join('\n');
   assert.ok(!/echoToken|placeEchoTokens|echotok/.test(ui), 'der Echo-Marker ist digital entfernt');
   assert.ok(/EchoWave\.html\(echo, size\)/.test(ui), 'boardHTML ruft die Echo-Ebene auf');
 });
 
 test('Versionsnummer: eine Konstante (MAGUS_VERSION) speist Menü-Link und Über-Seite, das Regelwerk hat einen Eintrag dazu (0.7.7.4)', () => {
   const fs = require('fs'), path = require('path');
-  const src = ['01-versionen.js', '26a-darstellung.js'].map(f => fs.readFileSync(path.join(__dirname, '..', 'src', 'ui', f), 'utf8')).join('\n');   // seit 0.13.1 stehen Nummer und Versionstexte in 01-versionen.js
+  const src = ['01-versionen.js', '26c-startseite.js'].map(f => fs.readFileSync(path.join(__dirname, '..', 'src', 'ui', f), 'utf8')).join('\n');   // seit 0.13.1 stehen Nummer und Versionstexte in 01-versionen.js, die Startseite in 26c-startseite.js
   const v = (src.match(/const MAGUS_VERSION = '([0-9.]+)'/) || [])[1];
   assert.ok(v, 'Konstante vorhanden');
   assert.ok(!/Neu in Version [0-9]/.test(src), 'keine fest eingetragene Versionsnummer in „Neu in Version“');
