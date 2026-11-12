@@ -1,9 +1,10 @@
 /* ---------- Versionen: Versionsnummer und Versionsbeschreibung (Seite „Neu in Version …“) ---------- */
 // Aktuelle Versionsnummer: einzige Stelle, an der sie gesetzt wird (Menü-Link und Über-Seite lesen sie von hier; bei jedem Schritt hochzählen)
-const MAGUS_VERSION = '0.13.2.1';
+const MAGUS_VERSION = '0.13.2.2';
 // Versionsbeschreibung: ein Eintrag je Version, die neueste zuerst. Bei jedem Schritt oben einen Eintrag [Nummer, Text] ergänzen;
 // der erste Eintrag gehört zu MAGUS_VERSION und erscheint unter „Neu in Version …“.
 const VERSIONEN = [
+  ['0.13.2.2', '<b>HP und Mana ohne Obergrenze:</b> Die maximalen HP und das maximale Mana lassen sich beliebig oft ausbauen (bisher höchstens zweimal). Jeder weitere Schritt kostet 1 Gold mehr als der vorige (1, 2, 3, 4 …), der Preis begrenzt den Ausbau also von selbst. Ausspiellimit (3), Handkarten (5) und Magie (3) behalten ihre Höchstwerte. Der Computergegner baut HP und Mana weiter bis 6 aus und steckt übriges Gold in die Magie; erst wenn alle Magie auf Stufe 3 steht, kauft er darüber hinaus HP und Mana.'],
   ['0.13.2.1', '<b>Ein HP je Upgrade:</b> Das HP-Upgrade erhöht die maximalen Lebenspunkte nur noch um 1 statt um 2. Die Preise bleiben (1 Gold, dann 2 Gold), es bleibt bei zwei Ausbauten, der Höchstwert liegt damit bei 6 statt 8 HP. Grund: +2 HP für 1 Gold war nach der Messung aus Version 0.13.2 der mit Abstand stärkste Kauf; mit 1 HP werden Magie und Bibliothek für die Monster wichtiger. Die Monster sind unverändert.'],
   ['0.13.2', '<b>Monster und Upgrade-Kosten neu vermessen (keine Regeländerung):</b> Mit dem vorausplanenden Computergegner wurde geprüft, wie gut sich die Monster jeder Stufe zu Beginn und nach dem Ausbau besiegen lassen und was jedes einzelne Upgrade bringt. Zu Beginn einer Stufe gewinnt der Angreifer 2 % (Stufe I), 13 % (II) und 21 % (III) der Kämpfe, mit dem Gold der Stufe, Magie und Bibliothek 75 %, 74 % und 60 %. Am Spiel ändert diese Version nichts; die Vorschläge dazu (unter anderem nur 1 HP je Upgrade) stehen im Regelwerk.'],
   ['0.13.1', '<b>Interner Umbau des Codes:</b> Der Quelltext ist neu geordnet (Kampfablauf, Kampfplan des Computergegners, Startseite und diese Versionstexte liegen in eigenen Dateien, lange Zeilen sind umgebrochen). An Regeln, Computergegner und Aussehen ändert sich nichts.'],

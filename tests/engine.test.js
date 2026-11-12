@@ -702,7 +702,7 @@ test('Steigende Preise (priceRise): jeder Kauf einer Kategorie verteuert die nä
   // tatsächliche Käufe zählen
   st.gold = 20; st.pending = 20;
   for (const [need, what] of [[1, 'hp'], [2, 'hp']]) { const g = st.gold; s.turn = 0; assert.ok(M.apply(s, { pid: 0, type: 'spend', what }).ok); assert.equal(g - st.gold, need, what + ' kostet ' + need); }
-  s.turn = 0; assert.equal(M.apply(s, { pid: 0, type: 'spend', what: 'hp' }).ok, false, 'ein dritter HP-Ausbau ist nicht möglich (höchstens Stufe 3)');
+  s.rules.maxUpgrades = 2; s.turn = 0; assert.equal(M.apply(s, { pid: 0, type: 'spend', what: 'hp' }).ok, false, 'mit maxUpgrades 2 (Stand bis 0.13.2.1) ist ein dritter HP-Ausbau nicht möglich'); s.rules.maxUpgrades = 0;
   const pn = st.pending; s.turn = 0; assert.ok(M.apply(s, { pid: 0, type: 'magic', elem: 'F' }).ok); assert.equal(pn - st.pending, 1);
   s.turn = 0; const pn2 = st.pending; assert.ok(M.apply(s, { pid: 0, type: 'magic', elem: 'E' }).ok); assert.equal(pn2 - st.pending, 2, 'zweiter Magie-Kauf kostet 2');
   s.turn = 0; const pn3 = st.pending; assert.ok(M.apply(s, { pid: 0, type: 'magic', elem: 'F' }).ok); assert.equal(pn3 - st.pending, 3, 'dritter Magie-Kauf kostet 3, auch wenn es nur Stufe 3 ist');
@@ -937,10 +937,15 @@ test('Jede Entwicklung der Spieler ist auf Stufe 3 begrenzt (zwei Ausbauten), Ko
   assert.equal(st.limit, 3);
   assert.deepEqual(run('slot'), [1, 2, null], 'Handplätze 3 → 5');
   assert.equal(p.slots, 5);
-  assert.deepEqual(run('hp'), [1, 2, null], 'max. HP 4 → 8');
-  assert.equal(st.maxHp, 6);
-  assert.deepEqual(run('mana'), [1, 2, null], 'max. Mana 4 → 6');
-  assert.equal(st.maxMana, 6);
+  assert.equal(s.rules.maxUpgrades, 0, 'seit 0.13.2.2: HP und Mana ohne Obergrenze');
+  assert.deepEqual(run('hp'), [1, 2, 3], 'max. HP 4 → 7, kein Ende');
+  assert.equal(st.maxHp, 7);
+  assert.deepEqual(run('mana'), [1, 2, 3], 'max. Mana 4 → 7, kein Ende');
+  assert.equal(st.maxMana, 7);
+  s.rules.maxUpgrades = 4;   // Schalter: höchstens so viele Ausbauten (2 = wie bis 0.13.2.1)
+  assert.deepEqual(run('hp'), [4, null, null], 'mit maxUpgrades 4 ist nach dem vierten Ausbau Schluss');
+  assert.equal(M.maxed(st, 'hp', s.rules), true);
+  s.rules.maxUpgrades = 0;
   assert.deepEqual(run('drawlimit'), [1, 2, null], 'Nachziehlimit 1 → 3');
   assert.equal(st.drawLimit, 3);
 });

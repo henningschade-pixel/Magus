@@ -7,12 +7,12 @@ const SUP = M.SUPERIOR, EL = M.ELEMENTS;
 function baseBuild(rules) {
   const r = Object.assign({}, M.DEFAULT_RULES, rules || {});
   return { hp: r.startHp, mana: 4, limit: r.startLimit, slots: M.MIN_SLOTS, mag: { F: 1, E: 1, W: 1 }, buys: { hp: 0, mana: 0, limit: 0, slot: 0, mag: 0 }, temple: { points: 0, level: 0 }, up: 0, gold: 0,
-    deck: ['F1', 'F1', 'F1', 'F1', 'E1', 'E1', 'E1', 'E1', 'W1', 'W1', 'W1', 'W1'], hpPer: r.hpPerPoint || 1, rise: r.priceRise || 0, cost: Object.assign({ hp: 1, mana: 1, limit: r.limitCost || 1, slot: 1 }, (rules || {}).cost || {}) };
+    deck: ['F1', 'F1', 'F1', 'F1', 'E1', 'E1', 'E1', 'E1', 'W1', 'W1', 'W1', 'W1'], hpPer: r.hpPerPoint || 1, maxUp: r.maxUpgrades || 0, rise: r.priceRise || 0, cost: Object.assign({ hp: 1, mana: 1, limit: r.limitCost || 1, slot: 1 }, (rules || {}).cost || {}) };
 }
 const clone = b => JSON.parse(JSON.stringify(b));
 function price(b, k) { return b.cost[k] * (1 + b.rise * b.buys[k]); }
 function canBuy(b, k) {
-  if (k === 'hp' || k === 'mana') return b.buys[k] < M.MAX_UPGRADES;
+  if (k === 'hp' || k === 'mana') return !b.maxUp || b.buys[k] < b.maxUp;   // maxUpgrades 0 = ohne Obergrenze (seit 0.13.2.2)
   if (k === 'limit') return b.limit < M.MAX_LIMIT;
   return b.slots < M.MAX_SLOTS;
 }

@@ -14,7 +14,7 @@ function regenGain(state) { const r = state.rules.regenByStage; return r ? (r[Ma
 // Kategorien: hp, mana, limit, slot, draw (Nachziehlimit) und mag (Magie, alle drei Richtungen zusammen, unabhängig von der Stufe); s.buys zählt die Käufe des Spielers.
 function bought(s, k) { return (s && s.buys && s.buys[k]) || 0; }
 function risen(state, base, s, k) { return base * (1 + (state.rules.priceRise || 0) * bought(s, k)); }
-function maxed(s, k) { return bought(s, k) >= MAX_UPGRADES; }   // HP und Mana der Spieler: höchstens zwei Ausbauten (Stufe 3)
+function maxed(s, k, rules) { const m = rules ? rules.maxUpgrades : MAX_UPGRADES; return m > 0 && bought(s, k) >= m; }   // HP und Mana der Spieler: seit 0.13.2.2 ohne Obergrenze (Regel maxUpgrades 0; 2 = wie bis 0.13.2.1 höchstens zwei Ausbauten). Ohne ‚rules‘ gilt die alte feste Grenze
 function buyCount(s, k) { s.buys = s.buys || {}; s.buys[k] = (s.buys[k] || 0) + 1; }
 function limitStepCost(state, s) { return risen(state, state.rules.limitCost > 0 ? state.rules.limitCost : (s.limit <= 1 ? state.rules.limitFirstStepCost : 1), s, 'limit'); }
 function manaStepCost(state, s) { return risen(state, 1, s, 'mana'); }

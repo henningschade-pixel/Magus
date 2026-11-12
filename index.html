@@ -718,7 +718,7 @@ function regenGain(state) { const r = state.rules.regenByStage; return r ? (r[Ma
 // Kategorien: hp, mana, limit, slot, draw (Nachziehlimit) und mag (Magie, alle drei Richtungen zusammen, unabhängig von der Stufe); s.buys zählt die Käufe des Spielers.
 function bought(s, k) { return (s && s.buys && s.buys[k]) || 0; }
 function risen(state, base, s, k) { return base * (1 + (state.rules.priceRise || 0) * bought(s, k)); }
-function maxed(s, k) { return bought(s, k) >= MAX_UPGRADES; }   // HP und Mana der Spieler: höchstens zwei Ausbauten (Stufe 3)
+function maxed(s, k, rules) { const m = rules ? rules.maxUpgrades : MAX_UPGRADES; return m > 0 && bought(s, k) >= m; }   // HP und Mana der Spieler: seit 0.13.2.2 ohne Obergrenze (Regel maxUpgrades 0; 2 = wie bis 0.13.2.1 höchstens zwei Ausbauten). Ohne ‚rules‘ gilt die alte feste Grenze
 function buyCount(s, k) { s.buys = s.buys || {}; s.buys[k] = (s.buys[k] || 0) + 1; }
 function limitStepCost(state, s) { return risen(state, state.rules.limitCost > 0 ? state.rules.limitCost : (s.limit <= 1 ? state.rules.limitFirstStepCost : 1), s, 'limit'); }
 function manaStepCost(state, s) { return risen(state, 1, s, 'mana'); }
@@ -1758,13 +1758,13 @@ function execSpend(state, pid, what) {
   if (s[f] <= 0) return fail(f === 'gold' ? 'Du hast kein Gold.' : 'Keine offenen Upgrade-Punkte.');
   let cost = 1;
   if (what === 'hp') {
-    if (bought(s, 'hp') >= MAX_UPGRADES) return fail('Die max. HP sind am Maximum (' + MAX_UPGRADES + ' Ausbauten).');
+    if (maxed(s, 'hp', state.rules)) return fail('Die max. HP sind am Maximum (' + state.rules.maxUpgrades + ' Ausbauten).');
     cost = hpStepCost(state, s);
     if (s[f] < cost) return fail('Die nächsten HP kosten ' + payTxt(state, f, cost) + '.');
     const n = state.rules.hpPerPoint || 1; s.maxHp += n; buyCount(s, 'hp');   // Upgrade erhöht nur das Maximum, die aktuellen HP bleiben
   }
   else if (what === 'mana') {
-    if (bought(s, 'mana') >= MAX_UPGRADES) return fail('Das max. Mana ist am Maximum (' + MAX_UPGRADES + ' Ausbauten).');
+    if (maxed(s, 'mana', state.rules)) return fail('Das max. Mana ist am Maximum (' + state.rules.maxUpgrades + ' Ausbauten).');
     cost = manaStepCost(state, s);
     if (s[f] < cost) return fail('Der nächste Mana-Schritt kostet ' + payTxt(state, f, cost) + '.');
     s.maxMana++; buyCount(s, 'mana');   // nur das Maximum steigt, das aktuelle Mana bleibt
@@ -1856,7 +1856,7 @@ function applyWorld(state, a) {
 /* Magus – Regelkern (Teil 8): Spielstart und Schnittstelle nach außen. */
 
 // Regelwerte (Abstimmungs- und Variantenschalter). ‚curses‘: Fluchsystem, siehe 30-curses.js.
-const DEFAULT_RULES = { maxRounds: 0, exhaustRounds: 10, priceRise: 1, startHp: 4, startLimit: 1, startSp: 3, surplusSp: 1, swapCosts: 1, limitCost: 1, limitFirstStepCost: 1, hpPerPoint: 1, stagePoints: [0, 0, 0, 0], stageGold: [0, 3, 6, 9], loserUp: 0, loserUp2: 0, winLead: 4, winSpFromShowdown: 1, monsterSp: 1, monsterLoot: 0, fleeAllowed: 0, allowAtk: { attack: 1, recover: 1, draw: 1, pass: 1, echo: 1, combo: 1 }, allowDef: { defend: 2, recover: 0, draw: 0, pass: 1, echo: 0, combo: 1 }, idleLimit: 0, drawMarker: 0, drawPenaltyGold: 1, drawPenaltyMana: 1, drawLimitCost: [1, 1], lossHelp: 1, lossGold: [0, 1, 2, 3], lossPoints: [0, 0, 0, 0], lossBoth: 0, showdownSp: 1, lootBoth: true, recoverByStage: [1, 2, 3], regenByStage: [1, 2, 3], supply: 8, supply2: 6, supply3: 4, startCards: 0 };   // Jede gespielte Karte (auch Kombokarten) kostet 1 Mana, nur Verteidigung in der überlegenen Farbe ist gratis. recoverByStage: Mana-Gewinn von „Erholen“ im Kampf je Abschnitt
+const DEFAULT_RULES = { maxRounds: 0, exhaustRounds: 10, priceRise: 1, startHp: 4, startLimit: 1, startSp: 3, surplusSp: 1, swapCosts: 1, limitCost: 1, limitFirstStepCost: 1, hpPerPoint: 1, maxUpgrades: 0, stagePoints: [0, 0, 0, 0], stageGold: [0, 3, 6, 9], loserUp: 0, loserUp2: 0, winLead: 4, winSpFromShowdown: 1, monsterSp: 1, monsterLoot: 0, fleeAllowed: 0, allowAtk: { attack: 1, recover: 1, draw: 1, pass: 1, echo: 1, combo: 1 }, allowDef: { defend: 2, recover: 0, draw: 0, pass: 1, echo: 0, combo: 1 }, idleLimit: 0, drawMarker: 0, drawPenaltyGold: 1, drawPenaltyMana: 1, drawLimitCost: [1, 1], lossHelp: 1, lossGold: [0, 1, 2, 3], lossPoints: [0, 0, 0, 0], lossBoth: 0, showdownSp: 1, lootBoth: true, recoverByStage: [1, 2, 3], regenByStage: [1, 2, 3], supply: 8, supply2: 6, supply3: 4, startCards: 0 };   // Jede gespielte Karte (auch Kombokarten) kostet 1 Mana, nur Verteidigung in der überlegenen Farbe ist gratis. recoverByStage: Mana-Gewinn von „Erholen“ im Kampf je Abschnitt
 
 function newPlayer(state, name, ai, startIds) {
   const p = { name, ai: !!ai, stats: newStats(), temple: { points: 0, level: 0 }, sp: state.rules.startSp || 0, slots: MIN_SLOTS, drawRed: false, drawN: 0 };   // drawN: Nachziehvorgänge seit der letzten anderen Aktion (höchstens Nachziehlimit), drawRed: Marker rot
@@ -1956,7 +1956,7 @@ return { allowed, ELEMENTS, SUPERIOR, NAMES, START_DECK, MAX_MAGIC, MAX_SLOTS, M
 // Alle Gewichte der KI an einer Stelle (abgestimmt per Selbstspiel: Änderungen wurden nur übernommen, wenn sie sich in 800 Partien mit getauschten Plätzen klar durchsetzten). Pro Platz überschreibbar (setParams), damit Varianten gegeneinander spielen können.
 const DEFAULTS = {
   // Ausbaureihenfolge der Upgrade-Punkte
-  limitA: 1, slotA: 5, manaA: 4, hpA: 7, limitB: 3, slotB: 5,
+  limitA: 1, slotA: 5, manaA: 4, hpA: 6, limitB: 3, slotB: 5, hpB: 6, manaB: 6,   // hpB/manaB (seit 0.13.2.2): bis zu diesen Höchstwerten baut die KI HP und Mana aus (die Regel selbst kennt keine Grenze mehr; erst wenn alle Magie auf der Höchststufe steht, geht übriges Gold weiter in HP und Mana). Selbstspiel, 2000 Partien gegen 6/6/6: hpB 7 50,1 %, 8 46,5 %, 10 44,6 %, ohne Grenze 44,3 %; manaB 5 49,9 %, 7 48,9 %, 8 42,7 %, ohne Grenze 38,6 %; hpA 4 42,6 %, 5 39,7 %, 7 48,9 %, 8 45,7 %
   // Lust, ein Monster anzugreifen
   cBase: 34, cHp: 3, cMana: 1.5, cWt: 3.5, cMon: 0.8, minHp: 1, minMana: 2,
   // Nachziehmarker rot (Nachziehen schenkt dem Gegner Gold bzw. ein Nachziehtoken): dRed Abschlag auf das
@@ -2104,14 +2104,15 @@ function pickSpend(p, state, pid) {
   const s = p.stats, Q = P(pid);
   const lc = M.limitStepCost(state, s);
   const canL = lc <= upv(state, s);
-  const canM = !M.maxed(s, 'mana') && M.manaStepCost(state, s) <= upv(state, s), canH = !M.maxed(s, 'hp') && M.hpStepCost(state, s) <= upv(state, s), canS = p.slots < M.MAX_SLOTS && M.slotStepCost(state, s) <= upv(state, s);   // seit 0.3.2 steigen alle Preise mit jedem Kauf
+  const canM = !M.maxed(s, 'mana', state.rules) && M.manaStepCost(state, s) <= upv(state, s), canH = !M.maxed(s, 'hp', state.rules) && M.hpStepCost(state, s) <= upv(state, s), canS = p.slots < M.MAX_SLOTS && M.slotStepCost(state, s) <= upv(state, s);   // seit 0.3.2 steigen alle Preise mit jedem Kauf
   const pl = stratPlan(state, pid);
   if (pl.st === 1 && s.limit < 2) return canL ? 'limit' : null;   // auf Ausspiellimit 2 sparen
   const noSlot = stratSlotLock(state, p, pid);
   const canD = !!state.rules.drawMarker && s.drawLimit < Math.min(Q.dlMax, M.MAX_DRAW_LIMIT) && M.drawLimitCost(state, s) <= upv(state, s);   // Nachziehlimit (Upgrade-Punkte) bis Stufe dlMax, an Stelle dlPos der Reihenfolge
+  const magFull = M.ELEMENTS.every(e => s.mag[e] >= M.MAX_MAGIC);   // alle Magie ausgebaut: Gold hat keine andere Verwendung mehr
   const order = [
     ['limit', s.limit < Q.limitA && canL], ['slot', p.slots < Q.slotA && canS], ['mana', s.maxMana < Q.manaA && canM], ['hp', s.maxHp < Q.hpA && canH],
-    ['limit', s.limit < Q.limitB && canL], ['slot', p.slots < Q.slotB && canS], ['hp', canH], ['mana', canM], ['limit', s.limit < M.MAX_LIMIT && canL],
+    ['limit', s.limit < Q.limitB && canL], ['slot', p.slots < Q.slotB && canS], ['hp', (s.maxHp < Q.hpB || magFull) && canH], ['mana', (s.maxMana < Q.manaB || magFull) && canM], ['limit', s.limit < M.MAX_LIMIT && canL],
   ];
   order.splice(Math.max(0, Math.min(order.length, Q.dlPos)), 0, ['drawlimit', canD]);
   if (s.limit < Q.limitA && !canL && upv(state, s) < lc) return null;   // auf den Limit-Schritt sparen
@@ -2895,10 +2896,11 @@ let upSeen = null, hpHold = null, curseHold = {}, stageSeen = 1, endSnd = null, 
 
 /* ---------- Versionen: Versionsnummer und Versionsbeschreibung (Seite „Neu in Version …“) ---------- */
 // Aktuelle Versionsnummer: einzige Stelle, an der sie gesetzt wird (Menü-Link und Über-Seite lesen sie von hier; bei jedem Schritt hochzählen)
-const MAGUS_VERSION = '0.13.2.1';
+const MAGUS_VERSION = '0.13.2.2';
 // Versionsbeschreibung: ein Eintrag je Version, die neueste zuerst. Bei jedem Schritt oben einen Eintrag [Nummer, Text] ergänzen;
 // der erste Eintrag gehört zu MAGUS_VERSION und erscheint unter „Neu in Version …“.
 const VERSIONEN = [
+  ['0.13.2.2', '<b>HP und Mana ohne Obergrenze:</b> Die maximalen HP und das maximale Mana lassen sich beliebig oft ausbauen (bisher höchstens zweimal). Jeder weitere Schritt kostet 1 Gold mehr als der vorige (1, 2, 3, 4 …), der Preis begrenzt den Ausbau also von selbst. Ausspiellimit (3), Handkarten (5) und Magie (3) behalten ihre Höchstwerte. Der Computergegner baut HP und Mana weiter bis 6 aus und steckt übriges Gold in die Magie; erst wenn alle Magie auf Stufe 3 steht, kauft er darüber hinaus HP und Mana.'],
   ['0.13.2.1', '<b>Ein HP je Upgrade:</b> Das HP-Upgrade erhöht die maximalen Lebenspunkte nur noch um 1 statt um 2. Die Preise bleiben (1 Gold, dann 2 Gold), es bleibt bei zwei Ausbauten, der Höchstwert liegt damit bei 6 statt 8 HP. Grund: +2 HP für 1 Gold war nach der Messung aus Version 0.13.2 der mit Abstand stärkste Kauf; mit 1 HP werden Magie und Bibliothek für die Monster wichtiger. Die Monster sind unverändert.'],
   ['0.13.2', '<b>Monster und Upgrade-Kosten neu vermessen (keine Regeländerung):</b> Mit dem vorausplanenden Computergegner wurde geprüft, wie gut sich die Monster jeder Stufe zu Beginn und nach dem Ausbau besiegen lassen und was jedes einzelne Upgrade bringt. Zu Beginn einer Stufe gewinnt der Angreifer 2 % (Stufe I), 13 % (II) und 21 % (III) der Kämpfe, mit dem Gold der Stufe, Magie und Bibliothek 75 %, 74 % und 60 %. Am Spiel ändert diese Version nichts; die Vorschläge dazu (unter anderem nur 1 HP je Upgrade) stehen im Regelwerk.'],
   ['0.13.1', '<b>Interner Umbau des Codes:</b> Der Quelltext ist neu geordnet (Kampfablauf, Kampfplan des Computergegners, Startseite und diese Versionstexte liegen in eigenen Dateien, lange Zeilen sind umgebrochen). An Regeln, Computergegner und Aussehen ändert sich nichts.'],
@@ -3727,8 +3729,8 @@ function statsBlock(name, s, p, size, up, full) {
   const pl = (ok, w, title, attr) => ok ? '<button class="up ' + UC + '" data-act="' + (attr || 'spend') + '" ' + (attr ? 'data-e' : 'data-w') + '="' + w + '" title="' + title + '"></button>' : '';
   // Schritte, die mehr als 1 Upgrade-Punkt kosten, bleiben sichtbar (abgedunkelt, solange die Punkte fehlen) und tragen eine Kostenzahl.
   const plc = (show, afford, w, label, c) => !show ? '' : '<button class="up ' + UC + (c > 1 ? ' costly' : '') + (afford ? '' : ' off') + '" data-act="spend" data-w="' + w + '"' + (c > 1 ? ' data-c="' + c + '"' : '') + (afford ? '' : ' disabled') + ' title="' + label + ' (' + M.payTxt(G, UF, c) + (afford ? '' : UF === 'gold' ? ', dir fehlt Gold' : ', dir fehlen Punkte') + ')"></button>';
-  const hpPl = M.maxed(s, 'hp') ? '' : hc > 1 ? plc(up && anyT && pend > 0, pend >= hc, 'hp', '+' + (G.rules.hpPerPoint || 1) + ' max. HP', hc) : pl(up && anyT && pend > 0, 'hp', '+' + (G.rules.hpPerPoint || 1) + ' max. HP (' + one + ')');
-  const manaPl = M.maxed(s, 'mana') ? '' : mc > 1 ? plc(up && anyT && pend > 0, pend >= mc, 'mana', '+1 max. Mana', mc) : pl(up && anyT && pend > 0, 'mana', '+1 max. Mana (' + one + ')');
+  const hpPl = M.maxed(s, 'hp', G.rules) ? '' : hc > 1 ? plc(up && anyT && pend > 0, pend >= hc, 'hp', '+' + (G.rules.hpPerPoint || 1) + ' max. HP', hc) : pl(up && anyT && pend > 0, 'hp', '+' + (G.rules.hpPerPoint || 1) + ' max. HP (' + one + ')');
+  const manaPl = M.maxed(s, 'mana', G.rules) ? '' : mc > 1 ? plc(up && anyT && pend > 0, pend >= mc, 'mana', '+1 max. Mana', mc) : pl(up && anyT && pend > 0, 'mana', '+1 max. Mana (' + one + ')');
   const limPl = lc > 1 ? plc(up && anyT && pend > 0 && s.limit < M.MAX_LIMIT, pend >= lc, 'limit', '+1 Ausspiellimit', lc) : pl(up && anyT && pend >= lc && s.limit < M.MAX_LIMIT, 'limit', '+1 Ausspiellimit (' + one + ')');
   const lead = b => compact ? '' : '<span class="lead">' + (b || '') + '</span>';   // Upgrade-Knöpfe stehen links neben dem Symbol; ohne Knöpfe schrumpft die Spalte auf 0 (Ausrichtung wie beim Gegner)
   // Opfern: goldener Münzknopf links neben dem Gold (wie die Upgrade-Knöpfe, die Zahl als Plakette erst ab 2; bei 0 transparent, seit 0.5.6.6); die Pfeile ◀ ▶ daneben stellen die Anzahl ein
