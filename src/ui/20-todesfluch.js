@@ -48,15 +48,40 @@ const CurseFx = (() => {
     }
     ctx.restore();
     const pil = p.pillar * seg(u, .55, .68) * (1 - seg(u, .94, 1)) * ga;   // Lichtsäule
-    if (pil > 0) { const pw = (46 + g * 80) * p.size * (1 + (pulse - 1) * .6); ctx.save(); ctx.globalCompositeOperation = 'lighter'; const gy = ctx.createLinearGradient(0, C.y, 0, C.y - 400); gy.addColorStop(0, rgba(col, .5 * pil * flick)); gy.addColorStop(1, rgba(col, 0)); [1, .62, .3].forEach((f, i) => { ctx.fillStyle = gy; ctx.globalAlpha = i ? .7 : .35; ctx.fillRect(C.x - pw * f / 2, C.y - 400, pw * f, 400); }); ctx.restore(); }
+    if (pil > 0) {
+      const pw = (46 + g * 80) * p.size * (1 + (pulse - 1) * .6);
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const gy = ctx.createLinearGradient(0, C.y, 0, C.y - 400);
+      gy.addColorStop(0, rgba(col, .5 * pil * flick));
+      gy.addColorStop(1, rgba(col, 0));
+      [1, .62, .3].forEach((f, i) => { ctx.fillStyle = gy; ctx.globalAlpha = i ? .7 : .35; ctx.fillRect(C.x - pw * f / 2, C.y - 400, pw * f, 400); });
+      ctx.restore();
+    }
     const nP = Math.round(p.particles), pa = seg(u, .5, .68) * (1 - seg(u, .9, 1));   // Funken
     if (nP > 0 && pa > 0) {
       const pr = rng(p.seed + 3); ctx.save(); ctx.globalCompositeOperation = 'lighter';
-      for (let i = 0; i < nP; i++) { const r1 = pr(), r2 = pr(), r3 = pr(), ph = (r1 + t * (.18 + .4 * r2) / (p.dur / 3)) % 1, an = r1 * Math.PI * 2, rad = R * Math.sqrt(r2) * .95, x = C.x + Math.cos(an) * rad * sc, y0 = C.y + Math.sin(an) * rad * tilt * sc, y = y0 - ph * 480 * .5 * (.5 + r3); ctx.fillStyle = rgba(lighten(col, .4), Math.sin(Math.PI * ph) * pa * .9); ctx.beginPath(); ctx.arc(x + Math.sin(ph * 9 + r3 * 6) * 6, y, 1 + r3 * 2, 0, 7); ctx.fill(); }
+      for (let i = 0; i < nP; i++) {
+        const r1 = pr(), r2 = pr(), r3 = pr(), ph = (r1 + t * (.18 + .4 * r2) / (p.dur / 3)) % 1, an = r1 * Math.PI * 2, rad = R * Math.sqrt(r2) * .95, x = C.x + Math.cos(an) * rad * sc, y0 = C.y + Math.sin(an) * rad * tilt * sc, y = y0 - ph * 480 * .5 * (.5 + r3);
+        ctx.fillStyle = rgba(lighten(col, .4), Math.sin(Math.PI * ph) * pa * .9);
+        ctx.beginPath();
+        ctx.arc(x + Math.sin(ph * 9 + r3 * 6) * 6, y, 1 + r3 * 2, 0, 7);
+        ctx.fill();
+      }
       ctx.restore();
     }
     const sw = seg(u, .93, 1);   // Schockring und Blitz
-    if (sw > 0 && sw < 1) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const rr2 = R * (.15 + 1.1 * eo(sw)); ctx.strokeStyle = rgba(lighten(col, .5), (1 - sw) * .9); ctx.lineWidth = 5 * (1 - sw) + 1; ctx.beginPath(); ctx.ellipse(C.x, C.y, rr2, rr2 * tilt, 0, 0, 7); ctx.stroke(); ctx.restore(); }
+    if (sw > 0 && sw < 1) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const rr2 = R * (.15 + 1.1 * eo(sw));
+      ctx.strokeStyle = rgba(lighten(col, .5), (1 - sw) * .9);
+      ctx.lineWidth = 5 * (1 - sw) + 1;
+      ctx.beginPath();
+      ctx.ellipse(C.x, C.y, rr2, rr2 * tilt, 0, 0, 7);
+      ctx.stroke();
+      ctx.restore();
+    }
     const fl = ignite * .18 + .85 * seg(u, .9, .93) * (1 - seg(u, .93, .99));
     if (fl > 0) { ctx.fillStyle = rgba(lighten(col, .75), fl * .6); ctx.fillRect(-BIG, -BIG, 2 * BIG, 2 * BIG); }
     ctx.restore();

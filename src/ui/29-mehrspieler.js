@@ -5,7 +5,9 @@ let MP = null, roomApi;
 const MP_KEY = 'magus-mp';
 // Kennung dieser Spielversion: beide Geräte müssen denselben Programmtext haben, sonst rechnen sie unterschiedlich.
 const BUILD = (() => { let h = 2166136261; const t = [...document.scripts].map(x => x.text).join(''); for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); })();
-function mpOldVersion(who) { mpWait('Andere Spielversion', '<p class="bad">' + who + ' hat eine andere Version von Magus geladen.</p><p class="note">Bitte auf beiden Geräten die Seite mit Strg+F5 (Handy: Seite neu laden, notfalls Cache leeren) neu laden und danach einen neuen Raum erstellen.</p>'); }
+function mpOldVersion(who) {
+  mpWait('Andere Spielversion', '<p class="bad">' + who + ' hat eine andere Version von Magus geladen.</p><p class="note">Bitte auf beiden Geräten die Seite mit Strg+F5 (Handy: Seite neu laden, notfalls Cache leeren) neu laden und danach einen neuen Raum erstellen.</p>');
+}
 async function mpRoomApi() {
   if (roomApi) return roomApi;
   try { roomApi = window.claude && window.claude.use ? await window.claude.use('room') : null; } catch (e) { roomApi = null; }
@@ -100,7 +102,15 @@ async function mpJoin() {
   if (!(await mpOpen(code, false))) return;
   mpWait('Raum ' + code.toUpperCase(), '<p class="note">Verbinde mit dem Gastgeber …</p>');
   let tries = 0;
-  const ask = () => { if (!MP) return; if (++tries > 12) { clearInterval(MP.hello); mpWait('Raum ' + code.toUpperCase(), '<p class="bad">Kein Gastgeber gefunden. Stimmt der Code, und ist der Raum auf dem anderen Gerät noch offen?</p>' + (MP.room.peerjs ? '<p class="note">Technisch: ' + [MP.room.srv || 'Vermittlungsserver nicht erreicht', MP.room.err ? 'Fehler ' + MP.room.err : '', MP.room.ice ? 'ICE ' + MP.room.ice : ''].filter(Boolean).join(' · ') + '</p>' : '')); return; } mpEmit('hello', { v: BUILD }); };
+  const ask = () => {
+    if (!MP) return;
+    if (++tries > 12) {
+      clearInterval(MP.hello);
+      mpWait('Raum ' + code.toUpperCase(), '<p class="bad">Kein Gastgeber gefunden. Stimmt der Code, und ist der Raum auf dem anderen Gerät noch offen?</p>' + (MP.room.peerjs ? '<p class="note">Technisch: ' + [MP.room.srv || 'Vermittlungsserver nicht erreicht', MP.room.err ? 'Fehler ' + MP.room.err : '', MP.room.ice ? 'ICE ' + MP.room.ice : ''].filter(Boolean).join(' · ') + '</p>' : ''));
+      return;
+    }
+    mpEmit('hello', { v: BUILD });
+  };
   MP.hello = setInterval(ask, 2000); ask();
 }
 async function mpLeave() {

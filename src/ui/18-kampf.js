@@ -132,7 +132,18 @@ function combatPreview(cx, c, atk) {
     const ev = c.pending > 0 ? M.evalDefense(cx.myStats, sel, c.color, { combo: M.allowed(G, 'defense', 'combo') }) : { valid: true };   // Reaktion ohne Angriff: nichts zu verteidigen
     if (!sel.length || !c.pending) prev = '';
     else if (!ev.valid) prev = '<span class="bad">' + esc(ev.reason) + '</span>';
-    else { if (ev.cost > 0) manaPv = ev.cost; prev = ''; canExec = ev.affordable; val = ev.block || 0; if (ev.ord) { const r = ORD_ROWS.find(x => x[0] === ev.ord.key), late = ev.ord.key === 'gh' || ev.ord.key === 'wt' || ev.ord.key === 'ws'; prev += '<div class="note"><b>' + r[1] + '</b> Stufe ' + ev.ord.lvl + (late ? ' nach' : ' vor') + ' der Verteidigung: ' + ordText(r[0], ev.ord.lvl) + '</div>'; if (ev.ord.key === 'gr') prev += lfSummary(cx, ev.ord.lvl); } if (!ev.affordable) prev += '<div class="bad">Zu wenig Mana.</div>'; }
+    else {
+      if (ev.cost > 0) manaPv = ev.cost;
+      prev = '';
+      canExec = ev.affordable;
+      val = ev.block || 0;
+      if (ev.ord) {
+        const r = ORD_ROWS.find(x => x[0] === ev.ord.key), late = ev.ord.key === 'gh' || ev.ord.key === 'wt' || ev.ord.key === 'ws';
+        prev += '<div class="note"><b>' + r[1] + '</b> Stufe ' + ev.ord.lvl + (late ? ' nach' : ' vor') + ' der Verteidigung: ' + ordText(r[0], ev.ord.lvl) + '</div>';
+        if (ev.ord.key === 'gr') prev += lfSummary(cx, ev.ord.lvl);
+      }
+      if (!ev.affordable) prev += '<div class="bad">Zu wenig Mana.</div>';
+    }
   }
   return { prev, canExec, val };
 }

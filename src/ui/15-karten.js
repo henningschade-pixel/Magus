@@ -61,7 +61,11 @@ function place(card, s) {
   d.classList.toggle('down', !!s.down); d.classList.toggle('marked', !!s.marked); d.classList.toggle('first', !!s.first); d.classList.toggle('fd', !!s.fd); d.classList.toggle('cand', !!s.cand); d.classList.toggle('locked', !!s.locked); d.classList.toggle('sightopen', !!s.free);
   d.classList.toggle('myhand', !!s.mine); d.dataset.slot = s.slot === undefined ? '' : s.slot;
   d.style.pointerEvents = s.mine ? 'auto' : 'none';
-  if (flipped) { const ms = CardFlip.hand(d.querySelector('.inner'), s.down ? 0 : 180, s.down ? 180 : 0, wait); cardsUntil = Math.max(cardsUntil, Date.now() + ms); }   // Volle Drehung (Kartendreh-Werkstatt); nur Karten, die in die Hand kommen oder sie verlassen (Austeilen, Aufdecken); Mischen und Ablegen drehen ohne Animation
+  // Volle Drehung (Kartendreh-Werkstatt); nur Karten, die in die Hand kommen oder sie verlassen (Austeilen, Aufdecken); Mischen und Ablegen drehen ohne Animation
+  if (flipped) {
+    const ms = CardFlip.hand(d.querySelector('.inner'), s.down ? 0 : 180, s.down ? 180 : 0, wait);
+    cardsUntil = Math.max(cardsUntil, Date.now() + ms);
+  }
 }
 function slotX(i, n, L) {
   const w = CW * L.s, step = n > 1 ? Math.min(L.gap, (L.span - w) / (n - 1)) : 0, total = w + step * (n - 1);

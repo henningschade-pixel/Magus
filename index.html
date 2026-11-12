@@ -1059,7 +1059,15 @@ function evalDefense(stats, cards, color, opt) {
   const cost = curses.reduce((n, c) => n + c.tier, 0) + (el === color ? same.filter(c => !c.free).length : 0) + other.filter(c => !c.free).length;   // Verteidigung in der überlegenen Farbe ist gratis, Kombokarten kosten 1 Mana
   let block = 0; same.forEach(c => { block += Math.min(c.tier, stats.mag[el]); });
   const out = { valid: true, el, cost, block, affordable: stats.mana >= cost, levels: { fw: 0, fe: 0, ew: 0, ulti: 0 }, ord: null, ultiEl: null };
-  if (other.length) { const tiers = { F: [], E: [], W: [] }; normals.forEach(c => tiers[c.el].push(c.tier)); const lv = comboLevels(tiers, stats.mag, el); echoBoost(stats, lv, lv.ord, lastEl); out.ord = !ulti && lv.ord && lv.ord.lvl > 0 ? lv.ord : null; if (ulti) { out.levels.ulti = lv.ulti; if (lv.ulti > 0) out.ultiEl = lastEl; } if (lv.echo) out.levels.echo = true; }
+  if (other.length) {
+    const tiers = { F: [], E: [], W: [] };
+    normals.forEach(c => tiers[c.el].push(c.tier));
+    const lv = comboLevels(tiers, stats.mag, el);
+    echoBoost(stats, lv, lv.ord, lastEl);
+    out.ord = !ulti && lv.ord && lv.ord.lvl > 0 ? lv.ord : null;
+    if (ulti) { out.levels.ulti = lv.ulti; if (lv.ulti > 0) out.ultiEl = lastEl; }
+    if (lv.echo) out.levels.echo = true;
+  }
   return out;
 }
 
@@ -1168,7 +1176,13 @@ function endCombat(state, end) {
 function clearCombatLeftovers(state, c) {
   if (c.forced && c.forced.cards) { const fs = c.sides.a.ctrl === c.forced.pid ? c.sides.a : c.sides.b; if (fs.kind === 'player') c.forced.cards.forEach(cd => fs.deck.discard.push(cd)); c.forced = null; }
   [c.sides.a, c.sides.b].forEach(sd => { if (sd.deck) dropSight(sd.deck); });   // übrige offene Hellsichtkarten auf den Ablagestapel
-  state.players.forEach(p => { (p.stats.traps || []).forEach(t => p.deck.discard.push(t.card)); p.stats.freeDraws = 0; p.deck.marks = []; ['death', 'deathPhase', 'heal', 'healPhase', 'manaflow', 'manaPhase', 'rainbow', 'traps', 'echo'].forEach(k => { delete p.stats[k]; }); });   // die Fallenkarte kehrt in den Ablagestapel zurück (wird gleich mit gemischt)
+  // die Fallenkarte kehrt in den Ablagestapel zurück (wird gleich mit gemischt)
+  state.players.forEach(p => {
+    (p.stats.traps || []).forEach(t => p.deck.discard.push(t.card));
+    p.stats.freeDraws = 0;
+    p.deck.marks = [];
+    ['death', 'deathPhase', 'heal', 'healPhase', 'manaflow', 'manaPhase', 'rainbow', 'traps', 'echo'].forEach(k => { delete p.stats[k]; });
+  });
   state.players.forEach(p => stripCurseCards(state, p.deck));
   ['healPhase', 'death', 'deathPhase', 'heal', 'manaflow', 'manaPhase', 'rainbow', 'traps', 'echo'].forEach(k => { delete c.sides.b.stats[k]; });
 }
@@ -1196,14 +1210,28 @@ function settleMonsterCombat(state, c, end, res, A, B) {
         log(state, 'Ausgleich: ' + (both ? 'Jeder Spieler erhält ' : A.name + ' erhält als Verlierer ') + [hp ? hp + ' Upgrade-Punkt' + (hp > 1 ? 'e' : '') : '', hg ? hg + ' Gold' : ''].filter(Boolean).join(' und ') + '.', both ? undefined : c.att);
       }
     }
-    if (msp) { const lost = Math.min(msp, A.sp); A.sp -= lost; res.sp = { winner: 0, loser: -lost }; if (lost) log(state, A.name + ' verliert ' + lost + ' Siegpunkt' + (lost > 1 ? 'e' : '') + '; das Monster bringt seinem Führer keine.', c.att); }   // Niederlage kostet den Angreifer, bringt dem Monsterführer aber nichts (sonst lässt sich ein unbesiegtes Monster endlos farmen)
+    // Niederlage kostet den Angreifer, bringt dem Monsterführer aber nichts (sonst lässt sich ein unbesiegtes Monster endlos farmen)
+    if (msp) {
+      const lost = Math.min(msp, A.sp);
+      A.sp -= lost;
+      res.sp = { winner: 0, loser: -lost };
+      if (lost) log(state, A.name + ' verliert ' + lost + ' Siegpunkt' + (lost > 1 ? 'e' : '') + '; das Monster bringt seinem Führer keine.', c.att);
+    }
   }
   else log(state, end.reason === 'flee' ? 'Die Flucht ist geglückt. Kein Sieger; das Monster behält seine Verletzungen.' : end.reason === 'exhaustion' ? 'Beide Seiten sind erschöpft. Kein Sieger.' : end.reason === 'rounds' ? 'Nach ' + state.rules.maxRounds + ' Kampfrunden endet der Kampf unentschieden. Kein Sieger; das Monster behält seine Verletzungen.' : 'Beide Seiten fallen. Kein Sieger.');
 }
 // Wertung eines Showdowns: Siegpunkte, Trostpreis für den Verlierer; Flucht und Unentschieden bleiben ohne Wertung.
 function settleShowdown(state, c, end, res, A, B) {
-  if (end.winner) { const w = end.winner === 'a' ? A : B, wl = w === A ? B : A, ssp = state.rules.showdownSp || 0, lost = Math.min(ssp, wl.sp); w.sp += ssp; wl.sp -= lost; res.sp = { winner: ssp, loser: -lost }; log(state, w.name + ' gewinnt den Showdown (+' + ssp + ' Siegpunkt' + (ssp > 1 ? 'e' : '') + (lost ? ', ' + wl.name + ' verliert ' + lost : '') + ').', end.winner === 'a' ? c.att : c.def);
-    const L = w === A ? B : A; const lu = state.showdown === 1 && state.rules.loserUp2 !== undefined ? state.rules.loserUp2 : state.rules.loserUp; if (lu > 0 && state.showdown < 2) { L.stats.pending += lu; L.stats.upGot += lu; log(state, L.name + ' erhält als Trostpreis ' + lu + ' Upgrade-Punkt' + (lu > 1 ? 'e' : '') + '.', w === A ? c.def : c.att); } }
+  if (end.winner) {
+    const w = end.winner === 'a' ? A : B, wl = w === A ? B : A, ssp = state.rules.showdownSp || 0, lost = Math.min(ssp, wl.sp);
+    w.sp += ssp;
+    wl.sp -= lost;
+    res.sp = { winner: ssp, loser: -lost };
+    log(state, w.name + ' gewinnt den Showdown (+' + ssp + ' Siegpunkt' + (ssp > 1 ? 'e' : '') + (lost ? ', ' + wl.name + ' verliert ' + lost : '') + ').', end.winner === 'a' ? c.att : c.def);
+    const L = w === A ? B : A;
+    const lu = state.showdown === 1 && state.rules.loserUp2 !== undefined ? state.rules.loserUp2 : state.rules.loserUp;
+    if (lu > 0 && state.showdown < 2) { L.stats.pending += lu; L.stats.upGot += lu; log(state, L.name + ' erhält als Trostpreis ' + lu + ' Upgrade-Punkt' + (lu > 1 ? 'e' : '') + '.', w === A ? c.def : c.att); }
+  }
   else log(state, end.reason === 'flee' ? 'Die Flucht ist geglückt. Der Showdown endet ohne Sieger, ohne Siegpunkte.' : end.reason === 'rounds' ? 'Nach ' + state.rules.maxRounds + ' Kampfrunden endet der Showdown unentschieden: keine Siegpunkte.' : 'Showdown ohne Sieger: keine Siegpunkte.');   // Flucht und Unentschieden zählen nie als Sieg oder Niederlage
 }
 // Spielende nach dem dritten Showdown oder bei ausreichendem Vorsprung (goal): Sieger nach Siegpunkten, dann Tempelstufe, dann Gold.
@@ -1464,7 +1492,14 @@ function execAttack(state) {
   if (dmg0 > 0 && opp.stats.traps) dmg = dmg0 - springTraps(state, opp, side, ev.prim, dmg0, fxs, texts);   // die Falle wird aufgedeckt, sobald Schaden eingeht, vor der Verteidigung
   if (dmg > 0) fxs.push({ kind: 'attack', who: side.ctrl, to: opp.ctrl, elem: ev.prim, n: dmg });
   log(state, side.name + ' greift an' + (ev.prim ? ' (' + NAMES[ev.prim] + ', Schaden ' + dmg0 + ')' : ' (nur Flüche)') + (texts.length ? ' – ' + texts.join(', ') : '') + '.', side.ctrl, fxs.length ? fxs : undefined);
-  if (hpDecided(state)) { c.turn = c.turn === 'a' ? 'b' : 'a'; c.action = 'attack'; c.color = null; c.pending = 0; c.atkTurns = (c.atkTurns || 0) + 1; }   // Stufe 1: Der Rückwurf der Falle hat den Angreifer auf 0 HP gebracht. Er ist besiegt, noch bevor der Verteidiger verteidigt oder Schaden nimmt; kein Fluss wirkt mehr
+  // Stufe 1: Der Rückwurf der Falle hat den Angreifer auf 0 HP gebracht. Er ist besiegt, noch bevor der Verteidiger verteidigt oder Schaden nimmt; kein Fluss wirkt mehr
+  if (hpDecided(state)) {
+    c.turn = c.turn === 'a' ? 'b' : 'a';
+    c.action = 'attack';
+    c.color = null;
+    c.pending = 0;
+    c.atkTurns = (c.atkTurns || 0) + 1;
+  }
   else if (dmg > 0) { c.color = ev.prim; c.pending = dmg; c.afterAtk = true; c.turn = c.turn === 'a' ? 'b' : 'a'; c.action = 'defense'; c.atkTurns = (c.atkTurns || 0) + 1; }
   else passAttackTurn(state, true);
   const res = finishStep(state, { k: 'A', who: side.key === 'a' ? 0 : 1, v: dmg0 });
@@ -1593,9 +1628,18 @@ function applyCombat(state, a) {
   if (side.ctrl !== pid) return fail('Die Gegenseite ist am Zug.');
   switch (a.type) {
     case 'mark': { const e = toggleMark(side.deck, a.slot, side.stats.limit); return e ? fail(e) : { ok: true }; }
-    case 'lfp': { if (c.action !== 'attack' && c.action !== 'defense') return fail('Nur im Angriffs- oder Verteidigungszug.'); const ok = ['sm', 'om', 'sd', 'od', 'sh', 'oh', 'sr', 'or', 'st', 'ot']; c.lfp = a.pick === null ? null : (Array.isArray(a.pick) ? a.pick : []).filter(x => typeof x === 'string' && ok.includes(x.split(':')[0]) && (x.indexOf(':') < 0 || ELEMENTS.includes(x.split(':')[1]))).slice(0, 3); return { ok: true }; }
+    case 'lfp': {
+      if (c.action !== 'attack' && c.action !== 'defense') return fail('Nur im Angriffs- oder Verteidigungszug.');
+      const ok = ['sm', 'om', 'sd', 'od', 'sh', 'oh', 'sr', 'or', 'st', 'ot'];
+      c.lfp = a.pick === null ? null : (Array.isArray(a.pick) ? a.pick : []).filter(x => typeof x === 'string' && ok.includes(x.split(':')[0]) && (x.indexOf(':') < 0 || ELEMENTS.includes(x.split(':')[1]))).slice(0, 3);
+      return { ok: true };
+    }
     case 'attack': if (c.action !== 'attack') return fail('Jetzt wird verteidigt.'); if (!allowed(state, 'attack', 'attack')) return fail('Angreifen ist in den Einstellungen für die Angriffsphase abgeschaltet.'); return execAttack(state);
-    case 'defend': if (c.action !== 'defense') return fail('Jetzt wird angegriffen.'); if (!c.pending) return fail('Ohne Angriff gibt es nichts zu verteidigen.'); if (!allowed(state, 'defense', 'defend')) return fail('Verteidigen ist in den Einstellungen für die Verteidigungsphase abgeschaltet.'); return execDefense(state, false);
+    case 'defend':
+      if (c.action !== 'defense') return fail('Jetzt wird angegriffen.');
+      if (!c.pending) return fail('Ohne Angriff gibt es nichts zu verteidigen.');
+      if (!allowed(state, 'defense', 'defend')) return fail('Verteidigen ist in den Einstellungen für die Verteidigungsphase abgeschaltet.');
+      return execDefense(state, false);
     case 'pass':
       if (!allowed(state, c.action, 'pass')) return fail('Passen ist in den Einstellungen für diese Phase abgeschaltet.');
       if (c.action === 'defense' && !c.pending) { log(state, side.name + ' reagiert nicht.', side.ctrl); return endReaction(state); }
@@ -2117,7 +2161,13 @@ function ecoStep(state, pid) {
   const opp = state.players[1 - pid].stats, oppTop = M.ELEMENTS.slice().sort((x, y) => opp.mag[y] - opp.mag[x])[0];   // Aufbau des Gegners: seine stärkste Magie, und welche Farbe ihr überlegen ist
   const planEl = planElement(state, pid);
   let best = null;
-  for (const e of M.ELEMENTS) { const cost = M.magicCost(state, s.mag[e], s); if (s.mag[e] < M.MAX_MAGIC && mgv(state, s) >= cost) { const sc = Q.mBase - cost * Q.mCost + countEl(e) * Q.mCnt + (s.mag[e] === Math.max(s.mag.F, s.mag.E, s.mag.W) ? Q.mTop : 0) + (e === M.SUPERIOR[oppTop] ? Q.mCounter * opp.mag[oppTop] : 0) + (e === planEl ? Q.mPlan : 0) + Q.mCatch * Math.max(0, opp.mag[e] - s.mag[e]); if (!best || sc > best.sc) best = { sc, a: A({ type: 'magic', elem: e }) }; } }
+  for (const e of M.ELEMENTS) {
+    const cost = M.magicCost(state, s.mag[e], s);
+    if (s.mag[e] < M.MAX_MAGIC && mgv(state, s) >= cost) {
+      const sc = Q.mBase - cost * Q.mCost + countEl(e) * Q.mCnt + (s.mag[e] === Math.max(s.mag.F, s.mag.E, s.mag.W) ? Q.mTop : 0) + (e === M.SUPERIOR[oppTop] ? Q.mCounter * opp.mag[oppTop] : 0) + (e === planEl ? Q.mPlan : 0) + Q.mCatch * Math.max(0, opp.mag[e] - s.mag[e]);
+      if (!best || sc > best.sc) best = { sc, a: A({ type: 'magic', elem: e }) };
+    }
+  }
   if (best) return best.a;
   if (sw) {   // swapCosts: Magie kostet Punkte, die nur der Tempel liefert (Gold opfern); Verbesserungen kosten Gold
     if (Q.sacG && M.magicProgress(p) < Q.mgGoal) { const a = sacMagic(Q.sacRes, 1, 99); if (a) return a; }
@@ -2496,7 +2546,11 @@ function planDefense(state, pid, X) {
     let score = left * (lethal ? Q.dLeth : Q.dPend) + (ev.cost || 0) * Q.dCost + (sub.length - nCurse) * Q.dKeep - nCurse * 0.6;
     if (lvM > 0) score += absorbed * Q.mirKeep;   // jede geminderte Einheit Schaden kostet eine Schildladung
     if (ev.ord) { const o = c.sides[c.turn === 'a' ? 'b' : 'a'], lvD = Object.assign({}, M.levelsFor(ev)); if (left >= s.hp) lvD.gh = 0; score -= ordComboWorth(side, o, Q, state.rules, lvD, ev); }   // tödlicher Restschaden: die Heilung nach dem Schaden verfällt
-    if (Q.dU > 0 && ev.levels && ev.levels.ulti > 0) { const o = c.sides[c.turn === 'a' ? 'b' : 'a']; score -= Q.dU * (ev.ultiEl === 'F' ? ev.levels.ulti * Q.wDeath * Math.max(0.4, Math.min(1.4, o.stats.hp / 4)) : ultiWorth(side, o, Q, ev.ultiEl, ev.levels.ulti)); }   // Ultimate in der Verteidigung: Feuer Todesfluch für den Angreifer, Erde Meditation, Wasser Erleuchtung
+    // Ultimate in der Verteidigung: Feuer Todesfluch für den Angreifer, Erde Meditation, Wasser Erleuchtung
+    if (Q.dU > 0 && ev.levels && ev.levels.ulti > 0) {
+      const o = c.sides[c.turn === 'a' ? 'b' : 'a'];
+      score -= Q.dU * (ev.ultiEl === 'F' ? ev.levels.ulti * Q.wDeath * Math.max(0.4, Math.min(1.4, o.stats.hp / 4)) : ultiWorth(side, o, Q, ev.ultiEl, ev.levels.ulti));
+    }
     if (score < best.score) best = { score, ord: sub };
   }
   if (!best.ord.length) return [A({ type: 'pass' })];
@@ -3229,7 +3283,12 @@ const EchoWave = (() => {
 /* ---------- Zugwechsel (Werte der Zugwechsel-Werkstatt): Der Rand teilt sich in der Mitte, zwei Linien laufen links und rechts zur anderen Seite ---------- */
 let turnSide = null, turnAnim = null, turnWait = 0, cardsUntil = 0;   // cardsUntil: bis wann Karten fliegen oder verbrennen
 const TURN = { dur: 1.1, pause: .15, width: 4, glow: 26, head: 1, tail: .35, comet: .8, inner: 70, pulse: .35 };
-function turnClasses() { const live = !turnAnim || turnAnim.done; stage.classList.toggle('react', !!(G && !G.over && G.phase === 'combat' && G.combat && G.combat.action === 'defense' && (turnSide === 'me' || turnSide === 'opp'))); stage.classList.toggle('turn-me', turnSide === 'me' && live); stage.classList.toggle('turn-opp', turnSide === 'opp' && live); }
+function turnClasses() {
+  const live = !turnAnim || turnAnim.done;
+  stage.classList.toggle('react', !!(G && !G.over && G.phase === 'combat' && G.combat && G.combat.action === 'defense' && (turnSide === 'me' || turnSide === 'opp')));
+  stage.classList.toggle('turn-me', turnSide === 'me' && live);
+  stage.classList.toggle('turn-opp', turnSide === 'opp' && live);
+}
 function turnSync() {
   const want = G && !G.over ? (myTurn() ? 'me' : 'opp') : null;
   if ((!turnAnim || turnAnim.done) && want !== turnSide) {
@@ -3434,7 +3493,11 @@ function place(card, s) {
   d.classList.toggle('down', !!s.down); d.classList.toggle('marked', !!s.marked); d.classList.toggle('first', !!s.first); d.classList.toggle('fd', !!s.fd); d.classList.toggle('cand', !!s.cand); d.classList.toggle('locked', !!s.locked); d.classList.toggle('sightopen', !!s.free);
   d.classList.toggle('myhand', !!s.mine); d.dataset.slot = s.slot === undefined ? '' : s.slot;
   d.style.pointerEvents = s.mine ? 'auto' : 'none';
-  if (flipped) { const ms = CardFlip.hand(d.querySelector('.inner'), s.down ? 0 : 180, s.down ? 180 : 0, wait); cardsUntil = Math.max(cardsUntil, Date.now() + ms); }   // Volle Drehung (Kartendreh-Werkstatt); nur Karten, die in die Hand kommen oder sie verlassen (Austeilen, Aufdecken); Mischen und Ablegen drehen ohne Animation
+  // Volle Drehung (Kartendreh-Werkstatt); nur Karten, die in die Hand kommen oder sie verlassen (Austeilen, Aufdecken); Mischen und Ablegen drehen ohne Animation
+  if (flipped) {
+    const ms = CardFlip.hand(d.querySelector('.inner'), s.down ? 0 : 180, s.down ? 180 : 0, wait);
+    cardsUntil = Math.max(cardsUntil, Date.now() + ms);
+  }
 }
 function slotX(i, n, L) {
   const w = CW * L.s, step = n > 1 ? Math.min(L.gap, (L.span - w) / (n - 1)) : 0, total = w + step * (n - 1);
@@ -3574,7 +3637,11 @@ function drawNeedsMana() {
 const CardFlip = (() => {
   const MON = { extra: 0, persp: 800, heben: 30, skal: 1.06, kipp: 4, huepf: 0, nach: 8, schatten: .5, glanz: .5, leucht: .4, dauer: 900 };   // Monsterkarten (Export der Werkstatt)
   const HAND = { extra: 0, persp: 500, heben: 60, skal: 1.18, kipp: 8, huepf: 0, nach: 14, dauer: 700 };   // Handkarten: die Karten sind klein und fliegen zugleich, deshalb deutlicher als bei den Monsterkarten; ohne Schein
-  const bez = (x1, y1, x2, y2) => t => { let a = 0, b = 1, u = t; for (let k = 0; k < 24; k++) { u = (a + b) / 2; const x = 3 * (1 - u) * (1 - u) * u * x1 + 3 * (1 - u) * u * u * x2 + u * u * u; if (x < t) a = u; else b = u; } return 3 * (1 - u) * (1 - u) * u * y1 + 3 * (1 - u) * u * u * y2 + u * u * u; };
+  const bez = (x1, y1, x2, y2) => t => {
+    let a = 0, b = 1, u = t;
+    for (let k = 0; k < 24; k++) { u = (a + b) / 2; const x = 3 * (1 - u) * (1 - u) * u * x1 + 3 * (1 - u) * u * u * x2 + u * u * u; if (x < t) a = u; else b = u; }
+    return 3 * (1 - u) * (1 - u) * u * y1 + 3 * (1 - u) * u * u * y2 + u * u * u;
+  };
   const ease = bez(.4, 0, .2, 1);
   function pose(P, t, a0, a1) {
     const e = ease(t), sinT = Math.sin(Math.PI * t), dir = a1 >= a0 ? 1 : -1;
@@ -3968,7 +4035,18 @@ function combatPreview(cx, c, atk) {
     const ev = c.pending > 0 ? M.evalDefense(cx.myStats, sel, c.color, { combo: M.allowed(G, 'defense', 'combo') }) : { valid: true };   // Reaktion ohne Angriff: nichts zu verteidigen
     if (!sel.length || !c.pending) prev = '';
     else if (!ev.valid) prev = '<span class="bad">' + esc(ev.reason) + '</span>';
-    else { if (ev.cost > 0) manaPv = ev.cost; prev = ''; canExec = ev.affordable; val = ev.block || 0; if (ev.ord) { const r = ORD_ROWS.find(x => x[0] === ev.ord.key), late = ev.ord.key === 'gh' || ev.ord.key === 'wt' || ev.ord.key === 'ws'; prev += '<div class="note"><b>' + r[1] + '</b> Stufe ' + ev.ord.lvl + (late ? ' nach' : ' vor') + ' der Verteidigung: ' + ordText(r[0], ev.ord.lvl) + '</div>'; if (ev.ord.key === 'gr') prev += lfSummary(cx, ev.ord.lvl); } if (!ev.affordable) prev += '<div class="bad">Zu wenig Mana.</div>'; }
+    else {
+      if (ev.cost > 0) manaPv = ev.cost;
+      prev = '';
+      canExec = ev.affordable;
+      val = ev.block || 0;
+      if (ev.ord) {
+        const r = ORD_ROWS.find(x => x[0] === ev.ord.key), late = ev.ord.key === 'gh' || ev.ord.key === 'wt' || ev.ord.key === 'ws';
+        prev += '<div class="note"><b>' + r[1] + '</b> Stufe ' + ev.ord.lvl + (late ? ' nach' : ' vor') + ' der Verteidigung: ' + ordText(r[0], ev.ord.lvl) + '</div>';
+        if (ev.ord.key === 'gr') prev += lfSummary(cx, ev.ord.lvl);
+      }
+      if (!ev.affordable) prev += '<div class="bad">Zu wenig Mana.</div>';
+    }
   }
   return { prev, canExec, val };
 }
@@ -4088,15 +4166,40 @@ const CurseFx = (() => {
     }
     ctx.restore();
     const pil = p.pillar * seg(u, .55, .68) * (1 - seg(u, .94, 1)) * ga;   // Lichtsäule
-    if (pil > 0) { const pw = (46 + g * 80) * p.size * (1 + (pulse - 1) * .6); ctx.save(); ctx.globalCompositeOperation = 'lighter'; const gy = ctx.createLinearGradient(0, C.y, 0, C.y - 400); gy.addColorStop(0, rgba(col, .5 * pil * flick)); gy.addColorStop(1, rgba(col, 0)); [1, .62, .3].forEach((f, i) => { ctx.fillStyle = gy; ctx.globalAlpha = i ? .7 : .35; ctx.fillRect(C.x - pw * f / 2, C.y - 400, pw * f, 400); }); ctx.restore(); }
+    if (pil > 0) {
+      const pw = (46 + g * 80) * p.size * (1 + (pulse - 1) * .6);
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const gy = ctx.createLinearGradient(0, C.y, 0, C.y - 400);
+      gy.addColorStop(0, rgba(col, .5 * pil * flick));
+      gy.addColorStop(1, rgba(col, 0));
+      [1, .62, .3].forEach((f, i) => { ctx.fillStyle = gy; ctx.globalAlpha = i ? .7 : .35; ctx.fillRect(C.x - pw * f / 2, C.y - 400, pw * f, 400); });
+      ctx.restore();
+    }
     const nP = Math.round(p.particles), pa = seg(u, .5, .68) * (1 - seg(u, .9, 1));   // Funken
     if (nP > 0 && pa > 0) {
       const pr = rng(p.seed + 3); ctx.save(); ctx.globalCompositeOperation = 'lighter';
-      for (let i = 0; i < nP; i++) { const r1 = pr(), r2 = pr(), r3 = pr(), ph = (r1 + t * (.18 + .4 * r2) / (p.dur / 3)) % 1, an = r1 * Math.PI * 2, rad = R * Math.sqrt(r2) * .95, x = C.x + Math.cos(an) * rad * sc, y0 = C.y + Math.sin(an) * rad * tilt * sc, y = y0 - ph * 480 * .5 * (.5 + r3); ctx.fillStyle = rgba(lighten(col, .4), Math.sin(Math.PI * ph) * pa * .9); ctx.beginPath(); ctx.arc(x + Math.sin(ph * 9 + r3 * 6) * 6, y, 1 + r3 * 2, 0, 7); ctx.fill(); }
+      for (let i = 0; i < nP; i++) {
+        const r1 = pr(), r2 = pr(), r3 = pr(), ph = (r1 + t * (.18 + .4 * r2) / (p.dur / 3)) % 1, an = r1 * Math.PI * 2, rad = R * Math.sqrt(r2) * .95, x = C.x + Math.cos(an) * rad * sc, y0 = C.y + Math.sin(an) * rad * tilt * sc, y = y0 - ph * 480 * .5 * (.5 + r3);
+        ctx.fillStyle = rgba(lighten(col, .4), Math.sin(Math.PI * ph) * pa * .9);
+        ctx.beginPath();
+        ctx.arc(x + Math.sin(ph * 9 + r3 * 6) * 6, y, 1 + r3 * 2, 0, 7);
+        ctx.fill();
+      }
       ctx.restore();
     }
     const sw = seg(u, .93, 1);   // Schockring und Blitz
-    if (sw > 0 && sw < 1) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const rr2 = R * (.15 + 1.1 * eo(sw)); ctx.strokeStyle = rgba(lighten(col, .5), (1 - sw) * .9); ctx.lineWidth = 5 * (1 - sw) + 1; ctx.beginPath(); ctx.ellipse(C.x, C.y, rr2, rr2 * tilt, 0, 0, 7); ctx.stroke(); ctx.restore(); }
+    if (sw > 0 && sw < 1) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const rr2 = R * (.15 + 1.1 * eo(sw));
+      ctx.strokeStyle = rgba(lighten(col, .5), (1 - sw) * .9);
+      ctx.lineWidth = 5 * (1 - sw) + 1;
+      ctx.beginPath();
+      ctx.ellipse(C.x, C.y, rr2, rr2 * tilt, 0, 0, 7);
+      ctx.stroke();
+      ctx.restore();
+    }
     const fl = ignite * .18 + .85 * seg(u, .9, .93) * (1 - seg(u, .93, .99));
     if (fl > 0) { ctx.fillStyle = rgba(lighten(col, .75), fl * .6); ctx.fillRect(-BIG, -BIG, 2 * BIG, 2 * BIG); }
     ctx.restore();
@@ -4161,21 +4264,53 @@ const UltFx = (() => {
       const bx=Cc.x+Math.cos(a)*R*.95,by=Cc.y+Math.sin(a)*R*.95*tilt,Hh=(70+hr*60)*p.hVineH*S/1.2,ph=pr1*6,sw=10+pr2*10,dir=Math.cos(a)>0?1:-1;
       const pt=s=>({x:bx+Math.sin(s*4+ph)*sw*s*dir+dir*s*12,y:by-s*Hh});
       glowLine(ctx,col,1.7,gl*.5,inten*.9,()=>{for(let k=0;k<=24;k++){const s=gv*k/24,q=pt(s);k?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y)}});
-      for(let k=1;k<=4;k++){const s=gv*k/4.3;if(s<.12)continue;const q=pt(s);ctx.save();ctx.translate(q.x,q.y);ctx.rotate((k%2?-1:1)*.9-Math.PI/2);ctx.fillStyle=rgba(lighten(col,.25),.85*inten);ctx.shadowColor=col;ctx.shadowBlur=gl*.5;ctx.beginPath();ctx.ellipse(8,0,9,3.6,0,0,7);ctx.fill();ctx.restore()}
+      for(let k=1;k<=4;k++){
+        const s=gv*k/4.3;
+        if(s<.12)continue;
+        const q=pt(s);
+        ctx.save();
+        ctx.translate(q.x,q.y);
+        ctx.rotate((k%2?-1:1)*.9-Math.PI/2);
+        ctx.fillStyle=rgba(lighten(col,.25),.85*inten);
+        ctx.shadowColor=col;
+        ctx.shadowBlur=gl*.5;
+        ctx.beginPath();
+        ctx.ellipse(8,0,9,3.6,0,0,7);
+        ctx.fill();
+        ctx.restore()
+      }
     }
     const lc=seg(u,.5,.8)*(1-seg(u,.93,1))*p.hLight;   // Lichtsäule
-    if(lc>0){const pw=100*S*(1+.1*Math.sin(t*9));ctx.save();ctx.globalCompositeOperation='lighter';const gy=ctx.createLinearGradient(0,Cc.y,0,Cc.y-380);gy.addColorStop(0,rgba(lighten(col,.3),.5*lc*flick));gy.addColorStop(1,rgba(col,0));[1,.6,.3].forEach((f,i)=>{ctx.fillStyle=gy;ctx.globalAlpha=i?.7:.32;ctx.fillRect(Cc.x-pw*f/2,Cc.y-380,pw*f,380)});ctx.restore()}
+    if(lc>0){
+      const pw=100*S*(1+.1*Math.sin(t*9));
+      ctx.save();
+      ctx.globalCompositeOperation='lighter';
+      const gy=ctx.createLinearGradient(0,Cc.y,0,Cc.y-380);
+      gy.addColorStop(0,rgba(lighten(col,.3),.5*lc*flick));
+      gy.addColorStop(1,rgba(col,0));
+      [1,.6,.3].forEach((f,i)=>{ctx.fillStyle=gy;ctx.globalAlpha=i?.7:.32;ctx.fillRect(Cc.x-pw*f/2,Cc.y-380,pw*f,380)});
+      ctx.restore()
+    }
     const pl=seg(u,.42,.62),py=C.y-75;   // Pluszeichen
     if(pl>0){
       const fade=1-seg(u,.9,.97),sc=(.4+.6*eo(pl))*(1+.06*Math.sin(t*6)*seg(u,.62,.9)),arm=40*S*p.hPlus*sc,wd=arm*.42;
       if(fade>0){ctx.save();ctx.translate(C.x,py);ctx.shadowColor=col;ctx.shadowBlur=gl*1.6;ctx.fillStyle=rgba(lighten(col,.6),.95*pl*fade*flick);ctx.beginPath();rrect(ctx,-arm,-wd/2,2*arm,wd,wd/2);rrect(ctx,-wd/2,-arm,wd,2*arm,wd/2);ctx.fill();
         ctx.shadowBlur=0;ctx.strokeStyle=rgba(lighten(col,.4),.55*pl*fade);ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,arm*1.5,0,7);ctx.stroke();ctx.restore()}
     }
-    for(let k=0;k<Math.round(p.hPulse);k++){const q=seg(u,.6+k*.06,.82+k*.06);if(q>0&&q<1){ctx.save();ctx.globalCompositeOperation='lighter';ctx.strokeStyle=rgba(lighten(col,.4),(1-q)*.8*fin);ctx.lineWidth=4*(1-q)+1;const r2=R*(.2+1.1*eo(q));ctx.beginPath();ctx.ellipse(Cc.x,Cc.y,r2,r2*tilt,0,0,7);ctx.stroke();ctx.restore()}}
+    for(let k=0;k<Math.round(p.hPulse);k++){
+      const q=seg(u,.6+k*.06,.82+k*.06);
+      if(q>0&&q<1){ctx.save();ctx.globalCompositeOperation='lighter';ctx.strokeStyle=rgba(lighten(col,.4),(1-q)*.8*fin);ctx.lineWidth=4*(1-q)+1;const r2=R*(.2+1.1*eo(q));ctx.beginPath();ctx.ellipse(Cc.x,Cc.y,r2,r2*tilt,0,0,7);ctx.stroke();ctx.restore()}
+    }
     const nP=Math.round(p.particles),pa=seg(u,.18,.45)*(1-seg(u,.9,1));   // aufsteigende Lichtpunkte
     if(nP>0&&pa>0){
       const pr=rng(p.seed+13);ctx.save();ctx.globalCompositeOperation='lighter';
-      for(let i=0;i<nP;i++){const r1=pr(),r2=pr(),r3=pr(),ph=(r1+t*(.12+.25*r2)/(D/4))%1,an=r1*Math.PI*2,rad=R*Math.sqrt(r2)*.9,x=Cc.x+Math.cos(an)*rad+Math.sin(ph*7+r3*6)*8,y=Cc.y+Math.sin(an)*rad*tilt-ph*230*(.5+.6*r3);ctx.fillStyle=rgba(i%4?lighten(col,.45):'#ffe9a8',Math.sin(Math.PI*ph)*pa*.9);ctx.beginPath();ctx.arc(x,y,1.2+r3*2.2,0,7);ctx.fill()}
+      for(let i=0;i<nP;i++){
+        const r1=pr(),r2=pr(),r3=pr(),ph=(r1+t*(.12+.25*r2)/(D/4))%1,an=r1*Math.PI*2,rad=R*Math.sqrt(r2)*.9,x=Cc.x+Math.cos(an)*rad+Math.sin(ph*7+r3*6)*8,y=Cc.y+Math.sin(an)*rad*tilt-ph*230*(.5+.6*r3);
+        ctx.fillStyle=rgba(i%4?lighten(col,.45):'#ffe9a8',Math.sin(Math.PI*ph)*pa*.9);
+        ctx.beginPath();
+        ctx.arc(x,y,1.2+r3*2.2,0,7);
+        ctx.fill()
+      }
       ctx.restore();
     }
     const fl=p.flash*seg(u,.88,.92)*(1-seg(u,.92,.99));
@@ -4193,7 +4328,13 @@ const UltFx = (() => {
     const n=Math.max(5,Math.round(p.mStar)),sp=eio(seg(u,.12,.44)),rs=R*.9;   // Achtstern: jede dritte Ecke verbunden, zeichnet sich der Reihe nach
     if(sp>0){const tot=n*sp,full=Math.floor(tot),rest=tot-full,v=k=>{const a=top+((k*3)%n)/n*Math.PI*2+t*.12;return[Math.cos(a)*rs,Math.sin(a)*rs]};
       glowLine(ctx,col,2,gl*.8,inten*.95,()=>{const a0=v(0);ctx.moveTo(a0[0],a0[1]);for(let k=1;k<=full&&k<=n;k++){const q=v(k);ctx.lineTo(q[0],q[1])}if(full<n&&rest>0){const a1=v(full),a2=v(full+1);ctx.lineTo(lerp(a1[0],a2[0],rest),lerp(a1[1],a2[1],rest))}})}
-    for(let i=0;i<12;i++){const a=top+i/12*Math.PI*2,al=seg(u,.16+i/12*.12,.22+i/12*.12);if(al<=0)continue;const x=Math.cos(a)*R*1.1,y=Math.sin(a)*R*1.1,h=R*.05;glowLine(ctx,col,1.6,gl*.5,inten*al,()=>{ctx.moveTo(x,y-h);ctx.lineTo(x+h,y);ctx.lineTo(x,y+h);ctx.lineTo(x-h,y);ctx.closePath()})}   // Rautenrunen am Rand
+    // Rautenrunen am Rand
+    for(let i=0;i<12;i++){
+      const a=top+i/12*Math.PI*2,al=seg(u,.16+i/12*.12,.22+i/12*.12);
+      if(al<=0)continue;
+      const x=Math.cos(a)*R*1.1,y=Math.sin(a)*R*1.1,h=R*.05;
+      glowLine(ctx,col,1.6,gl*.5,inten*al,()=>{ctx.moveTo(x,y-h);ctx.lineTo(x+h,y);ctx.lineTo(x,y+h);ctx.lineTo(x-h,y);ctx.closePath()})
+    }
     ctx.restore();
     const nP=Math.round(p.particles),pa=seg(u,.18,.5)*(1-seg(u,.78,.86));   // Manafunken: vom Ring spiralförmig zur Mitte, dabei aufwärts
     if(nP>0&&pa>0){const pr=rng(p.seed+31);ctx.save();ctx.globalCompositeOperation='lighter';
@@ -4211,7 +4352,10 @@ const UltFx = (() => {
       ctx.strokeStyle=rgba('#ffffff',.85*cr*fl);ctx.lineWidth=1.6;ctx.beginPath();P.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]));ctx.closePath();ctx.stroke();
       ctx.beginPath();ctx.moveTo(-w*sx,0);ctx.lineTo(w*sx,0);ctx.moveTo(0,-h);ctx.lineTo(0,h);ctx.stroke();
       ctx.restore();star4(ctx,C.x+w*.2,cy-h*.3,7+5*Math.sin(t*7)**2,'#ffffff',.9*cr)}
-    for(let k=0;k<Math.round(p.mPulse);k++){const q=seg(u,.6+k*.06,.84+k*.06);if(q>0&&q<1){ctx.save();ctx.globalCompositeOperation='lighter';ctx.strokeStyle=rgba(lighten(col,.5),(1-q)*.8*fin);ctx.lineWidth=4*(1-q)+1;const r2=R*(.2+1.1*eo(q));ctx.beginPath();ctx.ellipse(Cc.x,Cc.y,r2,r2*tilt,0,0,7);ctx.stroke();ctx.restore()}}
+    for(let k=0;k<Math.round(p.mPulse);k++){
+      const q=seg(u,.6+k*.06,.84+k*.06);
+      if(q>0&&q<1){ctx.save();ctx.globalCompositeOperation='lighter';ctx.strokeStyle=rgba(lighten(col,.5),(1-q)*.8*fin);ctx.lineWidth=4*(1-q)+1;const r2=R*(.2+1.1*eo(q));ctx.beginPath();ctx.ellipse(Cc.x,Cc.y,r2,r2*tilt,0,0,7);ctx.stroke();ctx.restore()}
+    }
     const bs=seg(u,.84,.97);   // Abschluss: der Kristall zerstiebt in Funken
     if(bs>0&&bs<1){const pr=rng(p.seed+37);ctx.save();ctx.globalCompositeOperation='lighter';
       for(let i=0;i<26;i++){const a=pr()*Math.PI*2,sp2=60+pr()*150,x=C.x+Math.cos(a)*sp2*eo(bs),y=C.y-62+Math.sin(a)*sp2*.7*eo(bs)+bs*bs*40;ctx.fillStyle=rgba(i%3?Lt:'#ffffff',(1-bs)*.9);ctx.beginPath();ctx.arc(x,y,1.2+pr()*2.2,0,7);ctx.fill()}
@@ -4277,8 +4421,12 @@ const TrapFx = (() => {
         stage.appendChild(orb); requestAnimationFrame(() => { orb.style.left = to.x + 'px'; orb.style.top = to.y + 'px'; });
         setTimeout(() => {
           orb.remove();
-          const n = document.createElement('div'); n.textContent = '−' + f.refl; n.style.cssText = 'position:absolute;z-index:297;pointer-events:none;font:700 38px Alegreya,serif;color:#ff6b3d;text-shadow:0 0 4px #000,0 0 10px #000;left:' + (to.x - 20) + 'px;top:' + (to.y - 24) + 'px;transition:top .8s,opacity .8s';
-          stage.appendChild(n); requestAnimationFrame(() => { n.style.top = (to.y - 80) + 'px'; n.style.opacity = '0'; }); setTimeout(() => n.remove(), 900);
+          const n = document.createElement('div');
+          n.textContent = '−' + f.refl;
+          n.style.cssText = 'position:absolute;z-index:297;pointer-events:none;font:700 38px Alegreya,serif;color:#ff6b3d;text-shadow:0 0 4px #000,0 0 10px #000;left:' + (to.x - 20) + 'px;top:' + (to.y - 24) + 'px;transition:top .8s,opacity .8s';
+          stage.appendChild(n);
+          requestAnimationFrame(() => { n.style.top = (to.y - 80) + 'px'; n.style.opacity = '0'; });
+          setTimeout(() => n.remove(), 900);
         }, 460);
         setTimeout(() => { el.style.transition = 'opacity .45s'; el.style.opacity = '0'; }, 500);
         setTimeout(() => el.remove(), 1000);
@@ -4347,24 +4495,80 @@ const MirrorFx = (() => {
         if (hit) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = Math.min(1, .55 * P.flash); ctx.drawImage(im, -w / 2, -h / 2, w, h); }
         if (brk) {   // Risse nur in der großen Darstellung
           ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = .9 * clamp((t - ev.tBreak) / .12) * (rf ? 1 : seg(m, .55, .95)); const cr = rng(11); ctx.strokeStyle = '#fff'; ctx.shadowColor = col; ctx.shadowBlur = 6; ctx.lineWidth = Math.max(1, h / 120); ctx.lineJoin = 'round';
-          for (let q = 0; q < P.cracks; q++) { let a = q / P.cracks * Math.PI * 2 + (cr() - .5) * .9, x = (cr() - .5) * w * .12, y = -h * .28 + (cr() - .5) * h * .08; const len = h * (.18 + cr() * .3); ctx.beginPath(); ctx.moveTo(x, y); for (let s2 = 1; s2 <= 6; s2++) { a += (cr() - .5) * .6; x += Math.cos(a) * len / 6; y += Math.sin(a) * len / 6; ctx.lineTo(x, y); } ctx.stroke(); }
+          for (let q = 0; q < P.cracks; q++) {
+            let a = q / P.cracks * Math.PI * 2 + (cr() - .5) * .9, x = (cr() - .5) * w * .12, y = -h * .28 + (cr() - .5) * h * .08;
+            const len = h * (.18 + cr() * .3);
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            for (let s2 = 1; s2 <= 6; s2++) { a += (cr() - .5) * .6; x += Math.cos(a) * len / 6; y += Math.sin(a) * len / 6; ctx.lineTo(x, y); }
+            ctx.stroke();
+          }
         }
         ctx.restore();
       }
     }
     const lit = brk && t > ev.tBreak + .12 ? ev.after : n;   // Stufenanzeige: die gebrochene Stufe erlischt
-    for (let i = 0; i < n && !shattered; i++) { const on = i < lit; ctx.save(); ctx.translate(pos.x + (i - (n - 1) / 2) * lerp(18, 34, m), pos.y + h / 2 + lerp(14, 34, m)); ctx.rotate(Math.PI / 4); ctx.strokeStyle = on ? col : 'rgba(255,255,255,.25)'; ctx.lineWidth = 2; const sz = lerp(4, 8, m); if (on) { ctx.shadowColor = col; ctx.shadowBlur = 10; ctx.fillStyle = rgba(col, .6); ctx.fillRect(-sz, -sz, 2 * sz, 2 * sz); } ctx.strokeRect(-sz, -sz, 2 * sz, 2 * sz); ctx.restore(); }
+    for (let i = 0; i < n && !shattered; i++) {
+      const on = i < lit;
+      ctx.save();
+      ctx.translate(pos.x + (i - (n - 1) / 2) * lerp(18, 34, m), pos.y + h / 2 + lerp(14, 34, m));
+      ctx.rotate(Math.PI / 4);
+      ctx.strokeStyle = on ? col : 'rgba(255,255,255,.25)';
+      ctx.lineWidth = 2;
+      const sz = lerp(4, 8, m);
+      if (on) { ctx.shadowColor = col; ctx.shadowBlur = 10; ctx.fillStyle = rgba(col, .6); ctx.fillRect(-sz, -sz, 2 * sz, 2 * sz); }
+      ctx.strokeRect(-sz, -sz, 2 * sz, 2 * sz);
+      ctx.restore();
+    }
     ev.sparks.forEach(sp => {   // Geschosse und Aufprall (der durchgehende Schaden selbst läuft in der Kampfanimation)
       const tgt = edge(rf ? Math.atan2(from.y - pos.y, from.x - pos.x) + sp.a + Math.PI / 2 : sp.a);
-      if (t >= sp.tl && t < sp.ta) { const b = (t - sp.tl) / (sp.ta - sp.tl); for (let q = 8; q >= 1; q--) { const bb = clamp(b - q * .02); ctx.save(); ctx.globalAlpha = (1 - q / 9) * .5; orb(ctx, lerp(from.x, tgt.x, bb), lerp(from.y, tgt.y, bb), (7 - q * .4) * P.spark, col); ctx.restore(); } orb(ctx, lerp(from.x, tgt.x, b), lerp(from.y, tgt.y, b), 9 * P.spark, col); }
-      if (t >= sp.ta && t < sp.ta + .4) { const g = seg(t, sp.ta, sp.ta + .4); ctx.save(); ctx.globalCompositeOperation = 'lighter'; const fl = ctx.createRadialGradient(tgt.x, tgt.y, 0, tgt.x, tgt.y, 80 * (1 - g) + 10); fl.addColorStop(0, 'rgba(255,255,255,' + (Math.min(1, .9 * P.flash) * (1 - g)) + ')'); fl.addColorStop(1, rgba(col, 0)); ctx.fillStyle = fl; ctx.beginPath(); ctx.arc(tgt.x, tgt.y, 90, 0, 7); ctx.fill(); ctx.strokeStyle = rgba(lighten(col, .5), (1 - g) * Math.min(1, P.flash)); ctx.lineWidth = 2.5 * (1 - g) + .5; ctx.beginPath(); ctx.ellipse(tgt.x, tgt.y, 8 + g * 54, 4 + g * 24, 0, 0, 7); ctx.stroke(); ctx.restore(); }
+      if (t >= sp.tl && t < sp.ta) {
+        const b = (t - sp.tl) / (sp.ta - sp.tl);
+        for (let q = 8; q >= 1; q--) { const bb = clamp(b - q * .02); ctx.save(); ctx.globalAlpha = (1 - q / 9) * .5; orb(ctx, lerp(from.x, tgt.x, bb), lerp(from.y, tgt.y, bb), (7 - q * .4) * P.spark, col); ctx.restore(); }
+        orb(ctx, lerp(from.x, tgt.x, b), lerp(from.y, tgt.y, b), 9 * P.spark, col);
+      }
+      if (t >= sp.ta && t < sp.ta + .4) {
+        const g = seg(t, sp.ta, sp.ta + .4);
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        const fl = ctx.createRadialGradient(tgt.x, tgt.y, 0, tgt.x, tgt.y, 80 * (1 - g) + 10);
+        fl.addColorStop(0, 'rgba(255,255,255,' + (Math.min(1, .9 * P.flash) * (1 - g)) + ')');
+        fl.addColorStop(1, rgba(col, 0));
+        ctx.fillStyle = fl;
+        ctx.beginPath();
+        ctx.arc(tgt.x, tgt.y, 90, 0, 7);
+        ctx.fill();
+        ctx.strokeStyle = rgba(lighten(col, .5), (1 - g) * Math.min(1, P.flash));
+        ctx.lineWidth = 2.5 * (1 - g) + .5;
+        ctx.beginPath();
+        ctx.ellipse(tgt.x, tgt.y, 8 + g * 54, 4 + g * 24, 0, 0, 7);
+        ctx.stroke();
+        ctx.restore();
+      }
     });
     ev.refl.forEach((sp, j) => {   // Rückwurf zum Angreifer
       const src = { x: pos.x + (j - (ev.refl.length - 1) / 2) * 16, y: pos.y - h * .3 };
-      if (t >= sp.tl && t < sp.ta) { const b = eio((t - sp.tl) / (sp.ta - sp.tl)); for (let q = 8; q >= 1; q--) { const bb = clamp(b - q * .03); ctx.save(); ctx.globalAlpha = (1 - q / 9) * .55; orb(ctx, lerp(src.x, hpAtt.x, bb), lerp(src.y, hpAtt.y, bb), (8 - q * .4) * P.spark, col); ctx.restore(); } orb(ctx, lerp(src.x, hpAtt.x, b), lerp(src.y, hpAtt.y, b), 11 * P.spark, col); }
-      if (t >= sp.ta && t < sp.ta + .45) { const g = seg(t, sp.ta, sp.ta + .45); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = rgba(lighten(col, .5), 1 - g); ctx.lineWidth = 3 * (1 - g) + .5; ctx.beginPath(); ctx.ellipse(hpAtt.x, hpAtt.y, 14 + g * 40, 6 + g * 16, 0, 0, 7); ctx.stroke(); ctx.restore(); }
+      if (t >= sp.tl && t < sp.ta) {
+        const b = eio((t - sp.tl) / (sp.ta - sp.tl));
+        for (let q = 8; q >= 1; q--) { const bb = clamp(b - q * .03); ctx.save(); ctx.globalAlpha = (1 - q / 9) * .55; orb(ctx, lerp(src.x, hpAtt.x, bb), lerp(src.y, hpAtt.y, bb), (8 - q * .4) * P.spark, col); ctx.restore(); }
+        orb(ctx, lerp(src.x, hpAtt.x, b), lerp(src.y, hpAtt.y, b), 11 * P.spark, col);
+      }
+      if (t >= sp.ta && t < sp.ta + .45) {
+        const g = seg(t, sp.ta, sp.ta + .45);
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.strokeStyle = rgba(lighten(col, .5), 1 - g);
+        ctx.lineWidth = 3 * (1 - g) + .5;
+        ctx.beginPath();
+        ctx.ellipse(hpAtt.x, hpAtt.y, 14 + g * 40, 6 + g * 16, 0, 0, 7);
+        ctx.stroke();
+        ctx.restore();
+      }
     });
-    if (ev.refl.length) { const tt = ev.refl[ev.refl.length - 1].ta, q = seg(t, tt, tt + .1) * (1 - seg(t, tt + .6, tt + .9)); if (q > 0) { ctx.save(); ctx.font = '700 22px Alegreya, serif'; ctx.textAlign = 'center'; ctx.fillStyle = rgba('#ff6b6b', q); ctx.fillText('−' + fx.r, hpAtt.x, hpAtt.y - 20 - 10 * seg(t, tt, tt + .9)); ctx.restore(); } }
+    if (ev.refl.length) {
+      const tt = ev.refl[ev.refl.length - 1].ta, q = seg(t, tt, tt + .1) * (1 - seg(t, tt + .6, tt + .9));
+      if (q > 0) { ctx.save(); ctx.font = '700 22px Alegreya, serif'; ctx.textAlign = 'center'; ctx.fillStyle = rgba('#ff6b6b', q); ctx.fillText('−' + fx.r, hpAtt.x, hpAtt.y - 20 - 10 * seg(t, tt, tt + .9)); ctx.restore(); }
+    }
   }
   const ev0 = fx => (fx.r || 0) > 0 ? 'r' : 'a';   // Rückwurf: die Geschosse kommen von der Seite des Verteidigers, sonst vom Angreifer
   // Angezeigte Schildposition je Seite und Farbe, nach jedem Zeichnen gemerkt: Verbraucht der Rückwurf alle Stufen, ist das Schild beim Start des Effekts schon aus der Anzeige verschwunden. Dann fliegt der Effekt trotzdem von dort, wo es stand (früher fiel er auf eine Ecke unten links, beim Nachziehstapel, zurück).
@@ -4411,7 +4615,19 @@ const FlowFx = (() => {
   const rgba = (hex, a) => { if (hex[0] === 'r') return hex.replace('rgb(', 'rgba(').replace(')', ',' + clamp(a) + ')'); const n = parseInt(hex.slice(1), 16); return 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + clamp(a) + ')'; };
   const lighten = (hex, k) => { const n = parseInt(hex.slice(1), 16), f = c => Math.round(c + (255 - c) * k); return 'rgb(' + f(n >> 16 & 255) + ',' + f(n >> 8 & 255) + ',' + f(n & 255) + ')'; };
   const G = '#93c24f', B = '#52a6f5', F = '#ff7a3d';
-  function orb(ctx, x, y, r, col, core) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(x, y, 0, x, y, r * 3); g.addColorStop(0, rgba(core || '#ffffff', 1)); g.addColorStop(.25, rgba(col, .85)); g.addColorStop(1, rgba(col, 0)); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r * 3, 0, 7); ctx.fill(); ctx.restore(); }
+  function orb(ctx, x, y, r, col, core) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r * 3);
+    g.addColorStop(0, rgba(core || '#ffffff', 1));
+    g.addColorStop(.25, rgba(col, .85));
+    g.addColorStop(1, rgba(col, 0));
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(x, y, r * 3, 0, 7);
+    ctx.fill();
+    ctx.restore();
+  }
   // Mittelpunkt eines Oberflächenelements in Bühnenkoordinaten
   function at(el) { if (!el) return null; const r = el.getBoundingClientRect(), sr = stage.getBoundingClientRect(), k = sr.width / stage.offsetWidth; return { x: (r.left + r.width / 2 - sr.left) / k, y: (r.top + r.height / 2 - sr.top) / k }; }
   const panelOf = pid => pid === ME ? stage.querySelector('.sbody[data-lead]') : stage.querySelector('.sbody:not([data-lead])');
@@ -4441,13 +4657,39 @@ const FlowFx = (() => {
       srcs.forEach((m, i) => {
         const d = d0 + i * .06, col = i % 2 ? B : G, mx = m.x + (i - (srcs.length - 1) / 2) * 16, my = m.y;
         const bs = (fx.removed || 0) > 0 ? seg(u, d - .02, d + .1) : 0;   // Marker-Auflösung nur, wenn wirklich Marker entfernt wurden
-        if (bs > 0 && bs < 1) { ctx.save(); ctx.translate(mx, my); ctx.rotate(Math.PI / 4); ctx.scale(1 + bs * .8, 1 + bs * .8); ctx.globalAlpha = 1 - bs; ctx.shadowColor = col; ctx.shadowBlur = 8; ctx.fillStyle = rgba(col, .55); ctx.fillRect(-9, -9, 18, 18); ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.strokeRect(-9, -9, 18, 18); ctx.restore(); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = rgba(lighten(col, .4), 1 - bs); ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(mx, my, 10 + bs * 34, 0, 7); ctx.stroke(); ctx.restore(); }
+        if (bs > 0 && bs < 1) {
+          ctx.save();
+          ctx.translate(mx, my);
+          ctx.rotate(Math.PI / 4);
+          ctx.scale(1 + bs * .8, 1 + bs * .8);
+          ctx.globalAlpha = 1 - bs;
+          ctx.shadowColor = col;
+          ctx.shadowBlur = 8;
+          ctx.fillStyle = rgba(col, .55);
+          ctx.fillRect(-9, -9, 18, 18);
+          ctx.strokeStyle = col;
+          ctx.lineWidth = 2;
+          ctx.strokeRect(-9, -9, 18, 18);
+          ctx.restore();
+          ctx.save();
+          ctx.globalCompositeOperation = 'lighter';
+          ctx.strokeStyle = rgba(lighten(col, .4), 1 - bs);
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.arc(mx, my, 10 + bs * 34, 0, 7);
+          ctx.stroke();
+          ctx.restore();
+        }
         const r = rng(seed + i * 31 + 1);
         for (let k = 0; k < motes; k++) {
           const dl = r() * .08, ph = r() * 6.28, lat = (r() - .5) * 60, c2 = k % 2 ? B : G, noHeal = !(fx.heal > 0), toDraw = dr && (noHeal || k % 2 === 1), tg = toDraw ? dr : noHeal ? { x: m.x, y: m.y - 90 } : hp;
           const hs = handOf(fx.who), cardsPt = { x: hs.x + (r() - .5) * 360, y: hs.y }, sx0 = toDraw || noHeal ? mx : cardsPt.x, sy0 = toDraw || noHeal ? my : cardsPt.y;   // Heilung geht von den Karten aus, der Nachziehmarker kommt von den aufgelösten Markern
           const s = seg(u, d + .03 + dl, d + .03 + dl + .26); if (s <= 0 || s >= 1) continue;
-          const pos = q => { const e = eio(q), cx = (sx0 + tg.x) / 2 + lat, cy = (sy0 + tg.y) / 2 - 60; const x = (1 - e) * (1 - e) * sx0 + 2 * (1 - e) * e * cx + e * e * tg.x, y = (1 - e) * (1 - e) * sy0 + 2 * (1 - e) * e * cy + e * e * tg.y, a = 10 * Math.sin(q * Math.PI); return [x + Math.cos(q * Math.PI * 4 + ph) * a, y + Math.sin(q * Math.PI * 4 + ph) * a]; };
+          const pos = q => {
+            const e = eio(q), cx = (sx0 + tg.x) / 2 + lat, cy = (sy0 + tg.y) / 2 - 60;
+            const x = (1 - e) * (1 - e) * sx0 + 2 * (1 - e) * e * cx + e * e * tg.x, y = (1 - e) * (1 - e) * sy0 + 2 * (1 - e) * e * cy + e * e * tg.y, a = 10 * Math.sin(q * Math.PI);
+            return [x + Math.cos(q * Math.PI * 4 + ph) * a, y + Math.sin(q * Math.PI * 4 + ph) * a];
+          };
           for (let j = 4; j >= 1; j--) { const q = clamp(s - j * .02); if (q <= 0) continue; const pp = pos(q); ctx.save(); ctx.globalAlpha = (1 - j / 5) * .5; orb(ctx, pp[0], pp[1], 2, c2); ctx.restore(); }
           const pp = pos(s); orb(ctx, pp[0], pp[1], 2.8, c2, '#ffffff');
         }
@@ -4456,11 +4698,30 @@ const FlowFx = (() => {
       const hu = seg(u, tEnd - .2, tEnd + .25);
       if (hu > 0 && hu < 1 && fx.heal > 0) {   // Heilung am Lebensbalken
         ctx.save(); ctx.globalCompositeOperation = 'lighter';
-        [[G, 0], [B, .15]].forEach(([c, dl]) => { const q = clamp((hu - dl) / (1 - dl)); if (q <= 0) return; ctx.strokeStyle = rgba(c, (1 - q) * .9); ctx.lineWidth = 4 * (1 - q) + 1; ctx.shadowColor = c; ctx.shadowBlur = 12; ctx.beginPath(); ctx.ellipse(hp.x, hp.y, 14 + q * 60, 8 + q * 22, 0, 0, 7); ctx.stroke(); });
+        [[G, 0], [B, .15]].forEach(([c, dl]) => {
+          const q = clamp((hu - dl) / (1 - dl));
+          if (q <= 0) return;
+          ctx.strokeStyle = rgba(c, (1 - q) * .9);
+          ctx.lineWidth = 4 * (1 - q) + 1;
+          ctx.shadowColor = c;
+          ctx.shadowBlur = 12;
+          ctx.beginPath();
+          ctx.ellipse(hp.x, hp.y, 14 + q * 60, 8 + q * 22, 0, 0, 7);
+          ctx.stroke();
+        });
         ctx.restore();
       }
       const tu = seg(u, tEnd - .15, tEnd) * (1 - seg(u, tEnd + .2, tEnd + .4));
-      if (tu > 0 && fx.heal > 0) { ctx.save(); ctx.font = '700 24px Alegreya, serif'; ctx.textAlign = 'center'; ctx.fillStyle = rgba(lighten(G, .5), tu); ctx.shadowColor = G; ctx.shadowBlur = 10; ctx.fillText('+' + fx.heal + ' HP', hp.x, hp.y - 16 - 18 * seg(u, tEnd - .15, tEnd + .4)); ctx.restore(); }
+      if (tu > 0 && fx.heal > 0) {
+        ctx.save();
+        ctx.font = '700 24px Alegreya, serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = rgba(lighten(G, .5), tu);
+        ctx.shadowColor = G;
+        ctx.shadowBlur = 10;
+        ctx.fillText('+' + fx.heal + ' HP', hp.x, hp.y - 16 - 18 * seg(u, tEnd - .15, tEnd + .4));
+        ctx.restore();
+      }
       if (dr) {   // neuer Nachziehmarker leuchtet auf
         const du = seg(u, tEnd - .2, tEnd + .05) * (1 - seg(u, tEnd + .1, tEnd + .4));
         if (du > 0) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = rgba(B, du * .9); ctx.lineWidth = 3; ctx.shadowColor = B; ctx.shadowBlur = 14; ctx.beginPath(); ctx.ellipse(dr.x, dr.y, 46 + (1 - du) * 20, 20 + (1 - du) * 10, 0, 0, 7); ctx.stroke(); ctx.restore(); }
@@ -4507,7 +4768,18 @@ const FlowFx = (() => {
       }
       const t0 = .12 + flight;
       const g = seg(t, t0, t0 + .35);
-      if (g > 0 && g < 1) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = rgba(lighten(B, .4), (1 - g) * .9); ctx.lineWidth = 3 * (1 - g) + .5; ctx.shadowColor = B; ctx.shadowBlur = 12; ctx.beginPath(); ctx.ellipse(Mp.x, Mp.y, 10 + g * 50, 6 + g * 20, 0, 0, 7); ctx.stroke(); ctx.restore(); }
+      if (g > 0 && g < 1) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.strokeStyle = rgba(lighten(B, .4), (1 - g) * .9);
+        ctx.lineWidth = 3 * (1 - g) + .5;
+        ctx.shadowColor = B;
+        ctx.shadowBlur = 12;
+        ctx.beginPath();
+        ctx.ellipse(Mp.x, Mp.y, 10 + g * 50, 6 + g * 20, 0, 0, 7);
+        ctx.stroke();
+        ctx.restore();
+      }
       for (let i = 0; i < n; i++) {   // herausgelöste Manakugeln steigen auf und verglühen
         const a0 = t0 + .05 + i * .08, q = seg(t, a0, a0 + .9); if (q <= 0 || q >= 1) continue;
         const ang = (i - (n - 1) / 2) * .7 - Math.PI / 2, d = 18 + eo(q) * 46, x = Mp.x + Math.cos(ang) * d + Math.sin(q * 9 + i) * 5, y = Mp.y + Math.sin(ang) * d - q * 22;
@@ -4531,7 +4803,18 @@ const FlowFx = (() => {
         const pp = pos(s); orb(ctx, pp[0], pp[1], 8, F, '#ffb347');
       }
       const t0 = .12 + flight, g = seg(t, t0, t0 + .4);
-      if (g > 0 && g < 1) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = rgba('#ffb347', (1 - g) * .9); ctx.lineWidth = 3 * (1 - g) + .5; ctx.shadowColor = F; ctx.shadowBlur = 12; ctx.beginPath(); ctx.ellipse(T.x, T.y, 20 + g * 130, 8 + g * 34, 0, 0, 7); ctx.stroke(); ctx.restore(); }
+      if (g > 0 && g < 1) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.strokeStyle = rgba('#ffb347', (1 - g) * .9);
+        ctx.lineWidth = 3 * (1 - g) + .5;
+        ctx.shadowColor = F;
+        ctx.shadowBlur = 12;
+        ctx.beginPath();
+        ctx.ellipse(T.x, T.y, 20 + g * 130, 8 + g * 34, 0, 0, 7);
+        ctx.stroke();
+        ctx.restore();
+      }
       for (let i = 0; i < n * 5; i++) {   // Funken steigen aus der Hand auf
         const r = rng(91 + i * 7), a0 = t0 + .05 + r() * .25, q = seg(t, a0, a0 + .9); if (q <= 0 || q >= 1) continue;
         const x = T.x + (r() - .5) * 300 + Math.sin(q * 8 + i) * 6, y = T.y - 20 - q * 70 * (.6 + r());
@@ -4549,7 +4832,17 @@ const FlowFx = (() => {
     const who = fx.who, w = who === ME ? 's' : 'o', n = Math.max(1, Math.min(fx.n || 1, 4)), hp = hpOf(who), toks = [...stage.querySelectorAll('.deathtok[data-who="' + w + '"]')], C = '#a67bff', D = '#4a1f86';
     const srcs = []; for (let i = 0; i < n; i++) { const q = deathPos(w, i); srcs.push(at(toks[0]) || { x: q.x + 24, y: q.y + 24 }); }
     const life = .75, N = 36, dur = curseStart(n - 1) + CURSE_F + .65;
-    const puff = (ctx, x, y, r, a, col) => { if (a <= 0.01) return; const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, rgba(lighten(col, .3), a)); g.addColorStop(.45, rgba(col, a * .65)); g.addColorStop(1, rgba(D, 0)); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); };
+    const puff = (ctx, x, y, r, a, col) => {
+      if (a <= 0.01) return;
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+      g.addColorStop(0, rgba(lighten(col, .3), a));
+      g.addColorStop(.45, rgba(col, a * .65));
+      g.addColorStop(1, rgba(D, 0));
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, 7);
+      ctx.fill();
+    };
     run(dur, (ctx, t) => {
       srcs.forEach((sr, i) => {
         const d = curseStart(i), rr = rng(17 + i * 29), cx = (sr.x + hp.x) / 2 + (rr() - .5) * 90, cy = Math.min(sr.y, hp.y) - 60 - rr() * 50;
@@ -4581,7 +4874,17 @@ const FlowFx = (() => {
     if (off()) return;
     const who = fx.who, total = Math.max(1, fx.n || 1), n = Math.max(1, Math.min(total, 4)), hp = hpOf(who), src = at(stage.querySelector('.combatcenter .note')) || { x: SW / 2, y: 300 }, C = '#e0605a', D = '#3a0a0a';
     const life = .75, N = 30, dur = curseStart(n - 1) + CURSE_F + .85;
-    const puff = (ctx, x, y, r, a, col) => { if (a <= 0.01) return; const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, rgba(lighten(col, .25), a)); g.addColorStop(.45, rgba(col, a * .65)); g.addColorStop(1, rgba(D, 0)); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); };
+    const puff = (ctx, x, y, r, a, col) => {
+      if (a <= 0.01) return;
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+      g.addColorStop(0, rgba(lighten(col, .25), a));
+      g.addColorStop(.45, rgba(col, a * .65));
+      g.addColorStop(1, rgba(D, 0));
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, 7);
+      ctx.fill();
+    };
     run(dur, (ctx, t) => {
       const vg = seg(t, 0, .2) * (1 - seg(t, .2, .9));   // kurzes Abdunkeln des ganzen Bildes, dunkelrot zu den Rändern
       if (vg > 0) { const v = ctx.createRadialGradient(SW / 2, 400, 120, SW / 2, 400, SW * .62); v.addColorStop(0, 'rgba(40,0,0,0)'); v.addColorStop(1, 'rgba(40,0,0,' + (.5 * vg) + ')'); ctx.fillStyle = v; ctx.fillRect(0, 0, SW, 800); }
@@ -4617,8 +4920,49 @@ const FlowFx = (() => {
     const who = fx.who, w = who === ME ? 's' : 'o', toks = [...stage.querySelectorAll((fx.mana ? '.manatok' : '.healtok:not(.manatok)') + '[data-who="' + w + '"]')], n = Math.max(1, Math.min(fx.marks || fx.n || 1, 4)), hp = fx.mana ? manaPos(who) : hpOf(who), C = fx.mana ? '#52a6f5' : '#93c24f', D = fx.mana ? '#1d4f94' : '#2f7a2f', Lt = fx.mana ? '#d6ecff' : '#e8ffb8';
     const srcs = []; for (let i = 0; i < n; i++) { const q = deathPos(w, i); srcs.push(at(toks[0]) || { x: q.x + 24, y: q.y + 24 }); }
     const life = .75, N = 36, dur = curseStart(n - 1) + CURSE_F + .65;
-    const puff = (ctx, x, y, r, a, col) => { if (a <= 0.01) return; const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, rgba(lighten(col, .3), a)); g.addColorStop(.45, rgba(col, a * .65)); g.addColorStop(1, rgba(D, 0)); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); };
-    const plus = (ctx, x, y, s, a) => { if (fx.mana) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = rgba(Lt, a); ctx.shadowColor = C; ctx.shadowBlur = 8; ctx.beginPath(); ctx.moveTo(x, y - s * 1.3); ctx.lineTo(x + s * .8, y); ctx.lineTo(x, y + s * 1.3); ctx.lineTo(x - s * .8, y); ctx.closePath(); ctx.fill(); ctx.restore(); return; } ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = rgba(Lt, a); ctx.lineWidth = Math.max(1.5, s * .38); ctx.lineCap = 'round'; ctx.shadowColor = C; ctx.shadowBlur = 8; ctx.beginPath(); ctx.moveTo(x - s, y); ctx.lineTo(x + s, y); ctx.moveTo(x, y - s); ctx.lineTo(x, y + s); ctx.stroke(); ctx.restore(); };
+    const puff = (ctx, x, y, r, a, col) => {
+      if (a <= 0.01) return;
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+      g.addColorStop(0, rgba(lighten(col, .3), a));
+      g.addColorStop(.45, rgba(col, a * .65));
+      g.addColorStop(1, rgba(D, 0));
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, 7);
+      ctx.fill();
+    };
+    const plus = (ctx, x, y, s, a) => {
+      if (fx.mana) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.fillStyle = rgba(Lt, a);
+        ctx.shadowColor = C;
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.moveTo(x, y - s * 1.3);
+        ctx.lineTo(x + s * .8, y);
+        ctx.lineTo(x, y + s * 1.3);
+        ctx.lineTo(x - s * .8, y);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+        return;
+      }
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = rgba(Lt, a);
+      ctx.lineWidth = Math.max(1.5, s * .38);
+      ctx.lineCap = 'round';
+      ctx.shadowColor = C;
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.moveTo(x - s, y);
+      ctx.lineTo(x + s, y);
+      ctx.moveTo(x, y - s);
+      ctx.lineTo(x, y + s);
+      ctx.stroke();
+      ctx.restore();
+    };
     run(dur, (ctx, t) => {
       srcs.forEach((sr, i) => {
         const d = curseStart(i), rr = rng(41 + i * 29), cx = (sr.x + hp.x) / 2 + (rr() - .5) * 90, cy = Math.min(sr.y, hp.y) - 60 - rr() * 50;
@@ -4728,7 +5072,20 @@ function drawProjectile(ctx,p,el,a,b,q,seed,t){
     ctx.save();
     if(p.look==='kugel'){ctx.globalAlpha=k*.6;orbGlow(ctx,pp[0],pp[1],size*k*.9,col)}
     else if(el==='F'){ctx.globalAlpha=k*.75;orbGlow(ctx,pp[0]+(r1-.5)*6,pp[1]-j*1.2+(r2-.5)*4,size*k*(.7+r2*.5),j%2?'#ffb347':col)}
-    else if(el==='E'){ctx.restore();ctx.save();if(j%2){const rg=ctx.createRadialGradient(pp[0],pp[1]+j,0,pp[0],pp[1]+j,size*k*1.6);rg.addColorStop(0,'rgba(170,150,105,'+(.35*k)+')');rg.addColorStop(1,'rgba(170,150,105,0)');ctx.fillStyle=rg;ctx.beginPath();ctx.arc(pp[0],pp[1]+j,size*k*1.6,0,7);ctx.fill()}else chunk(ctx,pp[0]+(r1-.5)*12,pp[1]+j*2.2+(r2-.5)*6,Math.max(1.2,size*k*.4),j*1.3+r1*5,k*.85,j%3?'#7a6e4c':'#8aa05a',seed+j)}   // Staubwolken und fallende Brocken
+    // Staubwolken und fallende Brocken
+    else if(el==='E'){
+      ctx.restore();
+      ctx.save();
+      if(j%2){
+        const rg=ctx.createRadialGradient(pp[0],pp[1]+j,0,pp[0],pp[1]+j,size*k*1.6);
+        rg.addColorStop(0,'rgba(170,150,105,'+(.35*k)+')');
+        rg.addColorStop(1,'rgba(170,150,105,0)');
+        ctx.fillStyle=rg;
+        ctx.beginPath();
+        ctx.arc(pp[0],pp[1]+j,size*k*1.6,0,7);
+        ctx.fill()
+      }else chunk(ctx,pp[0]+(r1-.5)*12,pp[1]+j*2.2+(r2-.5)*6,Math.max(1.2,size*k*.4),j*1.3+r1*5,k*.85,j%3?'#7a6e4c':'#8aa05a',seed+j)
+    }
     else{ctx.globalAlpha=k*.8;ctx.fillStyle=j%2?rgba(col,.9):'rgba(210,235,255,.9)';ctx.beginPath();ctx.arc(pp[0]+(r1-.5)*6,pp[1]+j*2.2+(r2-.5)*4,Math.max(.8,size*k*.32),0,7);ctx.fill()}   // Tropfen fallen vom Wasserball
     ctx.restore();
   }
@@ -4754,7 +5111,15 @@ function drawIdle(ctx,p,el,x,y,seed,t,alpha){
   const col=EL[el],size=8*p.size;ctx.save();ctx.globalAlpha=alpha;if(el!=='F')y+=Math.sin(t*3+seed)*3;
   if(p.look==='kugel')orbGlow(ctx,x,y,size,col,'#fff');
   else if(el==='F'){orbGlow(ctx,x,y,size*1.15,col,'#ffb347');orbGlow(ctx,x,y-size*.25,size*.55,'#ff8a2f');fireEmbers(ctx,x,y,size,t,seed)}
-  else if(el==='E'){const R2=size*1.1*(1.15+.45*p.heavy*(p.look==='kugel'?0:1));ctx.save();ctx.globalAlpha*=.5;orbGlow(ctx,x,y,R2*.7,col,'#b9e070');ctx.restore();rock(ctx,x,y,R2,seed+.3,seed,col);for(let k=0;k<3;k++){const a=t*1.8+k*2.1+seed;chunk(ctx,x+Math.cos(a)*R2*1.7,y+Math.sin(a)*R2*.7-4,2.4,a*2,.9,'#8aa05a',seed+k)}}
+  else if(el==='E'){
+    const R2=size*1.1*(1.15+.45*p.heavy*(p.look==='kugel'?0:1));
+    ctx.save();
+    ctx.globalAlpha*=.5;
+    orbGlow(ctx,x,y,R2*.7,col,'#b9e070');
+    ctx.restore();
+    rock(ctx,x,y,R2,seed+.3,seed,col);
+    for(let k=0;k<3;k++){const a=t*1.8+k*2.1+seed;chunk(ctx,x+Math.cos(a)*R2*1.7,y+Math.sin(a)*R2*.7-4,2.4,a*2,.9,'#8aa05a',seed+k)}
+  }
   else{waterBody(ctx,x,y,size*1.6,0,t,seed,p);ctx.strokeStyle=rgba(col,.4*(1-((t*1.2+seed)%1)));ctx.lineWidth=1.5;ctx.beginPath();ctx.ellipse(x,y+size*1.3,size*(1+((t*1.2+seed)%1)*1.6),size*.4*(1+((t*1.2+seed)%1)*1.6),0,0,7);ctx.stroke()}
   ctx.restore();
 }
@@ -4988,7 +5353,8 @@ function drawClash(ctx,p,style,x,y,g,ea,ed,seed){
     ctx.globalCompositeOperation='lighter';[[ca,0],[cd,.12]].forEach(([c,dl])=>{const q=clamp((g-dl)/(1-dl));if(q<=0)return;ctx.strokeStyle=rgba(lighten(c,.4),(1-q)*.9);ctx.lineWidth=4*(1-q)+.8;ctx.beginPath();ctx.arc(x,y,10+q*70*S,0,7);ctx.stroke()});
   }
   if(style==='funken'){
-    ctx.globalCompositeOperation='lighter';for(let k=0;k<26;k++){const a=sr()*Math.PI*2,v=30+sr()*110*S,c=k%2?ca:cd;ctx.strokeStyle=rgba(lighten(c,.5),(1-g)*.9);ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x+Math.cos(a)*v*g*.6,y+Math.sin(a)*v*g*.6);ctx.lineTo(x+Math.cos(a)*v*g,y+Math.sin(a)*v*g);ctx.stroke()}
+    ctx.globalCompositeOperation='lighter';
+    for(let k=0;k<26;k++){const a=sr()*Math.PI*2,v=30+sr()*110*S,c=k%2?ca:cd;ctx.strokeStyle=rgba(lighten(c,.5),(1-g)*.9);ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(x+Math.cos(a)*v*g*.6,y+Math.sin(a)*v*g*.6);ctx.lineTo(x+Math.cos(a)*v*g,y+Math.sin(a)*v*g);ctx.stroke()}
   }
   if(style==='dampf')kSteam(ctx,p,x,y,g,sr);
   if(style==='lava')kLava(ctx,p,x,y,g,sr,clashDur(p,style));
@@ -5329,7 +5695,11 @@ function showFx() {
   let k = 0, preMs = 0;   // preMs: Wartezeit der Verteidigungsanimation hinter einer Kombo-Animation derselben Aktion
   for (const e of G.log) {
     if (e.n <= fxLast) continue;
-    const go = f => { if (!FAST) fxSound(f); if (f.kind === 'ultimate' && (f.el === 'E' || f.el === 'W')) UltFx.play(f.el); if (f.kind === 'lifeflow') FlowFx.lifeflow(f); else if (f.kind === 'aggro') FlowFx.aggro(f); else if (f.kind === 'drain') FlowFx.drain(f); else if (f.kind === 'ruin') FlowFx.ruin(f); else if (f.kind === 'attack') FlowFx.attack(f); else if (f.kind === 'defense') FlowFx.defense(f); };
+    const go = f => {
+      if (!FAST) fxSound(f);
+      if (f.kind === 'ultimate' && (f.el === 'E' || f.el === 'W')) UltFx.play(f.el);
+      if (f.kind === 'lifeflow') FlowFx.lifeflow(f); else if (f.kind === 'aggro') FlowFx.aggro(f); else if (f.kind === 'drain') FlowFx.drain(f); else if (f.kind === 'ruin') FlowFx.ruin(f); else if (f.kind === 'attack') FlowFx.attack(f); else if (f.kind === 'defense') FlowFx.defense(f);
+    };
     let pendTrap = null;   // Falle (seit 0.9.5): Sie löst erst aus, wenn der Angriff in der Mitte liegt; sie läuft deshalb als Teil der Angriffsanimation (KampfFx) mit dem vollen Angriff vor dem Rückwurf
     [].concat(e.fx || []).forEach(f => {
       if (f.kind === 'trap') { pendTrap = f; return; }
@@ -5468,7 +5838,11 @@ function renderInner() {
     dthSeen = { c: G.combat, n: dd };
     // Rituale von Meditation und Multispiegel laufen seit 0.7.2.5 bei jedem Wirken der Ultimate (showFx), nicht mehr nur bei steigender Stufe
   } else { mkSeen = null; dthSeen = null; hlSeen = null; rbSeen = null; }
-  if (manaPv > 0 && cx.combat) { const mv = panels.querySelector('.sbody[data-lead] [data-pv="mana"]'), st = cx.myStats; if (mv) { mv.innerHTML = '<span class="pvdn">' + Math.max(0, st.mana - manaPv) + '</span>/' + st.maxMana; ArcFx.mark(mv, st.mana + '/' + st.maxMana, null, true); } }   // Mana nach dem Ausspielen in Rot; der Anteil auf dem Mana-Bogen blinkt dazu (seit 0.5.6.5)
+  // Mana nach dem Ausspielen in Rot; der Anteil auf dem Mana-Bogen blinkt dazu (seit 0.5.6.5)
+  if (manaPv > 0 && cx.combat) {
+    const mv = panels.querySelector('.sbody[data-lead] [data-pv="mana"]'), st = cx.myStats;
+    if (mv) { mv.innerHTML = '<span class="pvdn">' + Math.max(0, st.mana - manaPv) + '</span>/' + st.maxMana; ArcFx.mark(mv, st.mana + '/' + st.maxMana, null, true); }
+  }
   { const mine = panels.querySelector('.sbody[data-lead]');   // Knopfspalte weich ein- und ausfahren
     if (mine) { const now = mine.classList.contains('hasup'); if (leadPrev !== null && leadPrev !== now) { mine.classList.toggle('hasup', leadPrev); void mine.offsetWidth; mine.classList.toggle('hasup', now); } leadPrev = now; } }
   showFx();
@@ -5571,7 +5945,9 @@ function finSpark(pid, W) {
   const xs = i => L + i / (n - 1) * (W - L - R), ys = v => T + (Ht - T - B) * (1 - v / ymax);
   const line = (seat, col, dash) => '<polyline points="' + H.map((h, i) => xs(i).toFixed(1) + ',' + ys(h.p[seat].sp).toFixed(1)).join(' ') + '" fill="none" stroke="' + col + '" stroke-width="2.6" stroke-linejoin="round"' + (dash ? ' stroke-dasharray="5 4" opacity=".75"' : '') + '/>';
   let s = '<svg viewBox="0 0 ' + W + ' ' + Ht + '" width="100%" style="display:block"><line x1="' + L + '" x2="' + (W - R) + '" y1="' + ys(0) + '" y2="' + ys(0) + '" stroke="rgba(255,255,255,.3)"/><text x="' + (L - 5) + '" y="' + (ys(0) + 4) + '" text-anchor="end" fill="#9a97a6" font-size="11">0</text><text x="' + (L - 5) + '" y="' + (ys(ymax) + 4) + '" text-anchor="end" fill="#9a97a6" font-size="11">' + ymax + '</text>';
-  H.forEach((h, i) => { if (h.ev && h.ev.type === 'showdown') s += '<line x1="' + xs(i) + '" x2="' + xs(i) + '" y1="' + T + '" y2="' + ys(0) + '" stroke="rgba(255,255,255,.14)" stroke-dasharray="3 3"/><text x="' + xs(i) + '" y="' + (T - 1) + '" text-anchor="middle" fill="#e0b84a" font-size="12">★</text>'; });
+  H.forEach((h, i) => {
+    if (h.ev && h.ev.type === 'showdown') s += '<line x1="' + xs(i) + '" x2="' + xs(i) + '" y1="' + T + '" y2="' + ys(0) + '" stroke="rgba(255,255,255,.14)" stroke-dasharray="3 3"/><text x="' + xs(i) + '" y="' + (T - 1) + '" text-anchor="middle" fill="#e0b84a" font-size="12">★</text>';
+  });
   const last = H[n - 1].p;
   return s + line(q, '#b9b4c4', true) + line(pid, '#f0c24a', false) + '<circle cx="' + xs(n - 1) + '" cy="' + ys(last[pid].sp) + '" r="4.5" fill="#f0c24a"/><circle cx="' + xs(n - 1) + '" cy="' + ys(last[q].sp) + '" r="3.5" fill="#b9b4c4"/></svg>';
 }
@@ -5881,7 +6257,9 @@ let MP = null, roomApi;
 const MP_KEY = 'magus-mp';
 // Kennung dieser Spielversion: beide Geräte müssen denselben Programmtext haben, sonst rechnen sie unterschiedlich.
 const BUILD = (() => { let h = 2166136261; const t = [...document.scripts].map(x => x.text).join(''); for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); })();
-function mpOldVersion(who) { mpWait('Andere Spielversion', '<p class="bad">' + who + ' hat eine andere Version von Magus geladen.</p><p class="note">Bitte auf beiden Geräten die Seite mit Strg+F5 (Handy: Seite neu laden, notfalls Cache leeren) neu laden und danach einen neuen Raum erstellen.</p>'); }
+function mpOldVersion(who) {
+  mpWait('Andere Spielversion', '<p class="bad">' + who + ' hat eine andere Version von Magus geladen.</p><p class="note">Bitte auf beiden Geräten die Seite mit Strg+F5 (Handy: Seite neu laden, notfalls Cache leeren) neu laden und danach einen neuen Raum erstellen.</p>');
+}
 async function mpRoomApi() {
   if (roomApi) return roomApi;
   try { roomApi = window.claude && window.claude.use ? await window.claude.use('room') : null; } catch (e) { roomApi = null; }
@@ -5976,7 +6354,15 @@ async function mpJoin() {
   if (!(await mpOpen(code, false))) return;
   mpWait('Raum ' + code.toUpperCase(), '<p class="note">Verbinde mit dem Gastgeber …</p>');
   let tries = 0;
-  const ask = () => { if (!MP) return; if (++tries > 12) { clearInterval(MP.hello); mpWait('Raum ' + code.toUpperCase(), '<p class="bad">Kein Gastgeber gefunden. Stimmt der Code, und ist der Raum auf dem anderen Gerät noch offen?</p>' + (MP.room.peerjs ? '<p class="note">Technisch: ' + [MP.room.srv || 'Vermittlungsserver nicht erreicht', MP.room.err ? 'Fehler ' + MP.room.err : '', MP.room.ice ? 'ICE ' + MP.room.ice : ''].filter(Boolean).join(' · ') + '</p>' : '')); return; } mpEmit('hello', { v: BUILD }); };
+  const ask = () => {
+    if (!MP) return;
+    if (++tries > 12) {
+      clearInterval(MP.hello);
+      mpWait('Raum ' + code.toUpperCase(), '<p class="bad">Kein Gastgeber gefunden. Stimmt der Code, und ist der Raum auf dem anderen Gerät noch offen?</p>' + (MP.room.peerjs ? '<p class="note">Technisch: ' + [MP.room.srv || 'Vermittlungsserver nicht erreicht', MP.room.err ? 'Fehler ' + MP.room.err : '', MP.room.ice ? 'ICE ' + MP.room.ice : ''].filter(Boolean).join(' · ') + '</p>' : ''));
+      return;
+    }
+    mpEmit('hello', { v: BUILD });
+  };
   MP.hello = setInterval(ask, 2000); ask();
 }
 async function mpLeave() {
@@ -6047,7 +6433,11 @@ function onAct(d) {
         render(); } break; }
     case 'sightok': { const f = G.combat && G.combat.forced; if (!f || (f.kind !== 'sight' && f.kind !== 'trap') || sightSel.filter(k => k === 'k').length !== f.n) break;
       const pk = sightSel.slice(); sightSel = []; act(f.kind === 'trap' ? { type: 'fd', slots: [pk.indexOf('k')] } : { type: 'fd', pick: pk }); break; }
-    case 'draw': if (canDrawNow()) { if (drawPenaltyNow() > 0 && !drawAsk) { drawAsk = true; render(); } else { drawAsk = false; act({ type: 'draw' }); } } else if (myTurn()) toast(G.phase === 'combat' && G.combat.action === 'attack' && drawNeedsMana() ? 'Roter Nachziehmarker: Nachziehen kostet ' + M.drawManaCost(G, ME) + ' Mana, du hast nicht genug.' : 'Jetzt ist kein Nachziehen möglich.'); break;
+    case 'draw':
+      if (canDrawNow()) {
+        if (drawPenaltyNow() > 0 && !drawAsk) { drawAsk = true; render(); } else { drawAsk = false; act({ type: 'draw' }); }
+      } else if (myTurn()) toast(G.phase === 'combat' && G.combat.action === 'attack' && drawNeedsMana() ? 'Roter Nachziehmarker: Nachziehen kostet ' + M.drawManaCost(G, ME) + ' Mana, du hast nicht genug.' : 'Jetzt ist kein Nachziehen möglich.');
+      break;
     case 'drawyes': drawAsk = false; if (canDrawNow()) act({ type: 'draw' }); else render(); break;
     case 'drawno': drawAsk = false; render(); break;
     case 'freedraw': act({ type: 'freeDraw' }); break;
@@ -6257,7 +6647,10 @@ function statsSvg() {
   const { x0, x1, y0, y1 } = stView, xs = i => L + (i - x0) / (x1 - x0) * pw, ys = v => T + PH - (v - y0) / (y1 - y0) * PH;
   let svg = '<svg id="stsvg" viewBox="0 0 ' + W + ' ' + ph + '" width="' + W + '" height="' + ph + '" style="display:block;max-width:100%;touch-action:none;user-select:none"><defs><clipPath id="stclip"><rect x="' + L + '" y="' + (T - 40) + '" width="' + pw + '" height="' + (PH + 40) + '"/></clipPath></defs>';
   const ystep = niceStep(y1 - y0, 8), xstep = Math.max(1, niceStep(x1 - x0, 14));
-  for (let g = Math.ceil(y0 / ystep) * ystep; g <= y1 + 1e-9; g += ystep) { const v = Math.round(g * 100) / 100; svg += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + ys(v) + '" y2="' + ys(v) + '" stroke="rgba(255,255,255,' + (v === 0 ? .35 : .1) + ')"/><text x="' + (L - 8) + '" y="' + (ys(v) + 5) + '" text-anchor="end" fill="#9a97a6" font-size="14">' + v + '</text>'; }
+  for (let g = Math.ceil(y0 / ystep) * ystep; g <= y1 + 1e-9; g += ystep) {
+    const v = Math.round(g * 100) / 100;
+    svg += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + ys(v) + '" y2="' + ys(v) + '" stroke="rgba(255,255,255,' + (v === 0 ? .35 : .1) + ')"/><text x="' + (L - 8) + '" y="' + (ys(v) + 5) + '" text-anchor="end" fill="#9a97a6" font-size="14">' + v + '</text>';
+  }
   for (let g = Math.ceil(x0 / xstep) * xstep; g <= x1 + 1e-9; g += xstep) svg += '<text x="' + xs(g) + '" y="' + (T + PH + 22) + '" text-anchor="middle" fill="#9a97a6" font-size="14">' + Math.round(g) + '</text>';
   svg += '<text x="' + (L + pw / 2) + '" y="' + (ph - 4) + '" text-anchor="middle" fill="#9a97a6" font-size="14">Züge</text><g clip-path="url(#stclip)">';
   const inView = H.filter((h, i) => i >= x0 - 1 && i <= x1 + 1).length;
@@ -6276,7 +6669,10 @@ function statsSvg() {
       const pts = H.map((h, i) => xs(i).toFixed(1) + ',' + ys(h.p[seat][s.k]).toFixed(1));
       if (pts.length > 1) svg += '<polyline points="' + pts.join(' ') + '" fill="none" stroke="' + s.col + '" stroke-width="' + (s.thin ? 1.8 : 3.4) + '" stroke-linejoin="round"' + (dash ? ' stroke-dasharray="' + dash + '" opacity=".75"' : '') + '/>';
       else if (pts.length === 1) { const q = pts[0].split(','); svg += '<circle cx="' + q[0] + '" cy="' + q[1] + '" r="4" fill="' + s.col + '"/>'; }
-      if (inView <= 60) H.forEach((h, i) => { if (i < x0 - 1 || i > x1 + 1) return; svg += '<circle cx="' + xs(i).toFixed(1) + '" cy="' + ys(h.p[seat][s.k]).toFixed(1) + '" r="3" fill="' + s.col + '"><title>' + s.name + ' (' + (key === 'me' ? 'du' : esc(G.players[OPP].name)) + ') nach Zug ' + i + ': ' + h.p[seat][s.k] + '</title></circle>'; });
+      if (inView <= 60) H.forEach((h, i) => {
+        if (i < x0 - 1 || i > x1 + 1) return;
+        svg += '<circle cx="' + xs(i).toFixed(1) + '" cy="' + ys(h.p[seat][s.k]).toFixed(1) + '" r="3" fill="' + s.col + '"><title>' + s.name + ' (' + (key === 'me' ? 'du' : esc(G.players[OPP].name)) + ') nach Zug ' + i + ': ' + h.p[seat][s.k] + '</title></circle>';
+      });
     });
   });
   return svg + '</g></svg>';
@@ -6303,7 +6699,13 @@ overlay.addEventListener('wheel', e => {
   statsRedraw();
 }, { passive: false });
 let stDrag = null;
-overlay.addEventListener('pointerdown', e => { const sv = document.getElementById('stsvg'); if (!sv || !sv.contains(e.target) || e.button !== 0 || e.target.closest('[data-act="stfight"]')) return; const q = statsPos(e); stDrag = { x: e.clientX, y: e.clientY, k: q.k, v: Object.assign({}, stView) }; try { sv.setPointerCapture(e.pointerId); } catch (x) { /* egal */ } });
+overlay.addEventListener('pointerdown', e => {
+  const sv = document.getElementById('stsvg');
+  if (!sv || !sv.contains(e.target) || e.button !== 0 || e.target.closest('[data-act="stfight"]')) return;
+  const q = statsPos(e);
+  stDrag = { x: e.clientX, y: e.clientY, k: q.k, v: Object.assign({}, stView) };
+  try { sv.setPointerCapture(e.pointerId); } catch (x) { /* egal */ }
+});
 overlay.addEventListener('pointermove', e => {
   if (!stDrag) return;
   const { L, R, PH, W } = ST, pw = W - L - R, dx = (e.clientX - stDrag.x) * stDrag.k, dy = (e.clientY - stDrag.y) * stDrag.k, v = stDrag.v;
@@ -6529,7 +6931,14 @@ const Intro = (() => {
     stop();
     if (!G || FAST || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) || (navigator.webdriver && !/[?&]intro/.test(location.search))) return;   // Testläufe (Playwright, außer mit ?intro) und reduzierte Bewegung: ohne Vorführung
     const R = LAYOUT.monsters;
-    covers = M.ELEMENTS.map((e, i) => { const d = document.createElement('div'); d.className = 'introcover'; d.style.cssText = 'left:' + (R.left + i * R.step) + 'px;top:' + R.top + 'px;width:' + R.w + 'px;height:' + R.h + 'px'; d.innerHTML = '<div class="cfshadow"></div><div class="mc"><div class="face cfback" style="background-image:url(' + IMG.logo + ')"></div><div class="face cffront"><div class="cfglint"></div></div></div>'; stage.appendChild(d); return d; });
+    covers = M.ELEMENTS.map((e, i) => {
+      const d = document.createElement('div');
+      d.className = 'introcover';
+      d.style.cssText = 'left:' + (R.left + i * R.step) + 'px;top:' + R.top + 'px;width:' + R.w + 'px;height:' + R.h + 'px';
+      d.innerHTML = '<div class="cfshadow"></div><div class="mc"><div class="face cfback" style="background-image:url(' + IMG.logo + ')"></div><div class="face cffront"><div class="cfglint"></div></div></div>';
+      stage.appendChild(d);
+      return d;
+    });
     stage.dataset.hm = '0 1 2';   // die echten Monsterkarten bleiben verborgen, bis ihre Abdeckung umgedreht ist
     on = true; monRev = 0; pl = { [ME]: { st: 'disc', k: 0 }, [OPP]: { st: 'disc', k: 0 } };
     const n = G.players[ME].deck.hand.length, order = [ME, OPP];

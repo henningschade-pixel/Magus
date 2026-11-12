@@ -35,7 +35,10 @@ function statsSvg() {
   const { x0, x1, y0, y1 } = stView, xs = i => L + (i - x0) / (x1 - x0) * pw, ys = v => T + PH - (v - y0) / (y1 - y0) * PH;
   let svg = '<svg id="stsvg" viewBox="0 0 ' + W + ' ' + ph + '" width="' + W + '" height="' + ph + '" style="display:block;max-width:100%;touch-action:none;user-select:none"><defs><clipPath id="stclip"><rect x="' + L + '" y="' + (T - 40) + '" width="' + pw + '" height="' + (PH + 40) + '"/></clipPath></defs>';
   const ystep = niceStep(y1 - y0, 8), xstep = Math.max(1, niceStep(x1 - x0, 14));
-  for (let g = Math.ceil(y0 / ystep) * ystep; g <= y1 + 1e-9; g += ystep) { const v = Math.round(g * 100) / 100; svg += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + ys(v) + '" y2="' + ys(v) + '" stroke="rgba(255,255,255,' + (v === 0 ? .35 : .1) + ')"/><text x="' + (L - 8) + '" y="' + (ys(v) + 5) + '" text-anchor="end" fill="#9a97a6" font-size="14">' + v + '</text>'; }
+  for (let g = Math.ceil(y0 / ystep) * ystep; g <= y1 + 1e-9; g += ystep) {
+    const v = Math.round(g * 100) / 100;
+    svg += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + ys(v) + '" y2="' + ys(v) + '" stroke="rgba(255,255,255,' + (v === 0 ? .35 : .1) + ')"/><text x="' + (L - 8) + '" y="' + (ys(v) + 5) + '" text-anchor="end" fill="#9a97a6" font-size="14">' + v + '</text>';
+  }
   for (let g = Math.ceil(x0 / xstep) * xstep; g <= x1 + 1e-9; g += xstep) svg += '<text x="' + xs(g) + '" y="' + (T + PH + 22) + '" text-anchor="middle" fill="#9a97a6" font-size="14">' + Math.round(g) + '</text>';
   svg += '<text x="' + (L + pw / 2) + '" y="' + (ph - 4) + '" text-anchor="middle" fill="#9a97a6" font-size="14">Züge</text><g clip-path="url(#stclip)">';
   const inView = H.filter((h, i) => i >= x0 - 1 && i <= x1 + 1).length;
@@ -54,7 +57,10 @@ function statsSvg() {
       const pts = H.map((h, i) => xs(i).toFixed(1) + ',' + ys(h.p[seat][s.k]).toFixed(1));
       if (pts.length > 1) svg += '<polyline points="' + pts.join(' ') + '" fill="none" stroke="' + s.col + '" stroke-width="' + (s.thin ? 1.8 : 3.4) + '" stroke-linejoin="round"' + (dash ? ' stroke-dasharray="' + dash + '" opacity=".75"' : '') + '/>';
       else if (pts.length === 1) { const q = pts[0].split(','); svg += '<circle cx="' + q[0] + '" cy="' + q[1] + '" r="4" fill="' + s.col + '"/>'; }
-      if (inView <= 60) H.forEach((h, i) => { if (i < x0 - 1 || i > x1 + 1) return; svg += '<circle cx="' + xs(i).toFixed(1) + '" cy="' + ys(h.p[seat][s.k]).toFixed(1) + '" r="3" fill="' + s.col + '"><title>' + s.name + ' (' + (key === 'me' ? 'du' : esc(G.players[OPP].name)) + ') nach Zug ' + i + ': ' + h.p[seat][s.k] + '</title></circle>'; });
+      if (inView <= 60) H.forEach((h, i) => {
+        if (i < x0 - 1 || i > x1 + 1) return;
+        svg += '<circle cx="' + xs(i).toFixed(1) + '" cy="' + ys(h.p[seat][s.k]).toFixed(1) + '" r="3" fill="' + s.col + '"><title>' + s.name + ' (' + (key === 'me' ? 'du' : esc(G.players[OPP].name)) + ') nach Zug ' + i + ': ' + h.p[seat][s.k] + '</title></circle>';
+      });
     });
   });
   return svg + '</g></svg>';
@@ -81,7 +87,13 @@ overlay.addEventListener('wheel', e => {
   statsRedraw();
 }, { passive: false });
 let stDrag = null;
-overlay.addEventListener('pointerdown', e => { const sv = document.getElementById('stsvg'); if (!sv || !sv.contains(e.target) || e.button !== 0 || e.target.closest('[data-act="stfight"]')) return; const q = statsPos(e); stDrag = { x: e.clientX, y: e.clientY, k: q.k, v: Object.assign({}, stView) }; try { sv.setPointerCapture(e.pointerId); } catch (x) { /* egal */ } });
+overlay.addEventListener('pointerdown', e => {
+  const sv = document.getElementById('stsvg');
+  if (!sv || !sv.contains(e.target) || e.button !== 0 || e.target.closest('[data-act="stfight"]')) return;
+  const q = statsPos(e);
+  stDrag = { x: e.clientX, y: e.clientY, k: q.k, v: Object.assign({}, stView) };
+  try { sv.setPointerCapture(e.pointerId); } catch (x) { /* egal */ }
+});
 overlay.addEventListener('pointermove', e => {
   if (!stDrag) return;
   const { L, R, PH, W } = ST, pw = W - L - R, dx = (e.clientX - stDrag.x) * stDrag.k, dy = (e.clientY - stDrag.y) * stDrag.k, v = stDrag.v;

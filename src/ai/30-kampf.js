@@ -243,7 +243,11 @@ function planDefense(state, pid, X) {
     let score = left * (lethal ? Q.dLeth : Q.dPend) + (ev.cost || 0) * Q.dCost + (sub.length - nCurse) * Q.dKeep - nCurse * 0.6;
     if (lvM > 0) score += absorbed * Q.mirKeep;   // jede geminderte Einheit Schaden kostet eine Schildladung
     if (ev.ord) { const o = c.sides[c.turn === 'a' ? 'b' : 'a'], lvD = Object.assign({}, M.levelsFor(ev)); if (left >= s.hp) lvD.gh = 0; score -= ordComboWorth(side, o, Q, state.rules, lvD, ev); }   // tödlicher Restschaden: die Heilung nach dem Schaden verfällt
-    if (Q.dU > 0 && ev.levels && ev.levels.ulti > 0) { const o = c.sides[c.turn === 'a' ? 'b' : 'a']; score -= Q.dU * (ev.ultiEl === 'F' ? ev.levels.ulti * Q.wDeath * Math.max(0.4, Math.min(1.4, o.stats.hp / 4)) : ultiWorth(side, o, Q, ev.ultiEl, ev.levels.ulti)); }   // Ultimate in der Verteidigung: Feuer Todesfluch für den Angreifer, Erde Meditation, Wasser Erleuchtung
+    // Ultimate in der Verteidigung: Feuer Todesfluch für den Angreifer, Erde Meditation, Wasser Erleuchtung
+    if (Q.dU > 0 && ev.levels && ev.levels.ulti > 0) {
+      const o = c.sides[c.turn === 'a' ? 'b' : 'a'];
+      score -= Q.dU * (ev.ultiEl === 'F' ? ev.levels.ulti * Q.wDeath * Math.max(0.4, Math.min(1.4, o.stats.hp / 4)) : ultiWorth(side, o, Q, ev.ultiEl, ev.levels.ulti));
+    }
     if (score < best.score) best = { score, ord: sub };
   }
   if (!best.ord.length) return [A({ type: 'pass' })];

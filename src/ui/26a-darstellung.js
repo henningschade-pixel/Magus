@@ -87,7 +87,11 @@ function showFx() {
   let k = 0, preMs = 0;   // preMs: Wartezeit der Verteidigungsanimation hinter einer Kombo-Animation derselben Aktion
   for (const e of G.log) {
     if (e.n <= fxLast) continue;
-    const go = f => { if (!FAST) fxSound(f); if (f.kind === 'ultimate' && (f.el === 'E' || f.el === 'W')) UltFx.play(f.el); if (f.kind === 'lifeflow') FlowFx.lifeflow(f); else if (f.kind === 'aggro') FlowFx.aggro(f); else if (f.kind === 'drain') FlowFx.drain(f); else if (f.kind === 'ruin') FlowFx.ruin(f); else if (f.kind === 'attack') FlowFx.attack(f); else if (f.kind === 'defense') FlowFx.defense(f); };
+    const go = f => {
+      if (!FAST) fxSound(f);
+      if (f.kind === 'ultimate' && (f.el === 'E' || f.el === 'W')) UltFx.play(f.el);
+      if (f.kind === 'lifeflow') FlowFx.lifeflow(f); else if (f.kind === 'aggro') FlowFx.aggro(f); else if (f.kind === 'drain') FlowFx.drain(f); else if (f.kind === 'ruin') FlowFx.ruin(f); else if (f.kind === 'attack') FlowFx.attack(f); else if (f.kind === 'defense') FlowFx.defense(f);
+    };
     let pendTrap = null;   // Falle (seit 0.9.5): Sie löst erst aus, wenn der Angriff in der Mitte liegt; sie läuft deshalb als Teil der Angriffsanimation (KampfFx) mit dem vollen Angriff vor dem Rückwurf
     [].concat(e.fx || []).forEach(f => {
       if (f.kind === 'trap') { pendTrap = f; return; }
@@ -226,7 +230,11 @@ function renderInner() {
     dthSeen = { c: G.combat, n: dd };
     // Rituale von Meditation und Multispiegel laufen seit 0.7.2.5 bei jedem Wirken der Ultimate (showFx), nicht mehr nur bei steigender Stufe
   } else { mkSeen = null; dthSeen = null; hlSeen = null; rbSeen = null; }
-  if (manaPv > 0 && cx.combat) { const mv = panels.querySelector('.sbody[data-lead] [data-pv="mana"]'), st = cx.myStats; if (mv) { mv.innerHTML = '<span class="pvdn">' + Math.max(0, st.mana - manaPv) + '</span>/' + st.maxMana; ArcFx.mark(mv, st.mana + '/' + st.maxMana, null, true); } }   // Mana nach dem Ausspielen in Rot; der Anteil auf dem Mana-Bogen blinkt dazu (seit 0.5.6.5)
+  // Mana nach dem Ausspielen in Rot; der Anteil auf dem Mana-Bogen blinkt dazu (seit 0.5.6.5)
+  if (manaPv > 0 && cx.combat) {
+    const mv = panels.querySelector('.sbody[data-lead] [data-pv="mana"]'), st = cx.myStats;
+    if (mv) { mv.innerHTML = '<span class="pvdn">' + Math.max(0, st.mana - manaPv) + '</span>/' + st.maxMana; ArcFx.mark(mv, st.mana + '/' + st.maxMana, null, true); }
+  }
   { const mine = panels.querySelector('.sbody[data-lead]');   // Knopfspalte weich ein- und ausfahren
     if (mine) { const now = mine.classList.contains('hasup'); if (leadPrev !== null && leadPrev !== now) { mine.classList.toggle('hasup', leadPrev); void mine.offsetWidth; mine.classList.toggle('hasup', now); } leadPrev = now; } }
   showFx();

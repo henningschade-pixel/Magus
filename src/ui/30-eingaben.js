@@ -49,7 +49,11 @@ function onAct(d) {
         render(); } break; }
     case 'sightok': { const f = G.combat && G.combat.forced; if (!f || (f.kind !== 'sight' && f.kind !== 'trap') || sightSel.filter(k => k === 'k').length !== f.n) break;
       const pk = sightSel.slice(); sightSel = []; act(f.kind === 'trap' ? { type: 'fd', slots: [pk.indexOf('k')] } : { type: 'fd', pick: pk }); break; }
-    case 'draw': if (canDrawNow()) { if (drawPenaltyNow() > 0 && !drawAsk) { drawAsk = true; render(); } else { drawAsk = false; act({ type: 'draw' }); } } else if (myTurn()) toast(G.phase === 'combat' && G.combat.action === 'attack' && drawNeedsMana() ? 'Roter Nachziehmarker: Nachziehen kostet ' + M.drawManaCost(G, ME) + ' Mana, du hast nicht genug.' : 'Jetzt ist kein Nachziehen möglich.'); break;
+    case 'draw':
+      if (canDrawNow()) {
+        if (drawPenaltyNow() > 0 && !drawAsk) { drawAsk = true; render(); } else { drawAsk = false; act({ type: 'draw' }); }
+      } else if (myTurn()) toast(G.phase === 'combat' && G.combat.action === 'attack' && drawNeedsMana() ? 'Roter Nachziehmarker: Nachziehen kostet ' + M.drawManaCost(G, ME) + ' Mana, du hast nicht genug.' : 'Jetzt ist kein Nachziehen möglich.');
+      break;
     case 'drawyes': drawAsk = false; if (canDrawNow()) act({ type: 'draw' }); else render(); break;
     case 'drawno': drawAsk = false; render(); break;
     case 'freedraw': act({ type: 'freeDraw' }); break;

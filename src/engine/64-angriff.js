@@ -24,7 +24,14 @@ function execAttack(state) {
   if (dmg0 > 0 && opp.stats.traps) dmg = dmg0 - springTraps(state, opp, side, ev.prim, dmg0, fxs, texts);   // die Falle wird aufgedeckt, sobald Schaden eingeht, vor der Verteidigung
   if (dmg > 0) fxs.push({ kind: 'attack', who: side.ctrl, to: opp.ctrl, elem: ev.prim, n: dmg });
   log(state, side.name + ' greift an' + (ev.prim ? ' (' + NAMES[ev.prim] + ', Schaden ' + dmg0 + ')' : ' (nur Flüche)') + (texts.length ? ' – ' + texts.join(', ') : '') + '.', side.ctrl, fxs.length ? fxs : undefined);
-  if (hpDecided(state)) { c.turn = c.turn === 'a' ? 'b' : 'a'; c.action = 'attack'; c.color = null; c.pending = 0; c.atkTurns = (c.atkTurns || 0) + 1; }   // Stufe 1: Der Rückwurf der Falle hat den Angreifer auf 0 HP gebracht. Er ist besiegt, noch bevor der Verteidiger verteidigt oder Schaden nimmt; kein Fluss wirkt mehr
+  // Stufe 1: Der Rückwurf der Falle hat den Angreifer auf 0 HP gebracht. Er ist besiegt, noch bevor der Verteidiger verteidigt oder Schaden nimmt; kein Fluss wirkt mehr
+  if (hpDecided(state)) {
+    c.turn = c.turn === 'a' ? 'b' : 'a';
+    c.action = 'attack';
+    c.color = null;
+    c.pending = 0;
+    c.atkTurns = (c.atkTurns || 0) + 1;
+  }
   else if (dmg > 0) { c.color = ev.prim; c.pending = dmg; c.afterAtk = true; c.turn = c.turn === 'a' ? 'b' : 'a'; c.action = 'defense'; c.atkTurns = (c.atkTurns || 0) + 1; }
   else passAttackTurn(state, true);
   const res = finishStep(state, { k: 'A', who: side.key === 'a' ? 0 : 1, v: dmg0 });

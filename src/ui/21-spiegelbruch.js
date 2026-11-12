@@ -52,24 +52,80 @@ const MirrorFx = (() => {
         if (hit) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = Math.min(1, .55 * P.flash); ctx.drawImage(im, -w / 2, -h / 2, w, h); }
         if (brk) {   // Risse nur in der großen Darstellung
           ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = .9 * clamp((t - ev.tBreak) / .12) * (rf ? 1 : seg(m, .55, .95)); const cr = rng(11); ctx.strokeStyle = '#fff'; ctx.shadowColor = col; ctx.shadowBlur = 6; ctx.lineWidth = Math.max(1, h / 120); ctx.lineJoin = 'round';
-          for (let q = 0; q < P.cracks; q++) { let a = q / P.cracks * Math.PI * 2 + (cr() - .5) * .9, x = (cr() - .5) * w * .12, y = -h * .28 + (cr() - .5) * h * .08; const len = h * (.18 + cr() * .3); ctx.beginPath(); ctx.moveTo(x, y); for (let s2 = 1; s2 <= 6; s2++) { a += (cr() - .5) * .6; x += Math.cos(a) * len / 6; y += Math.sin(a) * len / 6; ctx.lineTo(x, y); } ctx.stroke(); }
+          for (let q = 0; q < P.cracks; q++) {
+            let a = q / P.cracks * Math.PI * 2 + (cr() - .5) * .9, x = (cr() - .5) * w * .12, y = -h * .28 + (cr() - .5) * h * .08;
+            const len = h * (.18 + cr() * .3);
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            for (let s2 = 1; s2 <= 6; s2++) { a += (cr() - .5) * .6; x += Math.cos(a) * len / 6; y += Math.sin(a) * len / 6; ctx.lineTo(x, y); }
+            ctx.stroke();
+          }
         }
         ctx.restore();
       }
     }
     const lit = brk && t > ev.tBreak + .12 ? ev.after : n;   // Stufenanzeige: die gebrochene Stufe erlischt
-    for (let i = 0; i < n && !shattered; i++) { const on = i < lit; ctx.save(); ctx.translate(pos.x + (i - (n - 1) / 2) * lerp(18, 34, m), pos.y + h / 2 + lerp(14, 34, m)); ctx.rotate(Math.PI / 4); ctx.strokeStyle = on ? col : 'rgba(255,255,255,.25)'; ctx.lineWidth = 2; const sz = lerp(4, 8, m); if (on) { ctx.shadowColor = col; ctx.shadowBlur = 10; ctx.fillStyle = rgba(col, .6); ctx.fillRect(-sz, -sz, 2 * sz, 2 * sz); } ctx.strokeRect(-sz, -sz, 2 * sz, 2 * sz); ctx.restore(); }
+    for (let i = 0; i < n && !shattered; i++) {
+      const on = i < lit;
+      ctx.save();
+      ctx.translate(pos.x + (i - (n - 1) / 2) * lerp(18, 34, m), pos.y + h / 2 + lerp(14, 34, m));
+      ctx.rotate(Math.PI / 4);
+      ctx.strokeStyle = on ? col : 'rgba(255,255,255,.25)';
+      ctx.lineWidth = 2;
+      const sz = lerp(4, 8, m);
+      if (on) { ctx.shadowColor = col; ctx.shadowBlur = 10; ctx.fillStyle = rgba(col, .6); ctx.fillRect(-sz, -sz, 2 * sz, 2 * sz); }
+      ctx.strokeRect(-sz, -sz, 2 * sz, 2 * sz);
+      ctx.restore();
+    }
     ev.sparks.forEach(sp => {   // Geschosse und Aufprall (der durchgehende Schaden selbst läuft in der Kampfanimation)
       const tgt = edge(rf ? Math.atan2(from.y - pos.y, from.x - pos.x) + sp.a + Math.PI / 2 : sp.a);
-      if (t >= sp.tl && t < sp.ta) { const b = (t - sp.tl) / (sp.ta - sp.tl); for (let q = 8; q >= 1; q--) { const bb = clamp(b - q * .02); ctx.save(); ctx.globalAlpha = (1 - q / 9) * .5; orb(ctx, lerp(from.x, tgt.x, bb), lerp(from.y, tgt.y, bb), (7 - q * .4) * P.spark, col); ctx.restore(); } orb(ctx, lerp(from.x, tgt.x, b), lerp(from.y, tgt.y, b), 9 * P.spark, col); }
-      if (t >= sp.ta && t < sp.ta + .4) { const g = seg(t, sp.ta, sp.ta + .4); ctx.save(); ctx.globalCompositeOperation = 'lighter'; const fl = ctx.createRadialGradient(tgt.x, tgt.y, 0, tgt.x, tgt.y, 80 * (1 - g) + 10); fl.addColorStop(0, 'rgba(255,255,255,' + (Math.min(1, .9 * P.flash) * (1 - g)) + ')'); fl.addColorStop(1, rgba(col, 0)); ctx.fillStyle = fl; ctx.beginPath(); ctx.arc(tgt.x, tgt.y, 90, 0, 7); ctx.fill(); ctx.strokeStyle = rgba(lighten(col, .5), (1 - g) * Math.min(1, P.flash)); ctx.lineWidth = 2.5 * (1 - g) + .5; ctx.beginPath(); ctx.ellipse(tgt.x, tgt.y, 8 + g * 54, 4 + g * 24, 0, 0, 7); ctx.stroke(); ctx.restore(); }
+      if (t >= sp.tl && t < sp.ta) {
+        const b = (t - sp.tl) / (sp.ta - sp.tl);
+        for (let q = 8; q >= 1; q--) { const bb = clamp(b - q * .02); ctx.save(); ctx.globalAlpha = (1 - q / 9) * .5; orb(ctx, lerp(from.x, tgt.x, bb), lerp(from.y, tgt.y, bb), (7 - q * .4) * P.spark, col); ctx.restore(); }
+        orb(ctx, lerp(from.x, tgt.x, b), lerp(from.y, tgt.y, b), 9 * P.spark, col);
+      }
+      if (t >= sp.ta && t < sp.ta + .4) {
+        const g = seg(t, sp.ta, sp.ta + .4);
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        const fl = ctx.createRadialGradient(tgt.x, tgt.y, 0, tgt.x, tgt.y, 80 * (1 - g) + 10);
+        fl.addColorStop(0, 'rgba(255,255,255,' + (Math.min(1, .9 * P.flash) * (1 - g)) + ')');
+        fl.addColorStop(1, rgba(col, 0));
+        ctx.fillStyle = fl;
+        ctx.beginPath();
+        ctx.arc(tgt.x, tgt.y, 90, 0, 7);
+        ctx.fill();
+        ctx.strokeStyle = rgba(lighten(col, .5), (1 - g) * Math.min(1, P.flash));
+        ctx.lineWidth = 2.5 * (1 - g) + .5;
+        ctx.beginPath();
+        ctx.ellipse(tgt.x, tgt.y, 8 + g * 54, 4 + g * 24, 0, 0, 7);
+        ctx.stroke();
+        ctx.restore();
+      }
     });
     ev.refl.forEach((sp, j) => {   // Rückwurf zum Angreifer
       const src = { x: pos.x + (j - (ev.refl.length - 1) / 2) * 16, y: pos.y - h * .3 };
-      if (t >= sp.tl && t < sp.ta) { const b = eio((t - sp.tl) / (sp.ta - sp.tl)); for (let q = 8; q >= 1; q--) { const bb = clamp(b - q * .03); ctx.save(); ctx.globalAlpha = (1 - q / 9) * .55; orb(ctx, lerp(src.x, hpAtt.x, bb), lerp(src.y, hpAtt.y, bb), (8 - q * .4) * P.spark, col); ctx.restore(); } orb(ctx, lerp(src.x, hpAtt.x, b), lerp(src.y, hpAtt.y, b), 11 * P.spark, col); }
-      if (t >= sp.ta && t < sp.ta + .45) { const g = seg(t, sp.ta, sp.ta + .45); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = rgba(lighten(col, .5), 1 - g); ctx.lineWidth = 3 * (1 - g) + .5; ctx.beginPath(); ctx.ellipse(hpAtt.x, hpAtt.y, 14 + g * 40, 6 + g * 16, 0, 0, 7); ctx.stroke(); ctx.restore(); }
+      if (t >= sp.tl && t < sp.ta) {
+        const b = eio((t - sp.tl) / (sp.ta - sp.tl));
+        for (let q = 8; q >= 1; q--) { const bb = clamp(b - q * .03); ctx.save(); ctx.globalAlpha = (1 - q / 9) * .55; orb(ctx, lerp(src.x, hpAtt.x, bb), lerp(src.y, hpAtt.y, bb), (8 - q * .4) * P.spark, col); ctx.restore(); }
+        orb(ctx, lerp(src.x, hpAtt.x, b), lerp(src.y, hpAtt.y, b), 11 * P.spark, col);
+      }
+      if (t >= sp.ta && t < sp.ta + .45) {
+        const g = seg(t, sp.ta, sp.ta + .45);
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.strokeStyle = rgba(lighten(col, .5), 1 - g);
+        ctx.lineWidth = 3 * (1 - g) + .5;
+        ctx.beginPath();
+        ctx.ellipse(hpAtt.x, hpAtt.y, 14 + g * 40, 6 + g * 16, 0, 0, 7);
+        ctx.stroke();
+        ctx.restore();
+      }
     });
-    if (ev.refl.length) { const tt = ev.refl[ev.refl.length - 1].ta, q = seg(t, tt, tt + .1) * (1 - seg(t, tt + .6, tt + .9)); if (q > 0) { ctx.save(); ctx.font = '700 22px Alegreya, serif'; ctx.textAlign = 'center'; ctx.fillStyle = rgba('#ff6b6b', q); ctx.fillText('−' + fx.r, hpAtt.x, hpAtt.y - 20 - 10 * seg(t, tt, tt + .9)); ctx.restore(); } }
+    if (ev.refl.length) {
+      const tt = ev.refl[ev.refl.length - 1].ta, q = seg(t, tt, tt + .1) * (1 - seg(t, tt + .6, tt + .9));
+      if (q > 0) { ctx.save(); ctx.font = '700 22px Alegreya, serif'; ctx.textAlign = 'center'; ctx.fillStyle = rgba('#ff6b6b', q); ctx.fillText('−' + fx.r, hpAtt.x, hpAtt.y - 20 - 10 * seg(t, tt, tt + .9)); ctx.restore(); }
+    }
   }
   const ev0 = fx => (fx.r || 0) > 0 ? 'r' : 'a';   // Rückwurf: die Geschosse kommen von der Seite des Verteidigers, sonst vom Angreifer
   // Angezeigte Schildposition je Seite und Farbe, nach jedem Zeichnen gemerkt: Verbraucht der Rückwurf alle Stufen, ist das Schild beim Start des Effekts schon aus der Anzeige verschwunden. Dann fliegt der Effekt trotzdem von dort, wo es stand (früher fiel er auf eine Ecke unten links, beim Nachziehstapel, zurück).

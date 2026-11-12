@@ -6,7 +6,19 @@ const FlowFx = (() => {
   const rgba = (hex, a) => { if (hex[0] === 'r') return hex.replace('rgb(', 'rgba(').replace(')', ',' + clamp(a) + ')'); const n = parseInt(hex.slice(1), 16); return 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + clamp(a) + ')'; };
   const lighten = (hex, k) => { const n = parseInt(hex.slice(1), 16), f = c => Math.round(c + (255 - c) * k); return 'rgb(' + f(n >> 16 & 255) + ',' + f(n >> 8 & 255) + ',' + f(n & 255) + ')'; };
   const G = '#93c24f', B = '#52a6f5', F = '#ff7a3d';
-  function orb(ctx, x, y, r, col, core) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; const g = ctx.createRadialGradient(x, y, 0, x, y, r * 3); g.addColorStop(0, rgba(core || '#ffffff', 1)); g.addColorStop(.25, rgba(col, .85)); g.addColorStop(1, rgba(col, 0)); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r * 3, 0, 7); ctx.fill(); ctx.restore(); }
+  function orb(ctx, x, y, r, col, core) {
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r * 3);
+    g.addColorStop(0, rgba(core || '#ffffff', 1));
+    g.addColorStop(.25, rgba(col, .85));
+    g.addColorStop(1, rgba(col, 0));
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(x, y, r * 3, 0, 7);
+    ctx.fill();
+    ctx.restore();
+  }
   // Mittelpunkt eines Oberflächenelements in Bühnenkoordinaten
   function at(el) { if (!el) return null; const r = el.getBoundingClientRect(), sr = stage.getBoundingClientRect(), k = sr.width / stage.offsetWidth; return { x: (r.left + r.width / 2 - sr.left) / k, y: (r.top + r.height / 2 - sr.top) / k }; }
   const panelOf = pid => pid === ME ? stage.querySelector('.sbody[data-lead]') : stage.querySelector('.sbody:not([data-lead])');
@@ -36,13 +48,39 @@ const FlowFx = (() => {
       srcs.forEach((m, i) => {
         const d = d0 + i * .06, col = i % 2 ? B : G, mx = m.x + (i - (srcs.length - 1) / 2) * 16, my = m.y;
         const bs = (fx.removed || 0) > 0 ? seg(u, d - .02, d + .1) : 0;   // Marker-Auflösung nur, wenn wirklich Marker entfernt wurden
-        if (bs > 0 && bs < 1) { ctx.save(); ctx.translate(mx, my); ctx.rotate(Math.PI / 4); ctx.scale(1 + bs * .8, 1 + bs * .8); ctx.globalAlpha = 1 - bs; ctx.shadowColor = col; ctx.shadowBlur = 8; ctx.fillStyle = rgba(col, .55); ctx.fillRect(-9, -9, 18, 18); ctx.strokeStyle = col; ctx.lineWidth = 2; ctx.strokeRect(-9, -9, 18, 18); ctx.restore(); ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = rgba(lighten(col, .4), 1 - bs); ctx.lineWidth = 2.5; ctx.beginPath(); ctx.arc(mx, my, 10 + bs * 34, 0, 7); ctx.stroke(); ctx.restore(); }
+        if (bs > 0 && bs < 1) {
+          ctx.save();
+          ctx.translate(mx, my);
+          ctx.rotate(Math.PI / 4);
+          ctx.scale(1 + bs * .8, 1 + bs * .8);
+          ctx.globalAlpha = 1 - bs;
+          ctx.shadowColor = col;
+          ctx.shadowBlur = 8;
+          ctx.fillStyle = rgba(col, .55);
+          ctx.fillRect(-9, -9, 18, 18);
+          ctx.strokeStyle = col;
+          ctx.lineWidth = 2;
+          ctx.strokeRect(-9, -9, 18, 18);
+          ctx.restore();
+          ctx.save();
+          ctx.globalCompositeOperation = 'lighter';
+          ctx.strokeStyle = rgba(lighten(col, .4), 1 - bs);
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.arc(mx, my, 10 + bs * 34, 0, 7);
+          ctx.stroke();
+          ctx.restore();
+        }
         const r = rng(seed + i * 31 + 1);
         for (let k = 0; k < motes; k++) {
           const dl = r() * .08, ph = r() * 6.28, lat = (r() - .5) * 60, c2 = k % 2 ? B : G, noHeal = !(fx.heal > 0), toDraw = dr && (noHeal || k % 2 === 1), tg = toDraw ? dr : noHeal ? { x: m.x, y: m.y - 90 } : hp;
           const hs = handOf(fx.who), cardsPt = { x: hs.x + (r() - .5) * 360, y: hs.y }, sx0 = toDraw || noHeal ? mx : cardsPt.x, sy0 = toDraw || noHeal ? my : cardsPt.y;   // Heilung geht von den Karten aus, der Nachziehmarker kommt von den aufgelösten Markern
           const s = seg(u, d + .03 + dl, d + .03 + dl + .26); if (s <= 0 || s >= 1) continue;
-          const pos = q => { const e = eio(q), cx = (sx0 + tg.x) / 2 + lat, cy = (sy0 + tg.y) / 2 - 60; const x = (1 - e) * (1 - e) * sx0 + 2 * (1 - e) * e * cx + e * e * tg.x, y = (1 - e) * (1 - e) * sy0 + 2 * (1 - e) * e * cy + e * e * tg.y, a = 10 * Math.sin(q * Math.PI); return [x + Math.cos(q * Math.PI * 4 + ph) * a, y + Math.sin(q * Math.PI * 4 + ph) * a]; };
+          const pos = q => {
+            const e = eio(q), cx = (sx0 + tg.x) / 2 + lat, cy = (sy0 + tg.y) / 2 - 60;
+            const x = (1 - e) * (1 - e) * sx0 + 2 * (1 - e) * e * cx + e * e * tg.x, y = (1 - e) * (1 - e) * sy0 + 2 * (1 - e) * e * cy + e * e * tg.y, a = 10 * Math.sin(q * Math.PI);
+            return [x + Math.cos(q * Math.PI * 4 + ph) * a, y + Math.sin(q * Math.PI * 4 + ph) * a];
+          };
           for (let j = 4; j >= 1; j--) { const q = clamp(s - j * .02); if (q <= 0) continue; const pp = pos(q); ctx.save(); ctx.globalAlpha = (1 - j / 5) * .5; orb(ctx, pp[0], pp[1], 2, c2); ctx.restore(); }
           const pp = pos(s); orb(ctx, pp[0], pp[1], 2.8, c2, '#ffffff');
         }
@@ -51,11 +89,30 @@ const FlowFx = (() => {
       const hu = seg(u, tEnd - .2, tEnd + .25);
       if (hu > 0 && hu < 1 && fx.heal > 0) {   // Heilung am Lebensbalken
         ctx.save(); ctx.globalCompositeOperation = 'lighter';
-        [[G, 0], [B, .15]].forEach(([c, dl]) => { const q = clamp((hu - dl) / (1 - dl)); if (q <= 0) return; ctx.strokeStyle = rgba(c, (1 - q) * .9); ctx.lineWidth = 4 * (1 - q) + 1; ctx.shadowColor = c; ctx.shadowBlur = 12; ctx.beginPath(); ctx.ellipse(hp.x, hp.y, 14 + q * 60, 8 + q * 22, 0, 0, 7); ctx.stroke(); });
+        [[G, 0], [B, .15]].forEach(([c, dl]) => {
+          const q = clamp((hu - dl) / (1 - dl));
+          if (q <= 0) return;
+          ctx.strokeStyle = rgba(c, (1 - q) * .9);
+          ctx.lineWidth = 4 * (1 - q) + 1;
+          ctx.shadowColor = c;
+          ctx.shadowBlur = 12;
+          ctx.beginPath();
+          ctx.ellipse(hp.x, hp.y, 14 + q * 60, 8 + q * 22, 0, 0, 7);
+          ctx.stroke();
+        });
         ctx.restore();
       }
       const tu = seg(u, tEnd - .15, tEnd) * (1 - seg(u, tEnd + .2, tEnd + .4));
-      if (tu > 0 && fx.heal > 0) { ctx.save(); ctx.font = '700 24px Alegreya, serif'; ctx.textAlign = 'center'; ctx.fillStyle = rgba(lighten(G, .5), tu); ctx.shadowColor = G; ctx.shadowBlur = 10; ctx.fillText('+' + fx.heal + ' HP', hp.x, hp.y - 16 - 18 * seg(u, tEnd - .15, tEnd + .4)); ctx.restore(); }
+      if (tu > 0 && fx.heal > 0) {
+        ctx.save();
+        ctx.font = '700 24px Alegreya, serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = rgba(lighten(G, .5), tu);
+        ctx.shadowColor = G;
+        ctx.shadowBlur = 10;
+        ctx.fillText('+' + fx.heal + ' HP', hp.x, hp.y - 16 - 18 * seg(u, tEnd - .15, tEnd + .4));
+        ctx.restore();
+      }
       if (dr) {   // neuer Nachziehmarker leuchtet auf
         const du = seg(u, tEnd - .2, tEnd + .05) * (1 - seg(u, tEnd + .1, tEnd + .4));
         if (du > 0) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = rgba(B, du * .9); ctx.lineWidth = 3; ctx.shadowColor = B; ctx.shadowBlur = 14; ctx.beginPath(); ctx.ellipse(dr.x, dr.y, 46 + (1 - du) * 20, 20 + (1 - du) * 10, 0, 0, 7); ctx.stroke(); ctx.restore(); }
@@ -102,7 +159,18 @@ const FlowFx = (() => {
       }
       const t0 = .12 + flight;
       const g = seg(t, t0, t0 + .35);
-      if (g > 0 && g < 1) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = rgba(lighten(B, .4), (1 - g) * .9); ctx.lineWidth = 3 * (1 - g) + .5; ctx.shadowColor = B; ctx.shadowBlur = 12; ctx.beginPath(); ctx.ellipse(Mp.x, Mp.y, 10 + g * 50, 6 + g * 20, 0, 0, 7); ctx.stroke(); ctx.restore(); }
+      if (g > 0 && g < 1) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.strokeStyle = rgba(lighten(B, .4), (1 - g) * .9);
+        ctx.lineWidth = 3 * (1 - g) + .5;
+        ctx.shadowColor = B;
+        ctx.shadowBlur = 12;
+        ctx.beginPath();
+        ctx.ellipse(Mp.x, Mp.y, 10 + g * 50, 6 + g * 20, 0, 0, 7);
+        ctx.stroke();
+        ctx.restore();
+      }
       for (let i = 0; i < n; i++) {   // herausgelöste Manakugeln steigen auf und verglühen
         const a0 = t0 + .05 + i * .08, q = seg(t, a0, a0 + .9); if (q <= 0 || q >= 1) continue;
         const ang = (i - (n - 1) / 2) * .7 - Math.PI / 2, d = 18 + eo(q) * 46, x = Mp.x + Math.cos(ang) * d + Math.sin(q * 9 + i) * 5, y = Mp.y + Math.sin(ang) * d - q * 22;
@@ -126,7 +194,18 @@ const FlowFx = (() => {
         const pp = pos(s); orb(ctx, pp[0], pp[1], 8, F, '#ffb347');
       }
       const t0 = .12 + flight, g = seg(t, t0, t0 + .4);
-      if (g > 0 && g < 1) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = rgba('#ffb347', (1 - g) * .9); ctx.lineWidth = 3 * (1 - g) + .5; ctx.shadowColor = F; ctx.shadowBlur = 12; ctx.beginPath(); ctx.ellipse(T.x, T.y, 20 + g * 130, 8 + g * 34, 0, 0, 7); ctx.stroke(); ctx.restore(); }
+      if (g > 0 && g < 1) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.strokeStyle = rgba('#ffb347', (1 - g) * .9);
+        ctx.lineWidth = 3 * (1 - g) + .5;
+        ctx.shadowColor = F;
+        ctx.shadowBlur = 12;
+        ctx.beginPath();
+        ctx.ellipse(T.x, T.y, 20 + g * 130, 8 + g * 34, 0, 0, 7);
+        ctx.stroke();
+        ctx.restore();
+      }
       for (let i = 0; i < n * 5; i++) {   // Funken steigen aus der Hand auf
         const r = rng(91 + i * 7), a0 = t0 + .05 + r() * .25, q = seg(t, a0, a0 + .9); if (q <= 0 || q >= 1) continue;
         const x = T.x + (r() - .5) * 300 + Math.sin(q * 8 + i) * 6, y = T.y - 20 - q * 70 * (.6 + r());
@@ -144,7 +223,17 @@ const FlowFx = (() => {
     const who = fx.who, w = who === ME ? 's' : 'o', n = Math.max(1, Math.min(fx.n || 1, 4)), hp = hpOf(who), toks = [...stage.querySelectorAll('.deathtok[data-who="' + w + '"]')], C = '#a67bff', D = '#4a1f86';
     const srcs = []; for (let i = 0; i < n; i++) { const q = deathPos(w, i); srcs.push(at(toks[0]) || { x: q.x + 24, y: q.y + 24 }); }
     const life = .75, N = 36, dur = curseStart(n - 1) + CURSE_F + .65;
-    const puff = (ctx, x, y, r, a, col) => { if (a <= 0.01) return; const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, rgba(lighten(col, .3), a)); g.addColorStop(.45, rgba(col, a * .65)); g.addColorStop(1, rgba(D, 0)); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); };
+    const puff = (ctx, x, y, r, a, col) => {
+      if (a <= 0.01) return;
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+      g.addColorStop(0, rgba(lighten(col, .3), a));
+      g.addColorStop(.45, rgba(col, a * .65));
+      g.addColorStop(1, rgba(D, 0));
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, 7);
+      ctx.fill();
+    };
     run(dur, (ctx, t) => {
       srcs.forEach((sr, i) => {
         const d = curseStart(i), rr = rng(17 + i * 29), cx = (sr.x + hp.x) / 2 + (rr() - .5) * 90, cy = Math.min(sr.y, hp.y) - 60 - rr() * 50;
@@ -176,7 +265,17 @@ const FlowFx = (() => {
     if (off()) return;
     const who = fx.who, total = Math.max(1, fx.n || 1), n = Math.max(1, Math.min(total, 4)), hp = hpOf(who), src = at(stage.querySelector('.combatcenter .note')) || { x: SW / 2, y: 300 }, C = '#e0605a', D = '#3a0a0a';
     const life = .75, N = 30, dur = curseStart(n - 1) + CURSE_F + .85;
-    const puff = (ctx, x, y, r, a, col) => { if (a <= 0.01) return; const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, rgba(lighten(col, .25), a)); g.addColorStop(.45, rgba(col, a * .65)); g.addColorStop(1, rgba(D, 0)); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); };
+    const puff = (ctx, x, y, r, a, col) => {
+      if (a <= 0.01) return;
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+      g.addColorStop(0, rgba(lighten(col, .25), a));
+      g.addColorStop(.45, rgba(col, a * .65));
+      g.addColorStop(1, rgba(D, 0));
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, 7);
+      ctx.fill();
+    };
     run(dur, (ctx, t) => {
       const vg = seg(t, 0, .2) * (1 - seg(t, .2, .9));   // kurzes Abdunkeln des ganzen Bildes, dunkelrot zu den Rändern
       if (vg > 0) { const v = ctx.createRadialGradient(SW / 2, 400, 120, SW / 2, 400, SW * .62); v.addColorStop(0, 'rgba(40,0,0,0)'); v.addColorStop(1, 'rgba(40,0,0,' + (.5 * vg) + ')'); ctx.fillStyle = v; ctx.fillRect(0, 0, SW, 800); }
@@ -212,8 +311,49 @@ const FlowFx = (() => {
     const who = fx.who, w = who === ME ? 's' : 'o', toks = [...stage.querySelectorAll((fx.mana ? '.manatok' : '.healtok:not(.manatok)') + '[data-who="' + w + '"]')], n = Math.max(1, Math.min(fx.marks || fx.n || 1, 4)), hp = fx.mana ? manaPos(who) : hpOf(who), C = fx.mana ? '#52a6f5' : '#93c24f', D = fx.mana ? '#1d4f94' : '#2f7a2f', Lt = fx.mana ? '#d6ecff' : '#e8ffb8';
     const srcs = []; for (let i = 0; i < n; i++) { const q = deathPos(w, i); srcs.push(at(toks[0]) || { x: q.x + 24, y: q.y + 24 }); }
     const life = .75, N = 36, dur = curseStart(n - 1) + CURSE_F + .65;
-    const puff = (ctx, x, y, r, a, col) => { if (a <= 0.01) return; const g = ctx.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, rgba(lighten(col, .3), a)); g.addColorStop(.45, rgba(col, a * .65)); g.addColorStop(1, rgba(D, 0)); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); };
-    const plus = (ctx, x, y, s, a) => { if (fx.mana) { ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = rgba(Lt, a); ctx.shadowColor = C; ctx.shadowBlur = 8; ctx.beginPath(); ctx.moveTo(x, y - s * 1.3); ctx.lineTo(x + s * .8, y); ctx.lineTo(x, y + s * 1.3); ctx.lineTo(x - s * .8, y); ctx.closePath(); ctx.fill(); ctx.restore(); return; } ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.strokeStyle = rgba(Lt, a); ctx.lineWidth = Math.max(1.5, s * .38); ctx.lineCap = 'round'; ctx.shadowColor = C; ctx.shadowBlur = 8; ctx.beginPath(); ctx.moveTo(x - s, y); ctx.lineTo(x + s, y); ctx.moveTo(x, y - s); ctx.lineTo(x, y + s); ctx.stroke(); ctx.restore(); };
+    const puff = (ctx, x, y, r, a, col) => {
+      if (a <= 0.01) return;
+      const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+      g.addColorStop(0, rgba(lighten(col, .3), a));
+      g.addColorStop(.45, rgba(col, a * .65));
+      g.addColorStop(1, rgba(D, 0));
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, 7);
+      ctx.fill();
+    };
+    const plus = (ctx, x, y, s, a) => {
+      if (fx.mana) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'lighter';
+        ctx.fillStyle = rgba(Lt, a);
+        ctx.shadowColor = C;
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.moveTo(x, y - s * 1.3);
+        ctx.lineTo(x + s * .8, y);
+        ctx.lineTo(x, y + s * 1.3);
+        ctx.lineTo(x - s * .8, y);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+        return;
+      }
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.strokeStyle = rgba(Lt, a);
+      ctx.lineWidth = Math.max(1.5, s * .38);
+      ctx.lineCap = 'round';
+      ctx.shadowColor = C;
+      ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.moveTo(x - s, y);
+      ctx.lineTo(x + s, y);
+      ctx.moveTo(x, y - s);
+      ctx.lineTo(x, y + s);
+      ctx.stroke();
+      ctx.restore();
+    };
     run(dur, (ctx, t) => {
       srcs.forEach((sr, i) => {
         const d = curseStart(i), rr = rng(41 + i * 29), cx = (sr.x + hp.x) / 2 + (rr() - .5) * 90, cy = Math.min(sr.y, hp.y) - 60 - rr() * 50;

@@ -8,9 +8,18 @@ function applyCombat(state, a) {
   if (side.ctrl !== pid) return fail('Die Gegenseite ist am Zug.');
   switch (a.type) {
     case 'mark': { const e = toggleMark(side.deck, a.slot, side.stats.limit); return e ? fail(e) : { ok: true }; }
-    case 'lfp': { if (c.action !== 'attack' && c.action !== 'defense') return fail('Nur im Angriffs- oder Verteidigungszug.'); const ok = ['sm', 'om', 'sd', 'od', 'sh', 'oh', 'sr', 'or', 'st', 'ot']; c.lfp = a.pick === null ? null : (Array.isArray(a.pick) ? a.pick : []).filter(x => typeof x === 'string' && ok.includes(x.split(':')[0]) && (x.indexOf(':') < 0 || ELEMENTS.includes(x.split(':')[1]))).slice(0, 3); return { ok: true }; }
+    case 'lfp': {
+      if (c.action !== 'attack' && c.action !== 'defense') return fail('Nur im Angriffs- oder Verteidigungszug.');
+      const ok = ['sm', 'om', 'sd', 'od', 'sh', 'oh', 'sr', 'or', 'st', 'ot'];
+      c.lfp = a.pick === null ? null : (Array.isArray(a.pick) ? a.pick : []).filter(x => typeof x === 'string' && ok.includes(x.split(':')[0]) && (x.indexOf(':') < 0 || ELEMENTS.includes(x.split(':')[1]))).slice(0, 3);
+      return { ok: true };
+    }
     case 'attack': if (c.action !== 'attack') return fail('Jetzt wird verteidigt.'); if (!allowed(state, 'attack', 'attack')) return fail('Angreifen ist in den Einstellungen für die Angriffsphase abgeschaltet.'); return execAttack(state);
-    case 'defend': if (c.action !== 'defense') return fail('Jetzt wird angegriffen.'); if (!c.pending) return fail('Ohne Angriff gibt es nichts zu verteidigen.'); if (!allowed(state, 'defense', 'defend')) return fail('Verteidigen ist in den Einstellungen für die Verteidigungsphase abgeschaltet.'); return execDefense(state, false);
+    case 'defend':
+      if (c.action !== 'defense') return fail('Jetzt wird angegriffen.');
+      if (!c.pending) return fail('Ohne Angriff gibt es nichts zu verteidigen.');
+      if (!allowed(state, 'defense', 'defend')) return fail('Verteidigen ist in den Einstellungen für die Verteidigungsphase abgeschaltet.');
+      return execDefense(state, false);
     case 'pass':
       if (!allowed(state, c.action, 'pass')) return fail('Passen ist in den Einstellungen für diese Phase abgeschaltet.');
       if (c.action === 'defense' && !c.pending) { log(state, side.name + ' reagiert nicht.', side.ctrl); return endReaction(state); }

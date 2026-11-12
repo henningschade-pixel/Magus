@@ -68,7 +68,15 @@ function evalDefense(stats, cards, color, opt) {
   const cost = curses.reduce((n, c) => n + c.tier, 0) + (el === color ? same.filter(c => !c.free).length : 0) + other.filter(c => !c.free).length;   // Verteidigung in der überlegenen Farbe ist gratis, Kombokarten kosten 1 Mana
   let block = 0; same.forEach(c => { block += Math.min(c.tier, stats.mag[el]); });
   const out = { valid: true, el, cost, block, affordable: stats.mana >= cost, levels: { fw: 0, fe: 0, ew: 0, ulti: 0 }, ord: null, ultiEl: null };
-  if (other.length) { const tiers = { F: [], E: [], W: [] }; normals.forEach(c => tiers[c.el].push(c.tier)); const lv = comboLevels(tiers, stats.mag, el); echoBoost(stats, lv, lv.ord, lastEl); out.ord = !ulti && lv.ord && lv.ord.lvl > 0 ? lv.ord : null; if (ulti) { out.levels.ulti = lv.ulti; if (lv.ulti > 0) out.ultiEl = lastEl; } if (lv.echo) out.levels.echo = true; }
+  if (other.length) {
+    const tiers = { F: [], E: [], W: [] };
+    normals.forEach(c => tiers[c.el].push(c.tier));
+    const lv = comboLevels(tiers, stats.mag, el);
+    echoBoost(stats, lv, lv.ord, lastEl);
+    out.ord = !ulti && lv.ord && lv.ord.lvl > 0 ? lv.ord : null;
+    if (ulti) { out.levels.ulti = lv.ulti; if (lv.ulti > 0) out.ultiEl = lastEl; }
+    if (lv.echo) out.levels.echo = true;
+  }
   return out;
 }
 

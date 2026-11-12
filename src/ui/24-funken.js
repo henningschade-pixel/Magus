@@ -69,7 +69,20 @@ function drawProjectile(ctx,p,el,a,b,q,seed,t){
     ctx.save();
     if(p.look==='kugel'){ctx.globalAlpha=k*.6;orbGlow(ctx,pp[0],pp[1],size*k*.9,col)}
     else if(el==='F'){ctx.globalAlpha=k*.75;orbGlow(ctx,pp[0]+(r1-.5)*6,pp[1]-j*1.2+(r2-.5)*4,size*k*(.7+r2*.5),j%2?'#ffb347':col)}
-    else if(el==='E'){ctx.restore();ctx.save();if(j%2){const rg=ctx.createRadialGradient(pp[0],pp[1]+j,0,pp[0],pp[1]+j,size*k*1.6);rg.addColorStop(0,'rgba(170,150,105,'+(.35*k)+')');rg.addColorStop(1,'rgba(170,150,105,0)');ctx.fillStyle=rg;ctx.beginPath();ctx.arc(pp[0],pp[1]+j,size*k*1.6,0,7);ctx.fill()}else chunk(ctx,pp[0]+(r1-.5)*12,pp[1]+j*2.2+(r2-.5)*6,Math.max(1.2,size*k*.4),j*1.3+r1*5,k*.85,j%3?'#7a6e4c':'#8aa05a',seed+j)}   // Staubwolken und fallende Brocken
+    // Staubwolken und fallende Brocken
+    else if(el==='E'){
+      ctx.restore();
+      ctx.save();
+      if(j%2){
+        const rg=ctx.createRadialGradient(pp[0],pp[1]+j,0,pp[0],pp[1]+j,size*k*1.6);
+        rg.addColorStop(0,'rgba(170,150,105,'+(.35*k)+')');
+        rg.addColorStop(1,'rgba(170,150,105,0)');
+        ctx.fillStyle=rg;
+        ctx.beginPath();
+        ctx.arc(pp[0],pp[1]+j,size*k*1.6,0,7);
+        ctx.fill()
+      }else chunk(ctx,pp[0]+(r1-.5)*12,pp[1]+j*2.2+(r2-.5)*6,Math.max(1.2,size*k*.4),j*1.3+r1*5,k*.85,j%3?'#7a6e4c':'#8aa05a',seed+j)
+    }
     else{ctx.globalAlpha=k*.8;ctx.fillStyle=j%2?rgba(col,.9):'rgba(210,235,255,.9)';ctx.beginPath();ctx.arc(pp[0]+(r1-.5)*6,pp[1]+j*2.2+(r2-.5)*4,Math.max(.8,size*k*.32),0,7);ctx.fill()}   // Tropfen fallen vom Wasserball
     ctx.restore();
   }
@@ -95,7 +108,15 @@ function drawIdle(ctx,p,el,x,y,seed,t,alpha){
   const col=EL[el],size=8*p.size;ctx.save();ctx.globalAlpha=alpha;if(el!=='F')y+=Math.sin(t*3+seed)*3;
   if(p.look==='kugel')orbGlow(ctx,x,y,size,col,'#fff');
   else if(el==='F'){orbGlow(ctx,x,y,size*1.15,col,'#ffb347');orbGlow(ctx,x,y-size*.25,size*.55,'#ff8a2f');fireEmbers(ctx,x,y,size,t,seed)}
-  else if(el==='E'){const R2=size*1.1*(1.15+.45*p.heavy*(p.look==='kugel'?0:1));ctx.save();ctx.globalAlpha*=.5;orbGlow(ctx,x,y,R2*.7,col,'#b9e070');ctx.restore();rock(ctx,x,y,R2,seed+.3,seed,col);for(let k=0;k<3;k++){const a=t*1.8+k*2.1+seed;chunk(ctx,x+Math.cos(a)*R2*1.7,y+Math.sin(a)*R2*.7-4,2.4,a*2,.9,'#8aa05a',seed+k)}}
+  else if(el==='E'){
+    const R2=size*1.1*(1.15+.45*p.heavy*(p.look==='kugel'?0:1));
+    ctx.save();
+    ctx.globalAlpha*=.5;
+    orbGlow(ctx,x,y,R2*.7,col,'#b9e070');
+    ctx.restore();
+    rock(ctx,x,y,R2,seed+.3,seed,col);
+    for(let k=0;k<3;k++){const a=t*1.8+k*2.1+seed;chunk(ctx,x+Math.cos(a)*R2*1.7,y+Math.sin(a)*R2*.7-4,2.4,a*2,.9,'#8aa05a',seed+k)}
+  }
   else{waterBody(ctx,x,y,size*1.6,0,t,seed,p);ctx.strokeStyle=rgba(col,.4*(1-((t*1.2+seed)%1)));ctx.lineWidth=1.5;ctx.beginPath();ctx.ellipse(x,y+size*1.3,size*(1+((t*1.2+seed)%1)*1.6),size*.4*(1+((t*1.2+seed)%1)*1.6),0,0,7);ctx.stroke()}
   ctx.restore();
 }

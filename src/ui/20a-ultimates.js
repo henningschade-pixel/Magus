@@ -39,21 +39,53 @@ const UltFx = (() => {
       const bx=Cc.x+Math.cos(a)*R*.95,by=Cc.y+Math.sin(a)*R*.95*tilt,Hh=(70+hr*60)*p.hVineH*S/1.2,ph=pr1*6,sw=10+pr2*10,dir=Math.cos(a)>0?1:-1;
       const pt=s=>({x:bx+Math.sin(s*4+ph)*sw*s*dir+dir*s*12,y:by-s*Hh});
       glowLine(ctx,col,1.7,gl*.5,inten*.9,()=>{for(let k=0;k<=24;k++){const s=gv*k/24,q=pt(s);k?ctx.lineTo(q.x,q.y):ctx.moveTo(q.x,q.y)}});
-      for(let k=1;k<=4;k++){const s=gv*k/4.3;if(s<.12)continue;const q=pt(s);ctx.save();ctx.translate(q.x,q.y);ctx.rotate((k%2?-1:1)*.9-Math.PI/2);ctx.fillStyle=rgba(lighten(col,.25),.85*inten);ctx.shadowColor=col;ctx.shadowBlur=gl*.5;ctx.beginPath();ctx.ellipse(8,0,9,3.6,0,0,7);ctx.fill();ctx.restore()}
+      for(let k=1;k<=4;k++){
+        const s=gv*k/4.3;
+        if(s<.12)continue;
+        const q=pt(s);
+        ctx.save();
+        ctx.translate(q.x,q.y);
+        ctx.rotate((k%2?-1:1)*.9-Math.PI/2);
+        ctx.fillStyle=rgba(lighten(col,.25),.85*inten);
+        ctx.shadowColor=col;
+        ctx.shadowBlur=gl*.5;
+        ctx.beginPath();
+        ctx.ellipse(8,0,9,3.6,0,0,7);
+        ctx.fill();
+        ctx.restore()
+      }
     }
     const lc=seg(u,.5,.8)*(1-seg(u,.93,1))*p.hLight;   // Lichtsäule
-    if(lc>0){const pw=100*S*(1+.1*Math.sin(t*9));ctx.save();ctx.globalCompositeOperation='lighter';const gy=ctx.createLinearGradient(0,Cc.y,0,Cc.y-380);gy.addColorStop(0,rgba(lighten(col,.3),.5*lc*flick));gy.addColorStop(1,rgba(col,0));[1,.6,.3].forEach((f,i)=>{ctx.fillStyle=gy;ctx.globalAlpha=i?.7:.32;ctx.fillRect(Cc.x-pw*f/2,Cc.y-380,pw*f,380)});ctx.restore()}
+    if(lc>0){
+      const pw=100*S*(1+.1*Math.sin(t*9));
+      ctx.save();
+      ctx.globalCompositeOperation='lighter';
+      const gy=ctx.createLinearGradient(0,Cc.y,0,Cc.y-380);
+      gy.addColorStop(0,rgba(lighten(col,.3),.5*lc*flick));
+      gy.addColorStop(1,rgba(col,0));
+      [1,.6,.3].forEach((f,i)=>{ctx.fillStyle=gy;ctx.globalAlpha=i?.7:.32;ctx.fillRect(Cc.x-pw*f/2,Cc.y-380,pw*f,380)});
+      ctx.restore()
+    }
     const pl=seg(u,.42,.62),py=C.y-75;   // Pluszeichen
     if(pl>0){
       const fade=1-seg(u,.9,.97),sc=(.4+.6*eo(pl))*(1+.06*Math.sin(t*6)*seg(u,.62,.9)),arm=40*S*p.hPlus*sc,wd=arm*.42;
       if(fade>0){ctx.save();ctx.translate(C.x,py);ctx.shadowColor=col;ctx.shadowBlur=gl*1.6;ctx.fillStyle=rgba(lighten(col,.6),.95*pl*fade*flick);ctx.beginPath();rrect(ctx,-arm,-wd/2,2*arm,wd,wd/2);rrect(ctx,-wd/2,-arm,wd,2*arm,wd/2);ctx.fill();
         ctx.shadowBlur=0;ctx.strokeStyle=rgba(lighten(col,.4),.55*pl*fade);ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,0,arm*1.5,0,7);ctx.stroke();ctx.restore()}
     }
-    for(let k=0;k<Math.round(p.hPulse);k++){const q=seg(u,.6+k*.06,.82+k*.06);if(q>0&&q<1){ctx.save();ctx.globalCompositeOperation='lighter';ctx.strokeStyle=rgba(lighten(col,.4),(1-q)*.8*fin);ctx.lineWidth=4*(1-q)+1;const r2=R*(.2+1.1*eo(q));ctx.beginPath();ctx.ellipse(Cc.x,Cc.y,r2,r2*tilt,0,0,7);ctx.stroke();ctx.restore()}}
+    for(let k=0;k<Math.round(p.hPulse);k++){
+      const q=seg(u,.6+k*.06,.82+k*.06);
+      if(q>0&&q<1){ctx.save();ctx.globalCompositeOperation='lighter';ctx.strokeStyle=rgba(lighten(col,.4),(1-q)*.8*fin);ctx.lineWidth=4*(1-q)+1;const r2=R*(.2+1.1*eo(q));ctx.beginPath();ctx.ellipse(Cc.x,Cc.y,r2,r2*tilt,0,0,7);ctx.stroke();ctx.restore()}
+    }
     const nP=Math.round(p.particles),pa=seg(u,.18,.45)*(1-seg(u,.9,1));   // aufsteigende Lichtpunkte
     if(nP>0&&pa>0){
       const pr=rng(p.seed+13);ctx.save();ctx.globalCompositeOperation='lighter';
-      for(let i=0;i<nP;i++){const r1=pr(),r2=pr(),r3=pr(),ph=(r1+t*(.12+.25*r2)/(D/4))%1,an=r1*Math.PI*2,rad=R*Math.sqrt(r2)*.9,x=Cc.x+Math.cos(an)*rad+Math.sin(ph*7+r3*6)*8,y=Cc.y+Math.sin(an)*rad*tilt-ph*230*(.5+.6*r3);ctx.fillStyle=rgba(i%4?lighten(col,.45):'#ffe9a8',Math.sin(Math.PI*ph)*pa*.9);ctx.beginPath();ctx.arc(x,y,1.2+r3*2.2,0,7);ctx.fill()}
+      for(let i=0;i<nP;i++){
+        const r1=pr(),r2=pr(),r3=pr(),ph=(r1+t*(.12+.25*r2)/(D/4))%1,an=r1*Math.PI*2,rad=R*Math.sqrt(r2)*.9,x=Cc.x+Math.cos(an)*rad+Math.sin(ph*7+r3*6)*8,y=Cc.y+Math.sin(an)*rad*tilt-ph*230*(.5+.6*r3);
+        ctx.fillStyle=rgba(i%4?lighten(col,.45):'#ffe9a8',Math.sin(Math.PI*ph)*pa*.9);
+        ctx.beginPath();
+        ctx.arc(x,y,1.2+r3*2.2,0,7);
+        ctx.fill()
+      }
       ctx.restore();
     }
     const fl=p.flash*seg(u,.88,.92)*(1-seg(u,.92,.99));
@@ -71,7 +103,13 @@ const UltFx = (() => {
     const n=Math.max(5,Math.round(p.mStar)),sp=eio(seg(u,.12,.44)),rs=R*.9;   // Achtstern: jede dritte Ecke verbunden, zeichnet sich der Reihe nach
     if(sp>0){const tot=n*sp,full=Math.floor(tot),rest=tot-full,v=k=>{const a=top+((k*3)%n)/n*Math.PI*2+t*.12;return[Math.cos(a)*rs,Math.sin(a)*rs]};
       glowLine(ctx,col,2,gl*.8,inten*.95,()=>{const a0=v(0);ctx.moveTo(a0[0],a0[1]);for(let k=1;k<=full&&k<=n;k++){const q=v(k);ctx.lineTo(q[0],q[1])}if(full<n&&rest>0){const a1=v(full),a2=v(full+1);ctx.lineTo(lerp(a1[0],a2[0],rest),lerp(a1[1],a2[1],rest))}})}
-    for(let i=0;i<12;i++){const a=top+i/12*Math.PI*2,al=seg(u,.16+i/12*.12,.22+i/12*.12);if(al<=0)continue;const x=Math.cos(a)*R*1.1,y=Math.sin(a)*R*1.1,h=R*.05;glowLine(ctx,col,1.6,gl*.5,inten*al,()=>{ctx.moveTo(x,y-h);ctx.lineTo(x+h,y);ctx.lineTo(x,y+h);ctx.lineTo(x-h,y);ctx.closePath()})}   // Rautenrunen am Rand
+    // Rautenrunen am Rand
+    for(let i=0;i<12;i++){
+      const a=top+i/12*Math.PI*2,al=seg(u,.16+i/12*.12,.22+i/12*.12);
+      if(al<=0)continue;
+      const x=Math.cos(a)*R*1.1,y=Math.sin(a)*R*1.1,h=R*.05;
+      glowLine(ctx,col,1.6,gl*.5,inten*al,()=>{ctx.moveTo(x,y-h);ctx.lineTo(x+h,y);ctx.lineTo(x,y+h);ctx.lineTo(x-h,y);ctx.closePath()})
+    }
     ctx.restore();
     const nP=Math.round(p.particles),pa=seg(u,.18,.5)*(1-seg(u,.78,.86));   // Manafunken: vom Ring spiralförmig zur Mitte, dabei aufwärts
     if(nP>0&&pa>0){const pr=rng(p.seed+31);ctx.save();ctx.globalCompositeOperation='lighter';
@@ -89,7 +127,10 @@ const UltFx = (() => {
       ctx.strokeStyle=rgba('#ffffff',.85*cr*fl);ctx.lineWidth=1.6;ctx.beginPath();P.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]));ctx.closePath();ctx.stroke();
       ctx.beginPath();ctx.moveTo(-w*sx,0);ctx.lineTo(w*sx,0);ctx.moveTo(0,-h);ctx.lineTo(0,h);ctx.stroke();
       ctx.restore();star4(ctx,C.x+w*.2,cy-h*.3,7+5*Math.sin(t*7)**2,'#ffffff',.9*cr)}
-    for(let k=0;k<Math.round(p.mPulse);k++){const q=seg(u,.6+k*.06,.84+k*.06);if(q>0&&q<1){ctx.save();ctx.globalCompositeOperation='lighter';ctx.strokeStyle=rgba(lighten(col,.5),(1-q)*.8*fin);ctx.lineWidth=4*(1-q)+1;const r2=R*(.2+1.1*eo(q));ctx.beginPath();ctx.ellipse(Cc.x,Cc.y,r2,r2*tilt,0,0,7);ctx.stroke();ctx.restore()}}
+    for(let k=0;k<Math.round(p.mPulse);k++){
+      const q=seg(u,.6+k*.06,.84+k*.06);
+      if(q>0&&q<1){ctx.save();ctx.globalCompositeOperation='lighter';ctx.strokeStyle=rgba(lighten(col,.5),(1-q)*.8*fin);ctx.lineWidth=4*(1-q)+1;const r2=R*(.2+1.1*eo(q));ctx.beginPath();ctx.ellipse(Cc.x,Cc.y,r2,r2*tilt,0,0,7);ctx.stroke();ctx.restore()}
+    }
     const bs=seg(u,.84,.97);   // Abschluss: der Kristall zerstiebt in Funken
     if(bs>0&&bs<1){const pr=rng(p.seed+37);ctx.save();ctx.globalCompositeOperation='lighter';
       for(let i=0;i<26;i++){const a=pr()*Math.PI*2,sp2=60+pr()*150,x=C.x+Math.cos(a)*sp2*eo(bs),y=C.y-62+Math.sin(a)*sp2*.7*eo(bs)+bs*bs*40;ctx.fillStyle=rgba(i%3?Lt:'#ffffff',(1-bs)*.9);ctx.beginPath();ctx.arc(x,y,1.2+pr()*2.2,0,7);ctx.fill()}
@@ -155,8 +196,12 @@ const TrapFx = (() => {
         stage.appendChild(orb); requestAnimationFrame(() => { orb.style.left = to.x + 'px'; orb.style.top = to.y + 'px'; });
         setTimeout(() => {
           orb.remove();
-          const n = document.createElement('div'); n.textContent = '−' + f.refl; n.style.cssText = 'position:absolute;z-index:297;pointer-events:none;font:700 38px Alegreya,serif;color:#ff6b3d;text-shadow:0 0 4px #000,0 0 10px #000;left:' + (to.x - 20) + 'px;top:' + (to.y - 24) + 'px;transition:top .8s,opacity .8s';
-          stage.appendChild(n); requestAnimationFrame(() => { n.style.top = (to.y - 80) + 'px'; n.style.opacity = '0'; }); setTimeout(() => n.remove(), 900);
+          const n = document.createElement('div');
+          n.textContent = '−' + f.refl;
+          n.style.cssText = 'position:absolute;z-index:297;pointer-events:none;font:700 38px Alegreya,serif;color:#ff6b3d;text-shadow:0 0 4px #000,0 0 10px #000;left:' + (to.x - 20) + 'px;top:' + (to.y - 24) + 'px;transition:top .8s,opacity .8s';
+          stage.appendChild(n);
+          requestAnimationFrame(() => { n.style.top = (to.y - 80) + 'px'; n.style.opacity = '0'; });
+          setTimeout(() => n.remove(), 900);
         }, 460);
         setTimeout(() => { el.style.transition = 'opacity .45s'; el.style.opacity = '0'; }, 500);
         setTimeout(() => el.remove(), 1000);

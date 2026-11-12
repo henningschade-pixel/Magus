@@ -78,7 +78,9 @@ function finSpark(pid, W) {
   const xs = i => L + i / (n - 1) * (W - L - R), ys = v => T + (Ht - T - B) * (1 - v / ymax);
   const line = (seat, col, dash) => '<polyline points="' + H.map((h, i) => xs(i).toFixed(1) + ',' + ys(h.p[seat].sp).toFixed(1)).join(' ') + '" fill="none" stroke="' + col + '" stroke-width="2.6" stroke-linejoin="round"' + (dash ? ' stroke-dasharray="5 4" opacity=".75"' : '') + '/>';
   let s = '<svg viewBox="0 0 ' + W + ' ' + Ht + '" width="100%" style="display:block"><line x1="' + L + '" x2="' + (W - R) + '" y1="' + ys(0) + '" y2="' + ys(0) + '" stroke="rgba(255,255,255,.3)"/><text x="' + (L - 5) + '" y="' + (ys(0) + 4) + '" text-anchor="end" fill="#9a97a6" font-size="11">0</text><text x="' + (L - 5) + '" y="' + (ys(ymax) + 4) + '" text-anchor="end" fill="#9a97a6" font-size="11">' + ymax + '</text>';
-  H.forEach((h, i) => { if (h.ev && h.ev.type === 'showdown') s += '<line x1="' + xs(i) + '" x2="' + xs(i) + '" y1="' + T + '" y2="' + ys(0) + '" stroke="rgba(255,255,255,.14)" stroke-dasharray="3 3"/><text x="' + xs(i) + '" y="' + (T - 1) + '" text-anchor="middle" fill="#e0b84a" font-size="12">★</text>'; });
+  H.forEach((h, i) => {
+    if (h.ev && h.ev.type === 'showdown') s += '<line x1="' + xs(i) + '" x2="' + xs(i) + '" y1="' + T + '" y2="' + ys(0) + '" stroke="rgba(255,255,255,.14)" stroke-dasharray="3 3"/><text x="' + xs(i) + '" y="' + (T - 1) + '" text-anchor="middle" fill="#e0b84a" font-size="12">★</text>';
+  });
   const last = H[n - 1].p;
   return s + line(q, '#b9b4c4', true) + line(pid, '#f0c24a', false) + '<circle cx="' + xs(n - 1) + '" cy="' + ys(last[pid].sp) + '" r="4.5" fill="#f0c24a"/><circle cx="' + xs(n - 1) + '" cy="' + ys(last[q].sp) + '" r="3.5" fill="#b9b4c4"/></svg>';
 }
