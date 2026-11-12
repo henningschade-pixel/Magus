@@ -66,7 +66,22 @@
   "file": "engine/60-kampfberechnung.js"
  },
  {
-  "file": "engine/65-kampfablauf.js"
+  "file": "engine/61-kampfstart.js"
+ },
+ {
+  "file": "engine/62-kampfende.js"
+ },
+ {
+  "file": "engine/63-kampfeffekte.js"
+ },
+ {
+  "file": "engine/64-angriff.js"
+ },
+ {
+  "file": "engine/66-verteidigung.js"
+ },
+ {
+  "file": "engine/67-kampfaktionen.js"
  },
  {
   "file": "engine/70-weltphase.js"
