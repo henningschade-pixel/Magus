@@ -63,13 +63,13 @@ Der aktive Spieler wählt ein lebendes Monster und greift an, der Mitspieler fü
 
 **Statt anzugreifen** darf man: nachziehen (gratis, Hand wird getauscht; bei rotem Nachziehmarker kostet es 1 Mana, siehe „Nachziehmarker“), **erholen** oder passen. Jede dieser Aktionen beendet den Angriffszug.
 
-**Fliehen (neu):** Im Monsterkampf darf jede Seite fliehen, wenn das Monster 0 Mana hat, ihm gerade kein Angriff entgegengebracht wird (er ist in seinem Angriffszug) und er nicht unter einem Todesfluss steht. Der Kampf endet ohne Sieger und ohne Beute, das Monster behält seine HP und sein Mana, der Mitspieler ist als Nächster dran (mit der üblichen Regeneration). Im Showdown gilt dasselbe Fliehen: Der Showdown endet dann ohne Sieger, und es gibt keine Siegpunkte (anders als bei einem Showdown, in dem beide fallen). Die KI flieht nicht (`fleeT` 999): Im Selbstspiel verlor sie damit.
+**Fliehen (neu):** Im Monsterkampf darf jede Seite fliehen, wenn das Monster 0 Mana hat, ihm gerade kein Angriff entgegengebracht wird (er ist in seinem Angriffszug) und er nicht unter einem Todesfluch steht. Der Kampf endet ohne Sieger und ohne Beute, das Monster behält seine HP und sein Mana, der Mitspieler ist als Nächster dran (mit der üblichen Regeneration). Im Showdown gilt dasselbe Fliehen: Der Showdown endet dann ohne Sieger, und es gibt keine Siegpunkte (anders als bei einem Showdown, in dem beide fallen). Die KI flieht nicht (`fleeT` 999): Im Selbstspiel verlor sie damit.
 
 **Erholen:** Wer den Angriff auslässt, erhält **Mana in Höhe des Abschnitts** (1 / 2 / 3). In der Verteidigung gibt es **kein Erholen**: Wer dort passt, führt keine Verteidigung aus und nimmt den Schaden hin (ein Spiegel dieser Farbe gleicht bis zu seiner Stufe aus und verliert dafür Stufen), erhält aber kein Mana. Nachziehen, Erholen und Passen beenden den Zug.
 
 **Kampfende:**
-- Fällt eine Seite auf 0 HP, hat die andere gewonnen; fallen beide gleichzeitig, gibt es keinen Sieger. Geprüft wird in fester Reihenfolge (seit 0.8.3.1): 1) reflektierter Schaden (Falle), 2) Schaden nach der Verteidigung (samt Heilung), 3) Flusseffekte am Ende der Angriffsphase (Todesfluss, Erschöpfung, Heil- und Manafluss). Die erste Stufe, in der eine Seite auf 0 HP fällt, entscheidet; spätere Stufen wirken dann nicht mehr.
-- Haben beide 0 Mana, endet der Kampf **nicht mehr automatisch** ohne Sieger. Er geht weiter: Erholen im Angriffszug bringt Mana, der Todesfluss zehrt am Ende der Angriffsphasen. Beenden lässt er sich seit 0.9.1 nur noch durch Sieg, Niederlage oder die **Erschöpfung**; **Fliehen** (möglich, wenn der Gegner 0 Mana hat) ist abgeschaltet (`fleeAllowed` 0, siehe Änderung 0.9.1). Als technische Sicherung endet ein Kampf nach 400 Schritten ohne Sieger.
+- Fällt eine Seite auf 0 HP, hat die andere gewonnen; fallen beide gleichzeitig, gibt es keinen Sieger. Geprüft wird in fester Reihenfolge (seit 0.8.3.1): 1) reflektierter Schaden (Falle), 2) Schaden nach der Verteidigung (samt Heilung), 3) Dauereffekte am Ende der Angriffsphase (Todesfluch, Erschöpfung, Meditation und Erleuchtung). Die erste Stufe, in der eine Seite auf 0 HP fällt, entscheidet; spätere Stufen wirken dann nicht mehr.
+- Haben beide 0 Mana, endet der Kampf **nicht mehr automatisch** ohne Sieger. Er geht weiter: Erholen im Angriffszug bringt Mana, der Todesfluch zehrt am Ende der Angriffsphasen. Beenden lässt er sich seit 0.9.1 nur noch durch Sieg, Niederlage oder die **Erschöpfung**; **Fliehen** (möglich, wenn der Gegner 0 Mana hat) ist abgeschaltet (`fleeAllowed` 0, siehe Änderung 0.9.1). Als technische Sicherung endet ein Kampf nach 400 Schritten ohne Sieger.
 - Siegt der Spieler gegen das Monster, gibt es **keine Beute** (`monsterLoot` 0; ohne die Regel gälte das Gold des Monsters 1/2/3, auch für den Monsterführer mit `lootBoth`). Der Angreifer erhält 1 Siegpunkt (`monsterSp`); der Monsterführer verliert nichts. Siegt das Monster, gibt es keine Beute, und das Monster **zieht sich zurück**: Es verlässt das Brett, gilt als besiegt und bringt keine Beute (sonst ließe sich die Hilfe durch absichtliche Niederlagen farmen, die HP stiegen ohne Ende); der Angreifer verliert 1 Siegpunkt (nie unter 0), der Monsterführer gewinnt und verliert dabei nie Siegpunkte. **Ausgleich (seit 0.4, vorher „Hilfe“ für beide):** Gewinnt das Monster, erhält nur der Verlierer (der Angreifer) Gold: 1 / 2 / 3 je Abschnitt (`lossHelp` 1, `lossGold` [0,1,2,3], `lossPoints` 0, `lossBoth` 0; mit `lossBoth` 1 bekämen beide den Ausgleich), ohne Begrenzung. Ohne Sieger (Flucht, beide fallen) gibt es weder Beute noch Siegpunkte, das Monster bleibt am Leben.
 - In Monsterkämpfen bleiben HP und Mana erhalten und regenerieren in der Weltphase; vor und nach einem Showdown sind sie voll.
 
@@ -85,15 +85,15 @@ Die Farbe der ersten markierten Karte (**Primärfarbe**) liefert den Schaden und
 |---|---|---|---|
 | Rot (Schaden) | Falle | Blau + Rot | ziehe drei Karten vom Stapel, lege eine davon verdeckt vor dich, die übrigen kommen auf den Ablagestapel (Stufe S, kein Marker) |
 | Rot (Schaden) | Lähmung | Grün + Rot | **2·S Fluchkarten** (2 / 4 / 6) auf den Ablagestapel der Gegenseite |
-| Rot (Schaden) | Todesfluss (Ultimate) | alle drei Farben, Rot als zweite Karte | Todesfluss (Stufe S) |
+| Rot (Schaden) | Todesfluch (Ultimate) | alle drei Farben, Rot als zweite Karte | Todesfluch (Stufe S) |
 | Blau (variabel) | Hellsicht | Rot + Blau | ziehe 3 Karten, wähle S davon aus und lege sie offen vor dich (ohne Manakosten nutzbar, danach abgelegt); die übrigen kommen auf den Ablagestapel |
 | Blau (variabel) | Schild | Grün + Blau | Schild: S Ladungen kommen zu den liegenden dazu (seit 0.12.1.1 stapelnd, ohne Obergrenze) |
-| Blau (variabel) | Manafluss (Ultimate) | alle drei Farben, Blau als zweite Karte | Manafluss (Stufe S) |
+| Blau (variabel) | Erleuchtung (Ultimate) | alle drei Farben, Blau als zweite Karte | Erleuchtung (Stufe S) |
 | Grün (Heilung) | Heilung | Blau + Grün | S HP heilen |
 | Grün (Heilung) | Läuterung | Rot + Grün | S beliebige Marker vom Brett entfernen, je entferntem Marker ein Nachziehtoken |
-| Grün (Heilung) | Heilfluss (Ultimate) | alle drei Farben, Grün als zweite Karte | Heilfluss (Stufe S) |
+| Grün (Heilung) | Meditation (Ultimate) | alle drei Farben, Grün als zweite Karte | Meditation (Stufe S) |
 
-**Ultimate (seit 0.11.0.9):** Sie entsteht mit allen drei Farben und hängt wie jede Kombo an der **Sekundärfarbe**, der Farbe der ersten Karte, die nicht der Primärfarbe entspricht (Rot Todesfluss, Blau Manafluss, Grün Heilfluss). Die dritte Farbe hat keine Wirkung und löst die Ultimate nur aus. Die Reihenfolge der Karten ist damit Primär-, Sekundär-, dritte Farbe; zu jeder Primärfarbe gibt es zwei Ultimates (je nach Sekundärfarbe). Bis 0.11.0.8 bestimmte die zuletzt markierte Karte die Ultimate (0.9.9), bis 0.9.8 die erste. Der Schaden kommt weiter von der Primärfarbe (erste Karte); die Stufe S bleibt das Minimum der drei Kartensummen (höchstens 3). Das Echo verstärkt die Ultimate, wenn es die Sekundärfarbe hat.
+**Ultimate (seit 0.11.0.9):** Sie entsteht mit allen drei Farben und hängt wie jede Kombo an der **Sekundärfarbe**, der Farbe der ersten Karte, die nicht der Primärfarbe entspricht (Rot Todesfluch, Blau Erleuchtung, Grün Meditation). Die dritte Farbe hat keine Wirkung und löst die Ultimate nur aus. Die Reihenfolge der Karten ist damit Primär-, Sekundär-, dritte Farbe; zu jeder Primärfarbe gibt es zwei Ultimates (je nach Sekundärfarbe). Bis 0.11.0.8 bestimmte die zuletzt markierte Karte die Ultimate (0.9.9), bis 0.9.8 die erste. Der Schaden kommt weiter von der Primärfarbe (erste Karte); die Stufe S bleibt das Minimum der drei Kartensummen (höchstens 3). Das Echo verstärkt die Ultimate, wenn es die Sekundärfarbe hat.
 
 **Echo (seit 0.9):** Jede Nutzung von Primärmagie (seit 0.9.6 auch Angriffe und Verteidigungen **ohne** Kombo; davor nur die sechs Zwei-Farben-Kombos und die Ultimate) hinterlässt bei der Seite, die sie wirkt, ein **Echo in der Farbe der ersten Karte (Primärmagie)**. Jede neue Nutzung **erneuert** das Echo (neue Farbe); Passen, Erholen und Spielzüge ohne farbige erste Karte (nur Fluchkarten) lassen es stehen. Enthält der **nächste Kombo** eine **Sekundärkarte in der Farbe des Echos**, steigt seine Stufe um **1 (höchstens 3)**; das gilt auch, wenn er das Echo gleichzeitig durch seine eigene Primärfarbe erneuert. Bei der Ultimate ist (seit 0.11.0.9) nur die **zweite Karte (Sekundärfarbe)** die Sekundärkarte; 0.9.9 bis 0.11.0.8 war es die Schlusskarte (bis 0.9.8 beide Farben außer der ersten); das Echo, das sie hinterlässt, hat weiter die Farbe der ersten Karte. Das Echo ist **kein Marker im Sinne der Läuterung** (nicht läuterbar), gilt nur bis Kampfende und wird digital seit 0.9.4 auf dem Magie-Brett gezeigt: Die Schlange der Echo-Farbe leuchtet pulsierend und sendet Wellen nach außen (beim Gegner genauso). Der Echo-Marker (neutraler Stein mit hellen Ringen) gehört nur zum analogen Spiel.
 
@@ -105,16 +105,16 @@ Die Farbe der ersten markierten Karte (**Primärfarbe**) liefert den Schaden und
 
 **Schild (Blau + Grün, seit 0.8):** Es mindert eingehenden, nicht geblockten Schaden gegen **jede** Farbe um bis zu seine Ladungen (1 / 2 / 3) und verliert je geminderten Schaden eine Ladung. **Seit 0.12.1.1 stapelt das Schild:** Ein neues Schild addiert seine Ladungen zu den liegenden, ohne Obergrenze (vorher: die höhere Zahl, höchstens 3). Läuterbar. Ein Rückwurf findet nicht mehr statt. In der Verteidigung gestellt, wirkt es erst nach ihr. Die Grafik ist die des früheren Multischilds, ohne dessen Anfangsanimation.
 
-**Farbspiegel (bis 0.7.7.8):** ersetzt durch Falle und Schild; der Multispiegel (Wasser-Ultimate) ist durch den Manafluss ersetzt.
+**Farbspiegel (bis 0.7.7.8):** ersetzt durch Falle und Schild; der Multispiegel (Wasser-Ultimate) ist durch den Erleuchtung ersetzt.
 
 **Läuterung:** Wählbar sind alle Marker auf dem Brett, auch eigene: Todesmarker, Heil-, Mana- und Schildmarker sowie **gegnerische Nachziehtokens**. Gegnerische Tokens werden nur zerstört, sie werden nicht gutgeschrieben. Für jeden anderen entfernten Marker erhält der Angreifer ein Nachziehtoken. Keine Heilung.
 
-**Ultimate (Todesfluss):** Die Stufe ist das Minimum aus den drei Magiewerten und den drei höchsten Kartenstufen, höchstens 3. Der Gegner verliert S HP am Ende jeder eigenen Angriffsphase bis Kampfende; nur Läuterung kann Marker entfernen. Die Ultimate **gilt auch in der Verteidigung** (alle drei Farben, die Verteidigungsfarbe blockt, die beiden anderen sind Kombokarten): Nach der Verteidigung erhält der Angreifer den Todesfluss.
+**Ultimate (Todesfluch):** Die Stufe ist das Minimum aus den drei Magiewerten und den drei höchsten Kartenstufen, höchstens 3. Der Gegner verliert S HP am Ende jeder eigenen Angriffsphase bis Kampfende; nur Läuterung kann Marker entfernen. Die Ultimate **gilt auch in der Verteidigung** (alle drei Farben, die Verteidigungsfarbe blockt, die beiden anderen sind Kombokarten): Nach der Verteidigung erhält der Angreifer den Todesfluch.
 
 **Ultimate nach Farbe (seit 0.7):** Die Farbe der ersten Karte entscheidet. Die Stufe S gilt wie bisher (Minimum der drei Kartensummen, höchstens 3); mehrere Marker einer Art galten bis 0.12.1.0 nicht addiert (es galt der höchste); **seit 0.12.1.1 stapeln sie**: Jede Ultimate legt ihre Stufe zusätzlich zu den liegenden Markern. Alle drei Marker entfernt nur die Läuterung (sie sind wählbar wie die Todesmarker).
-- **Feuer: Todesfluss** wie bisher (S Todesmarker beim Gegner, S HP Verlust am Ende jeder seiner Angriffsphasen).
-- **Erde: Heilfluss.** S grüne Marker mit Plus bei dir selbst: Am Ende jeder deiner Angriffsphasen heilst du S HP (höchstens bis zu den max. HP) bis Kampfende.
-- **Wasser: Manafluss (seit 0.8, vorher Multispiegel).** S blaue Marker mit Kristall bei dir selbst: Am Ende jeder deiner Angriffsphasen regenerierst du S Mana (höchstens bis zum maximalen Mana) bis Kampfende. Nur Marker, die schon zu Beginn der Phase lagen, zählen. Die Läuterung kann sie entfernen. Animation: neues Ritual in der Ultimate-Werkstatt (Ring, Achtstern, aufsteigender Kristall, Manafunken), im Spiel eine blaue Wolke zur Manaanzeige.
+- **Feuer: Todesfluch** wie bisher (S Todesmarker beim Gegner, S HP Verlust am Ende jeder seiner Angriffsphasen).
+- **Erde: Meditation.** S grüne Marker mit Plus bei dir selbst: Am Ende jeder deiner Angriffsphasen heilst du S HP (höchstens bis zu den max. HP) bis Kampfende.
+- **Wasser: Erleuchtung (seit 0.8, vorher Multispiegel).** S blaue Marker mit Kristall bei dir selbst: Am Ende jeder deiner Angriffsphasen regenerierst du S Mana (höchstens bis zum maximalen Mana) bis Kampfende. Nur Marker, die schon zu Beginn der Phase lagen, zählen. Die Läuterung kann sie entfernen. Animation: neues Ritual in der Ultimate-Werkstatt (Ring, Achtstern, aufsteigender Kristall, Manafunken), im Spiel eine blaue Wolke zur Manaanzeige.
 
 
 ## Monster
@@ -372,14 +372,14 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 
 - **Opfern ohne Obergrenze:** Es lässt sich beliebig viel Gold auf einmal opfern (vorher höchstens 4 in der Oberfläche).
 - **Kartenkauf ohne Freischaltung:** Karten der Stufe 2 und 3 sind unabhängig von der entwickelten Magie kaufbar. Die Magie begrenzt nur noch, wie viel eine Karte im Kampf zählt.
-- **Ultimates nach Primärfarbe:** Feuer Todesfluss, Erde Heilfluss (grüner Marker mit Plus), Wasser Prisma (siehe oben). Nur Läuterung entfernt diese Marker.
+- **Ultimates nach Primärfarbe:** Feuer Todesfluch, Erde Meditation (grüner Marker mit Plus), Wasser Prisma (siehe oben). Nur Läuterung entfernt diese Marker.
 - **Nachziehmarker-Strafe nach Abschnitt:** Mana (Kampf) und Gold (Weltphase) kosten 1/2/3 je Abschnitt; vor dem Nachziehen bei rotem Marker erscheint eine Warnung (wie beim Fliehen).
 - Der Hinweistext zur Schildwirkung („Spiegel: …“) im Kampf entfällt.
 
 ## Änderung 0.7.0.1 (06.11.)
 
 - **Kombo-Übersicht:** Alle Kombos stehen nach der Farbe der ersten Karte geordnet (Feuer, Wasser, Erde), die Ultimate jeweils darunter, und passen ohne Scrollbalken in das Fenster. Ausführliche Wirkungen stehen im Tooltip.
-- **Umbenennung:** Der Todes-Fluch (Feuer-Ultimate) heißt **Todesfluss**.
+- **Umbenennung:** Der Todes-Fluch (Feuer-Ultimate) heißt **Todesfluch**.
 
 ## Änderung 0.7.0.2 (06.11.)
 
@@ -399,16 +399,16 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 
 ## Änderung 0.7.2.1 (06.11.)
 
-- **Keine Spieländerung:** Neue Werkstatt `werkstatt/ultimate-werkstatt.html` (Ultimate-Werkstatt) für die Kombos aus allen drei Elementen: Todesfluss (Feuer, das Pentagramm aus `CurseFx`), Heilfluss (Erde: Kreis mit Ranken, Pluszeichen und Lichtsäule) und Prisma (Wasser: Lichtstrahl, der sich im Kristall in Feuer, Erde und Wasser aufspaltet, dann die Schildkuppel). Nach dem Ritual fliegen die Marker auf ihre Plätze und die Wirkung läuft (Gegner verliert HP, Heilung, Abwehr dreier Farben). Heilfluss und Prisma sind Entwürfe; im Spiel haben sie bisher nur den Ton.
+- **Keine Spieländerung:** Neue Werkstatt `werkstatt/ultimate-werkstatt.html` (Ultimate-Werkstatt) für die Kombos aus allen drei Elementen: Todesfluch (Feuer, das Pentagramm aus `CurseFx`), Meditation (Erde: Kreis mit Ranken, Pluszeichen und Lichtsäule) und Prisma (Wasser: Lichtstrahl, der sich im Kristall in Feuer, Erde und Wasser aufspaltet, dann die Schildkuppel). Nach dem Ritual fliegen die Marker auf ihre Plätze und die Wirkung läuft (Gegner verliert HP, Heilung, Abwehr dreier Farben). Meditation und Prisma sind Entwürfe; im Spiel haben sie bisher nur den Ton.
 
 ## Änderung 0.7.2.2 (06.11.)
 
 - **Prisma verliert Stufen:** Die Stufen des Prisma verfallen wie die eines Farbspiegels: Je ausgeglichenem oder zurückgeworfenem Schaden geht eine Stufe ab. Es gilt weiter der höhere Wert von Farbspiegel und Prisma gegen die Angriffsfarbe (höchstens so viel Schaden je Verteidigung), **verbraucht werden aber immer zuerst die Stufen des Farbspiegels**, dann die des Prisma (Beispiel: Feuerspiegel 1 und Prisma 2 gleichen 2 Schaden aus, der Feuerspiegel verliert 1, das Prisma 1). Umsetzung: `defenseOutcome` (`lostStd`, `lostRb`), `defenseComboPre` und `execDefense` in `src/engine/65-kampfablauf.js`; Vorschau und Protokoll folgen derselben Rechnung („Spiegel und Prisma: … verliert 2 Stufen (1 vom Spiegel, 1 vom Prisma)“). Der Schild-Effekt (`MirrorFx`) gilt dem Farbspiegel, wenn er Stufen verliert, sonst dem Prisma (Schild mit Regenbogenfarben, `elem` R). Test: `Standardschilde werden vor dem Prisma verbraucht` in `tests/engine.test.js`. Die KI ist nicht neu abgestimmt; die Referenzpartien (`tests/golden.json`) sind neu erzeugt.
-- **Rituale für Heilfluss und Prisma:** Aus der Ultimate-Werkstatt ins Spiel übernommen (`UltFx` in `src/ui/20a-ultimates.js`). Wie das Pentagramm des Todesfluss laufen sie mittig auf dem Bildschirm (4 s), sobald der erste Heilmarker bzw. das Prisma gelegt wird: Heilfluss mit Kreis, Ranken, Pluszeichen, Lichtsäule und Heilwellen; Prisma mit Lichtstrahl, der sich im Kristall in Feuer, Erde und Wasser aufspaltet, und der Schildkuppel. Die Werte stehen in `P` dort (Standard der Werkstatt).
+- **Rituale für Meditation und Prisma:** Aus der Ultimate-Werkstatt ins Spiel übernommen (`UltFx` in `src/ui/20a-ultimates.js`). Wie das Pentagramm des Todesfluch laufen sie mittig auf dem Bildschirm (4 s), sobald der erste Heilmarker bzw. das Prisma gelegt wird: Meditation mit Kreis, Ranken, Pluszeichen, Lichtsäule und Heilwellen; Prisma mit Lichtstrahl, der sich im Kristall in Feuer, Erde und Wasser aufspaltet, und der Schildkuppel. Die Werte stehen in `P` dort (Standard der Werkstatt).
 
 ## Änderung 0.7.2.3 (06.11.)
 
-- **Effekt der Heilmarker:** Heilt der Heilfluss am Ende der eigenen Angriffsphase, steigt aus jedem Heilmarker (bis zu 4 dargestellt) eine grüne Wolke mit Lichtpunkten und Pluszeichen zur Lebensanzeige (`FlowFx.heal` in `src/ui/22-lifeflow-aggro.js`), analog zur Wolke des Todesfluss. Die Lebensanzeige zeigt bis zum Eintreffen den alten Stand (`holdHp` in `src/ui/26a-darstellung.js`, gemeinsam mit dem Todesfluss). Keine Regeländerung.
+- **Effekt der Heilmarker:** Heilt die Meditation am Ende der eigenen Angriffsphase, steigt aus jedem Heilmarker (bis zu 4 dargestellt) eine grüne Wolke mit Lichtpunkten und Pluszeichen zur Lebensanzeige (`FlowFx.heal` in `src/ui/22-lifeflow-aggro.js`), analog zur Wolke des Todesfluch. Die Lebensanzeige zeigt bis zum Eintreffen den alten Stand (`holdHp` in `src/ui/26a-darstellung.js`, gemeinsam mit dem Todesfluch). Keine Regeländerung.
 
 ## Änderung 0.7.2.4 (06.11.)
 
@@ -417,7 +417,7 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 
 ## Änderung 0.7.2.5 (06.11.)
 
-- **Rituale bei jedem Wirken:** Die Rituale von Heilfluss und Multischild starten jetzt über den Effekt der Ultimate im Kampflog (`showFx`), nicht mehr nur, wenn die Summe der Marker steigt. Bisher blieb das Multischild-Ritual aus, wenn die Stufe schon gleich hoch oder höher lag (die Ultimate setzt nur das Maximum). Keine Regeländerung.
+- **Rituale bei jedem Wirken:** Die Rituale von Meditation und Multischild starten jetzt über den Effekt der Ultimate im Kampflog (`showFx`), nicht mehr nur, wenn die Summe der Marker steigt. Bisher blieb das Multischild-Ritual aus, wenn die Stufe schon gleich hoch oder höher lag (die Ultimate setzt nur das Maximum). Keine Regeländerung.
 
 ## Änderung 0.7.2.6 (06.11.)
 
@@ -429,7 +429,7 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 
 ## Änderung 0.7.2.8 (06.11.)
 
-- **Heilfluss wie Todesfluss:** Ein Heilmarker, der in der eigenen Angriffsphase gelegt wird (Ultimate im Angriff), heilt erst am Ende der **nächsten** eigenen Angriffsphase. Bisher heilte er schon am Ende der Phase, in der er gelegt wurde. Technisch merkt `stats.healPhase` die Stufe zu Beginn der Phase (wie `deathPhase`); eine Erhöhung in derselben Phase zählt erst ab der nächsten. Wird die Ultimate in der Verteidigung gelegt, heilt der Marker wie bisher am Ende der nächsten eigenen Angriffsphase.
+- **Meditation wie Todesfluch:** Ein Heilmarker, der in der eigenen Angriffsphase gelegt wird (Ultimate im Angriff), heilt erst am Ende der **nächsten** eigenen Angriffsphase. Bisher heilte er schon am Ende der Phase, in der er gelegt wurde. Technisch merkt `stats.healPhase` die Stufe zu Beginn der Phase (wie `deathPhase`); eine Erhöhung in derselben Phase zählt erst ab der nächsten. Wird die Ultimate in der Verteidigung gelegt, heilt der Marker wie bisher am Ende der nächsten eigenen Angriffsphase.
 
 ## Änderung 0.7.2.9 (06.11.)
 
@@ -442,7 +442,7 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 
 ## Änderung 0.7.2.12 (06.11.)
 
-- **Zähler statt Mehrfachabbildung:** Todes- und Heilmarker zeigen sich als **ein** Token mit Zähler (×N ab 2), wie Farbspiegel und Multispiegel. In der Läuterung wählt ein Klick einen Marker mehr, nach dem Maximum wieder alle ab (wie bei den Schildmarkern). Die Wolken von Todes- und Heilfluss starten weiterhin je eine pro Marker (höchstens 4), alle aus diesem Token. Nur Darstellung und Bedienung, keine Regeländerung.
+- **Zähler statt Mehrfachabbildung:** Todes- und Heilmarker zeigen sich als **ein** Token mit Zähler (×N ab 2), wie Farbspiegel und Multispiegel. In der Läuterung wählt ein Klick einen Marker mehr, nach dem Maximum wieder alle ab (wie bei den Schildmarkern). Die Wolken von Todesfluch und Meditation starten weiterhin je eine pro Marker (höchstens 4), alle aus diesem Token. Nur Darstellung und Bedienung, keine Regeländerung.
 
 ## Änderung 0.7.2.13 bis 0.7.2.15 (06.11.)
 
@@ -479,7 +479,7 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 
 ## Änderung 0.7.2.23 (06.11.)
 
-- **Schilde erst nach der Verteidigung:** Ein Farbspiegel-Kombo (Wasser + Feuer/Erde) und die Wasser-Ultimate (Multispiegel), die in der Verteidigung gewirkt werden, stellen den Schild erst **nach** dem Schaden. Er gleicht den laufenden Angriff nicht mehr aus, gilt aber ab dem nächsten Angriff (analog zur Heilung seit 0.5.4). Bereits stehende Schilde wirken wie bisher. Im Angriffszug gewirkte Schilde sind davon nicht betroffen. Zerrüttung, Lähmung, Läuterung und Todesfluss wirken weiter vor der Verteidigung. Das ändert die KI-Referenzpartien (`tests/golden.json` neu erzeugt) und die Vorschau der Verteidigung.
+- **Schilde erst nach der Verteidigung:** Ein Farbspiegel-Kombo (Wasser + Feuer/Erde) und die Wasser-Ultimate (Multispiegel), die in der Verteidigung gewirkt werden, stellen den Schild erst **nach** dem Schaden. Er gleicht den laufenden Angriff nicht mehr aus, gilt aber ab dem nächsten Angriff (analog zur Heilung seit 0.5.4). Bereits stehende Schilde wirken wie bisher. Im Angriffszug gewirkte Schilde sind davon nicht betroffen. Zerrüttung, Lähmung, Läuterung und Todesfluch wirken weiter vor der Verteidigung. Das ändert die KI-Referenzpartien (`tests/golden.json` neu erzeugt) und die Vorschau der Verteidigung.
 
 ## Änderung 0.7.2.24 (06.11.)
 
@@ -487,7 +487,7 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 
 ## Änderung 0.7.5.1 (06.11.)
 
-- **Keine Regeländerung, KI neu abgestimmt** (Messung in `tools/balance/README.md`): kein Opfern von Gold für Magie mehr (`sacG` 0), Heilfluss höher und Multispiegel niedriger bewertet (`uHeal`, `uMulti`), Läuterung entfernt gezielt eigene Todesmarker und gegnerische Heilmarker (`lfDeath`, `lfHeal`), neue Angriffsgewichte, Fliehen nur noch in den ersten vier Weltzügen ohne entschiedenen Kampf (`fleeIdle` 4). Die Eröffnung (Handplätze erst nach dem ersten Sieg) wartet auf den ersten besiegten Monsterkampf: Die Engine zählt dafür `stats.kills`. Die Referenzpartien (`tests/golden.json`) sind neu erzeugt. 86,6 % gegen die KI von 0.7.3.3.
+- **Keine Regeländerung, KI neu abgestimmt** (Messung in `tools/balance/README.md`): kein Opfern von Gold für Magie mehr (`sacG` 0), Meditation höher und Multispiegel niedriger bewertet (`uHeal`, `uMulti`), Läuterung entfernt gezielt eigene Todesmarker und gegnerische Heilmarker (`lfDeath`, `lfHeal`), neue Angriffsgewichte, Fliehen nur noch in den ersten vier Weltzügen ohne entschiedenen Kampf (`fleeIdle` 4). Die Eröffnung (Handplätze erst nach dem ersten Sieg) wartet auf den ersten besiegten Monsterkampf: Die Engine zählt dafür `stats.kills`. Die Referenzpartien (`tests/golden.json`) sind neu erzeugt. 86,6 % gegen die KI von 0.7.3.3.
 
 ## Änderung 0.7.6.1 (06.11.)
 
@@ -525,7 +525,7 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 
 ## Änderung 0.7.7.2 (07.11.)
 
-- **Kein Rundenlimit mehr, dafür Erschöpfung:** `maxRounds` steht auf 0 (aus; die Regel bleibt als Schalter erhalten, die Version 0.7.7.1 mit 20 Runden ist damit zurückgenommen). Neu ist die Regel `exhaustRounds` (Standard 10, 0 = aus): Nach je 10 Kampfrunden steigt die **Erschöpfung** um 1. Beide Seiten verlieren am Ende ihrer Angriffsphase (nach Angriff und Verteidigung der Gegenseite, gleicher Zeitpunkt wie der Todesfluss) so viele HP, wie die Erschöpfung hoch ist: Runde 1–10: 0, Runde 11–20: 1, Runde 21–30: 2 usw. Sie gilt in Monsterkämpfen (auch für das Monster) und im Showdown. Fällt eine Seite dadurch auf 0 HP, verliert sie wie sonst; der Kampf endet nie unentschieden durch die Runden. Anzeige im Kampffenster: „Runde N · Erschöpfung X“ (vor Runde 11: „Erschöpfung ab Runde 11“). Anlass: Spiellog Seed 2127820936, dritter Showdown mit 148 Aktionen ohne HP-Änderung. Die Erschöpfung ist unabhängig von der alten Sicherung `MAX_COMBAT_TURNS` („Beide Seiten sind erschöpft“, 400 Züge).
+- **Kein Rundenlimit mehr, dafür Erschöpfung:** `maxRounds` steht auf 0 (aus; die Regel bleibt als Schalter erhalten, die Version 0.7.7.1 mit 20 Runden ist damit zurückgenommen). Neu ist die Regel `exhaustRounds` (Standard 10, 0 = aus): Nach je 10 Kampfrunden steigt die **Erschöpfung** um 1. Beide Seiten verlieren am Ende ihrer Angriffsphase (nach Angriff und Verteidigung der Gegenseite, gleicher Zeitpunkt wie der Todesfluch) so viele HP, wie die Erschöpfung hoch ist: Runde 1–10: 0, Runde 11–20: 1, Runde 21–30: 2 usw. Sie gilt in Monsterkämpfen (auch für das Monster) und im Showdown. Fällt eine Seite dadurch auf 0 HP, verliert sie wie sonst; der Kampf endet nie unentschieden durch die Runden. Anzeige im Kampffenster: „Runde N · Erschöpfung X“ (vor Runde 11: „Erschöpfung ab Runde 11“). Anlass: Spiellog Seed 2127820936, dritter Showdown mit 148 Aktionen ohne HP-Änderung. Die Erschöpfung ist unabhängig von der alten Sicherung `MAX_COMBAT_TURNS` („Beide Seiten sind erschöpft“, 400 Züge).
 - **Offen:** Die KI kennt die Erschöpfung nicht; ihre Parameter (`stallFrom`, `stallDec`, `aThr`) sind noch auf das frühere Limit abgestimmt. KI-Referenzpartien (`tests/golden.json`) sind neu erzeugt; `npm run balance` steht noch aus.
 
 ## Änderung 0.7.7.3 (07.11.)
@@ -559,10 +559,10 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 
 ## Änderung 0.8 (07.11.)
 
-- **Blaue Kombos überarbeitet:** (a) **Blau + Rot = Falle:** ziehe bis zu drei Karten, lege eine verdeckt vor dich; bei eingehendem Schaden wird sie aufgedeckt, passt die Farbe des Schadens, werden 2 / 4 / 6 unblockbar vor der Verteidigung reflektiert (gedeckelt durch den eingehenden Schaden, der entsprechend sinkt), danach kommt die Karte auf den Ablagestapel (auch ohne Rückwurf); sie ist kein Marker. (b) **Blau + Grün = Schild:** mindert eingehenden, nicht geblockten Schaden um 1 / 2 / 3 Ladungen, Grafik des Multischilds ohne Anfangsanimation. (c) **Blau + Rot + Grün = Manafluss:** regeneriert 1 / 2 / 3 Mana am Ende des eigenen Angriffszugs, Marker mit Kristall, Läuterung wählbar (Codes `sm`/`om`).
+- **Blaue Kombos überarbeitet:** (a) **Blau + Rot = Falle:** ziehe bis zu drei Karten, lege eine verdeckt vor dich; bei eingehendem Schaden wird sie aufgedeckt, passt die Farbe des Schadens, werden 2 / 4 / 6 unblockbar vor der Verteidigung reflektiert (gedeckelt durch den eingehenden Schaden, der entsprechend sinkt), danach kommt die Karte auf den Ablagestapel (auch ohne Rückwurf); sie ist kein Marker. (b) **Blau + Grün = Schild:** mindert eingehenden, nicht geblockten Schaden um 1 / 2 / 3 Ladungen, Grafik des Multischilds ohne Anfangsanimation. (c) **Blau + Rot + Grün = Erleuchtung:** regeneriert 1 / 2 / 3 Mana am Ende des eigenen Angriffszugs, Marker mit Kristall, Läuterung wählbar (Codes `sm`/`om`).
 - **Entfallen:** Farbspiegel (rot, grün) und Multispiegel samt Rückwurf an Verteidigungsüberschuss und Spiegelbruch-Ablauf in der Engine; die Läuterungscodes `sm:F` usw. gelten nicht mehr.
-- **Animationen:** Neues Manafluss-Ritual (`fxMana` in `UltFx`, auch in der Ultimate-Werkstatt, Vorlagen „Manafluss einzeln“ und „kühl“); Manawolke in `FlowFx.heal` (Variante `mana`); `TrapFx` (Karte dreht sich um, Geschoss zum Angreifer, „−N“).
-- **KI und Tests:** KI bewertet Falle, Schild und Manafluss neu (`trapWorth`, `shieldWorth`, `uMana`, `wTrap`); Engine-Tests für Falle, Schild, Manafluss und Läuterung umgeschrieben; Golden-Datei neu erzeugt.
+- **Animationen:** Neues Erleuchtung-Ritual (`fxMana` in `UltFx`, auch in der Ultimate-Werkstatt, Vorlagen „Erleuchtung einzeln“ und „kühl“); Manawolke in `FlowFx.heal` (Variante `mana`); `TrapFx` (Karte dreht sich um, Geschoss zum Angreifer, „−N“).
+- **KI und Tests:** KI bewertet Falle, Schild und Erleuchtung neu (`trapWorth`, `shieldWorth`, `uMana`, `wTrap`); Engine-Tests für Falle, Schild, Erleuchtung und Läuterung umgeschrieben; Golden-Datei neu erzeugt.
 
 ## Änderung 0.8.0.1 (07.11.)
 
@@ -614,7 +614,7 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 
 ## Änderung 0.8.3.1 (07.11.)
 
-- **Reihenfolge der Niederlagenprüfung (0 HP):** Die Engine prüft jetzt ausdrücklich in drei Stufen, und die erste Stufe mit einer Seite auf 0 HP entscheidet den Kampf: **1) reflektierter Schaden** (Rückwurf der Falle, vor der Verteidigung: der Angreifer ist besiegt, ohne dass der Verteidiger noch verteidigt oder Schaden nimmt), **2) Schaden nach der Verteidigung** (Restschaden nach Block und Schild, danach die Heilung), **3) Flusseffekte** am Ende der Angriffsphase (Todesfluss, Erschöpfung, danach Heil- und Manafluss). Folgen: Ein Todesfluss kann den Angreifer nicht mehr zusammen mit dem Verteidiger auf 0 bringen (kein Unentschieden), und ein Heil- oder Manafluss belebt niemanden wieder. Engine: neue Hilfsfunktion `hpDecided` in `65-kampfablauf.js` als Tor vor den Stufen 2 und 3; drei neue Tests („Niederlagenprüfung 1–3“). Die bisherigen Ergebnisse (Golden-Datei) bleiben unverändert.
+- **Reihenfolge der Niederlagenprüfung (0 HP):** Die Engine prüft jetzt ausdrücklich in drei Stufen, und die erste Stufe mit einer Seite auf 0 HP entscheidet den Kampf: **1) reflektierter Schaden** (Rückwurf der Falle, vor der Verteidigung: der Angreifer ist besiegt, ohne dass der Verteidiger noch verteidigt oder Schaden nimmt), **2) Schaden nach der Verteidigung** (Restschaden nach Block und Schild, danach die Heilung), **3) Dauereffekte** am Ende der Angriffsphase (Todesfluch, Erschöpfung, danach Meditation und Erleuchtung). Folgen: Ein Todesfluch kann den Angreifer nicht mehr zusammen mit dem Verteidiger auf 0 bringen (kein Unentschieden), und eine Meditation oder Erleuchtung belebt niemanden wieder. Engine: neue Hilfsfunktion `hpDecided` in `65-kampfablauf.js` als Tor vor den Stufen 2 und 3; drei neue Tests („Niederlagenprüfung 1–3“). Die bisherigen Ergebnisse (Golden-Datei) bleiben unverändert.
 
 ## Änderung 0.8.4 (07.11.)
 
@@ -622,11 +622,11 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 
 ## Änderung 0.8.4.1 (07.11.)
 
-- **Schild vor jeder Schadensquelle (Regeländerung):** Das Schild (`stats.rainbow`) mindert nicht mehr nur den Angriffsschaden, sondern **jeden** HP-Verlust: auch den **Rückwurf der Falle** (der Angreifer verliert nur den Rest über seinen Ladungen), den **Todesfluss** und die **Erschöpfung**. Je gemindertem Schaden geht eine Ladung verloren (Engine: `shieldHit`). Der eingehende Angriffsschaden sinkt durch die Falle weiterhin um den vollen Rückwurf. Passt zur Reihenfolge von 0.8.3.1: Das Schild wirkt in jeder Stufe vor dem Abzug der HP. Golden-Datei neu erzeugt (absichtliche Regeländerung); drei neue Tests.
+- **Schild vor jeder Schadensquelle (Regeländerung):** Das Schild (`stats.rainbow`) mindert nicht mehr nur den Angriffsschaden, sondern **jeden** HP-Verlust: auch den **Rückwurf der Falle** (der Angreifer verliert nur den Rest über seinen Ladungen), den **Todesfluch** und die **Erschöpfung**. Je gemindertem Schaden geht eine Ladung verloren (Engine: `shieldHit`). Der eingehende Angriffsschaden sinkt durch die Falle weiterhin um den vollen Rückwurf. Passt zur Reihenfolge von 0.8.3.1: Das Schild wirkt in jeder Stufe vor dem Abzug der HP. Golden-Datei neu erzeugt (absichtliche Regeländerung); drei neue Tests.
 
 ## Änderung 0.8.5 (07.11.)
 
-- **KI auf die neuen blauen Kombos abgestimmt, keine Änderung nötig:** `PARAMS=wFW,wTrap,uMana,uHeal,mirKeep,mirAvoid,wDeath,wEW,wFE,wDraw,lfDeath,lfHeal,keepB node tools/balance/opt2.js 3 600` (Pool: Champion plus drei früh angreifende Gegner). Runde 1: bester Kandidat `wDeath` 8 mit +0,9 Punkten, `wFW` 0,6 mit +0,7; Runde 2: `uMana` 0,7 mit +0,6. Alle liegen unter der Übernahmeschwelle (1,5 Standardfehler, etwa ±2 Punkte), nichts wurde übernommen; die Standardwerte der KI bleiben. Die Gewichte für Falle (`wTrap`), Schild (`wFW`), Manafluss (`uMana`) und Hellsicht liegen damit nahe am Optimum. Runde 3 entfiel, weil Runde 2 nichts übernahm. Gemessen wurde auf dem Regelstand 0.8.4 (vor der Änderung 0.8.4.1, die das Schild vor jeder Schadensquelle wirken lässt); `wFW` (Schild) ist danach nicht neu gemessen.
+- **KI auf die neuen blauen Kombos abgestimmt, keine Änderung nötig:** `PARAMS=wFW,wTrap,uMana,uHeal,mirKeep,mirAvoid,wDeath,wEW,wFE,wDraw,lfDeath,lfHeal,keepB node tools/balance/opt2.js 3 600` (Pool: Champion plus drei früh angreifende Gegner). Runde 1: bester Kandidat `wDeath` 8 mit +0,9 Punkten, `wFW` 0,6 mit +0,7; Runde 2: `uMana` 0,7 mit +0,6. Alle liegen unter der Übernahmeschwelle (1,5 Standardfehler, etwa ±2 Punkte), nichts wurde übernommen; die Standardwerte der KI bleiben. Die Gewichte für Falle (`wTrap`), Schild (`wFW`), Erleuchtung (`uMana`) und Hellsicht liegen damit nahe am Optimum. Runde 3 entfiel, weil Runde 2 nichts übernahm. Gemessen wurde auf dem Regelstand 0.8.4 (vor der Änderung 0.8.4.1, die das Schild vor jeder Schadensquelle wirken lässt); `wFW` (Schild) ist danach nicht neu gemessen.
 - `wTrap` und `mirKeep` sind jetzt in der Schrittweitentabelle von `tools/balance/opt.js` und damit für `opt2.js` abstimmbar.
 - Keine Regel- und keine KI-Änderung; `tests/golden.json` bleibt unverändert.
 
@@ -651,7 +651,7 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 
 ## Änderung 0.8.7.3 (08.11.)
 
-- **Verteidigung bei vollem Rückwurf (keine Regeländerung):** Wirft die Falle den gesamten eingehenden Schaden zurück, entfällt die Verteidigungsphase wie beim Angriff ohne Schaden: Der Verteidiger ist sofort im Angriffszug, die Angriffsphase des Angreifers endet mit ihren Flusseffekten. Das war schon so (`execAttack` in `65-kampfablauf.js`); neu ist nur ein Test dazu in `tests/engine.test.js`.
+- **Verteidigung bei vollem Rückwurf (keine Regeländerung):** Wirft die Falle den gesamten eingehenden Schaden zurück, entfällt die Verteidigungsphase wie beim Angriff ohne Schaden: Der Verteidiger ist sofort im Angriffszug, die Angriffsphase des Angreifers endet mit ihren Dauereffekten. Das war schon so (`execAttack` in `65-kampfablauf.js`); neu ist nur ein Test dazu in `tests/engine.test.js`.
 
 ## Änderung 0.9 (08.11.)
 
@@ -690,6 +690,12 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Tests:** Drei Tests angepasst (Nachziehmarker Weltphase, Nachziehlimit Kauf, Nachziehlimit Weltphase; der Marker-Reset läuft jetzt über den Händler), neuer Test „Magie kaufen und Upgrades sind keine Aktion mehr“. `tests/golden.json` ist neu erzeugt (absichtliche Regeländerung).
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
 
+## Änderung 0.13.0.2 (12.11.)
+
+- **Ultimates umbenannt (nur Namen, Wirkung unverändert):** Heilfluss heißt **Meditation**, Manafluss **Erleuchtung**, Todesfluss **Todesfluch**. Die neuen Namen stehen im Spiel (Kombo-Übersicht, Hilfen, Protokoll, Versionsbeschreibung), im Code, in den Tests, in der Werkstatt und in diesem Regelwerk, auch in den älteren Einträgen der Änderungsliste.
+- Der Sammelbegriff „Flusseffekte“ (Wirkungen am Ende der Angriffsphase: Todesfluch, Erschöpfung, Meditation, Erleuchtung) heißt jetzt „Dauereffekte“.
+- Marker (Todes-, Heil- und Manamarker) und interne Bezeichner (`death`, `heal`, `manaflow`) behalten ihre Namen.
+
 ## Änderung 0.13.0.1 (12.11.)
 
 - **Kombo-Übersicht mit Farbverlauf (nur Darstellung):** Hintergrund und Rand jeder Zeile verlaufen von der Primärfarbe (links) zur Sekundärfarbe (rechts); die Tertiärfarbe einer Ultimate geht nicht in den Verlauf ein. Bisher war die ganze Zeile in der Sekundärfarbe getönt.
@@ -726,7 +732,7 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 ## Änderung 0.12.1.1 (11.11.)
 
 - **Regeländerung: Alle Marker stapeln, die Höchstgrenzen entfallen.** Die Kombo-Effekte addieren sich jetzt zu dem, was schon liegt:
-  - **Ultimates** (Todes-, Heil- und Manafluss, läuterbar): Jede Ultimate legt ihre Stufe S zusätzlich zu den liegenden Markern (`castUltimate`, `src/engine/65-kampfablauf.js`; vorher galt der höhere Wert). Der Phasenmerker (`deathPhase`, `healPhase`, `manaPhase`) hält die Regel „wirkt erst am Ende der nächsten eigenen Angriffsphase“ für die neu gelegten Marker aufrecht.
+  - **Ultimates** (Todesfluch, Meditation und Erleuchtung, läuterbar): Jede Ultimate legt ihre Stufe S zusätzlich zu den liegenden Markern (`castUltimate`, `src/engine/65-kampfablauf.js`; vorher galt der höhere Wert). Der Phasenmerker (`deathPhase`, `healPhase`, `manaPhase`) hält die Regel „wirkt erst am Ende der nächsten eigenen Angriffsphase“ für die neu gelegten Marker aufrecht.
   - **Schild** (läuterbar): Die Ladungen addieren sich ohne Obergrenze (`shieldAdd`; vorher höchstens 3, nicht addiert).
   - **Hellsichtkarten** (nicht läuterbar): Sie stapelten schon (jede Hellsicht hängt ihre offenen Karten hinten an die Hand an); es gibt keine Obergrenze.
   - **Fallen** (nicht läuterbar): `stats.trap` ist jetzt die Liste `stats.traps`. Eine neue Falle ersetzt die liegende nicht mehr. Bei eingehendem Schaden werden alle aufgedeckt und abgelegt, passende Fallen werfen ihre Stufe zurück, zusammen höchstens der eingehende Schaden (`springTraps`).
@@ -820,7 +826,7 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 
 ## Änderung 0.9.9.14 (11.11.)
 
-- **„Ohne Angriff“ ist nicht „ohne Schaden“ (Klarstellung, Regeländerung bei Angriffen ohne Schaden):** Welche Stufe der Verteidigungs-Einstellungen gilt, richtet sich danach, ob die vorausgegangene Aktion ein Angriff war. *Ohne Angriff* gilt nach Erholen, Nachziehen und Passen, auch wenn dabei Schaden eintrat (Todesfluss trifft am Ende der Aktion und ist nicht blockbar). *Nach Angriff* gilt nach jedem Angriff, auch einem Angriff ohne Schaden (Reaktion ohne Schaden, kein Verteidigen). Zuvor wurde ein Angriff ohne Schaden wie „ohne Angriff“ behandelt.
+- **„Ohne Angriff“ ist nicht „ohne Schaden“ (Klarstellung, Regeländerung bei Angriffen ohne Schaden):** Welche Stufe der Verteidigungs-Einstellungen gilt, richtet sich danach, ob die vorausgegangene Aktion ein Angriff war. *Ohne Angriff* gilt nach Erholen, Nachziehen und Passen, auch wenn dabei Schaden eintrat (Todesfluch trifft am Ende der Aktion und ist nicht blockbar). *Nach Angriff* gilt nach jedem Angriff, auch einem Angriff ohne Schaden (Reaktion ohne Schaden, kein Verteidigen). Zuvor wurde ein Angriff ohne Schaden wie „ohne Angriff“ behandelt.
 - **KI in der Reaktion ohne Schaden:** Sie zieht nach, wenn Nachziehen erlaubt ist, die Hand schwach ist (leer, höchstens eine Karte oder kein Angriff mit Schaden) und nach den Nachziehkosten mindestens 1 Mana bleibt. Sonst erholt sie sich, wenn Mana fehlt und Erholen erlaubt ist; sonst passt sie.
 - Anzeige: Die Plakette nennt „ohne Angriff“ oder „nach Angriff ohne Schaden“. Tests ergänzt, `golden.json` neu erzeugt.
 
@@ -830,7 +836,7 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Optionen der Reaktion ohne Angriff:** Erholen (Mana wie in der Aktion), Nachziehen (Hand tauschen, Mana bei rotem Marker) und Passen (nicht reagieren). *Verteidigen* sowie Echo und Kombo entfallen, weil nichts zu verteidigen ist.
 - **Entfällt die Reaktion?** Ja, wenn Erholen und Nachziehen dort nicht erlaubt oder nicht sinnvoll sind (Mana voll bzw. zu wenig Mana für den roten Nachziehmarker); Passen allein löst keine Reaktion aus. Dann beginnt der Gegner gleich mit seiner Aktion.
 - **Standard:** Erholen und Nachziehen stehen auf *ohne Angriff*. Nach einer Aktion ohne Angriff kann der Gegner sich also vor seiner Aktion erholen oder nachziehen.
-- **Zählung:** Die Reaktion zählt nicht als Angriffszug (Kampfrunden, Erschöpfung, Fluss-Effekte unverändert: sie wirken am Ende der Aktion). Die Reaktion zählt aber als Kampfschritt im Verlauf. Passen in der Reaktion beendet nicht die Serie der Passen-Züge.
+- **Zählung:** Die Reaktion zählt nicht als Angriffszug (Kampfrunden, Erschöpfung, Dauereffekte unverändert: sie wirken am Ende der Aktion). Die Reaktion zählt aber als Kampfschritt im Verlauf. Passen in der Reaktion beendet nicht die Serie der Passen-Züge.
 - **KI:** Sie erholt sich in der Reaktion ohne Angriff, wenn es erlaubt ist und Mana fehlt, sonst passt sie. Nachziehen wählt sie dort nicht.
 - Anzeige: Plakette „Reaktion ohne Angriff“ und blauer Rahmen wie bei der Reaktion auf einen Angriff. Tests: Kampftests setzen Erholen/Nachziehen der Verteidigung auf aus (alter Ablauf); neuer Test „Reaktion ohne Angriff“; `golden.json` neu erzeugt.
 
@@ -880,7 +886,7 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 ## Änderung 0.9.9 (09.11.)
 
 - **Kombos nach Sekundärfarbe (Regeländerung):** Die Sekundärfarbe (zweite Farbe) bestimmt den Charakter der Kombo: Rot (Schaden) Falle und Lähmung, Blau (variabel) Hellsicht und Schild, Grün (Heilung) Heilung und Läuterung. Neue Farbpaare (Primär + Sekundär): **Falle** Blau + Rot (vorher Rot + Blau), **Lähmung** Grün + Rot (vorher Rot + Grün), **Hellsicht** Rot + Blau (vorher Blau + Rot), **Schild** Grün + Blau (vorher Blau + Grün), **Heilung** Rot + Grün (vorher Grün + Blau), **Läuterung** Blau + Grün (vorher Grün + Rot). Die Wirkungen und Stufen sind unverändert; nur `ORD_COMBO` (`src/engine/60-kampfberechnung.js`) ordnet die Paare neu zu.
-- **Ultimate nach Schlusskarte (Regeländerung):** Die zuletzt markierte Karte bestimmt die Ultimate (Rot Todesfluss, Blau Manafluss, Grün Heilfluss); die Basis aus den beiden anderen Farben darf in beliebiger Reihenfolge liegen. `evalAttack` und `evalDefense` liefern `ultiEl` jetzt aus der letzten normalen Karte. Auch in der Verteidigung gilt die Schlusskarte; die erste Karte bestimmt weiter die Verteidigungsfarbe und den Schaden.
+- **Ultimate nach Schlusskarte (Regeländerung):** Die zuletzt markierte Karte bestimmt die Ultimate (Rot Todesfluch, Blau Erleuchtung, Grün Meditation); die Basis aus den beiden anderen Farben darf in beliebiger Reihenfolge liegen. `evalAttack` und `evalDefense` liefern `ultiEl` jetzt aus der letzten normalen Karte. Auch in der Verteidigung gilt die Schlusskarte; die erste Karte bestimmt weiter die Verteidigungsfarbe und den Schaden.
 - **Echo:** Das Echo hinterlässt weiter die Farbe der ersten Karte (`ev.prim`, `defEv.el`). Die Ultimate wird durch ein Echo verstärkt, wenn dessen Farbe die der Schlusskarte ist (`echoBoost`); vorher genügte eine der beiden Farben außer der ersten.
 - **Kombo-Übersicht:** Sie ist nach Sekundärfarbe gruppiert (Rot, Blau, Grün); je Gruppe stehen die zwei Kombos und die Ultimate der Schlusskarte, alle Zeilen einer Gruppe sind gleich getönt (CSS `.cref.pF/.pW/.pE` jetzt nach Sekundärfarbe). In jeder Zeile steht die Primärfarbe vorn. Mit einer markierten Farbe zeigt sie die Kombos dieser Primärfarbe und die Ultimates, die sie enthalten; mit zwei Farben die erreichte Kombo samt Hinweis auf die dritte Farbe als Schlusskarte.
 - **KI:** `bestAttack` und die Verteidigungsvarianten (`src/ai/30-kampf.js`) probieren neben der ersten Karte auch jede Karte als letzte durch, damit die Ultimate der gewünschten Farbe gefunden wird. Die Stellschrauben sind nicht nachtrainiert.
@@ -912,7 +918,7 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 
 - **Erschöpfung deutlicher dargestellt (keine Regeländerung):** Geprüft wurde zuerst die Engine: Nach `exhaustRounds` Kampfrunden (Standard 10) verlieren beide Seiten am Ende ihres Angriffszugs je Stufe 1 HP (Stufe 1 ab Angriffszug 21, Stufe 2 ab Angriffszug 41 …). Das gilt im Pfad Angriff mit Schaden und Verteidigung ebenso wie beim Passen, Erholen und Nachziehen; eine Simulation über 30 Angriffszüge bestätigt die Abzüge. Der Abzug war nur kaum sichtbar (eine Zeile im Kampflog, die HP sprangen).
 - **Hintergrund:** Ab Runde `exhaustRounds + 1` dunkelt der Hintergrund ab (`stage.dataset.exh` = 1 bis 3, `#stage[data-exh]` in `src/style.css`, weiche Überblendung); je Stufe stärker und röter. Beim Eintritt und bei jedem Anstieg erscheint kurz der Schriftzug „Erschöpfung setzt ein“ bzw. „Erschöpfung N“ (`exhaustBanner` in `src/ui/26a-darstellung.js`, Sound `ruin`).
-- **HP-Abzug animiert:** `showFx` erkennt die Logzeile „Erschöpfung N: … verliert X HP“ und startet `FlowFx.exhaust` (`src/ui/22-lifeflow-aggro.js`): kurzes rotes Abdunkeln des Bildes, Schwaden von der Rundenanzeige zur Lebensanzeige der betroffenen Seite, Einschlag mit Ring und Zahl „−X HP“. Die HP zeigen bis zum Einschlag den alten Stand (`holdHp`). Folgt auf einen Todesfluss derselben Seite, läuft die Erschöpfung erst nach ihm ab (`tickEnd`). Ohne Animationen (Schnellmodus, reduzierte Bewegung) bleibt es bei der Textzeile.
+- **HP-Abzug animiert:** `showFx` erkennt die Logzeile „Erschöpfung N: … verliert X HP“ und startet `FlowFx.exhaust` (`src/ui/22-lifeflow-aggro.js`): kurzes rotes Abdunkeln des Bildes, Schwaden von der Rundenanzeige zur Lebensanzeige der betroffenen Seite, Einschlag mit Ring und Zahl „−X HP“. Die HP zeigen bis zum Einschlag den alten Stand (`holdHp`). Folgt auf einen Todesfluch derselben Seite, läuft die Erschöpfung erst nach ihm ab (`tickEnd`). Ohne Animationen (Schnellmodus, reduzierte Bewegung) bleibt es bei der Textzeile.
 - **Tests:** neuer Browser-Test in `tests/ui.test.js`; Engine, KI und `tests/golden.json` sind unverändert.
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
 

@@ -136,7 +136,7 @@ const FlowFx = (() => {
       if (tu > 0) { ctx.save(); ctx.font = '700 22px Alegreya, serif'; ctx.textAlign = 'center'; ctx.fillStyle = rgba('#ffb347', tu); ctx.shadowColor = F; ctx.shadowBlur = 10; ctx.fillText('−' + n + (n === 1 ? ' Karte' : ' Karten'), T.x, T.y - 70 - 12 * seg(t, t0 + .1, t0 + 1)); ctx.restore(); }
     });
   }
-  /* Todesfluss zehrt: aus jedem Todesmarker steigt eine violette Wolke auf, zieht in weichem Bogen zur Lebensanzeige und schlägt dort ein (kein Text) */
+  /* Todesfluch zehrt: aus jedem Todesmarker steigt eine violette Wolke auf, zieht in weichem Bogen zur Lebensanzeige und schlägt dort ein (kein Text) */
   const CURSE_F = .85, curseStart = i => .1 + i * .12;
   const curseMs = n => Math.round(1000 * (curseStart(Math.max(0, n - 1)) + CURSE_F));   // Dauer bis zum Einschlag der letzten Wolke
   function curse(fx) {
@@ -205,8 +205,8 @@ const FlowFx = (() => {
     });
   }
 
-  /* Heilfluss heilt (seit 0.7.2.3): aus jedem Heilmarker steigt eine grüne Wolke mit Lichtpunkten und kleinen Pluszeichen auf, zieht in weichem Bogen zur Lebensanzeige und heilt dort (kein Text); wie beim Todesfluss zeigen die HP bis zum Einschlag noch den alten Stand */
-  const healMs = n => curseMs(n);   // gleicher Zeitplan wie beim Todesfluss
+  /* Meditation heilt (seit 0.7.2.3): aus jedem Heilmarker steigt eine grüne Wolke mit Lichtpunkten und kleinen Pluszeichen auf, zieht in weichem Bogen zur Lebensanzeige und heilt dort (kein Text); wie beim Todesfluch zeigen die HP bis zum Einschlag noch den alten Stand */
+  const healMs = n => curseMs(n);   // gleicher Zeitplan wie beim Todesfluch
   function heal(fx) {
     if (off()) return;
     const who = fx.who, w = who === ME ? 's' : 'o', toks = [...stage.querySelectorAll((fx.mana ? '.manatok' : '.healtok:not(.manatok)') + '[data-who="' + w + '"]')], n = Math.max(1, Math.min(fx.marks || fx.n || 1, 4)), hp = fx.mana ? manaPos(who) : hpOf(who), C = fx.mana ? '#52a6f5' : '#93c24f', D = fx.mana ? '#1d4f94' : '#2f7a2f', Lt = fx.mana ? '#d6ecff' : '#e8ffb8';

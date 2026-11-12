@@ -46,7 +46,7 @@ test('Läuterung entfernt auch eigene Manamarker und gibt dafür ein Nachziehtok
   assert.equal(me.stats.freeDraws, 1);
 });
 
-test('Ultimate in der Verteidigung: alle drei Farben erlaubt, mit Feuer als zweiter Karte Todesfluss für den Angreifer', () => {
+test('Ultimate in der Verteidigung: alle drei Farben erlaubt, mit Feuer als zweiter Karte Todesfluch für den Angreifer', () => {
   const { s, me, op } = combatSetup(11, ['F1']);
   op.stats.limit = 3; op.stats.mana = 9;
   op.deck.hand.forEach((x, i) => { if (x) op.deck.hand[i] = Object.assign({}, x, { id: ['F3', 'W2', 'E2'][i] || x.id }); });
@@ -98,7 +98,7 @@ test('Stapeln (0.12.1.1): Ein neues Schild addiert seine Ladungen zu den liegend
   }
 });
 test('Stapeln (0.12.1.1): Ultimates addieren Heil-, Mana- und Todesmarker zu den liegenden, ohne Obergrenze', () => {
-  let t = combatSetup(11, ['F2', 'E2', 'W2']); t.me.stats.heal = 2;   // Sekundärfarbe Erde: Heilfluss
+  let t = combatSetup(11, ['F2', 'E2', 'W2']); t.me.stats.heal = 2;   // Sekundärfarbe Erde: Meditation
   [0, 1, 2].forEach(i => M.apply(t.s, { pid: 0, type: 'mark', slot: i })); assert.ok(M.apply(t.s, { pid: 0, type: 'attack' }).ok);
   assert.equal(t.me.stats.heal, 4, 'Heilmarker: 2 + 2');
   t = combatSetup(11, ['F2', 'W2', 'E2']); t.me.stats.manaflow = 3;
@@ -252,7 +252,7 @@ test('Monsterdecks passen zur Magie: zu jeder Magiestufe ab 2 eine Karte dieser 
   }
 });
 
-test('Fliehen: nur im Monsterkampf, im eigenen Angriffszug, bei Monster ohne Mana und ohne Todesfluss', () => {
+test('Fliehen: nur im Monsterkampf, im eigenen Angriffszug, bei Monster ohne Mana und ohne Todesfluch', () => {
   const fresh = () => combatSetup(11, ['F1']);
   let { s, c, me, op } = fresh();
   s.rules.fleeAllowed = 1;   // seit 0.9.1 standardmäßig aus
@@ -262,7 +262,7 @@ test('Fliehen: nur im Monsterkampf, im eigenen Angriffszug, bei Monster ohne Man
   assert.equal(M.canFlee(s, 0), true);
   assert.equal(M.canFlee(s, 1), false, 'nur der Angreifer');
   me.stats.death = 1;
-  assert.equal(M.canFlee(s, 0), false, 'Todesfluss');
+  assert.equal(M.canFlee(s, 0), false, 'Todesfluch');
   assert.equal(M.apply(s, { pid: 0, type: 'flee' }).ok, false);
   delete me.stats.death;
   const hp = c.sides.b.stats.hp, gold = me.stats.gold, sp0 = s.players.map(p => p.sp), g1 = s.players[1].stats.gold;
@@ -728,7 +728,7 @@ test('Zuordnung (0.9.9): Die Sekundärfarbe bestimmt den Charakter, die Primärf
   assert.deepEqual([key(['F1', 'E1']), key(['W1', 'E1'])], ['gr', 'gh'], 'Sekundär Grün: Läuterung (Rot + Grün), Heilung (Blau + Grün)');
 });
 
-test('Ultimate (0.11.0.9): Die Sekundärfarbe (zweite Farbe) bestimmt sie (Rot Todesfluss, Blau Manafluss, Grün Heilfluss), die dritte Farbe löst nur aus', () => {
+test('Ultimate (0.11.0.9): Die Sekundärfarbe (zweite Farbe) bestimmt sie (Rot Todesfluch, Blau Erleuchtung, Grün Meditation), die dritte Farbe löst nur aus', () => {
   const st = { mag: { F: 3, E: 3, W: 3 }, mana: 9 }, el = ids => M.evalAttack(st, ids.map(id => Object.assign({ id }, M.parseCard(id)))).ultiEl;
   assert.equal(el(['W1', 'F1', 'E1']), 'F'); assert.equal(el(['E1', 'F1', 'W1']), 'F');
   assert.equal(el(['F1', 'W1', 'E1']), 'W'); assert.equal(el(['E1', 'W1', 'F1']), 'W');
@@ -751,7 +751,7 @@ test('Läuterung kann auch eigene Nachziehtokens zerstören (ohne Gutschrift)', 
   assert.equal(me.stats.freeDraws, 1, 'ein eigener Token zerstört, kein neuer gutgeschrieben');
 });
 
-test('Todesfluss aus der Verteidigung wirkt nicht sofort, sondern erst in der nächsten Angriffsphase des Verfluchten', () => {
+test('Todesfluch aus der Verteidigung wirkt nicht sofort, sondern erst in der nächsten Angriffsphase des Verfluchten', () => {
   const { s, me, op } = combatSetup(11, ['F1']);
   op.stats.limit = 3; op.stats.mana = 9;
   op.deck.hand.forEach((x, i) => { if (x) op.deck.hand[i] = Object.assign({}, x, { id: ['F3', 'W2', 'E2'][i] || x.id }); });
@@ -760,7 +760,7 @@ test('Todesfluss aus der Verteidigung wirkt nicht sofort, sondern erst in der n�
   [1, 0, 2].forEach(i => assert.ok(M.apply(s, { pid: op.ctrl, type: 'mark', slot: i }).ok));   // zweite Karte F3: Feuer-Ultimate
   assert.ok(M.apply(s, { pid: op.ctrl, type: 'defend' }).ok);
   assert.ok(me.stats.death >= 1);
-  assert.ok(me.stats.hp >= hp0 - 5 && !s.log.slice(-6).some(e => /Todesfluss: /.test(e.txt)), 'kein Fluchschaden am Ende dieser Phase');
+  assert.ok(me.stats.hp >= hp0 - 5 && !s.log.slice(-6).some(e => /Todesfluch: /.test(e.txt)), 'kein Fluchschaden am Ende dieser Phase');
 });
 
 test('Pluswürfel „Magie“: eine Magiestufe mehr auf der Folgemagie des Monsters (das überlegene Element: Feuer → Wasser, Erde → Feuer, Wasser → Erde), mit passender Karte', () => {
@@ -966,15 +966,15 @@ test('Ultimate im Angriff nach Sekundärfarbe: Erde legt Heilmarker, der am Ende
   me.stats.maxHp = 9; me.stats.hp = 2;
   [0, 1, 2].forEach(i => assert.ok(M.apply(s, { pid: 0, type: 'mark', slot: i }).ok));
   assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
-  assert.equal(me.stats.heal, 2, 'Heilmarker Stufe 2 bei mir'); assert.equal(op.stats.death || 0, 0, 'kein Todesfluss für den Gegner');
+  assert.equal(me.stats.heal, 2, 'Heilmarker Stufe 2 bei mir'); assert.equal(op.stats.death || 0, 0, 'kein Todesfluch für den Gegner');
   assert.ok(M.apply(s, { pid: op.ctrl, type: 'pass' }).ok);
-  assert.equal(me.stats.hp, 2, 'Heilfluss wirkt wie der Todesfluss nicht in der Phase, in der er gelegt wurde (seit 0.7.2.8)');
+  assert.equal(me.stats.hp, 2, 'Meditation wirkt wie der Todesfluch nicht in der Phase, in der er gelegt wurde (seit 0.7.2.8)');
   assert.equal(me.stats.healPhase, undefined, 'Phasenmerker gelöscht');
   const hp0 = me.stats.hp; s.combat.sides[s.combat.turn === 'a' ? 'a' : 'b'];
   // nächste eigene Angriffsphase: Gegner ist am Zug, danach wieder ich; am Ende meiner Phase heilt der Marker
   assert.equal(s.combat.sides[s.combat.turn].ctrl, op.ctrl, 'Gegner am Zug'); assert.ok(M.apply(s, { pid: op.ctrl, type: 'pass' }).ok);
   assert.equal(s.combat.sides[s.combat.turn].ctrl, me.ctrl, 'ich am Zug'); assert.ok(M.apply(s, { pid: 0, type: 'pass' }).ok);
-  assert.equal(me.stats.hp, hp0 + 2, 'Heilfluss: +2 HP am Ende der nächsten eigenen Angriffsphase');
+  assert.equal(me.stats.hp, hp0 + 2, 'Meditation: +2 HP am Ende der nächsten eigenen Angriffsphase');
 });
 
 test('Ultimate im Angriff: Wasser legt Manamarker der Stufe S bei mir', () => {
@@ -984,12 +984,12 @@ test('Ultimate im Angriff: Wasser legt Manamarker der Stufe S bei mir', () => {
   assert.equal(me.stats.manaflow, 2); assert.equal(op.stats.death || 0, 0);
 });
 
-test('Manafluss: am Ende der eigenen Angriffsphase +S Mana (höchstens bis zum Maximum), nur Marker, die zu Beginn der Phase lagen', () => {
+test('Erleuchtung: am Ende der eigenen Angriffsphase +S Mana (höchstens bis zum Maximum), nur Marker, die zu Beginn der Phase lagen', () => {
   const { s, me, op } = combatSetup(11, ['F1']);
   me.stats.manaflow = 2; me.stats.mana = 4; me.stats.maxMana = 9; op.stats.hp = op.stats.maxHp = 9;
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
   assert.ok(M.apply(s, { pid: op.ctrl, type: 'pass' }).ok);
-  assert.equal(me.stats.mana, 4 - 1 + 2, 'Angriff kostet 1, der Manafluss bringt 2');
+  assert.equal(me.stats.mana, 4 - 1 + 2, 'Angriff kostet 1, die Erleuchtung bringt 2');
   const t = combatSetup(11, ['F1']); t.me.stats.manaflow = 3; t.me.stats.mana = 9; t.me.stats.maxMana = 9;
   M.apply(t.s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(t.s, { pid: 0, type: 'attack' }).ok);
   assert.ok(M.apply(t.s, { pid: t.op.ctrl, type: 'pass' }).ok);
@@ -1004,7 +1004,7 @@ test('Ultimate in der Verteidigung: Erde legt Heilmarker, Wasser Manamarker (jew
     M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
     [0, 1, 2].forEach(i => assert.ok(M.apply(s, { pid: op.ctrl, type: 'mark', slot: i }).ok));
     assert.ok(M.apply(s, { pid: op.ctrl, type: 'defend' }).ok);
-    assert.ok(op.stats[key] >= 1, key + ' beim Verteidiger'); assert.equal(me.stats.death || 0, 0, 'kein Todesfluss');
+    assert.ok(op.stats[key] >= 1, key + ' beim Verteidiger'); assert.equal(me.stats.death || 0, 0, 'kein Todesfluch');
   }
 });
 
@@ -1260,11 +1260,11 @@ test('Spieleinstellungen: exhaustRounds und winLead aus den Regeln gelten (0.8.1
 });
 
 
-// Reihenfolge der Niederlagenprüfung (0.8.3.1): 1) reflektierter Schaden, 2) Schaden nach der Verteidigung, 3) Flusseffekte
+// Reihenfolge der Niederlagenprüfung (0.8.3.1): 1) reflektierter Schaden, 2) Schaden nach der Verteidigung, 3) Dauereffekte
 test('Niederlagenprüfung 1: Der Rückwurf der Falle entscheidet vor der Verteidigung (Verteidiger gewinnt, bleibt unverletzt, Flüsse wirken nicht)', () => {
   const { s, me, op } = combatSetup(11, ['F3']);
   me.stats.hp = 1; me.stats.maxHp = 9; op.stats.hp = op.stats.maxHp = 9;
-  me.stats.heal = 5; me.stats.healPhase = 5;   // ein Heilfluss darf den Angreifer nicht mehr retten
+  me.stats.heal = 5; me.stats.healPhase = 5;   // eine Meditation darf den Angreifer nicht mehr retten
   op.stats.traps = [{ card: { id: 'F1', uid: 9001 }, el: 'F', tier: 1, lvl: 1 }];
   s.keepSnap = true; M.apply(s, { pid: 0, type: 'mark', slot: 0 });
   const r = M.apply(s, { pid: 0, type: 'attack' });
@@ -1272,17 +1272,17 @@ test('Niederlagenprüfung 1: Der Rückwurf der Falle entscheidet vor der Verteid
   assert.equal(r.combatEnd.reason, 'hp'); assert.equal(r.combatEnd.winner, 'b', 'der Angreifer fällt durch den Rückwurf');
   assert.equal(r.combatEnd.snap.sides.b.stats.hp, 9, 'der Verteidiger hat keinen Schaden genommen');
 });
-test('Niederlagenprüfung 2: Fällt der Verteidiger durch den Schaden nach der Verteidigung auf 0 HP, wirkt kein Fluss mehr (auch kein tödlicher Todesfluss des Angreifers)', () => {
+test('Niederlagenprüfung 2: Fällt der Verteidiger durch den Schaden nach der Verteidigung auf 0 HP, wirkt kein Dauereffekt mehr (auch kein tödlicher Todesfluch des Angreifers)', () => {
   const { s, me, op } = combatSetup(11, ['F3']);
-  me.stats.hp = 2; me.stats.maxHp = 9; me.stats.death = 5; me.stats.deathPhase = 5;   // der Todesfluss würde den Angreifer am Phasenende töten
+  me.stats.hp = 2; me.stats.maxHp = 9; me.stats.death = 5; me.stats.deathPhase = 5;   // der Todesfluch würde den Angreifer am Phasenende töten
   op.stats.hp = 1; op.stats.maxHp = 9; op.stats.mana = 0;
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
   const r = M.apply(s, { pid: op.ctrl, type: 'pass' });
   assert.ok(r.ok && r.combatEnd);
   assert.equal(r.combatEnd.winner, 'a', 'Stufe 2 entscheidet vor Stufe 3: kein Unentschieden');
-  assert.equal(me.stats.hp, 2, 'der Todesfluss hat nicht mehr getickt');
+  assert.equal(me.stats.hp, 2, 'der Todesfluch hat nicht mehr getickt');
 });
-test('Niederlagenprüfung 3: Der Todesfluss am Phasenende besiegt den Angreifer; der Heilfluss kommt danach und belebt nicht wieder', () => {
+test('Niederlagenprüfung 3: Der Todesfluch am Phasenende besiegt den Angreifer; die Meditation kommt danach und belebt nicht wieder', () => {
   const { s, me, op } = combatSetup(11, ['F1']);
   me.stats.hp = 2; me.stats.maxHp = 9; me.stats.death = 2; me.stats.deathPhase = 2; me.stats.heal = 3; me.stats.healPhase = 3;
   op.stats.hp = op.stats.maxHp = 9;
@@ -1290,8 +1290,8 @@ test('Niederlagenprüfung 3: Der Todesfluss am Phasenende besiegt den Angreifer;
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
   const r = M.apply(s, { pid: op.ctrl, type: 'pass' });
   assert.ok(r.ok && r.combatEnd);
-  assert.equal(r.combatEnd.winner, 'b', 'der Angreifer fällt durch den Todesfluss');
-  assert.equal(me.stats.hp, 0, 'der Heilfluss hat ihn nicht wieder aufgerichtet');
+  assert.equal(r.combatEnd.winner, 'b', 'der Angreifer fällt durch den Todesfluch');
+  assert.equal(me.stats.hp, 0, 'die Meditation hat ihn nicht wieder aufgerichtet');
 });
 
 // Schild vor jeder Schadensquelle (0.8.3.2)
@@ -1311,13 +1311,13 @@ test('Schild mindert nur so viel des Rückwurfs, wie es Ladungen hat; der Rest g
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
   assert.equal(me.stats.hp, 7); assert.equal(me.stats.rainbow, undefined);
 });
-test('Schild mindert auch den Todesfluss am Ende der Angriffsphase', () => {
+test('Schild mindert auch den Todesfluch am Ende der Angriffsphase', () => {
   const { s, me, op } = combatSetup(11, ['F1']);
   me.stats.hp = me.stats.maxHp = 9; me.stats.death = 2; me.stats.deathPhase = 2; me.stats.rainbow = 2;
   op.stats.hp = op.stats.maxHp = 9; op.stats.rainbow = 3;
   M.apply(s, { pid: 0, type: 'mark', slot: 0 }); assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
   assert.ok(M.apply(s, { pid: op.ctrl, type: 'pass' }).ok);
-  assert.equal(me.stats.hp, 9, 'der Todesfluss von 2 wurde geschluckt'); assert.equal(me.stats.rainbow, undefined);
+  assert.equal(me.stats.hp, 9, 'der Todesfluch von 2 wurde geschluckt'); assert.equal(me.stats.rainbow, undefined);
 });
 
 test('Falle: Wird der gesamte Schaden zurückgeworfen, entfällt die Verteidigung; der Verteidiger greift direkt an (0.8.7.3)', () => {
@@ -1345,7 +1345,7 @@ test('Echo: Eine Sekundärkarte in der Farbe des Echos erhöht die Kombostufe um
 });
 
 test('Echo: Die Ultimate wird durch ein Echo der Sekundärfarbe um 1 Stufe erhöht, das Echo der übrigen Farben wirkt nicht (0.11.0.9)', () => {
-  const u = (echo) => M.evalAttack(STATS({ echo }), cards(['F1', 'W1', 'E1'])).levels;   // zweite Karte Blau: Manafluss
+  const u = (echo) => M.evalAttack(STATS({ echo }), cards(['F1', 'W1', 'E1'])).levels;   // zweite Karte Blau: Erleuchtung
   assert.equal(u(undefined).ulti, 1);
   assert.equal(u('W').ulti, 2, 'Blau ist die Sekundärfarbe (zweite Karte)');
   assert.equal(u('E').ulti, 1, 'Grün ist nur die dritte Farbe (löst aus)');
@@ -1541,13 +1541,13 @@ test('Reaktion ohne Angriff (0.9.9.13): Nach einer Aktion ohne Angriff reagiert 
   M.apply(s, { pid: 0, type: 'pass' }); assert.equal(c.action, 'attack');
 });
 
-test('Reaktion ohne Angriff (0.9.9.14): „ohne Angriff“ hängt am Angriff, nicht am Schaden (Todesfluss, Angriff ohne Schaden)', () => {
+test('Reaktion ohne Angriff (0.9.9.14): „ohne Angriff“ hängt am Angriff, nicht am Schaden (Todesfluch, Angriff ohne Schaden)', () => {
   const dflt = { allowDef: Object.assign({}, M.DEFAULT_RULES.allowDef, { recover: 3, draw: 2 }) };
-  // Todesfluss: Der Fluch trifft den Passenden am Ende seiner Aktion, bleibt aber ein Zug ohne Angriff
+  // Todesfluch: Der Fluch trifft den Passenden am Ende seiner Aktion, bleibt aber ein Zug ohne Angriff
   let { s, c, me, op } = combatSetup(11, ['F3'], { rules: dflt });
   me.stats.death = 1; me.stats.mana = 5; op.stats.mana = 2; const hp = me.stats.hp;
   assert.ok(M.apply(s, { pid: 0, type: 'pass' }).ok);
-  assert.ok(me.stats.hp < hp, 'der Todesfluss wirkt');
+  assert.ok(me.stats.hp < hp, 'der Todesfluch wirkt');
   assert.equal(c.action, 'defense'); assert.equal(c.afterAtk, false); assert.equal(c.pending, 0);
   assert.equal(M.allowed(s, 'defense', 'recover'), true, 'ohne Angriff: Erholen erlaubt, obwohl Schaden eintrat');
   assert.equal(M.allowed(s, 'defense', 'draw'), false, 'nach Angriff: Nachziehen gilt hier nicht');

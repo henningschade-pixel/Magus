@@ -1,6 +1,6 @@
 /* Magus – Regelkern (Teil 6): Kampf (Monsterkämpfe und Showdowns).
    Ein Angriffszug: Karten markieren (erste Karte bestimmt das Element), angreifen; die Gegenseite verteidigt.
-   Kombos aus zwei Elementen (seit 0.9.9 bestimmt die Sekundärfarbe, die zweite Farbe, ihren Charakter: Rot Schaden, Blau variabel, Grün Heilung/Verbesserung); alle drei Farben ergeben eine Ultimate, deren Wirkung die Farbe der zuletzt markierten Karte bestimmt (Feuer Todesfluss, Erde Heilfluss, Wasser Manafluss; bis 0.9.8 bestimmte die erste Karte die Ultimate). */
+   Kombos aus zwei Elementen (seit 0.9.9 bestimmt die Sekundärfarbe, die zweite Farbe, ihren Charakter: Rot Schaden, Blau variabel, Grün Heilung/Verbesserung); alle drei Farben ergeben eine Ultimate, deren Wirkung die Farbe der zuletzt markierten Karte bestimmt (Feuer Todesfluch, Erde Meditation, Wasser Erleuchtung; bis 0.9.8 bestimmte die erste Karte die Ultimate). */
 
 /* ---------- Kampfberechnung ---------- */
 // Sekundärfarbe (seit 0.11.0.9): die Farbe der ersten markierten Karte, die nicht der Primärfarbe (Farbe der ersten Karte) entspricht

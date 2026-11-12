@@ -51,7 +51,7 @@ function startShowdown(state) {
 // Reihenfolge der Niederlagenprüfung (0 HP, seit 0.8.3.1 ausdrücklich festgelegt): Jede Stufe wird vollständig abgehandelt und geprüft, bevor die nächste beginnt; die erste Stufe, in der eine Seite auf 0 HP fällt, entscheidet den Kampf (spätere Stufen wirken dann nicht mehr und können weder ein Unentschieden noch eine Wiederbelebung bringen):
 //   1) reflektierter Schaden (Rückwurf der Falle, in execAttack, vor der Verteidigung),
 //   2) Schaden nach der Verteidigung (Restschaden nach Block und Schild, danach Heilung, in execDefense),
-//   3) Flusseffekte am Ende der Angriffsphase (Todesfluss, Erschöpfung, dann Heil- und Manafluss, in deathTick).
+//   3) Dauereffekte am Ende der Angriffsphase (Todesfluch, Erschöpfung, dann Meditation und Erleuchtung, in deathTick).
 function hpDecided(state) {
   const c = state.combat;
   return c.sides.a.stats.hp <= 0 || c.sides.b.stats.hp <= 0;
@@ -64,7 +64,7 @@ function evaluateEnd(state) {
     if (ah <= 0 && bh > 0) winner = 'b'; else if (bh <= 0 && ah > 0) winner = 'a';
     return { reason: 'hp', winner, monsterDefeated: bh <= 0 };
   }
-  // Kein automatisches Unentschieden mehr bei 0 Mana beider Seiten: Der Kampf geht weiter (Erholen bringt Mana, der Todesfluss zehrt am Ende der Angriffsphasen). Beenden lässt er sich durch Fliehen (siehe canFlee); als Sicherung gegen Endlosschleifen gilt MAX_COMBAT_TURNS.
+  // Kein automatisches Unentschieden mehr bei 0 Mana beider Seiten: Der Kampf geht weiter (Erholen bringt Mana, der Todesfluch zehrt am Ende der Angriffsphasen). Beenden lässt er sich durch Fliehen (siehe canFlee); als Sicherung gegen Endlosschleifen gilt MAX_COMBAT_TURNS.
   // Kampfrunden (seit 0.7.6.5): Eine Runde ist ein Angriffszug jeder Seite (die Verteidigung gehört zum Angriffszug des Gegners). Nach maxRounds Runden (Standard 10) endet der Kampf unentschieden, sobald der letzte Angriffszug samt Verteidigung abgeschlossen ist; der Kampf auf 0 HP geht vor.
   if (state.rules.maxRounds > 0 && c.action === 'attack' && (c.atkTurns || 0) >= 2 * state.rules.maxRounds) return { reason: 'rounds', winner: null, monsterDefeated: false };
   if (c.turns >= MAX_COMBAT_TURNS) return { reason: 'exhaustion', winner: null, monsterDefeated: false, forced: true };
@@ -163,14 +163,14 @@ function finishStep(state, info) {
 // Angriffszug endet ohne Schaden: die Gegenseite greift an (Verteidigung entfällt).
 const MAX_LVL = 3;   // höchste Kombostufe und Höchstzahl der Schildladungen
 // Schild (Blau + Grün, seit 0.8; stats.rainbow, Grafik des früheren Multischilds): Ladungen 1/2/3. Er mindert eingehenden, nicht geblockten Schaden gegen jede Farbe und verliert je gemindertem Schaden eine Ladung. Ein neues Schild addiert seine Ladungen zu den liegenden (seit 0.12.1.1 ohne Höchstgrenze; zuvor galt die höhere Zahl, höchstens 3).
-// Das Schild wirkt vor jeder Schadensquelle (seit 0.8.3.2): auch gegen den Rückwurf der Falle, den Todesfluss und die Erschöpfung. Es mindert den Schaden um höchstens seine Ladungen und verliert je gemindertem Schaden eine Ladung. Gibt den tatsächlich verlorenen Schaden zurück; absorbed (optional) meldet die Minderung.
+// Das Schild wirkt vor jeder Schadensquelle (seit 0.8.3.2): auch gegen den Rückwurf der Falle, den Todesfluch und die Erschöpfung. Es mindert den Schaden um höchstens seine Ladungen und verliert je gemindertem Schaden eine Ladung. Gibt den tatsächlich verlorenen Schaden zurück; absorbed (optional) meldet die Minderung.
 function shieldHit(stats, dmg) {
   const ab = Math.min(stats.rainbow || 0, Math.max(0, dmg));
   if (ab > 0) { stats.rainbow -= ab; if (!stats.rainbow) delete stats.rainbow; }
   return { hit: dmg - ab, absorbed: ab };
 }
 function shieldAdd(stats, n) { stats.rainbow = (stats.rainbow || 0) + n; }   // seit 0.12.1.1 stapeln die Ladungen (vorher: höchster Wert, höchstens 3)
-// Ultimates (seit 0.9.9 nach der Farbe der zuletzt markierten Karte, vorher der ersten): Feuer = Todesfluss (stats.death, Marker beim Gegner), Erde = Heilfluss (stats.heal, +1 HP je Marker am Ende der eigenen Angriffsphase), Wasser = Manafluss (seit 0.8, stats.manaflow: +1 Mana je Marker am Ende der eigenen Angriffsphase). Alle drei Marker entfernt nur die Läuterung.
+// Ultimates (seit 0.9.9 nach der Farbe der zuletzt markierten Karte, vorher der ersten): Feuer = Todesfluch (stats.death, Marker beim Gegner), Erde = Meditation (stats.heal, +1 HP je Marker am Ende der eigenen Angriffsphase), Wasser = Erleuchtung (seit 0.8, stats.manaflow: +1 Mana je Marker am Ende der eigenen Angriffsphase). Alle drei Marker entfernt nur die Läuterung.
 // Läuterung: gewählte Marker (sm/om Manamarker, sd/od Todesmarker, sh/oh Heilmarker, sr/or Schildmarker, st/ot Nachziehtokens), höchstens S; ohne Wahl automatisch eigene Todesmarker, dann Schild-, Mana- und Heilmarker des Gegners.
 function lifeflowPicks(state, side, opp, lvl) {
   if (Array.isArray(state.combat.lfp)) return state.combat.lfp.slice(0, lvl);
@@ -186,17 +186,17 @@ function exhaustionLevel(state, done) {
   const n = state.rules.exhaustRounds || 0;
   return n > 0 && done > 0 ? Math.floor((done - 1) / (2 * n)) : 0;
 }
-// Todesfluss: Am Ende der eigenen Angriffsphase (nach Angriff und Verteidigung der Gegenseite) verliert die Seite so viele HP, wie sie Todesmarker trägt.
+// Todesfluch: Am Ende der eigenen Angriffsphase (nach Angriff und Verteidigung der Gegenseite) verliert die Seite so viele HP, wie sie Todesmarker trägt.
 // Ist der Kampf schon entschieden (eine Seite auf 0 HP), wirkt er nicht mehr (Stufe 3 der Niederlagenprüfung, siehe hpDecided).
 function deathTick(state, side, done) {   // done: Nummer des Angriffszugs (1, 2, 3 …), der gerade endet; für die Erschöpfung
   const c = state.combat;
   // Ein Fluch, der erst in dieser Angriffsphase (durch die Ultimate der Verteidigung) gesprochen wurde, wirkt noch nicht: deathPhase merkt die Stufe zu Beginn der Phase.
   const dmg = Math.min(side.stats.death || 0, side.stats.deathPhase === undefined ? Infinity : side.stats.deathPhase); delete side.stats.deathPhase;
-  if (hpDecided(state)) return;   // Stufe 3 (Flusseffekte) kommt nach Stufe 1 (Rückwurf) und 2 (Schaden nach der Verteidigung): ist dort schon eine Seite auf 0 HP gefallen, wirkt kein Fluss mehr
+  if (hpDecided(state)) return;   // Stufe 3 (Dauereffekte) kommt nach Stufe 1 (Rückwurf) und 2 (Schaden nach der Verteidigung): ist dort schon eine Seite auf 0 HP gefallen, wirkt kein Dauereffekt mehr
   if (dmg > 0) {
-    const sh = shieldHit(side.stats, dmg);   // das Schild mindert auch den Todesfluss
+    const sh = shieldHit(side.stats, dmg);   // das Schild mindert auch den Todesfluch
     side.stats.hp = Math.max(0, side.stats.hp - sh.hit);
-    log(state, 'Todesfluss: ' + side.name + ' verliert ' + sh.hit + ' HP am Ende der Angriffsphase' + (sh.absorbed ? ' (Schild mindert um ' + sh.absorbed + ')' : '') + '.', side.ctrl);
+    log(state, 'Todesfluch: ' + side.name + ' verliert ' + sh.hit + ' HP am Ende der Angriffsphase' + (sh.absorbed ? ' (Schild mindert um ' + sh.absorbed + ')' : '') + '.', side.ctrl);
   }
   // Erschöpfung (seit 0.7.7.2): Nach je exhaustRounds Kampfrunden (Standard 10, 0 = aus) steigt sie um 1; beide Seiten (auch das Monster) verlieren am Ende ihrer Angriffsphase so viele HP, wie die Erschöpfung hoch ist. Runde 1–10: 0, Runde 11–20: 1, Runde 21–30: 2 …
   const exLvl = exhaustionLevel(state, done);
@@ -206,26 +206,26 @@ function deathTick(state, side, done) {   // done: Nummer des Angriffszugs (1, 2
     log(state, 'Erschöpfung ' + exLvl + ': ' + side.name + ' verliert ' + sh.hit + ' HP am Ende der Angriffsphase' + (sh.absorbed ? ' (Schild mindert um ' + sh.absorbed + ')' : '') + '.', side.ctrl);
     if (side.stats.hp <= 0) return;
   }
-  // Heilfluss (Erd-Ultimate): am Ende der eigenen Angriffsphase +1 HP je Heilmarker (nur Marker, die schon zu Beginn der Phase lagen: healPhase wie deathPhase), höchstens bis zu den maximalen HP; nur wer noch steht
+  // Meditation (Erd-Ultimate): am Ende der eigenen Angriffsphase +1 HP je Heilmarker (nur Marker, die schon zu Beginn der Phase lagen: healPhase wie deathPhase), höchstens bis zu den maximalen HP; nur wer noch steht
   const hl = Math.min(side.stats.heal || 0, side.stats.healPhase === undefined ? Infinity : side.stats.healPhase); delete side.stats.healPhase;
   if (hl > 0 && side.stats.hp > 0) {
     const before = side.stats.hp; side.stats.hp = Math.min(side.stats.maxHp, side.stats.hp + hl);
-    if (side.stats.hp > before) log(state, 'Heilfluss: ' + side.name + ' heilt ' + (side.stats.hp - before) + ' HP am Ende der Angriffsphase.', side.ctrl, { kind: 'healtick', who: side.ctrl, n: side.stats.hp - before, marks: hl });
+    if (side.stats.hp > before) log(state, 'Meditation: ' + side.name + ' heilt ' + (side.stats.hp - before) + ' HP am Ende der Angriffsphase.', side.ctrl, { kind: 'healtick', who: side.ctrl, n: side.stats.hp - before, marks: hl });
   }
-  // Manafluss (Wasser-Ultimate, seit 0.8): am Ende der eigenen Angriffsphase +1 Mana je Marker (nur Marker, die schon zu Beginn der Phase lagen: manaPhase), höchstens bis zum maximalen Mana; nur wer noch steht
+  // Erleuchtung (Wasser-Ultimate, seit 0.8): am Ende der eigenen Angriffsphase +1 Mana je Marker (nur Marker, die schon zu Beginn der Phase lagen: manaPhase), höchstens bis zum maximalen Mana; nur wer noch steht
   const mf = Math.min(side.stats.manaflow || 0, side.stats.manaPhase === undefined ? Infinity : side.stats.manaPhase); delete side.stats.manaPhase;
   if (mf > 0 && side.stats.hp > 0) {
     const before = side.stats.mana; side.stats.mana = Math.min(side.stats.maxMana, side.stats.mana + mf);
-    if (side.stats.mana > before) log(state, 'Manafluss: ' + side.name + ' regeneriert ' + (side.stats.mana - before) + ' Mana am Ende der Angriffsphase.', side.ctrl, { kind: 'manatick', who: side.ctrl, n: side.stats.mana - before, marks: mf });
+    if (side.stats.mana > before) log(state, 'Erleuchtung: ' + side.name + ' regeneriert ' + (side.stats.mana - before) + ' Mana am Ende der Angriffsphase.', side.ctrl, { kind: 'manatick', who: side.ctrl, n: side.stats.mana - before, marks: mf });
   }
 }
 // Ultimate wirken lassen: die Farbe der Schlusskarte (el, seit 0.9.9; vorher der ersten Karte) bestimmt die Marker. who legt sie bei sich (Erde, Wasser) oder beim Gegner (Feuer).
 function castUltimate(side, opp, el, lvl) {
   lvl = Math.max(1, Math.min(MAX_LVL, lvl));
-  if (el === 'E') { side.stats.heal = (side.stats.heal || 0) + lvl; return { text: 'Ultimate ' + lvl + ' (Erde): Heilfluss, ' + side.stats.heal + ' HP am Ende jeder eigenen Angriffsphase bis Kampfende', fx: { kind: 'ultimate', who: side.ctrl, to: side.ctrl, el: 'E', n: lvl } }; }
-  if (el === 'W') { side.stats.manaflow = (side.stats.manaflow || 0) + lvl; return { text: 'Ultimate ' + lvl + ' (Wasser): Manafluss, ' + side.stats.manaflow + ' Mana am Ende jeder eigenen Angriffsphase bis Kampfende', fx: { kind: 'ultimate', who: side.ctrl, to: side.ctrl, el: 'W', n: lvl } }; }
+  if (el === 'E') { side.stats.heal = (side.stats.heal || 0) + lvl; return { text: 'Ultimate ' + lvl + ' (Erde): Meditation, ' + side.stats.heal + ' HP am Ende jeder eigenen Angriffsphase bis Kampfende', fx: { kind: 'ultimate', who: side.ctrl, to: side.ctrl, el: 'E', n: lvl } }; }
+  if (el === 'W') { side.stats.manaflow = (side.stats.manaflow || 0) + lvl; return { text: 'Ultimate ' + lvl + ' (Wasser): Erleuchtung, ' + side.stats.manaflow + ' Mana am Ende jeder eigenen Angriffsphase bis Kampfende', fx: { kind: 'ultimate', who: side.ctrl, to: side.ctrl, el: 'W', n: lvl } }; }
   opp.stats.death = (opp.stats.death || 0) + lvl;   // seit 0.12.1.1 stapeln alle drei Flüsse (vorher: höchster Wert)
-  return { text: 'Ultimate ' + lvl + ' (Feuer): Todesfluss für ' + opp.name + ' (' + opp.stats.death + ' HP am Ende jeder seiner Angriffsphasen bis Kampfende)', fx: { kind: 'ultimate', who: side.ctrl, to: opp.ctrl, el: 'F', n: lvl } };
+  return { text: 'Ultimate ' + lvl + ' (Feuer): Todesfluch für ' + opp.name + ' (' + opp.stats.death + ' HP am Ende jeder seiner Angriffsphasen bis Kampfende)', fx: { kind: 'ultimate', who: side.ctrl, to: opp.ctrl, el: 'F', n: lvl } };
 }
 function passAttackTurn(state, wasAttack) {   // wasAttack: Die Aktion war ein Angriff (auch ohne Schaden); sonst „ohne Angriff“
   const c = state.combat;
@@ -372,7 +372,7 @@ function execAttack(state) {
   if (ev.prim && allowed(state, 'attack', 'echo')) side.stats.echo = ev.prim;   // Echo in der Farbe der ersten Karte (Einstellung echo); bei der Ultimate (Farbe der Schlusskarte: ev.ultiEl) ebenso
   if (echoUsed) texts.push('Echo (' + NAMES[echoOld] + '): Kombo +1 Stufe');
   applyComboPlan(state, side, opp, plan, ev, texts, fxs);
-  if (death && (ev.ultiEl || ev.prim) === 'E' && side.stats.healPhase === undefined) side.stats.healPhase = side.stats.heal || 0;   // wie beim Todesfluss: ein in dieser Angriffsphase gelegter Heilmarker heilt erst am Ende der nächsten eigenen Angriffsphase
+  if (death && (ev.ultiEl || ev.prim) === 'E' && side.stats.healPhase === undefined) side.stats.healPhase = side.stats.heal || 0;   // wie beim Todesfluch: ein in dieser Angriffsphase gelegter Heilmarker heilt erst am Ende der nächsten eigenen Angriffsphase
   if (death && (ev.ultiEl || ev.prim) === 'W' && side.stats.manaPhase === undefined) side.stats.manaPhase = side.stats.manaflow || 0;   // ebenso der Manamarker
   if (death) { const u = castUltimate(side, opp, ev.ultiEl || ev.prim, ev.levels.ulti); fxs.push(u.fx); texts.push(u.text); }
   c.lfp = null;
@@ -387,7 +387,7 @@ function execAttack(state) {
   const res = finishStep(state, { k: 'A', who: side.key === 'a' ? 0 : 1, v: dmg0 });
   return { ok: true, combatEnd: res };
 }
-// Fliehen (seit 0.9.1 standardmäßig abgeschaltet, Schalter fleeAllowed: 0 = aus, 1 = an; die Erschöpfung beendet festgefahrene Kämpfe): Im Monsterkampf und im Showdown darf jede Seite (im Monsterkampf der Angreifer ebenso wie der Spieler, der das Monster führt) den Kampf abbrechen, wenn der Gegner kein Mana mehr hat, ihr gerade kein Angriff entgegengebracht wird (eigener Angriffszug) und sie nicht unter einem Todesfluss steht. Kein Sieger, keine Beute; das Monster behält seine HP und sein Mana, und danach ist der Spieler am Zug, der das Monster geführt hat (er kann das angeschlagene Monster jetzt selbst angreifen).
+// Fliehen (seit 0.9.1 standardmäßig abgeschaltet, Schalter fleeAllowed: 0 = aus, 1 = an; die Erschöpfung beendet festgefahrene Kämpfe): Im Monsterkampf und im Showdown darf jede Seite (im Monsterkampf der Angreifer ebenso wie der Spieler, der das Monster führt) den Kampf abbrechen, wenn der Gegner kein Mana mehr hat, ihr gerade kein Angriff entgegengebracht wird (eigener Angriffszug) und sie nicht unter einem Todesfluch steht. Kein Sieger, keine Beute; das Monster behält seine HP und sein Mana, und danach ist der Spieler am Zug, der das Monster geführt hat (er kann das angeschlagene Monster jetzt selbst angreifen).
 function canFlee(state, pid) {
   const c = state.combat;
   if (!state.rules.fleeAllowed) return false;
@@ -438,7 +438,7 @@ function execDefense(state, passOnly, how) {   // how: 'recover' | 'draw' (Zug o
   if (defEv && defEv.el && allowed(state, 'defense', 'echo')) side.stats.echo = defEv.el;   // Farbe der ersten Karte (bei der Ultimate nicht die der Schlusskarte)
   // Seit 0.4 wirkt der Kombo zuerst, danach die Verteidigung: Ein Spiegel dieser Farbe wirkte früher schon gegen den Angriff, auf den verteidigt wird; seit 0.7.2.23 stellt ihn die Verteidigung erst nach dem Schaden. Seit 0.5.4 gilt das nicht mehr für die Heilung: Sie wirkt wieder nach Angriff und Verteidigung (Zerrüttung und die übrigen Kombos bleiben davor).
   let lateShield = 0, lateTrap = 0;   // Schild und Falle, die in dieser Verteidigung gestellt werden, wirken erst nach ihr
-  if (defEv && defEv.levels && defEv.levels.ulti > 0) {   // Ultimate in der Verteidigung: je nach Farbe der Schlusskarte Todesfluss für den Angreifer (Feuer), Heilfluss (Erde) oder Manafluss (Wasser) für den Verteidiger
+  if (defEv && defEv.levels && defEv.levels.ulti > 0) {   // Ultimate in der Verteidigung: je nach Farbe der Schlusskarte Todesfluch für den Angreifer (Feuer), Meditation (Erde) oder Erleuchtung (Wasser) für den Verteidiger
     const uel = defEv.ultiEl || defEv.el;
     if (uel !== 'E' && uel !== 'W' && attacker.stats.deathPhase === undefined) attacker.stats.deathPhase = attacker.stats.death || 0;
     const u = castUltimate(side, attacker, uel, defEv.levels.ulti);
@@ -486,7 +486,7 @@ function execDefense(state, passOnly, how) {   // how: 'recover' | 'draw' (Zug o
   side.stats.hp = Math.max(0, side.stats.hp);
   const attSide = attacker;   // wer gerade angegriffen hat: seine Angriffsphase endet mit dieser Verteidigung
   c.action = 'attack'; c.color = null; c.pending = 0; c.lfp = null;
-  if (!hpDecided(state)) deathTick(state, attSide, c.atkTurns || 0);   // Stufe 2 (Schaden nach der Verteidigung, samt Heilung) ist abgeschlossen; erst wenn dabei niemand auf 0 HP fiel, folgen als Stufe 3 die Flusseffekte (atkTurns zählt den Angriff dieser Phase schon mit)
+  if (!hpDecided(state)) deathTick(state, attSide, c.atkTurns || 0);   // Stufe 2 (Schaden nach der Verteidigung, samt Heilung) ist abgeschlossen; erst wenn dabei niemand auf 0 HP fiel, folgen als Stufe 3 die Dauereffekte (atkTurns zählt den Angriff dieser Phase schon mit)
   const res = finishStep(state, { k: 'V', who: side.key === 'a' ? 0 : 1, v: block, b: c0pending, left: leftover });
   return { ok: true, combatEnd: res };
 }
@@ -534,7 +534,7 @@ function applyCombat(state, a) {
       if (!state.rules.fleeAllowed) return fail('Fliehen ist abgeschaltet.');
       if (c.action !== 'attack') return fail('Fliehen geht nur im eigenen Angriffszug, nicht unter Angriff.');
       if (opp.stats.mana > 0) return fail('Fliehen geht nur, wenn der Gegner kein Mana mehr hat.');
-      if (side.stats.death > 0) return fail('Unter einem Todesfluss kann man nicht fliehen.');
+      if (side.stats.death > 0) return fail('Unter einem Todesfluch kann man nicht fliehen.');
       side.deck.marks = [];
       log(state, side.name + ' flieht vor ' + opp.name + '.', side.ctrl);
       c.turns++; traceStep(state, { t: c.turns });

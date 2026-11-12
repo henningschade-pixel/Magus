@@ -152,11 +152,11 @@ Regeln: Monster-Zweitmagie überlegen, Combo vor der Verteidigung, Ausgleich nur
 
 ## KI an die Regeln von 0.7 angepasst (Version 0.7.5.1, 06.11.)
 
-Anlass: Seit der letzten Abstimmung (0.4) änderten sich Kartenkauf ohne Freischaltung, Obergrenze Stufe 3 für alle Ausbauten, Ultimates nach Farbe, Nachziehstrafe nach Abschnitt, Heilfluss und Schilde mit Verzögerung, 3 Startsiegpunkte. Messwerkzeug neu: `node tools/balance/vs.js <Partien> <alte index.html> ['<Params neu>'] ['<Params alt>']` lässt die KI dieses Stands gegen die KI aus einer älteren `index.html` auf derselben Engine antworten.
+Anlass: Seit der letzten Abstimmung (0.4) änderten sich Kartenkauf ohne Freischaltung, Obergrenze Stufe 3 für alle Ausbauten, Ultimates nach Farbe, Nachziehstrafe nach Abschnitt, Meditation und Schilde mit Verzögerung, 3 Startsiegpunkte. Messwerkzeug neu: `node tools/balance/vs.js <Partien> <alte index.html> ['<Params neu>'] ['<Params alt>']` lässt die KI dieses Stands gegen die KI aus einer älteren `index.html` auf derselben Engine antworten.
 Befunde und Änderungen (je 2000 Partien gegen den Stand davor, ±2,2 Punkte):
 - **Eröffnung wartete auf Beute, die es nicht mehr gibt.** `looted` zählte erhaltenes Gold über dem Abschnittsbonus, also auch Ausgleichs- und Strafgold. Jetzt zählt der neue Engine-Zähler `stats.kills` (besiegte Monster). +4 Punkte; die Partien werden dadurch länger und die KI flieht öfter (siehe `fleeIdle`).
 - **`sacG` 0:** Gold für Magie zu opfern schadet seit der Stufe-3-Obergrenze (ohne Opfern 61 %). Magie kommt aus Abschnitt-1-Eröffnung und Tempel nur dort.
-- **Ultimates:** neue Gewichte `uHeal` 3 (Heilfluss, vorher fest 0,8) und `uMulti` 1 (Multispiegel, vorher fest 2; 8 verliert klar mit 32 %).
+- **Ultimates:** neue Gewichte `uHeal` 3 (Meditation, vorher fest 0,8) und `uMulti` 1 (Multispiegel, vorher fest 2; 8 verliert klar mit 32 %).
 - **Läuterung:** `lfDeath` 8 (Wert je entferntem eigenen Todesmarker, 63 %) und `lfHeal` 4 (gegnerische Heilmarker zählen mit, +6 bis +9 Punkte).
 - **Strafe nach Abschnitt:** `dRedS` (Zuschlag je Abschnitt auf `dRed`/`dTmp`/`dVen`) bleibt 0, in der Messung neutral (49 bis 50 %).
 - `opt2.js` (zwei Läufe, 400 Partien je Test) übernahm `oHits` 2, `cWt` 3,5, `aCost` 2,3, `aDmg` 0,7, `aThr` 0,8.

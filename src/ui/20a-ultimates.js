@@ -1,4 +1,4 @@
-/* ---------- Ultimate-Rituale für Heilfluss (Erde) und Manafluss (Wasser, seit 0.8; bis 0.7.7 Multispiegel), aus der Ultimate-Werkstatt (seit 0.7.2.2): mittig auf dem Bildschirm, wie das Pentagramm des Todesfluss (20-todesfluch.js). Die Marker und ihre Wirkung zeigt das Spiel selbst. ---------- */
+/* ---------- Ultimate-Rituale für Meditation (Erde) und Erleuchtung (Wasser, seit 0.8; bis 0.7.7 Multispiegel), aus der Ultimate-Werkstatt (seit 0.7.2.2): mittig auf dem Bildschirm, wie das Pentagramm des Todesfluch (20-todesfluch.js). Die Marker und ihre Wirkung zeigt das Spiel selbst. ---------- */
 const UltFx = (() => {
   const BIG = 3000, clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x)), lerp = (a, b, t) => a + (b - a) * t, seg = (u, a, b) => clamp((u - a) / (b - a));
   const eo = x => 1 - Math.pow(1 - x, 3), eio = x => x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
@@ -21,7 +21,7 @@ const UltFx = (() => {
   function rrect(ctx,x,y,w,h,r){r=Math.min(r,w/2,h/2);ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath()}
   function star4(ctx,x,y,r,col,a){ctx.save();ctx.globalCompositeOperation='lighter';ctx.fillStyle=rgba(col,a);ctx.beginPath();for(let i=0;i<8;i++){const an=i*Math.PI/4-Math.PI/2,rr=i%2?r*.28:r;ctx.lineTo(x+Math.cos(an)*rr,y+Math.sin(an)*rr)}ctx.closePath();ctx.fill();ctx.restore()}
   
-  /* ---------- Heilfluss (Erde): grüner Kreis mit Pluszeichen, Ranken, aufsteigendes Licht ---------- */
+  /* ---------- Meditation (Erde): grüner Kreis mit Pluszeichen, Ranken, aufsteigendes Licht ---------- */
   function fxHeal(ctx,p,t,D,u){
     const col=p.hColor,S=p.size,R=150*S,tilt=.42,Cc={x:C.x,y:C.y+30},gl=p.hGlow,top=-Math.PI/2;
     const fin=1-seg(u,.93,1),flick=1-.25*(.5+.5*Math.sin(t*23+Math.sin(t*7)*2)),inten=fin*flick;
@@ -60,7 +60,7 @@ const UltFx = (() => {
     if(fl>0){ctx.fillStyle=rgba(lighten(col,.8),fl*.42);ctx.fillRect(-BIG,-BIG,2*BIG,2*BIG)}
   }
   
-  /* ---------- Manafluss (Wasser, seit 0.8): blauer Ring mit Achtstern am Boden, Manafunken ziehen spiralförmig zur Mitte und verdichten sich zu einem schwebenden Kristall; Pulse, dann stieben die Funken auseinander ---------- */
+  /* ---------- Erleuchtung (Wasser, seit 0.8): blauer Ring mit Achtstern am Boden, Manafunken ziehen spiralförmig zur Mitte und verdichten sich zu einem schwebenden Kristall; Pulse, dann stieben die Funken auseinander ---------- */
   function fxMana(ctx,p,t,D,u){
     const col=p.mColor,S=p.size,R=150*S,tilt=.42,Cc={x:C.x,y:C.y+30},gl=p.mGlow,top=-Math.PI/2,Lt=lighten(col,.6);
     const fin=1-seg(u,.93,1),flick=1-.22*(.5+.5*Math.sin(t*21+Math.sin(t*6)*2)),inten=fin*flick;
@@ -99,7 +99,7 @@ const UltFx = (() => {
   }
   function lerpP(a,b,q){return{x:lerp(a.x,b.x,q),y:lerp(a.y,b.y,q)}}
   const cvs = {}, raf = {};
-  function play(kind) {   // 'E' Heilfluss, 'W' Manafluss
+  function play(kind) {   // 'E' Meditation, 'W' Erleuchtung
     if (FAST || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
     let cv = cvs[kind];
     if (!cv) { cv = cvs[kind] = document.createElement('canvas'); cv.width = SW; cv.height = 800; cv.style.cssText = 'position:absolute;left:0;top:0;width:' + SW + 'px;height:800px;z-index:290;pointer-events:none'; stage.appendChild(cv); }

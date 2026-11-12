@@ -486,7 +486,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 @keyframes arcfx{0%,100%{opacity:0}50%{opacity:1}}
 
 .crefh{font-size:11px;letter-spacing:.06em;text-transform:uppercase;margin:2px 0 1px;line-height:1.2;opacity:.85}.crefh.F{color:var(--fire)}.crefh.W{color:var(--water)}.crefh.E{color:var(--earth)}
-/* Manamarker (Manafluss, seit 0.8) wie der Heilmarker; Falle (Blau + Rot): verdeckte Karte in der Markerreihe, kein Marker */
+/* Manamarker (Erleuchtung, seit 0.8) wie der Heilmarker; Falle (Blau + Rot): verdeckte Karte in der Markerreihe, kein Marker */
 .manatok.healtok{width:46px;height:46px}
 .trapcard{position:relative;width:34px;height:48px;border-radius:4px;cursor:help;background:transparent}.trapcard .mul{position:absolute;right:-7px;bottom:-4px;z-index:2;font:700 20px Alegreya,serif;color:#f2d27a;text-shadow:0 0 2px #000,0 0 3px #000,0 0 6px #000}
 .trapcard img{width:100%;height:100%;object-fit:cover;border-radius:3px;display:block;transform:rotate(var(--r,0deg))}

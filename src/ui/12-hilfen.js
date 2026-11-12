@@ -35,7 +35,7 @@ function ctx() {
   }
   return { combat: false, myDeck: G.players[ME].deck, oppDeck: G.players[OPP].deck, myStats: G.players[ME].stats, oppStats: G.players[OPP].stats };
 }
-// Todesfluss (Ultimate): HP-Verlust am Ende jeder eigenen Angriffsphase, bis Kampfende.
+// Todesfluch (Ultimate): HP-Verlust am Ende jeder eigenen Angriffsphase, bis Kampfende.
 // Schild (Grün + Blau seit 0.9.9; zuvor Blau + Grün, seit 0.8; Grafik des früheren Multischilds) und Falle (Blau + Rot seit 0.9.9; zuvor Rot + Blau): liegen am Ende der Markerreihe vor den Handkarten (wie Todes-, Heil- und Manamarker). Das Schild trägt einen Zähler (Ladungen) ab 2; die Falle ist eine verdeckte Karte (kein Marker), ich sehe meine eigene.
 function shieldSvg(who) {
   const id = who || 'x';
@@ -113,7 +113,7 @@ function healTokens(s, who) {   // seit 0.7.2.11 ein Token mit Zähler statt meh
   return L ? '<button class="healtok lf' + (sel ? ' sel' : '') + '" data-who="' + who + '" data-act="lfm" data-k="' + who + 'h" title="Läuterung: Heilmarker wählen (Klick: einen mehr, nach dem Maximum wieder alle weg). ' + sel + ' von ' + N + ' gewählt." style="' + pos + '">' + img + mul + (sel ? '<i class="lfb">✓' + sel + '</i>' : '') + '</button>'
     : '<div class="healtok" data-who="' + who + '" title="' + tip + '" style="' + pos + '">' + img + mul + '</div>';
 }
-// Manamarker (Wasser-Ultimate Manafluss, seit 0.8): blaue Tokens mit Kristall; +1 Mana je Marker am Ende der eigenen Angriffsphase. Sie liegen in der Reihe hinter den Heilmarkern derselben Seite.
+// Manamarker (Wasser-Ultimate Erleuchtung, seit 0.8): blaue Tokens mit Kristall; +1 Mana je Marker am Ende der eigenen Angriffsphase. Sie liegen in der Reihe hinter den Heilmarkern derselben Seite.
 function manaTokens(s, who) {
   const N = s.manaflow || 0; if (N <= 0) return '';
   const L = lfCtx(), sel = L ? L.picks.filter(p => p === who + 'm').length : 0, mul = N > 1 ? '<b class="mul">×' + N + '</b>' : '';

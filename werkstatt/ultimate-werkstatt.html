@@ -71,7 +71,7 @@ textarea{width:100%;min-height:150px;background:var(--ink);color:var(--bone);bor
 <div class="wrap">
   <header>
     <h1>Ultimate-Werkstatt</h1>
-    <p>Effektwerkstatt für die Kombos aus allen drei Elementen. Die Farbe der ersten Karte entscheidet: Feuer gibt den <b>Todesfluss</b>, Erde den <b>Heilfluss</b>, Wasser den <b>Manafluss</b>. Gezeigt wird das Ritual selbst, danach die Marker auf dem Tisch und ihre Wirkung (HP-Verlust des Gegners, Heilung, Mana-Regeneration). Im Spiel stehen alle drei Rituale: Todesfluss (<code>CurseFx</code> in <code>src/ui/20-todesfluch.js</code>), Heilfluss und Manafluss (<code>UltFx</code> in <code>src/ui/20a-ultimates.js</code>, Manafluss seit 0.8; Parameter <code>m…</code> wie <code>P</code> dort).</p>
+    <p>Effektwerkstatt für die Kombos aus allen drei Elementen. Die Farbe der ersten Karte entscheidet: Feuer gibt den <b>Todesfluch</b>, Erde den <b>Meditation</b>, Wasser den <b>Erleuchtung</b>. Gezeigt wird das Ritual selbst, danach die Marker auf dem Tisch und ihre Wirkung (HP-Verlust des Gegners, Heilung, Mana-Regeneration). Im Spiel stehen alle drei Rituale: Todesfluch (<code>CurseFx</code> in <code>src/ui/20-todesfluch.js</code>), Meditation und Erleuchtung (<code>UltFx</code> in <code>src/ui/20a-ultimates.js</code>, Erleuchtung seit 0.8; Parameter <code>m…</code> wie <code>P</code> dort).</p>
   </header>
   <div class="grid">
     <section class="stagebox" aria-label="Vorschau">
@@ -92,7 +92,7 @@ textarea{width:100%;min-height:150px;background:var(--ink);color:var(--bone);bor
   </div>
   <section class="export">
     <h2>Werte für das Spiel</h2>
-    <p>Kopiere die Werte oder füge gespeicherte Werte ein und übernimm sie. Die Werte des Todesfluss entsprechen denen von <code>CurseFx</code> (Farbe <code>tColor</code>, Neigung <code>tTilt</code> usw.).</p>
+    <p>Kopiere die Werte oder füge gespeicherte Werte ein und übernimm sie. Die Werte des Todesfluch entsprechen denen von <code>CurseFx</code> (Farbe <code>tColor</code>, Neigung <code>tTilt</code> usw.).</p>
     <textarea id="json" spellcheck="false" aria-label="Effektwerte als JSON"></textarea>
     <div class="tools"><button class="btn primary" id="copy" type="button">Kopieren</button><button class="btn" id="apply" type="button">Eingefügte Werte übernehmen</button><button class="btn" id="reset" type="button">Auf Standard zurücksetzen</button></div>
     <div class="msg" id="msg" role="status"></div>
@@ -108,7 +108,7 @@ function rgba(hex,a){if(hex[0]==='r')return hex.replace('rgb(','rgba(').replace(
 function lighten(hex,k){const n=parseInt(hex.slice(1),16),f=c=>Math.round(c+(255-c)*k);return 'rgb('+f(n>>16&255)+','+f(n>>8&255)+','+f(n&255)+')'}
 function mix(a,b,k){const n=parseInt(a.slice(1),16),m=parseInt(b.slice(1),16),f=(x,y)=>Math.round(x+(y-x)*k);return '#'+((1<<24)+(f(n>>16&255,m>>16&255)<<16)+(f(n>>8&255,m>>8&255)<<8)+f(n&255,m&255)).toString(16).slice(1)}
 const EL={F:'#ff7a3d',E:'#93c24f',W:'#52a6f5'};
-const NAME={F:'Todesfluss',E:'Heilfluss',W:'Manafluss'};
+const NAME={F:'Todesfluch',E:'Meditation',W:'Erleuchtung'};
 const ORDER=['F','W','E'];   // wie in der Kombo-Übersicht des Spiels: Feuer, Wasser, Erde
 const C={x:360,y:268};      // Mitte des Rituals
 
@@ -119,12 +119,12 @@ const DEF={view:'alle',fx:'F',level:2,dur:4,size:1.2,dark:.55,flash:1,shake:.5,p
   mColor:'#52a6f5',mRings:2,mStar:8,mCrystal:1,mPulse:3,mGlow:14};
 const PRE={
  'Standard':{},
- 'Wie im Spiel (Todesfluss)':{view:'einzeln',fx:'F',dur:4,size:1.2,dark:.55,shake:.5,particles:50,tColor:'#a67bff',tTilt:.42,tRings:2,tRunes:14,tLine:2.5,tGlow:14,tFlicker:.4,tPillar:.6},
- 'Heilfluss einzeln':{view:'einzeln',fx:'E'},
- 'Manafluss einzeln':{view:'einzeln',fx:'W'},
+ 'Wie im Spiel (Todesfluch)':{view:'einzeln',fx:'F',dur:4,size:1.2,dark:.55,shake:.5,particles:50,tColor:'#a67bff',tTilt:.42,tRings:2,tRunes:14,tLine:2.5,tGlow:14,tFlicker:.4,tPillar:.6},
+ 'Meditation einzeln':{view:'einzeln',fx:'E'},
+ 'Erleuchtung einzeln':{view:'einzeln',fx:'W'},
  'Dezent':{size:.9,dur:3,dark:.3,flash:.5,shake:.2,particles:25,after:1.4,tRunes:10,tPillar:.3,hVines:4,hPulse:2,hLight:.4,mStar:6,mPulse:2},
  'Wucht':{size:1.5,dur:5.2,dark:.7,flash:1.3,shake:1,particles:90,after:2.6,tRunes:20,tPillar:1,hVines:9,hVineH:1.5,hPulse:5,hLight:1.2,mStar:12,mPulse:5},
- 'Manafluss, kühl':{view:'einzeln',fx:'W',mColor:'#7fd0ff'},
+ 'Erleuchtung, kühl':{view:'einzeln',fx:'W',mColor:'#7fd0ff'},
  'Stufe 3':{level:3}
 };
 
@@ -154,7 +154,7 @@ const qpt=(a,b,c,q)=>({x:(1-q)*(1-q)*a.x+2*(1-q)*q*c.x+q*q*b.x,y:(1-q)*(1-q)*a.y
 const slot=(side,i)=>({x:178+i*38,y:side==='opp'?82:H-82});
 const barC=side=>({x:360,y:side==='opp'?46:H-46});
 
-/* ---------- Todesfluss (Feuer): Pentagramm in Lila, wie CurseFx im Spiel ---------- */
+/* ---------- Todesfluch (Feuer): Pentagramm in Lila, wie CurseFx im Spiel ---------- */
 function fxCurse(ctx,p,t,D,u){
   const col=p.tColor,R=170*p.size,tilt=p.tTilt,Cc={x:C.x,y:C.y+10};
   const g=seg(u,.82,.93),charge=seg(u,.62,.68);
@@ -202,7 +202,7 @@ function fxCurse(ctx,p,t,D,u){
   if(fl>0){ctx.fillStyle=rgba(lighten(col,.75),fl*.6);ctx.fillRect(-BIG,-BIG,2*BIG,2*BIG)}
 }
 
-/* ---------- Heilfluss (Erde): grüner Kreis mit Pluszeichen, Ranken, aufsteigendes Licht ---------- */
+/* ---------- Meditation (Erde): grüner Kreis mit Pluszeichen, Ranken, aufsteigendes Licht ---------- */
 function fxHeal(ctx,p,t,D,u){
   const col=p.hColor,S=p.size,R=150*S,tilt=.42,Cc={x:C.x,y:C.y+30},gl=p.hGlow,top=-Math.PI/2;
   const fin=1-seg(u,.93,1),flick=1-.25*(.5+.5*Math.sin(t*23+Math.sin(t*7)*2)),inten=fin*flick;
@@ -241,7 +241,7 @@ function fxHeal(ctx,p,t,D,u){
   if(fl>0){ctx.fillStyle=rgba(lighten(col,.8),fl*.42);ctx.fillRect(-BIG,-BIG,2*BIG,2*BIG)}
 }
 
-/* ---------- Manafluss (Wasser, seit 0.8): blauer Ring mit Achtstern am Boden, Manafunken ziehen spiralförmig zur Mitte und verdichten sich zu einem schwebenden Kristall; Pulse, dann stieben die Funken auseinander ---------- */
+/* ---------- Erleuchtung (Wasser, seit 0.8): blauer Ring mit Achtstern am Boden, Manafunken ziehen spiralförmig zur Mitte und verdichten sich zu einem schwebenden Kristall; Pulse, dann stieben die Funken auseinander ---------- */
   function fxMana(ctx,p,t,D,u){
     const col=p.mColor,S=p.size,R=150*S,tilt=.42,Cc={x:C.x,y:C.y+30},gl=p.mGlow,top=-Math.PI/2,Lt=lighten(col,.6);
     const fin=1-seg(u,.93,1),flick=1-.22*(.5+.5*Math.sin(t*21+Math.sin(t*6)*2)),inten=fin*flick;
@@ -394,9 +394,9 @@ function draw(ctx,t,p){
 const FX={name:'ultimate',def:DEF,presets:PRE,
  ctrls:[
   {t:'h',l:'Szenario'},
-  {k:'view',t:'seg',l:'Ansicht',o:[['alle','Alle drei'],['einzeln','Einzeln']],hint:'„Alle drei“ zeigt Todesfluss, Manafluss und Heilfluss nebeneinander (Reihenfolge wie in der Kombo-Übersicht), „Einzeln“ eines groß.'},
-  {k:'fx',t:'seg',l:'Ultimate (bei „Einzeln“)',o:[['F','Todesfluss'],['W','Manafluss'],['E','Heilfluss']],hint:'Feuer = Todesfluss, Wasser = Manafluss, Erde = Heilfluss: Die Farbe der ersten Karte entscheidet.'},
-  {k:'level',t:'rng',l:'Stufe S',min:1,max:3,step:1,hint:'Todesfluss und Heilfluss legen S Marker; Manafluss legt S Marker (S Mana pro Zug).'},
+  {k:'view',t:'seg',l:'Ansicht',o:[['alle','Alle drei'],['einzeln','Einzeln']],hint:'„Alle drei“ zeigt Todesfluch, Erleuchtung und Meditation nebeneinander (Reihenfolge wie in der Kombo-Übersicht), „Einzeln“ eines groß.'},
+  {k:'fx',t:'seg',l:'Ultimate (bei „Einzeln“)',o:[['F','Todesfluch'],['W','Erleuchtung'],['E','Meditation']],hint:'Feuer = Todesfluch, Wasser = Erleuchtung, Erde = Meditation: Die Farbe der ersten Karte entscheidet.'},
+  {k:'level',t:'rng',l:'Stufe S',min:1,max:3,step:1,hint:'Todesfluch und Meditation legen S Marker; Erleuchtung legt S Marker (S Mana pro Zug).'},
   {t:'h',l:'Allgemein'},
   {k:'dur',t:'rng',l:'Dauer des Rituals',min:2,max:7,step:.1,u:' s'},
   {k:'size',t:'rng',l:'Größe',min:.6,max:1.8,step:.05,u:'×'},
@@ -404,8 +404,8 @@ const FX={name:'ultimate',def:DEF,presets:PRE,
   {k:'flash',t:'rng',l:'Blitz',min:0,max:1.5,step:.05,u:'×'},
   {k:'shake',t:'rng',l:'Wackeln',min:0,max:1.5,step:.05},
   {k:'particles',t:'rng',l:'Funken und Lichtpunkte',min:0,max:120,step:5},
-  {k:'after',t:'rng',l:'Wirkung danach',min:0,max:4,step:.1,u:' s',hint:'Nach dem Ritual und den Markern: Todesfluss zehrt am Gegner, Heilfluss heilt, Manafluss füllt Mana auf. 0 blendet es aus.'},
-  {t:'h',l:'Todesfluss (Feuer)',c:'ft'},
+  {k:'after',t:'rng',l:'Wirkung danach',min:0,max:4,step:.1,u:' s',hint:'Nach dem Ritual und den Markern: Todesfluch zehrt am Gegner, Meditation heilt, Erleuchtung füllt Mana auf. 0 blendet es aus.'},
+  {t:'h',l:'Todesfluch (Feuer)',c:'ft'},
   {k:'tColor',t:'col',l:'Farbe'},
   {k:'tTilt',t:'rng',l:'Neigung der Scheibe',min:.2,max:.8,step:.02},
   {k:'tRings',t:'rng',l:'Ringe',min:1,max:3,step:1},
@@ -414,7 +414,7 @@ const FX={name:'ultimate',def:DEF,presets:PRE,
   {k:'tGlow',t:'rng',l:'Leuchten',min:0,max:30,step:1},
   {k:'tFlicker',t:'rng',l:'Flackern',min:0,max:1,step:.05},
   {k:'tPillar',t:'rng',l:'Lichtsäule',min:0,max:1,step:.05},
-  {t:'h',l:'Heilfluss (Erde)',c:'fh'},
+  {t:'h',l:'Meditation (Erde)',c:'fh'},
   {k:'hColor',t:'col',l:'Farbe'},
   {k:'hRings',t:'rng',l:'Ringe',min:1,max:3,step:1},
   {k:'hVines',t:'rng',l:'Ranken',min:0,max:10,step:1,hint:'Ranken mit Blättern, die aus dem äußeren Ring wachsen.'},
@@ -423,7 +423,7 @@ const FX={name:'ultimate',def:DEF,presets:PRE,
   {k:'hLight',t:'rng',l:'Lichtsäule',min:0,max:1.5,step:.05,u:'×'},
   {k:'hPulse',t:'rng',l:'Heilwellen',min:0,max:5,step:1,hint:'Ringe, die vom Kreis nach außen laufen.'},
   {k:'hGlow',t:'rng',l:'Leuchten',min:0,max:30,step:1},
-  {t:'h',l:'Manafluss (Wasser)',c:'fp'},
+  {t:'h',l:'Erleuchtung (Wasser)',c:'fp'},
   {k:'mColor',t:'col',l:'Grundfarbe'},
   {k:'mRings',t:'rng',l:'Ringe',min:1,max:3,step:1},
   {k:'mStar',t:'rng',l:'Ecken des Sterns',min:5,max:12,step:1},

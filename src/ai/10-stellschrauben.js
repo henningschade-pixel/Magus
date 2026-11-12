@@ -34,7 +34,7 @@ const DEFAULTS = {
   // Angriffsbewertung; stallDec (seit 0.11 positiv): die Angriffsschwelle sinkt je zwei Kampfzüge nach stallFrom   // seit 0.7.6.5 (Kampfrunden-Limit 10): stallFrom 0, stallDec 3, aThr 0.4, damit die KI innerhalb von 10 Runden angreift
   // um so viel, damit festgefahrene Kämpfe enden (vorher −0,05 hob sie an: Patt-Schleifen bis 3000 Aktionen);
   // pasDec: die Angriffsschwelle sinkt um so viel je Passen-Zug des Gegners in Folge
-  // Ultimates nach Farbe (seit 0.7): uHeal Gewicht des Heilfluss (Erde, × wEW), uMana Gewicht des Manafluss (Wasser, seit 0.8, × aCost je Mana), der Todesfluss (Feuer) zählt wDeath
+  // Ultimates nach Farbe (seit 0.7): uHeal Gewicht der Meditation (Erde, × wEW), uMana Gewicht des Erleuchtung (Wasser, seit 0.8, × aCost je Mana), der Todesfluch (Feuer) zählt wDeath
   uHeal: 3, uMana: 1.5,
   // Läuterung (seit 0.7.4): lfDeath Wert je entferntem eigenen Todesmarker, lfHeal Gewicht der gegnerischen Heilmarker unter den entfernbaren Markern
   lfDeath: 8, lfHeal: 4,
