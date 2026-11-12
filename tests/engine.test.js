@@ -1208,7 +1208,7 @@ test('Echo digital: kein Marker mehr, die Schlange der Echo-Farbe bekommt Wellen
 
 test('Versionsnummer: eine Konstante (MAGUS_VERSION) speist Menü-Link und Über-Seite, das Regelwerk hat einen Eintrag dazu (0.7.7.4)', () => {
   const fs = require('fs'), path = require('path');
-  const src = fs.readFileSync(path.join(__dirname, '..', 'src', 'ui', '26a-darstellung.js'), 'utf8');
+  const src = ['01-versionen.js', '26a-darstellung.js'].map(f => fs.readFileSync(path.join(__dirname, '..', 'src', 'ui', f), 'utf8')).join('\n');   // seit 0.13.1 stehen Nummer und Versionstexte in 01-versionen.js
   const v = (src.match(/const MAGUS_VERSION = '([0-9.]+)'/) || [])[1];
   assert.ok(v, 'Konstante vorhanden');
   assert.ok(!/Neu in Version [0-9]/.test(src), 'keine fest eingetragene Versionsnummer in „Neu in Version“');
