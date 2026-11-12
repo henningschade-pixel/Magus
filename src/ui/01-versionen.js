@@ -1,9 +1,10 @@
 /* ---------- Versionen: Versionsnummer und Versionsbeschreibung (Seite „Neu in Version …“) ---------- */
 // Aktuelle Versionsnummer: einzige Stelle, an der sie gesetzt wird (Menü-Link und Über-Seite lesen sie von hier; bei jedem Schritt hochzählen)
-const MAGUS_VERSION = '0.13.1';
+const MAGUS_VERSION = '0.13.2';
 // Versionsbeschreibung: ein Eintrag je Version, die neueste zuerst. Bei jedem Schritt oben einen Eintrag [Nummer, Text] ergänzen;
 // der erste Eintrag gehört zu MAGUS_VERSION und erscheint unter „Neu in Version …“.
 const VERSIONEN = [
+  ['0.13.2', '<b>Monster und Upgrade-Kosten neu vermessen (keine Regeländerung):</b> Mit dem vorausplanenden Computergegner wurde geprüft, wie gut sich die Monster jeder Stufe zu Beginn und nach dem Ausbau besiegen lassen und was jedes einzelne Upgrade bringt. Zu Beginn einer Stufe gewinnt der Angreifer 2 % (Stufe I), 13 % (II) und 21 % (III) der Kämpfe, mit dem Gold der Stufe, Magie und Bibliothek 75 %, 74 % und 60 %. Am Spiel ändert diese Version nichts; die Vorschläge dazu (unter anderem nur 1 HP je Upgrade) stehen im Regelwerk.'],
   ['0.13.1', '<b>Interner Umbau des Codes:</b> Der Quelltext ist neu geordnet (Kampfablauf, Kampfplan des Computergegners, Startseite und diese Versionstexte liegen in eigenen Dateien, lange Zeilen sind umgebrochen). An Regeln, Computergegner und Aussehen ändert sich nichts.'],
   ['0.13.0.2', '<b>Neue Namen der Ultimates:</b> Der Heilfluss heißt jetzt <b>Meditation</b>, der Manafluss <b>Erleuchtung</b> und der Todesfluss <b>Todesfluch</b>. Die Wirkung ist unverändert; die neuen Namen stehen überall (Kombo-Übersicht, Hilfen, Protokoll, auch in den älteren Versionstexten unten). Was am Ende der Angriffsphase wirkt (Todesfluch, Erschöpfung, Meditation, Erleuchtung), heißt statt „Flusseffekte“ jetzt „Dauereffekte“.'],
   ['0.13.0.1', '<b>Kombo-Übersicht mit Farbverlauf:</b> Jede Zeile der Kombo-Übersicht ist jetzt als Verlauf eingefärbt, links die Primärfarbe, rechts die Sekundärfarbe; die dritte Farbe einer Ultimate zählt dabei nicht. Primär-, Sekundär- und Tertiärfarbe stehen in festen Spalten und damit in allen Zeilen untereinander. Die erreichte Stufe steht vor dem Text der Kombo.'],

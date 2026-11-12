@@ -183,3 +183,39 @@ Messung:
 - Probekämpfe in der Weltphase (`world` 12: vor dem Angriff wird jedes Monster zwölfmal durchgespielt, angegriffen wird nur ab dem Mindestwert `thr`, der je Zug seit dem letzten Kampf um `thrWt` sinkt), beide Seiten mit `sim` 60: `thr` −0,3: 20 von 40, `thr` 0: 24 von 40 und danach 80 von 160, `thr` 0,3: 16 von 40. Kein messbarer Gewinn, deshalb `world` 0 (aus); der Schalter bleibt zum Weiterprüfen.
 - Nicht gemessen: Stärke gegen Menschen. Offen bleibt die Weltphase (Ausbaureihenfolge, Zeitpunkt der Angriffe), die weiter mit den Gewichten der Basis-KI entscheidet.
 
+## Stufen-Messung: Monster und Upgrade-Kosten (Version 0.13.2, 12.11.)
+
+Frage: Sind die Monster zu Beginn einer Stufe kaum, mit den Mitteln der Stufe (Gold, Tempel, Magie, Bibliothek) aber gut zu besiegen, und sind die Upgrades ihren Preis wert? Statt ganzer Partien werden einzelne Kämpfe mit festgelegten Spielerbauten ausgetragen, beide Seiten mit der Vorausschau (`sim` 60), Monster gewürfelt wie im Spiel, Spieler mit vollen HP und vollem Mana.
+
+    node tools/balance/stufen.js bauten 1 start 3 s1.json                              # alle Verwendungen von 3 Gold, je 0/3/6 Bibliothekszüge, gegen die Monster I
+    node tools/balance/stufen.js bauten 2 tools/balance/stufen-ref1.json 6 s2.json     # Stufe II ab dem Referenzbau aus Stufe I
+    node tools/balance/stufen.js bauten 3 tools/balance/stufen-ref2.json 9 s3.json
+    node tools/balance/stufen.js nutzen 1 start                                        # Grenznutzen je Upgrade: Monsterkampf und Showdown gegen den Referenzbau
+    node tools/balance/stufen.js bauten 1 start 3 - '{"hpPerPoint":1}'                 # Variante
+
+`stufen-lib.js` setzt die Bauten zusammen (Kauf, Tempel, Magie, Bibliothek nach fester Regel: Karten der Hauptmagie bis zur Magiestufe aufwerten) und trägt die Kämpfe aus, `stufen-run.js` verteilt sie auf die Prozessorkerne. Referenzbauten: `stufen-ref1.json` (nach Stufe I: HP 6, Limit 2, Feuer 2, vier F2), `stufen-ref2.json` (nach Stufe II: HP 8, Limit 2, Hand 4, Feuer 3, vier F3).
+
+**Monster** (Sieg des Angreifers, 120 bis 150 Kämpfe je Wert, ±8 Punkte; in Klammern gegen Feuer-/Erd-/Wassermonster, der Spieler baut auf Feuer):
+
+| Stufe | Beginn | nur Gold | Gold, Magie und Bibliothek | bester Bau |
+|---|---|---|---|---|
+| I | 2 % (0/6/0) | 61 % (HP, Limit, Hand) | 75 % (70/96/60) | HP, Limit, 1 Gold Tempel → Feuer 2, 4 bis 6 Bibliothekszüge |
+| II | 13 % (11/23/2) | 65 % (HP, Mana, Limit, Hand) | 74 % (48/100/68) | HP, Hand, 3 Gold Tempel → Feuer 3, 6 Bibliothekszüge |
+| III | 21 % (7/48/10) | 54 % (2× Mana, Limit, Hand) | 60 % (40/93/47) | Mana, Limit, Hand, 2 Bibliothekszüge |
+
+**Grenznutzen** (Showdown gegen denselben Bau ohne das Upgrade, 80 bis 100 Kämpfe, ±10 Punkte; derselbe Bau gegen sich selbst liegt bei 41 bis 51 %):
+
+| Upgrade | am Start (Stufe I) | nach Stufe I | nach Stufe II |
+|---|---|---|---|
+| +1 HP | 82 % | 65 % | 59 % |
+| +2 HP | 95 % | 79 % | 66 % |
+| +1 Mana | 55 % | 59 % | 57 % |
+| +2 Mana | 61 % | 69 % | 81 % |
+| +1 Limit | 96 % (Monster 2 → 22 %) | 51 % | 59 % |
+| +1 Hand | 52 % | 72 % | 57 % |
+| +1 Magie (Hauptfarbe) und 2 Bibliothekszüge | 95 % | 65 % | – |
+| +1 Magie (zweite Farbe) und 2 Bibliothekszüge | 97 % | 72 % | 73 % |
+
+**Varianten:** Mit `hpPerPoint` 1 bleibt der beste Bau der Stufe I bei 76 %, ohne Magie und Bibliothek fällt er (Basis-KI) von 47 auf 31 %. Gleiche Bauten mit 6 statt 8 HP: Stufe II 67 statt 74 %, Stufe III 49 statt 59 %, Beginn der Stufe III 11 statt 21 %. Stufe-III-Monster mit 6 HP gegen Spieler mit 6 HP: Beginn 25 %, ausgebaut 61 %; mit 8 HP gegen Spieler mit 8 HP: Beginn 17 %, ausgebaut 49 %.
+
+**Grenzen:** Die Bibliothek folgt einer festen Regel und baut auf eine Hauptfarbe; Bauten mit zwei gleich starken Farben sind damit kaum untersucht. Stufe II und III hängen am gewählten Referenzbau der Stufe davor. Die Vorausschau spielt ihre Züge im Durchspielen nach der Basis-KI; gegen Menschen ist nichts gemessen.

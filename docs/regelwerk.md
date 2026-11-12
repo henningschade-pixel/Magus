@@ -690,6 +690,13 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Tests:** Drei Tests angepasst (Nachziehmarker Weltphase, Nachziehlimit Kauf, Nachziehlimit Weltphase; der Marker-Reset läuft jetzt über den Händler), neuer Test „Magie kaufen und Upgrades sind keine Aktion mehr“. `tests/golden.json` ist neu erzeugt (absichtliche Regeländerung).
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
 
+## Änderung 0.13.2 (12.11.)
+
+- **Keine Regeländerung.** Messung der Monster und der Upgrade-Kosten mit der Vorausschau (beide Seiten `sim` 60); Werkzeug `tools/balance/stufen.js`, Einzelheiten in `tools/balance/README.md` (Abschnitt „Stufen-Messung“).
+- **Monster (Sieg des Angreifers):** Stufe I Beginn 2 %, ausgebaut 75 %; Stufe II Beginn 13 %, ausgebaut 74 %; Stufe III Beginn 21 %, ausgebaut 60 %. Gegen das Monster, dessen Element die eigene Hauptmagie schlägt, 93 bis 100 %.
+- **Upgrades:** +2 HP für 1 Gold ist im Showdown der stärkste Kauf (95 % gegen denselben Bau ohne die HP), +1 HP bringt 82 %; das erste Limit 96 %, die erste Magiestufe mit zwei Bibliothekszügen 95 %; das erste Mana 55 %, die erste Handkarte 52 %.
+- **Vorschläge (nicht umgesetzt):** `hpPerPoint` 1 (ein HP je Upgrade, Höchstwert 6 HP), Monster unverändert; wahlweise erstes Limit für 2 Gold (`limitCost` 0, `limitFirstStepCost` 2).
+
 ## Änderung 0.13.1 (12.11.)
 
 - **Interner Umbau des Codes (keine Regeländerung, kein geändertes Verhalten):** `tests/golden.json` bleibt unverändert, alle Tests laufen wie zuvor.

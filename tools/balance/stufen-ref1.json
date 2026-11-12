@@ -1,0 +1,1 @@
+{"hp":6,"mana":4,"limit":2,"slots":3,"mag":{"F":2,"E":1,"W":1},"buys":{"hp":1,"mana":0,"limit":1,"slot":0,"mag":1},"temple":{"points":0,"level":1},"up":0,"gold":0,"deck":["E1","E1","E1","E1","W1","W1","F2","F2","F2","F2"],"hpPer":2,"rise":1,"cost":{"hp":1,"mana":1,"limit":1,"slot":1},"path":"hp limit Tempel1 F2 | Bib 4 (je 2 behalten)","libDone":4,"lib":4}
