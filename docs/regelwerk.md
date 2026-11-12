@@ -16,7 +16,7 @@ Eine Partie hat drei Abschnitte (1, 2, 3). Je Abschnitt gibt es drei Monster (St
 |---|---|---|
 | Gold | 0 | Abschnittsbonus siehe unten |
 | Siegpunkte | 3 | seit 0.3 (`startSp`, 0.3 bis 0.7.2.23: 2; seit 0.7.2.24: 3): schon die ersten Kämpfe kosten bei einer Niederlage etwas; nie unter 0 |
-| HP | 4 | seit 0.3.1 (`startHp`, vorher 3); jeder Upgrade-Punkt +2 Maximum (seit 0.3 mit Gold bezahlt) |
+| HP | 4 | seit 0.3.1 (`startHp`, vorher 3); jedes Upgrade +1 Maximum (seit 0.13.2.1, `hpPerPoint` 1; vorher +2), mit Gold bezahlt (1, dann 2 Gold), höchstens zwei Ausbauten, also höchstens 6 HP |
 | Mana | 4 | jeder Upgrade-Punkt +1 Maximum |
 | Magie Feuer / Erde / Wasser | je 1 | höchstens 3 |
 | Ausspiellimit | 1 | seit 0.5.1 (`startLimit`, 0.3 bis 0.4.1: 2); höchstens 3, die Schritte kosten 1 und 2 Gold (`limitCost` 1 mit `priceRise`) |
@@ -689,6 +689,12 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **KI:** `runTurn` (`src/ai/30-kampf.js`) führt alle Wirtschaftsschritte (`ecoStep`, höchstens 12) vor der eigentlichen Aktion im selben Zug aus; bisher beendete jeder Schritt außer dem Opfern den Zug. Die Stellschrauben bleiben unverändert und sind für die neue Regel nicht nachtrainiert (Messung mit `npm run balance` offen).
 - **Tests:** Drei Tests angepasst (Nachziehmarker Weltphase, Nachziehlimit Kauf, Nachziehlimit Weltphase; der Marker-Reset läuft jetzt über den Händler), neuer Test „Magie kaufen und Upgrades sind keine Aktion mehr“. `tests/golden.json` ist neu erzeugt (absichtliche Regeländerung).
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
+
+## Änderung 0.13.2.1 (12.11.)
+
+- **Ein HP je Upgrade:** `hpPerPoint` 1 (vorher 2). Das HP-Upgrade erhöht das Maximum um 1; Preise (1, dann 2 Gold) und die Grenze von zwei Ausbauten bleiben, der Höchstwert ist 6 HP (vorher 8). Die Monster sind unverändert.
+- **Grund (Messung aus 0.13.2):** +2 HP für 1 Gold gewann am Start 95 % der Showdowns gegen denselben Bau ohne die HP, +1 HP gewinnt 82 %. Gegen die Monster: bester Bau der Stufe I unverändert 76 %, ohne Magie und Bibliothek (Basis-KI) 31 statt 47 %; Stufe II ausgebaut 67 statt 74 %; Stufe III Beginn 11 statt 21 %, ausgebaut 49 statt 59 %.
+- `tests/golden.json` neu erzeugt (gewollte Regeländerung).
 
 ## Änderung 0.13.2 (12.11.)
 

@@ -644,7 +644,7 @@ test('Kosten getauscht (swapCosts): Magie kostet Upgrade-Punkte, alle anderen Ve
   assert.equal(M.DEFAULT_RULES.swapCosts, 1);
   assert.ok(go(g, { type: 'magic', elem: 'F' }).ok); assert.deepEqual([g.st.gold, g.st.pending, g.st.mag.F], [4, 3, 2], 'Magie Stufe 2: 1 Upgrade-Punkt');
   nxt(g); assert.ok(go(g, { type: 'magic', elem: 'F' }).ok); assert.deepEqual([g.st.gold, g.st.pending, g.st.mag.F], [4, 1, 3], 'zweiter Magie-Kauf: 2 Upgrade-Punkte (unabhängig von der Stufe)');
-  nxt(g); assert.ok(go(g, { type: 'spend', what: 'hp' }).ok); assert.deepEqual([g.st.gold, g.st.pending, g.st.maxHp], [3, 1, 6], 'HP: 1 Gold (+2, Start 4)');
+  nxt(g); assert.ok(go(g, { type: 'spend', what: 'hp' }).ok); assert.deepEqual([g.st.gold, g.st.pending, g.st.maxHp], [3, 1, 5], 'HP: 1 Gold (+1, Start 4)');
   nxt(g); assert.ok(go(g, { type: 'spend', what: 'limit' }).ok); assert.deepEqual([g.st.gold, g.st.limit], [2, 2], 'Limit 1 → 2: 1 Gold (seit 0.5.1)');
   nxt(g); assert.ok(go(g, { type: 'spend', what: 'limit' }).ok); assert.deepEqual([g.st.gold, g.st.limit], [0, 3], 'Limit 2 → 3: 2 Gold');
   nxt(g); g.st.gold = 3; assert.equal(go(g, { type: 'spend', what: 'limit' }).ok, false, 'Limit 4 gibt es nicht (höchstens Stufe 3)'); assert.equal(g.st.limit, 3); g.st.gold = 1;
@@ -938,7 +938,7 @@ test('Jede Entwicklung der Spieler ist auf Stufe 3 begrenzt (zwei Ausbauten), Ko
   assert.deepEqual(run('slot'), [1, 2, null], 'Handplätze 3 → 5');
   assert.equal(p.slots, 5);
   assert.deepEqual(run('hp'), [1, 2, null], 'max. HP 4 → 8');
-  assert.equal(st.maxHp, 8);
+  assert.equal(st.maxHp, 6);
   assert.deepEqual(run('mana'), [1, 2, null], 'max. Mana 4 → 6');
   assert.equal(st.maxMana, 6);
   assert.deepEqual(run('drawlimit'), [1, 2, null], 'Nachziehlimit 1 → 3');
