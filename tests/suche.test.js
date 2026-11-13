@@ -125,3 +125,28 @@ test('Vorausschau: mit leerer Hand wird nachgezogen statt erholt oder gepasst (0
     assert.equal(AI.plan(e.s, 0).pop().type, 'recover');
   });
 });
+
+test('Vorausschau: greift an, wenn der Gegner keine Handkarten hat, und besiegt einen passiven Gegner ohne Erschöpfung (0.13.6)', () => {
+  withSearch({ sim: 60 }, () => {
+    // Monster ohne Handkarten: Der Angriff trifft sicher, also wird angegriffen (früher oft Erholen oder Passen)
+    for (const seed of [41, 42, 43]) {
+      const { s, me, op } = combatSetup(seed, ['F1', 'E2']);
+      me.stats.mana = 2; me.stats.maxMana = 5; op.stats.hp = 6;
+      op.deck.hand.forEach((cd, i) => { if (cd) { op.deck.discard.push(cd); op.deck.hand[i] = null; } });
+      assert.equal(AI.plan(s, 0).pop().type, 'attack', 'Seed ' + seed + ': Angriff auf den Gegner ohne Handkarten');
+      op.stats.rainbow = 3;   // ein Schild, das jeden möglichen Angriff abfängt: keine Pflicht zum Angriff
+      assert.ok(AI.plan(s, 0).length >= 1);
+    }
+    // Der Mensch greift ein Monster an und passt dann nur noch: Die KI (Monsterführer) beendet den Kampf, bevor die Erschöpfung einsetzt
+    let ex = 0, n = 0;
+    for (const seed of [3, 4, 5, 6]) {
+      const s = M.newGame({ seed, ai: [false, true], first: 0 });
+      assert.ok(M.apply(s, { pid: 0, type: 'combat', elem: 'F' }).ok);
+      const c = s.combat; let g = 0;
+      while (s.combat === c && !s.over && g++ < 300) { const pid = M.actor(s); if (pid === 0) assert.ok(M.apply(s, { pid: 0, type: 'pass' }).ok); else assert.ok(AI.runTurn(s, pid).ok); }
+      assert.notEqual(s.combat, c, 'Kampf beendet'); n++;
+      if (s.log.some(l => /^Erschöpfung/.test(l.txt))) ex++;
+    }
+    assert.ok(ex <= 1, 'höchstens einer von ' + n + ' Kämpfen erreicht die Erschöpfung (' + ex + ')');
+  });
+});

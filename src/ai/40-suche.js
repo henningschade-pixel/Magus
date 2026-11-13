@@ -5,7 +5,8 @@
 // Im Durchspielen ziehen beide Seiten nach der Basis-KI. Die Zahl der Durchläufe verteilt ein Ausscheidungsverfahren: Nach jeder Runde fliegt die schwächere Hälfte der Züge raus, die übrigen werden in weiteren Welten genauer geprüft (alle Züge sehen dieselben Welten, damit der Zufall sie gleich trifft).
 // Stellschrauben (SEARCH, für alle Plätze; setSearch): sim = Durchläufe je Entscheidung (0 = aus, dann spielt die Basis-KI; 120 gewann 48 von 48 Partien gegen die Basis-KI, 240 war gegen 60 nicht messbar besser), ms = Zeitgrenze je Entscheidung in Millisekunden (0 = keine; mit Zeitgrenze sind Partien nicht mehr wiederholbar), steps = Schritte, nach denen ein Durchlauf abgebrochen und geschätzt wird, cands = höchstens so viele Angriffsfolgen.
 // Weltphase: world = Probekämpfe je Monster vor der Entscheidung, ein Monster anzugreifen (0 = Schätzformel der Basis-KI); thr = Mindestwert des Kampfs in Siegpunkten, thrWt = um so viel sinkt die Schwelle je Zug seit dem letzten Kampf (damit die Partie nicht stehen bleibt).
-const SEARCH = { sim: 120, ms: 0, steps: 90, cands: 14, world: 0, thr: 0, thrWt: 0.05 };
+// waitMix (seit 0.13.6): Wert des Abwartens im eigenen Angriffszug. −1 = der schlechtere Mittelwert aus „Gegner antwortet wie die Basis-KI“ und „Gegner wartet auch ab“; 0 bis 1 = Gewicht des abwartenden Gegners (0 = Verhalten bis 0.13.5). Mit 0.5 wartete die KI wieder deutlich häufiger ab.
+const SEARCH = { sim: 120, ms: 0, steps: 90, cands: 14, world: 0, thr: 0, thrWt: 0.05, waitMix: -1 };
 const SV = (pid, k) => { const q = PARAMS[pid]; return q && q[k] !== undefined ? q[k] : SEARCH[k]; };   // je Platz überschreibbar (setParams), damit Fassungen gegeneinander spielen können
 function setSearch(o) { if (o === null || o === undefined) return Object.assign({}, SEARCH); if (typeof o === 'number') o = { sim: o }; Object.assign(SEARCH, o); return Object.assign({}, SEARCH); }
 const now = () => (typeof performance !== 'undefined' && performance.now ? performance.now() : Date.now());
@@ -116,7 +117,7 @@ function attackOptions(state, side, opp, hand, A) {
         if (!(lv.ulti > 0) && lv.ew > 0) acts.push(A({ type: 'lfp', pick: purgePicks(stats, opp.stats, lv.ew) }));
         acts.push(A({ type: 'attack' }));
         const sig = f + '>' + (lv.ulti > 0 ? 'U' + ev.ultiEl : ev.ord && lvSum ? ev.ord.key : '-');
-        out.push({ acts, kind: 'attack', sig, prior: (dmg >= opp.stats.hp ? 50 : 0) + dmg * 1.2 + lvSum * 1.5 + (lv.ulti > 0 ? 2 + lv.ulti * 2 : 0) - ev.cost * 0.6 });
+        out.push({ acts, kind: 'attack', sig, dmg, prior: (dmg >= opp.stats.hp ? 50 : 0) + dmg * 1.2 + lvSum * 1.5 + (lv.ulti > 0 ? 2 + lv.ulti * 2 : 0) - ev.cost * 0.6 });
       }
     }
   }
@@ -197,6 +198,8 @@ function candidates(state, pid) {
   if (onlyDraw) return onlyDraw;
   if (c.action === 'attack') {
     if (M.allowed(state, 'attack', 'attack')) out.push(...attackOptions(state, side, opp, hand, A));
+    // Gegner ohne Handkarten (seit 0.13.6; die Zahl seiner Handkarten sieht man auch am Tisch): Er kann nicht verteidigen. Trifft ein Angriff durch sein Schild und liegt keine Falle, stehen nur solche Angriffe zur Wahl; welcher es wird, entscheidet weiter die Vorausschau.
+    if (!handList(opp.deck).length && !(opp.stats.traps || []).length) { const hit = out.filter(k => k.dmg > (opp.stats.rainbow || 0)); if (hit.length) return hit; }
     if (M.allowed(state, 'attack', 'recover') && s.mana < s.maxMana) out.push({ acts: [A({ type: 'recover' })], kind: 'recover', prior: 0 });
     else if (M.allowed(state, 'attack', 'pass')) out.push({ acts: [A({ type: 'pass' })], kind: 'pass', prior: 0 });
     else if (M.allowed(state, 'attack', 'recover')) out.push({ acts: [A({ type: 'recover' })], kind: 'recover', prior: 0 });
@@ -237,12 +240,22 @@ function searchPlan(state, pid) {
   const worlds = [];
   const world = w => { if (!worlds[w]) { const sd = (seed0 + Math.imul(w + 1, 0x27D4EB2F)) >>> 0, t = cloneState(state, sd); hideInfo(t, pid, M.makeRng(sd ^ 0x5bd1e995)); worlds[w] = { t, sd }; } return worlds[w]; };
   cands.forEach(k => { k.sum = 0; k.n = 0; k.bad = false; });
+  // Abwarten im eigenen Angriffszug (Erholen, Passen, Nachziehen) wird doppelt geprüft (seit 0.13.6): einmal mit einem Gegner, der wie die Basis-KI antwortet (meist greift er an), einmal mit einem Gegner, der in seinem nächsten Zug ebenfalls abwartet. Es zählt der für mich schlechtere Mittelwert, denn der Gegner wählt, was ihm mehr nützt.
+  // Vorher rechnete die Vorausschau fest damit, dass der Gegner in mein Abwarten hinein angreift und seine Karten verbraucht. So schien Abwarten fast immer besser als ein Angriff; warten beide, tritt der Kampf auf der Stelle, bis die Erschöpfung ihn entscheidet.
+  const waits = k => c.action === 'attack' && !c.forced && (k.kind === 'recover' || k.kind === 'pass' || k.kind === 'draw' || (k.kind === 'base' && k.acts[k.acts.length - 1].type !== 'attack' && k.acts[k.acts.length - 1].type !== 'freeDraw'));
+  cands.forEach(k => { k.wait = waits(k); k.sumW = 0; k.nW = 0; });
+  const val = k => { if (!(k.wait && k.nW)) return k.sum / k.n; const vb = k.sum / Math.max(1, k.n), vw = k.sumW / k.nW; return SEARCH.waitMix >= 0 ? (1 - SEARCH.waitMix) * vb + SEARCH.waitMix * vw : Math.min(vb, vw); };
   const run = (k, w) => {
     const W = world(w), t = cloneState(W.t, (W.sd + 1) >>> 0), cc = t.combat;
     if (!cc.forced) cc.sides[cc.turn].deck.marks = [];
     let ok = true;
     for (const a of k.acts) { if (!M.apply(t, a).ok) { ok = false; break; } if (t.combat !== cc) break; }
     if (!ok) { k.bad = true; k.sum -= 99; k.n++; return; }
+    if (k.wait && (w & 1) && t.combat === cc && !t.over && !cc.forced && cc.action === 'attack' && cc.sides[cc.turn].ctrl !== pid) {   // jede zweite Welt: Der Gegner wartet in seinem nächsten Zug auch ab
+      const q = cc.sides[cc.turn].ctrl;
+      applyFirst(t, [combatPlan(t, q, { noAtk: true })].concat(fallback(t, q).map(a => [a])));
+      k.sumW += rollout(t, pid, ctx, cc); k.nW++; return;
+    }
     k.sum += rollout(t, pid, ctx, cc); k.n++;
   };
   let alive = cands.slice(), done = 0, left = sim, out = false;
@@ -255,12 +268,12 @@ function searchPlan(state, pid) {
     }
     left -= per * alive.length; done += per;
     alive = alive.filter(k => !k.bad);
-    alive.sort((x, y) => y.sum / y.n - x.sum / x.n || y.prior - x.prior);
+    alive.sort((x, y) => val(y) - val(x) || y.prior - x.prior);
     if (!out) alive = alive.slice(0, Math.max(1, Math.ceil(alive.length / 2)));
     else alive = alive.slice(0, 1);
   }
   const best = alive[0];
-  if (SEARCH.debug) SEARCH.last = { ms: now() - t0, cands: cands.map(k => ({ kind: k.kind, acts: sigA(k.acts), n: k.n, v: k.n ? +(k.sum / k.n).toFixed(3) : null })), pick: best ? sigA(best.acts) : null };
+  if (SEARCH.debug) SEARCH.last = { ms: now() - t0, cands: cands.map(k => ({ kind: k.kind, acts: sigA(k.acts), n: k.n + k.nW, v: k.n + k.nW ? +val(k).toFixed(3) : null })), pick: best ? sigA(best.acts) : null };
   return best && !best.bad ? best.acts : base;
 }
 

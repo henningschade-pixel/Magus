@@ -101,13 +101,14 @@ function forcedPick(state, pid) {
   return cards.slice(0, Math.min(c.forced.n, cards.length)).map(x => x.slot);
 }
 // Kampfplan (seit 0.13.1 in Teilfunktionen zerlegt, Entscheidungen und Reihenfolge unverändert): Reaktion ohne Schaden (planReaction), Angriffszug (planAttack, darin Flucht nach Kampfprognose: fleeByForecast), Verteidigung (planDefense).
-function combatPlan(state, pid) {
+// opt.noAtk (seit 0.13.6, nur für die Vorausschau): Die Seite wartet in ihrem Angriffszug ab (erholen oder nachziehen) und greift nicht an.
+function combatPlan(state, pid, opt) {
   if (state.combat.forced && state.combat.forced.pid === pid) return [forcedAct(state, pid)];
   const c = state.combat, side = c.sides[c.turn], opp = c.sides[c.turn === 'a' ? 'b' : 'a'];
   const d = side.deck, hand = handList(d), A = a => Object.assign({ pid }, a);
   const s = side.stats, Q = P(pid);
   const canFlee = M.canFlee(state, pid) && (state.idleTurns || 0) < Q.fleeIdle;   // lange kein Kampf entschieden: nicht mehr fliehen, damit der Kampf einen Sieger bekommt (sonst Patt-Schleife Angreifen–Fliehen)
-  const X = { c, side, opp, d, hand, A, s, Q, canFlee };   // gemeinsamer Blick auf die Lage für die Teilpläne
+  const X = { c, side, opp, d, hand, A, s, Q, canFlee, noAtk: !!(opt && opt.noAtk) };   // gemeinsamer Blick auf die Lage für die Teilpläne
   if (c.action === 'defense' && !c.pending) return planReaction(state, pid, X);
   if (c.action === 'attack') return planAttack(state, pid, X);
   return planDefense(state, pid, X);
@@ -148,7 +149,7 @@ function planAttack(state, pid, X) {
   }
   const red = !!M.markerOf(state, pid).h.drawRed, payOk = s.mana >= M.drawManaCost(state, pid);   // roter Nachziehmarker: Nachziehen kostet Mana (ohne Mana nicht möglich)
   const lowMana = Q.rW * gain * Math.max(0, Q.rRef - s.mana) - (red ? Q.cRedA : 0);   // wenig Mana: nur noch starke Angriffe, sonst lieber erholen; roter Marker: auch schwächere Angriffe statt nachzuziehen
-  if (best && best.value > Q.aThr + lowMana - Q.pasDec * (opp.passed || 0) - Q.stallDec * Math.max(0, Math.floor(((c.turns || 0) - Q.stallFrom) / 2))) {   // Passt der Gegner im Angriffszug, bleibt er ohne Druck: dann lohnt auch ein knapper Angriff (sonst wartet die KI, bis die Anti-Stillstands-Schwelle sinkt)   // lange ohne Angriff: Schwelle sinkt, damit die KI nicht endlos nachzieht
+  if (!X.noAtk && best && best.value > Q.aThr + lowMana - Q.pasDec * (opp.passed || 0) - Q.stallDec * Math.max(0, Math.floor(((c.turns || 0) - Q.stallFrom) / 2))) {   // Passt der Gegner im Angriffszug, bleibt er ohne Druck: dann lohnt auch ein knapper Angriff (sonst wartet die KI, bis die Anti-Stillstands-Schwelle sinkt)   // lange ohne Angriff: Schwelle sinkt, damit die KI nicht endlos nachzieht
     const acts = best.ord.map(h => A({ type: 'mark', slot: h.slot }));
     const lvB = M.levelsFor(best.ev);
     if (best.ev.levels.ulti <= 0 && lvB.ew > 0) acts.push(A({ type: 'lfp', pick: purifyPicks(s, opp, lvB.ew) }));   // Läuterung: eigene Todesmarker, dann Schild und Manamarker des Gegners, zuletzt dessen Nachziehtokens

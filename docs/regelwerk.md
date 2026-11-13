@@ -690,6 +690,16 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Tests:** Drei Tests angepasst (Nachziehmarker Weltphase, Nachziehlimit Kauf, Nachziehlimit Weltphase; der Marker-Reset läuft jetzt über den Händler), neuer Test „Magie kaufen und Upgrades sind keine Aktion mehr“. `tests/golden.json` ist neu erzeugt (absichtliche Regeländerung).
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
 
+## Änderung 0.13.6 (13.11.)
+
+- Keine Regeländerung, nur der Computergegner (Vorausschau, `src/ai/40-suche.js`): Er griff oft nicht an, obwohl er konnte, auch nicht gegen einen Gegner ohne Handkarten. Kämpfe liefen dann bis in die Erschöpfung.
+- Ursache: Die Vorausschau spielt nach ihrem eigenen Zug beide Seiten nach der Basis-KI weiter. Die Basis-KI greift fast immer an. Wer abwartete, sah deshalb in der Rechnung einen Gegner, der in die (in der überlegenen Farbe kostenlose) Verteidigung hineinläuft und seine Karten verbraucht. Abwarten wirkte so durchweg besser als ein Angriff, auch mit 3000 statt 120 Durchläufen; es lag also nicht am Zufall.
+- Neu: Abwarten im eigenen Angriffszug (Erholen, Passen, Nachziehen) wird in jeder zweiten Welt mit einem Gegner durchgespielt, der in seinem nächsten Zug ebenfalls abwartet (`combatPlan` mit `noAtk`). Es zählt der schlechtere der beiden Mittelwerte. Stellschraube `waitMix` in `SEARCH` (−1 = der schlechtere Wert; 0 bis 1 = Gewicht des abwartenden Gegners im Mittel; 0 = altes Verhalten).
+- Neu: Hat der Gegner keine Handkarten (am Tisch sichtbar) und keine Falle, stehen nur Angriffe zur Wahl, die mehr Schaden machen, als sein Schild abfängt. Gibt es keinen solchen Angriff, bleibt die Wahl frei.
+- Messung, je 36 Kämpfe gegen einen Gegner, der nur passt und nicht verteidigt: bisher im Mittel 20,1 Züge, 12 Kämpfe mit Erschöpfung; jetzt 12,4 Züge, keiner. Derselbe Gegner mit leerer Hand: bisher 24,5 Züge, 25 Kämpfe mit Erschöpfung; jetzt 11,1 Züge, 2.
+- Im Spiel der Vorausschau gegen sich selbst (8 Partien): Wo Schaden möglich war, blieb der Angriff bisher 427-mal aus (376 Angriffe), jetzt 115-mal (402 Angriffe). Der Anteil der Kämpfe mit Erschöpfung sank dort kaum (33 von 108 auf 29 von 108, je 10 Partien): Zwischen zwei gleich starken Seiten hält die kostenlose Verteidigung die Kämpfe lang.
+- Stärke: gegen die Basis-KI 47 von 48 Partien gewonnen. Gegen die abwartende Fassung 0.13.5 22 von 56; der Unterschied liegt im Bereich des Zufalls, zeigt aber eher nach unten. Abwarten lohnt sich gegen einen Angreifer also weiterhin, das ist eine Frage der Regeln (Verteidigung gratis), nicht der KI.
+
 ## Änderung 0.13.5 (13.11.)
 
 - Keine Regeländerung, nur der Mehrspieler-Modus (`src/ui/28-peerjs.js`, `src/ui/29-mehrspieler.js`).
