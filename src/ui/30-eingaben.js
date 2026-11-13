@@ -28,6 +28,7 @@ function onAct(d) {
     case 'mphost': mpHost(); break;
     case 'mpjoin': mpJoin(); break;
     case 'mpexit': mpLeave(); showStart(); break;
+    case 'mpresume': mpRestore(mpSaved()); break;
     case 'deckview': deckView = !deckView; render(); break;
     case 'deckclose': deckView = false; render(); break;
     case 'dismiss': dismissOverlay(); break;

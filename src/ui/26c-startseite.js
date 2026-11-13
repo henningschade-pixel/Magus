@@ -62,12 +62,14 @@ function showStart(pg) {
   overlay.style.display = 'flex'; overlay.className = 'overlay';
   menuView = () => showStart(pg);
   const run = G && !G.over && !MP && started;
+  const mpsv = MP ? null : mpSaved();   // unterbrochene Mehrspieler-Partie auf diesem Gerät
   const back = menuTo('main', 'Zurück');
   let h = '<div class="box start"><h1>Magus</h1>';
   if (pg === 'main') {
     h += '<img class="logo" alt="" src="assets/img/logo.webp"><div class="menulist">' +
       (run ? menuBtn('resume', 'Spiel fortsetzen', '', 'primary') : '') +
-      menuTo('single', 'Einzelspieler', run ? '' : 'primary') + menuTo('multi', 'Mehrspieler') + menuTo('settings', 'Einstellungen') + menuTo('credits', 'Credits') + menuBtn('quit', 'Beenden') + '</div>' +
+      (mpsv ? menuBtn('mpresume', 'Partie fortsetzen (Raum ' + mpsv.code.toUpperCase() + ')', ' title="Setzt die unterbrochene Mehrspieler-Partie fort"', run ? '' : 'primary') : '') +
+      menuTo('single', 'Einzelspieler', run || mpsv ? '' : 'primary') + menuTo('multi', 'Mehrspieler') + menuTo('settings', 'Einstellungen') + menuTo('credits', 'Credits') + menuBtn('quit', 'Beenden') + '</div>' +
       '<div class="menufoot">' + menuTo('about', 'Neu in Version ' + MAGUS_VERSION, 'link') + '</div>';
   } else if (pg === 'single') {
     h += '<h2>Einzelspieler</h2><div class="menulist">' +

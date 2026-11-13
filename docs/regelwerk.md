@@ -690,6 +690,14 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Tests:** Drei Tests angepasst (Nachziehmarker Weltphase, Nachziehlimit Kauf, Nachziehlimit Weltphase; der Marker-Reset läuft jetzt über den Händler), neuer Test „Magie kaufen und Upgrades sind keine Aktion mehr“. `tests/golden.json` ist neu erzeugt (absichtliche Regeländerung).
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
 
+## Änderung 0.13.5 (13.11.)
+
+- Keine Regeländerung, nur der Mehrspieler-Modus (`src/ui/28-peerjs.js`, `src/ui/29-mehrspieler.js`).
+- Ursache der abweichenden Spielstände: Markieren und Sperren sind auch außerhalb des eigenen Zuges erlaubt. Handelten beide Geräte gleichzeitig, standen an derselben Stelle der Aktionsliste zwei verschiedene Aktionen; jedes Gerät überging die des anderen, und der Abgleich verglich nur die Länge der Listen. Jetzt gilt die Reihenfolge des Gastgebers: Der Gast baut die Partie bis zur Stelle neu auf, fügt die Aktion des Gastgebers ein und führt seine eigene dahinter erneut aus.
+- Abgleich alle zwei Sekunden mit Prüfsumme des Spielstands (Phase, Zug, Werte, Handkarten, Markierungen, Sperren). Weicht sie bei gleicher Aktionszahl ab, baut der Gast die Partie aus den Aktionen des Gastgebers neu auf.
+- Verbindung: Beide Geräte senden alle zwei Sekunden ein Lebenszeichen. Bleibt es acht Sekunden aus, wird die Verbindung neu aufgebaut; ebenso die Anmeldung beim Vermittlungsserver. Nach Bildschirmsperre, Tab-Wechsel oder WLAN-Wechsel wird sofort geprüft.
+- Partie fortsetzen: Die Partie liegt im Speicher des Browsers (höchstens zwölf Stunden, bis sie zu Ende ist). Nach dem Neuladen geht es von selbst weiter, sonst über den Knopf „Partie fortsetzen“ im Hauptmenü. Eine verlassene Mehrspieler-Partie läuft nicht mehr gegen den Computer weiter.
+
 ## Änderung 0.13.4 (13.11.)
 
 - Keine Regeländerung, nur der Computergegner: Mit leerer Hand zieht er im Kampf immer nach, solange Nachziehen möglich ist (ein Gratis-Nachziehen zuerst). Bisher wählte die Vorausschau (`src/ai/40-suche.js`) in dieser Lage meist Erholen oder Passen: in sechs Probepartien 105-mal Erholen und 103-mal Passen gegenüber 58-mal Nachziehen.

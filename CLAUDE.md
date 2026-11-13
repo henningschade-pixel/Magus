@@ -15,7 +15,7 @@ Will der Nutzer das Spiel starten, diese Adresse öffnen.
 1. Quellen unter `src/` ändern. `index.html` wird gebaut und nie von Hand bearbeitet.
 2. Versionsnummer und Versionsbeschreibung in `src/ui/01-versionen.js`: `MAGUS_VERSION` hochzählen und in `VERSIONEN` oben einen Eintrag `[Nummer, Text]` ergänzen.
 3. `docs/regelwerk.md`: Abschnitt `## Änderung <Nummer> (TT.MM.)` vor dem bisher neuesten Eintrag einfügen (ein Test prüft, dass er da ist).
-4. `npm run build`, dann `npm test` (156 Tests, rund zwei Minuten; die Browser-Tests brauchen Playwright mit Chromium und werden sonst übersprungen).
+4. `npm run build`, dann `npm test` (157 Tests, rund zwei Minuten; die Browser-Tests brauchen Playwright mit Chromium und werden sonst übersprungen).
 5. `src/` und `index.html` zusammen committen.
 
 Der Test „Verhalten unverändert“ vergleicht 24 feste KI-Partien mit `tests/golden.json`. Bei einem reinen Umbau darf er sich nicht ändern. Nur nach einer gewollten Regel- oder KI-Änderung: `npm run golden`.

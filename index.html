@@ -2902,10 +2902,11 @@ let upSeen = null, hpHold = null, curseHold = {}, stageSeen = 1, endSnd = null, 
 
 /* ---------- Versionen: Versionsnummer und Versionsbeschreibung (Seite „Neu in Version …“) ---------- */
 // Aktuelle Versionsnummer: einzige Stelle, an der sie gesetzt wird (Menü-Link und Über-Seite lesen sie von hier; bei jedem Schritt hochzählen)
-const MAGUS_VERSION = '0.13.4';
+const MAGUS_VERSION = '0.13.5';
 // Versionsbeschreibung: ein Eintrag je Version, die neueste zuerst. Bei jedem Schritt oben einen Eintrag [Nummer, Text] ergänzen;
 // der erste Eintrag gehört zu MAGUS_VERSION und erscheint unter „Neu in Version …“.
 const VERSIONEN = [
+  ['0.13.5', '<b>Mehrspieler stabiler, Partie fortsetzen:</b> Auf Tablets riss die Verbindung öfter ab, ohne dass das Spiel es bemerkte, und die beiden Geräte konnten unterschiedliche Spielstände bekommen, wenn beide gleichzeitig etwas taten (Karten markieren und sperren geht auch außerhalb des eigenen Zuges). Jetzt prüfen beide Geräte alle zwei Sekunden, ob die Verbindung lebt und ob ihre Spielstände übereinstimmen. Eine tote Verbindung wird von selbst neu aufgebaut, auch nach Bildschirmsperre oder WLAN-Wechsel; bei gleichzeitigen Aktionen gilt die Reihenfolge des Gastgebers, bei Abweichungen dessen Spielstand. Ein Hinweis zeigt an, wenn der Mitspieler nicht erreichbar ist und wenn er zurück ist. Neu ist der Knopf „Partie fortsetzen“ im Hauptmenü: Er führt in die unterbrochene Partie zurück, auch wenn der Tab geschlossen oder die Partie verlassen wurde (bis zu zwölf Stunden, solange sie nicht zu Ende ist). Eine verlassene Mehrspieler-Partie lässt sich nicht mehr gegen den Computer weiterspielen. An den Regeln ändert sich nichts.'],
   ['0.13.4', '<b>Computergegner zieht bei leerer Hand nach:</b> Hatte der Computergegner im Kampf keine Karte mehr auf der Hand, erholte er sich oft (Mana) oder passte, statt nachzuziehen. Mana lässt sich ohne Karten aber nicht einsetzen, Karten ohne Mana schon: Die Verteidigung in der überlegenen Farbe ist gratis. Mit leerer Hand zieht er jetzt immer nach, solange das möglich ist (zuerst mit einem Gratis-Nachziehen). An den Regeln ändert sich nichts.'],
   ['0.13.3', '<b>Upgrade-Punkte mit Vorschau:</b> Im Tempel zeigt die Zeile „Du“ beim Einstellen eines Opfers die neue Zahl der Upgrade-Punkte in Grün, beim Überfahren eines Kauf-Knopfes die sinkende Zahl in Rot, wie bei Gold, HP und Mana. Der Hinweis „+6 Punkte“ war missverständlich und heißt jetzt „+6 Tempelpunkte“.'],
   ['0.13.2.3', '<b>Wieder zwei Ausbauten je Wert:</b> Die Obergrenze für HP und Mana aus Version 0.13.2.2 ist zurückgenommen. Es gilt wieder eine Regel für alles: Jeder Wert (HP, Mana, Ausspiellimit, Handkarten) lässt sich zweimal ausbauen, der erste Schritt kostet 1 Gold, der zweite 2. Die HP reichen damit von 4 bis 6, das Mana von 4 bis 6. Grund: Am Tisch ist die einheitliche Regel einfacher, und die Messung zeigte keinen Nutzen der aufgehobenen Grenze.'],
@@ -6069,12 +6070,14 @@ function showStart(pg) {
   overlay.style.display = 'flex'; overlay.className = 'overlay';
   menuView = () => showStart(pg);
   const run = G && !G.over && !MP && started;
+  const mpsv = MP ? null : mpSaved();   // unterbrochene Mehrspieler-Partie auf diesem Gerät
   const back = menuTo('main', 'Zurück');
   let h = '<div class="box start"><h1>Magus</h1>';
   if (pg === 'main') {
     h += '<img class="logo" alt="" src="assets/img/logo.webp"><div class="menulist">' +
       (run ? menuBtn('resume', 'Spiel fortsetzen', '', 'primary') : '') +
-      menuTo('single', 'Einzelspieler', run ? '' : 'primary') + menuTo('multi', 'Mehrspieler') + menuTo('settings', 'Einstellungen') + menuTo('credits', 'Credits') + menuBtn('quit', 'Beenden') + '</div>' +
+      (mpsv ? menuBtn('mpresume', 'Partie fortsetzen (Raum ' + mpsv.code.toUpperCase() + ')', ' title="Setzt die unterbrochene Mehrspieler-Partie fort"', run ? '' : 'primary') : '') +
+      menuTo('single', 'Einzelspieler', run || mpsv ? '' : 'primary') + menuTo('multi', 'Mehrspieler') + menuTo('settings', 'Einstellungen') + menuTo('credits', 'Credits') + menuBtn('quit', 'Beenden') + '</div>' +
       '<div class="menufoot">' + menuTo('about', 'Neu in Version ' + MAGUS_VERSION, 'link') + '</div>';
   } else if (pg === 'single') {
     h += '<h2>Einzelspieler</h2><div class="menulist">' +
@@ -6219,46 +6222,93 @@ function specAdvance() {
 }
 /* ---------- PeerJS-Adapter: gleiche Schnittstelle wie die Raum-Funktion von claude.ai ----------
    Direkte Verbindung (WebRTC) zwischen zwei Browsern; PeerJS' kostenloser Vermittlungsserver
-   dient nur zum Verbindungsaufbau. Der Gastgeber meldet sich als 'magus-<code>' an, der Gast verbindet sich dorthin. */
+   dient nur zum Verbindungsaufbau. Der Gastgeber meldet sich als 'magus-<code>' an, der Gast verbindet sich dorthin.
+   Seit 0.13.5 überwacht ein Wächter (alle 2 s) die Verbindung: Beide Seiten senden ein Lebenszeichen; bleibt es 8 s aus,
+   gilt die Verbindung als tot (Tablets melden einen Abbruch oft nicht) und wird neu aufgebaut. Der Wächter meldet sich
+   auch beim Vermittlungsserver neu an, wenn diese Anmeldung verloren ging (Bildschirmsperre, WLAN-Wechsel). */
 const PeerRoom = {
   join(name, host) {
     return new Promise((resolve, reject) => {
-      const subs = {}, pl = new Set(); let conn = null, peer = null, left = false, retry = null;
+      const id = 'magus-' + name.replace(/^mg-/, '');
+      const subs = {}, pl = new Set(); let conn = null, peer = null, left = false, retry = null, timer = null;
+      let last = 0, dialAt = 0, dials = 0, had = false, wasOn = false, lostAt = 0, cycleAt = 0, sigAt = 0, tickAt = Date.now();
       const fire = (t, data) => (subs[t] || []).slice().forEach(f => { try { f({ data, sameTab: false }); } catch (e) { } });
-      const peers = () => [{ sameTab: true }].concat(conn && conn.open ? [{ sameTab: false }] : []);
-      const ping = () => { const p = peers(); pl.forEach(f => { try { f(p); } catch (e) { } }); };
+      const isOn = () => !!(conn && conn.open);
+      const peers = () => [{ sameTab: true }].concat(isOn() ? [{ sameTab: false }] : []);
+      const ping = () => {
+        const on = isOn(); if (on) { had = true; dials = 0; } else if (wasOn) lostAt = Date.now(); wasOn = on;
+        const p = peers(); pl.forEach(f => { try { f(p); } catch (e) { } });
+      };
+      const drop = () => { const c = conn; conn = null; if (c) { try { c.close(); } catch (e) { } } ping(); };
       const attach = c => {
-        if (conn && conn !== c) { try { conn.close(); } catch (e) { } }
+        if (!c) return;   // peer.connect liefert nichts, solange die Anmeldung beim Vermittlungsserver fehlt
+        if (conn && conn !== c) { const o = conn; conn = null; try { o.close(); } catch (e) { } }
         conn = c;
-        c.on('open', ping);
-        c.on('data', m => { if (m && m.t) fire(m.t, m.d); });
+        c.on('open', () => { if (conn === c) { last = Date.now(); ping(); } });
+        c.on('data', m => { if (conn !== c) return; last = Date.now(); if (m && m.t && m.t !== '_p') fire(m.t, m.d); });
         c.on('close', () => { if (conn === c) { conn = null; ping(); if (!host) later(); } });
         c.on('error', e => { room.err = (e && e.type) || 'Verbindungsfehler'; });
         c.on('iceStateChanged', st => { room.ice = st; });
-        if (c.open) ping();
+        if (c.open) { last = Date.now(); ping(); }
       };
-      const dial = () => { if (left || !peer || peer.destroyed || (conn && conn.open)) return; try { attach(peer.connect('magus-' + name.replace(/^mg-/, ''), { reliable: true })); } catch (e) { later(); } };
+      const dial = () => {
+        if (left || host || isOn() || !peer || peer.destroyed || peer.disconnected || !peer.open) return;   // fehlende Anmeldung holt der Wächter nach
+        dialAt = Date.now(); dials++;
+        try { attach(peer.connect(id, { reliable: true })); } catch (e) { }
+      };
       const later = () => { clearTimeout(retry); retry = setTimeout(dial, 2000); };
+      const tick = () => {
+        if (left) return;
+        const now = Date.now();
+        if (now - tickAt > 6000) last = Math.max(last, now - 5000);   // Gerät war eingefroren (Bildschirmsperre, anderer Tab): der Verbindung 3 s geben, sich zu melden
+        tickAt = now;
+        if (isOn()) {
+          try { conn.send({ t: '_p' }); } catch (e) { }
+          if (now - last > 8000) { room.err = 'keine Antwort'; drop(); }
+        }
+        if (isOn()) return;
+        if (!peer || peer.destroyed) { if (now - sigAt > 4000) create(); }
+        else if (peer.disconnected) { if (now - sigAt > 1500) { sigAt = now; try { peer.reconnect(); } catch (e) { } } }
+        else if (!peer.open) { if (now - sigAt > 15000) { try { peer.destroy(); } catch (e) { } } }   // Anmeldung hängt: neu anfangen
+        else if (!host) {
+          if (now - dialAt > 6000) { if (dials >= 3) { dials = 0; try { peer.destroy(); } catch (e) { } } else dial(); }   // drei Anläufe ohne Antwort: Anmeldung erneuern
+        } else if (had && now - Math.max(lostAt, cycleAt) > 20000) { cycleAt = now; try { peer.disconnect(); } catch (e) { } }   // Gastgeber: Anmeldung auffrischen, falls sie unbemerkt abgerissen ist
+      };
+      const wake = () => { if (!left && timer && document.visibilityState !== 'hidden') tick(); };
       const room = {
-        emit(t, d) { try { if (conn && conn.open) conn.send({ t, d }); } catch (e) { } return Promise.resolve(); },
+        emit(t, d) { try { if (isOn()) conn.send({ t, d }); } catch (e) { } return Promise.resolve(); },
         on(t, f) { (subs[t] = subs[t] || []).push(f); return () => { subs[t] = (subs[t] || []).filter(x => x !== f); }; },
         peerjs: true, peers, onPeers(f) { pl.add(f); return () => pl.delete(f); },
-        async leave() { left = true; clearTimeout(retry); try { if (conn) conn.close(); } catch (e) { } try { peer.destroy(); } catch (e) { } }
+        async leave() { stop(); try { if (conn) conn.close(); } catch (e) { } try { peer.destroy(); } catch (e) { } }
+      };
+      const stop = () => {
+        left = true; clearTimeout(retry); clearInterval(timer);
+        document.removeEventListener('visibilitychange', wake); window.removeEventListener('pageshow', wake); window.removeEventListener('online', wake);
       };
       let tries = 0;
       const create = () => {
-        const opts = { debug: 0 };
-        peer = host ? new window.Peer('magus-' + name.replace(/^mg-/, ''), opts) : new window.Peer(opts);
-        peer.on('open', () => { room.opened = true; room.srv = 'Vermittlungsserver erreicht'; resolve(room); if (!host) dial(); });
-        peer.on('connection', c => { if (host) attach(c); });
-        peer.on('disconnected', () => { try { if (!left && !peer.destroyed) peer.reconnect(); } catch (e) { } });
-        peer.on('error', e => {
+        if (left) return;
+        sigAt = Date.now();
+        const p = peer = host ? new window.Peer(id, { debug: 0 }) : new window.Peer({ debug: 0 });
+        p.on('open', () => {
+          if (peer !== p || left) return;
+          room.srv = 'Vermittlungsserver erreicht';
+          if (!room.opened) {
+            room.opened = true; timer = setInterval(tick, 2000);
+            document.addEventListener('visibilitychange', wake); window.addEventListener('pageshow', wake); window.addEventListener('online', wake);
+            resolve(room);
+          }
+          dial();
+        });
+        p.on('connection', c => { if (host && peer === p) attach(c); });
+        p.on('error', e => {
+          if (peer !== p) return;
           room.err = (e && e.type) || String(e);
           if (!room.opened) {
-            if (host && e.type === 'unavailable-id' && ++tries < 5) { try { peer.destroy(); } catch (x) { } setTimeout(create, 3000); return; }   // alte Anmeldung nach Neuladen läuft noch aus
-            if (e.type !== 'peer-unavailable') { reject(e); return; }
+            if (host && e.type === 'unavailable-id' && ++tries < 20) { try { p.destroy(); } catch (x) { } setTimeout(create, 3000); return; }   // alte Anmeldung nach Neuladen läuft noch aus (bis zu einer Minute)
+            if (e.type !== 'peer-unavailable') { stop(); reject(e); return; }
           }
-          if (!host && e.type === 'peer-unavailable') later();
+          if (!host && e.type === 'peer-unavailable') { dials = 0; later(); }   // Vermittlung antwortet, der Gastgeber ist nur gerade nicht angemeldet
         });
       };
       create();
@@ -6267,7 +6317,10 @@ const PeerRoom = {
 };
 /* ---------- Mehrspieler (Raum-Funktion von claude.ai) ----------
    Beide Geräte rechnen dasselbe Spiel (gleicher Startwert) und tauschen nur Aktionen aus.
-   Protokoll: hello (Gast tritt bei) → start (Startwert, Regeln) → need (ab Aktion n bitte) → acts; act = eine neue Aktion. */
+   Protokoll: hello (Gast tritt bei) → start (Startwert, Regeln) → need (ab Aktion n bitte) → acts; act = eine neue Aktion.
+   sync (alle 2 s): Zahl der Aktionen und Prüfsumme des Spielstands. Fehlen Aktionen, werden sie nachgereicht; weicht die
+   Prüfsumme ab, gilt der Stand des Gastgebers: Der Gast baut die Partie aus dessen Aktionen neu auf (resync).
+   Die Partie liegt zusätzlich im Speicher des Browsers, damit sie nach Neuladen oder geschlossenem Tab fortgesetzt werden kann. */
 let MP = null, roomApi;
 const MP_KEY = 'magus-mp';
 // Kennung dieser Spielversion: beide Geräte müssen denselben Programmtext haben, sonst rechnen sie unterschiedlich.
@@ -6291,39 +6344,77 @@ async function mpOffer() {   // Startbildschirm: Mehrspielerbereich nur zeigen, 
 }
 function mpMsg(t, bad) { const m = document.getElementById('mpmsg'); if (m) { m.textContent = t || ''; m.style.color = bad ? 'var(--bad)' : ''; } }
 function mpCode() { const a = 'abcdefghjkmnpqrstuvwxyz23456789'; let s = ''; for (let i = 0; i < 5; i++) s += a[Math.random() * a.length | 0]; return s; }
-function mpSave() { try { if (MP && MP.started) sessionStorage.setItem(MP_KEY, JSON.stringify({ code: MP.code, seat: MP.seat, host: MP.host, seed: MP.seed, first: MP.first, rules: MP.rules, log: MP.log })); } catch (e) { } }
-function mpForget() { try { sessionStorage.removeItem(MP_KEY); } catch (e) { } }
+// Zwei Ablagen: sessionStorage (dieser Tab: nach Neuladen geht es von selbst weiter) und localStorage (Knopf „Partie fortsetzen“, auch nach geschlossenem Tab)
+const MP_STORES = [() => sessionStorage, () => localStorage];
+function mpSave() {
+  if (!MP || !MP.started) return;
+  const t = JSON.stringify({ code: MP.code, seat: MP.seat, host: MP.host, seed: MP.seed, first: MP.first, rules: MP.rules, log: MP.log, ts: Date.now(), over: !!(G && G.over) });
+  MP_STORES.forEach(st => { try { st().setItem(MP_KEY, t); } catch (e) { } });
+}
+function mpForget() { try { sessionStorage.removeItem(MP_KEY); } catch (e) { } }   // die Ablage für „Partie fortsetzen“ bleibt, bis die Partie zu Ende ist oder eine neue beginnt
+function mpSaved(only) {   // gespeicherte, noch laufende Partie (höchstens 12 Stunden alt) oder null
+  for (const st of only ? [MP_STORES[0]] : MP_STORES) {
+    try { const sv = JSON.parse(st().getItem(MP_KEY) || 'null'); if (sv && sv.code && Array.isArray(sv.log) && !sv.over && Date.now() - (sv.ts || Date.now()) < 12 * 3600e3) return sv; } catch (e) { }
+  }
+  return null;
+}
 function mpOnline() { return !!MP && MP.room.peers().some(p => !p.sameTab); }
+// Prüfsumme des Spielstands: beide Geräte müssen nach gleich vielen Aktionen denselben Wert haben
+function mpHash() {
+  const hand = d => d && d.hand ? [d.hand.map(x => x ? x.id + (x.locked ? '!' : '') : 0), d.marks || 0, d.draw ? d.draw.length : 0] : 0, c = G.combat;
+  const t = JSON.stringify([G.phase, G.stage, G.showdown, G.turn, G.logN, !!G.over, G.players.map(p => [p.sp, M.prim(p.stats), hand(p.deck)]), c ? [c.turn, ['a', 'b'].map(k => [M.prim(c.sides[k].stats), hand(c.sides[k].deck)])] : 0]);
+  let h = 2166136261; for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return (h >>> 0).toString(36);
+}
+function mpBeat() { if (MP && MP.started && G) mpEmit('sync', { n: MP.log.length, h: mpHash() }); }
+// Gast: Partie aus den Aktionen des Gastgebers neu aufbauen (nach abweichender Prüfsumme oder einer Aktion, die sich nicht ausführen ließ)
+function mpRepair() {
+  if (!MP || MP.host || !MP.started || Date.now() - (MP.fixAt || 0) < 6000) return;
+  MP.fixAt = Date.now();
+  if (++MP.bad > 3) { if (MP.bad === 4) mpWait('Spielstände weichen ab', '<p class="bad">Die beiden Geräte rechnen trotz Abgleich unterschiedlich.</p><p class="note">Bitte auf beiden Geräten die Seite neu laden und „Partie fortsetzen“ wählen.</p>'); return; }
+  toast('Spielstand wird mit dem Gastgeber abgeglichen …');
+  mpStart(MP.seed, MP.first, MP.rules, true); MP.quiet = true;
+  mpEmit('need', { from: 0 });
+}
+function mpQuiet() { if (G.over) return; endView = null; modal = null; introSeen = G.phase === 'combat' && G.combat.mode === 'showdown' ? G.showdown : -1; hold = 0; }   // nachgeholte Aktionen: keine Ergebnis- und Ankündigungsbildschirme von früher
 function mpChip() {   // die Rauminformation steht im Home-Menü; der Home-Knopf wird rot, wenn der Mitspieler offline ist
+  if (MP && MP.started) { const on = mpOnline(); if (MP.on !== undefined && MP.on !== on) toast(on ? 'Mitspieler wieder verbunden.' : 'Verbindung zum Mitspieler unterbrochen. Sie wird neu aufgebaut …'); MP.on = on; }
   const h = document.getElementById('homebtn'); if (h) h.classList.toggle('off', !!MP && !mpOnline());
   const m = document.getElementById('mproom'); if (m && MP) { const on = mpOnline(); m.textContent = 'Raum ' + MP.code.toUpperCase() + ' · ' + (on ? 'online' : 'offline'); m.style.color = on ? '' : 'var(--bad)'; }
 }
 async function mpOpen(code, host) {
   const api = await mpRoomApi(); if (!api) { mpMsg('Mehrspieler ist hier nicht verfügbar.', true); return false; }
   let room; try { room = await api.join('mg-' + code, host); } catch (e) { mpMsg(e && e.type === 'unavailable-id' ? 'Code schon vergeben, bitte erneut versuchen.' : 'Raum konnte nicht geöffnet werden (Verbindung zum Vermittlungsserver?).', true); return false; }
-  MP = { room, code, host, seat: host ? 0 : 1, log: [], seed: null, first: 0, rules: null, started: false, subs: [], hello: null };
+  MP = { room, code, host, seat: host ? 0 : 1, log: [], seed: null, first: 0, rules: null, started: false, subs: [], hello: null, bad: 0 };
   // nur das eigene Echo (sameTab) wird ignoriert: das zweite Gerät derselben Person zählt als Mitspieler
   const on = (t, f) => MP.subs.push(room.on(t, m => { if (!m.sameTab) f(m.data || {}, m); }));
   on('hello', d => { if (!MP.host) return; if (d.v !== BUILD) { mpEmit('start', { v: BUILD }); if (!MP.started) mpOldVersion('Der Mitspieler'); return; } if (!MP.started) mpBegin(); mpEmit('start', { seed: MP.seed, first: MP.first, rules: MP.rules, v: BUILD }); });
   on('start', d => { if (MP.host) return; if (d.v !== BUILD) { clearInterval(MP.hello); mpOldVersion('Der Gastgeber'); return; } if (!MP.started || MP.seed !== d.seed) mpStart(d.seed, d.first, d.rules); clearInterval(MP.hello); mpEmit('need', { from: MP.log.length }); });
   on('need', d => mpSendLog(+d.from || 0));
-  on('sync', d => { if (!MP.started) return; const n = +d.n; if (n > MP.log.length) mpEmit('need', { from: MP.log.length }); else if (n < MP.log.length) mpSendLog(n); });   // Herzschlag: verlorene Nachrichten nachholen
-  MP.beat = setInterval(() => { if (MP && MP.started) mpEmit('sync', { n: MP.log.length }); }, 2000);
+  on('sync', d => {   // Herzschlag: verlorene Nachrichten nachholen, abweichende Spielstände erkennen
+    if (!MP.started || !G) return; const n = +d.n;
+    if (n > MP.log.length) mpEmit('need', { from: MP.log.length }); else if (n < MP.log.length) mpSendLog(n);
+    else if (d.h && d.h !== mpHash()) { if (MP.host) mpEmit('resync', {}); else mpRepair(); }
+    else MP.bad = 0;
+  });
+  on('resync', () => mpRepair());
+  MP.beat = setInterval(mpBeat, 2000);
   on('act', d => mpRecv(+d.i, [d.a]));
   on('acts', d => mpRecv(+d.from, d.list || []));
-  MP.subs.push(room.onPeers(() => mpChip()));
+  MP.subs.push(room.onPeers(() => { mpChip(); if (mpOnline()) mpBeat(); }));   // wieder verbunden: sofort abgleichen
   return true;
 }
 function mpEmit(topic, data) { return MP.room.emit(topic, data).catch(e => { if (e && e.code === 'not_permitted') mpMsg('Zum Mitspielen sind Mitwirken-Rechte (Contributor) nötig.', true); }); }
-function mpStart(seed, first, rules) {
-  MP.seed = seed; MP.first = first; MP.rules = rules; MP.started = true; MP.log = [];
+function mpStart(seed, first, rules, again) {   // again: dieselbe Partie wird neu aufgebaut (ohne Eröffnung)
+  MP.seed = seed; MP.first = first; MP.rules = rules; MP.started = true; MP.log = []; MP.quiet = false;
   ME = MP.seat; OPP = 1 - ME;
   clearTimeout(aiTimer); els.forEach(r => r.el.remove()); els.clear();
   G = M.newGame({ seed, first, names: ME === 0 ? ['Du', 'Mitspieler'] : ['Mitspieler', 'Du'], ai: [false, false], rules });
   M.record(G); G.keepSnap = true;
   seenCombat = null; endView = null; modal = null; introSeen = -1; hold = 0; started = true;
   overlay.style.display = 'none'; overlay.innerHTML = '';
-  Intro.start(); mpChip(); pump();
+  if (again) Intro.stop(); else Intro.start();
+  mpChip(); pump();
 }
 function mpBegin() {   // Gastgeber: Spiel anlegen
   const rules = Object.assign({}, M.DEFAULT_RULES, gameRules());   // Spieleinstellungen des Gastgebers gelten für beide
@@ -6344,17 +6435,31 @@ function mpRecv(from, list) {
   if (from > MP.log.length) { mpEmit('need', { from: MP.log.length }); return; }
   let applied = 0;
   for (let k = 0; k < list.length; k++) {
-    if (from + k < MP.log.length) continue;
+    if (from + k < MP.log.length) {
+      // Beide Geräte haben gleichzeitig gehandelt (Markieren und Sperren gehen auch außerhalb des eigenen Zuges): die Aktion des Gastgebers kommt zuerst
+      if (!MP.host && JSON.stringify(MP.log[from + k]) !== JSON.stringify(list[k])) { mpRebase(from + k, list.slice(k)); return; }
+      continue;
+    }
     const a = list[k], prev = G.logN, r = M.apply(G, a);
-    if (!r.ok) { toast('Synchronisierung fehlgeschlagen: ' + r.error); return; }
+    if (!r.ok) { if (MP.host) mpEmit('resync', {}); else mpRepair(); break; }   // Aktion passt nicht zum eigenen Stand: der Stand des Gastgebers gilt
     MP.log.push(a); applied++;
     checkCombatEnd(prev);
   }
-  if (applied) { mpSave(); pump(); }
+  if (applied) { if (applied > 3 || MP.quiet) mpQuiet(); mpSave(); pump(); }
 }
-function mpWait(title, text) {
+// Gast: Die eigenen Aktionen ab Stelle at weichen denen des Gastgebers. Partie bis dorthin neu aufbauen, die Aktionen des Gastgebers
+// einfügen und die eigenen dahinter erneut ausführen und senden (was dann nicht mehr geht, entfällt).
+function mpRebase(at, theirs) {
+  const base = MP.log.slice(0, at), mine = MP.log.slice(at);
+  mpStart(MP.seed, MP.first, MP.rules, true);
+  base.concat(theirs).forEach(a => { const prev = G.logN; if (M.apply(G, a).ok) { MP.log.push(a); checkCombatEnd(prev); } });
+  mpQuiet();
+  mine.forEach(a => { const prev = G.logN; if (M.apply(G, a).ok) { MP.log.push(a); mpEmit('act', { i: MP.log.length - 1, a }); checkCombatEnd(prev); } });
+  mpSave(); pump();
+}
+function mpWait(title, text, extra) {
   overlay.style.display = 'flex'; overlay.className = 'overlay';
-  overlay.innerHTML = '<div class="box"><h1>' + title + '</h1>' + text + '<button class="btn" style="margin-top:14px" data-act="mpexit">Abbrechen</button></div>';
+  overlay.innerHTML = '<div class="box"><h1>' + title + '</h1>' + text + (extra || '') + '<button class="btn" style="margin-top:14px" data-act="mpexit">Abbrechen</button></div>';
 }
 async function mpHost() {
   if (MP) await mpLeave();
@@ -6383,17 +6488,25 @@ async function mpJoin() {
 async function mpLeave() {
   const m = MP; MP = null; mpForget();
   if (!m) return;
+  if (m.started) { clearTimeout(aiTimer); G = null; started = false; endView = null; modal = null; }   // ohne Raum läuft die Partie nicht weiter (sonst übernähme der Computer den Platz des Mitspielers)
   clearInterval(m.hello); clearInterval(m.beat); m.subs.forEach(u => { try { u(); } catch (e) { } });
   try { await m.room.leave(); } catch (e) { }
   const hb = document.getElementById('homebtn'); if (hb) hb.classList.remove('off');
 }
-async function mpRestore() {   // nach Neuladen der Seite: laufende Partie wieder aufnehmen
-  let sv = null; try { sv = JSON.parse(sessionStorage.getItem(MP_KEY) || 'null'); } catch (e) { }
-  if (!sv || !(await mpRoomApi())) return;
-  if (!(await mpOpen(sv.code, sv.host))) return;
-  MP.seat = sv.seat; mpStart(sv.seed, sv.first, sv.rules);
+async function mpRestore(sv) {   // laufende Partie wieder aufnehmen: nach Neuladen der Seite von selbst, sonst über „Partie fortsetzen“
+  const auto = !sv; if (auto) sv = mpSaved(true);
+  if (!sv) return;
+  if (!(await mpRoomApi())) { if (!auto) toast('Mehrspieler ist hier nicht verfügbar.'); return; }
+  if (MP) await mpLeave();
+  const title = 'Raum ' + sv.code.toUpperCase();
+  mpWait(title, '<p class="note">Partie wird fortgesetzt …</p>');
+  if (!(await mpOpen(sv.code, sv.host))) {
+    mpWait(title, '<p class="bad">Der Raum konnte nicht wieder geöffnet werden.</p><p class="note">Besteht eine Internetverbindung? Ist die Partie auf diesem Gerät noch in einem anderen Tab offen, dort weiterspielen.</p>', '<button class="btn primary" style="margin-top:14px" data-act="mpresume">Erneut versuchen</button>');
+    return;
+  }
+  MP.seat = sv.seat; mpStart(sv.seed, sv.first, sv.rules, true);
   sv.log.forEach(a => { const prev = G.logN, r = M.apply(G, a); if (r.ok) { MP.log.push(a); checkCombatEnd(prev); } });
-  endView = null; modal = null; introSeen = G.phase === 'combat' && G.combat.mode === 'showdown' ? G.showdown : -1; hold = 0;
+  mpQuiet();
   mpSave(); pump();
   mpEmit('need', { from: MP.log.length }); if (!MP.host) mpEmit('hello', { v: BUILD });
 }
@@ -6427,6 +6540,7 @@ function onAct(d) {
     case 'mphost': mpHost(); break;
     case 'mpjoin': mpJoin(); break;
     case 'mpexit': mpLeave(); showStart(); break;
+    case 'mpresume': mpRestore(mpSaved()); break;
     case 'deckview': deckView = !deckView; render(); break;
     case 'deckclose': deckView = false; render(); break;
     case 'dismiss': dismissOverlay(); break;
