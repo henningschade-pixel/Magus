@@ -2422,6 +2422,7 @@ function planReaction(state, pid, X) {
   // Nachziehen, wenn die Hand schwach ist (leer, höchstens eine Karte oder kein sinnvoller Angriff) und nach den Kosten noch Mana zum Spielen bleibt; sonst Erholen, wenn Mana fehlt; sonst Passen
   // Mana-Schwelle: nach dem Nachziehen muss ein Zug mit voller Kartenzahl bezahlbar sein (1 Mana je Karte, höchstens das Ausspiellimit), sonst sind Kombos nicht möglich; fehlt das Mana, erholt sie sich zuerst
   const dcost = M.drawManaCost(state, pid), need = Math.min(s.limit, s.maxMana - dcost), weak = hand.length <= 1 || !(bestAttack(side, opp, hand, Q, state, null) || { dmg: 0 }).dmg;
+  if (M.allowed(state, 'defense', 'draw') && !hand.length && canDraw(d) && s.mana >= dcost) return [A({ type: 'draw' })];   // leere Hand (seit 0.13.4): Mana nützt ohne Karten nichts, deshalb zuerst nachziehen, auch wenn das Mana noch nicht für einen vollen Zug reicht
   if (M.allowed(state, 'defense', 'draw') && weak && s.mana - dcost >= need) return [A({ type: 'draw' })];
   if (M.allowed(state, 'defense', 'recover') && s.mana < s.maxMana) return [A({ type: 'recover' })];
   return [A({ type: 'pass' })];
@@ -2554,6 +2555,7 @@ function planDefense(state, pid, X) {
     }
     if (score < best.score) best = { score, ord: sub };
   }
+  if (!hand.length && M.allowed(state, 'defense', 'draw') && canDraw(d) && s.mana >= M.drawManaCost(state, pid)) return [A({ type: 'draw' })];   // leere Hand (seit 0.13.4): Der Schaden lässt sich nicht abwehren; ist Nachziehen in der Verteidigungsphase erlaubt, bringt es Karten statt nichts
   if (!best.ord.length) return [A({ type: 'pass' })];
   const acts = best.ord.map(h => A({ type: 'mark', slot: h.slot }));
   acts.push(A({ type: 'defend' }));
@@ -2753,6 +2755,10 @@ function candidates(state, pid) {
   if (side.ctrl !== pid) return [];
   const d = side.deck, s = side.stats, hand = handList(d), out = [];
   const payOk = s.mana >= M.drawManaCost(state, pid), drawable = canDraw(d) && payOk;
+  // Leere Hand (seit 0.13.4): Mana lässt sich ohne Karten nicht einsetzen, Karten ohne Mana aber schon (Verteidigung in der überlegenen Farbe ist gratis). Kann die Seite nachziehen, stehen deshalb nur die Nachzieh-Züge zur Wahl, Erholen und Passen entfallen.
+  const emptyDraw = phase => { if (hand.length) return null; const o = []; if (M.allowed(state, phase, 'draw') && drawable) o.push({ acts: [A({ type: 'draw' })], kind: 'draw', prior: 0 }); if (phase === 'attack' && s.freeDraws > 0 && canDraw(d)) return [{ acts: [A({ type: 'freeDraw' })], kind: 'freeDraw', prior: 1 }]; return o.length ? o : null; };   // ein Gratis-Nachziehen kostet keine Aktion und geht deshalb vor
+  const onlyDraw = emptyDraw(c.action === 'attack' ? 'attack' : 'defense');
+  if (onlyDraw) return onlyDraw;
   if (c.action === 'attack') {
     if (M.allowed(state, 'attack', 'attack')) out.push(...attackOptions(state, side, opp, hand, A));
     if (M.allowed(state, 'attack', 'recover') && s.mana < s.maxMana) out.push({ acts: [A({ type: 'recover' })], kind: 'recover', prior: 0 });
@@ -2896,10 +2902,11 @@ let upSeen = null, hpHold = null, curseHold = {}, stageSeen = 1, endSnd = null, 
 
 /* ---------- Versionen: Versionsnummer und Versionsbeschreibung (Seite „Neu in Version …“) ---------- */
 // Aktuelle Versionsnummer: einzige Stelle, an der sie gesetzt wird (Menü-Link und Über-Seite lesen sie von hier; bei jedem Schritt hochzählen)
-const MAGUS_VERSION = '0.13.3';
+const MAGUS_VERSION = '0.13.4';
 // Versionsbeschreibung: ein Eintrag je Version, die neueste zuerst. Bei jedem Schritt oben einen Eintrag [Nummer, Text] ergänzen;
 // der erste Eintrag gehört zu MAGUS_VERSION und erscheint unter „Neu in Version …“.
 const VERSIONEN = [
+  ['0.13.4', '<b>Computergegner zieht bei leerer Hand nach:</b> Hatte der Computergegner im Kampf keine Karte mehr auf der Hand, erholte er sich oft (Mana) oder passte, statt nachzuziehen. Mana lässt sich ohne Karten aber nicht einsetzen, Karten ohne Mana schon: Die Verteidigung in der überlegenen Farbe ist gratis. Mit leerer Hand zieht er jetzt immer nach, solange das möglich ist (zuerst mit einem Gratis-Nachziehen). An den Regeln ändert sich nichts.'],
   ['0.13.3', '<b>Upgrade-Punkte mit Vorschau:</b> Im Tempel zeigt die Zeile „Du“ beim Einstellen eines Opfers die neue Zahl der Upgrade-Punkte in Grün, beim Überfahren eines Kauf-Knopfes die sinkende Zahl in Rot, wie bei Gold, HP und Mana. Der Hinweis „+6 Punkte“ war missverständlich und heißt jetzt „+6 Tempelpunkte“.'],
   ['0.13.2.3', '<b>Wieder zwei Ausbauten je Wert:</b> Die Obergrenze für HP und Mana aus Version 0.13.2.2 ist zurückgenommen. Es gilt wieder eine Regel für alles: Jeder Wert (HP, Mana, Ausspiellimit, Handkarten) lässt sich zweimal ausbauen, der erste Schritt kostet 1 Gold, der zweite 2. Die HP reichen damit von 4 bis 6, das Mana von 4 bis 6. Grund: Am Tisch ist die einheitliche Regel einfacher, und die Messung zeigte keinen Nutzen der aufgehobenen Grenze.'],
   ['0.13.2.2', '<b>HP und Mana ohne Obergrenze:</b> Die maximalen HP und das maximale Mana lassen sich beliebig oft ausbauen (bisher höchstens zweimal). Jeder weitere Schritt kostet 1 Gold mehr als der vorige (1, 2, 3, 4 …), der Preis begrenzt den Ausbau also von selbst. Ausspiellimit (3), Handkarten (5) und Magie (3) behalten ihre Höchstwerte. Der Computergegner baut HP und Mana weiter bis 6 aus und steckt übriges Gold in die Magie; erst wenn alle Magie auf Stufe 3 steht, kauft er darüber hinaus HP und Mana.'],

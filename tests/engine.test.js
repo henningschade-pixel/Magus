@@ -1570,7 +1570,10 @@ test('KI in der Reaktion ohne Angriff: Nachziehen bei schwacher Hand und vorhand
   op.deck.hand.forEach((_, i) => { op.deck.hand[i] = null; });   // leere Hand, Mana 3 von 6
   assert.equal(AI.plan(s, op.ctrl)[0].type, 'draw', 'leere Hand, Mana vorhanden: nachziehen');
   op.stats.mana = 0;
-  assert.equal(AI.plan(s, op.ctrl)[0].type, 'recover', 'kein Mana zum Spielen: erst erholen');
+  assert.equal(AI.plan(s, op.ctrl)[0].type, 'draw', 'leere Hand ohne Mana: trotzdem nachziehen, Mana nützt ohne Karten nichts (seit 0.13.4; zuvor erst erholen)');
+  op.deck.hand[0] = { id: 'F1' };
+  assert.equal(AI.plan(s, op.ctrl)[0].type, 'recover', 'eine Karte, kein Mana zum Spielen: erst erholen');
+  op.deck.hand[0] = null;
   op.stats.mana = 6; assert.equal(AI.plan(s, op.ctrl)[0].type, 'draw', 'leere Hand, Mana voll: nachziehen');
   ['F3', 'E3', 'W3'].forEach((id, i) => { op.deck.hand[i] = Object.assign({}, op.deck.hand[i], { id }); });
   assert.equal(AI.plan(s, op.ctrl)[0].type, 'pass', 'gute Hand, Mana voll: nichts zu tun');

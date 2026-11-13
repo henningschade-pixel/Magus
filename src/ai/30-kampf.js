@@ -118,6 +118,7 @@ function planReaction(state, pid, X) {
   // Nachziehen, wenn die Hand schwach ist (leer, höchstens eine Karte oder kein sinnvoller Angriff) und nach den Kosten noch Mana zum Spielen bleibt; sonst Erholen, wenn Mana fehlt; sonst Passen
   // Mana-Schwelle: nach dem Nachziehen muss ein Zug mit voller Kartenzahl bezahlbar sein (1 Mana je Karte, höchstens das Ausspiellimit), sonst sind Kombos nicht möglich; fehlt das Mana, erholt sie sich zuerst
   const dcost = M.drawManaCost(state, pid), need = Math.min(s.limit, s.maxMana - dcost), weak = hand.length <= 1 || !(bestAttack(side, opp, hand, Q, state, null) || { dmg: 0 }).dmg;
+  if (M.allowed(state, 'defense', 'draw') && !hand.length && canDraw(d) && s.mana >= dcost) return [A({ type: 'draw' })];   // leere Hand (seit 0.13.4): Mana nützt ohne Karten nichts, deshalb zuerst nachziehen, auch wenn das Mana noch nicht für einen vollen Zug reicht
   if (M.allowed(state, 'defense', 'draw') && weak && s.mana - dcost >= need) return [A({ type: 'draw' })];
   if (M.allowed(state, 'defense', 'recover') && s.mana < s.maxMana) return [A({ type: 'recover' })];
   return [A({ type: 'pass' })];
@@ -250,6 +251,7 @@ function planDefense(state, pid, X) {
     }
     if (score < best.score) best = { score, ord: sub };
   }
+  if (!hand.length && M.allowed(state, 'defense', 'draw') && canDraw(d) && s.mana >= M.drawManaCost(state, pid)) return [A({ type: 'draw' })];   // leere Hand (seit 0.13.4): Der Schaden lässt sich nicht abwehren; ist Nachziehen in der Verteidigungsphase erlaubt, bringt es Karten statt nichts
   if (!best.ord.length) return [A({ type: 'pass' })];
   const acts = best.ord.map(h => A({ type: 'mark', slot: h.slot }));
   acts.push(A({ type: 'defend' }));

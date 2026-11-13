@@ -107,3 +107,21 @@ test('Probekämpfe der Weltphase: Partie endet, der Zustand bleibt beim Planen u
     assert.ok(s.over);
   });
 });
+
+test('Vorausschau: mit leerer Hand wird nachgezogen statt erholt oder gepasst (0.13.4)', () => {
+  withSearch({ sim: 40 }, () => {
+    for (const mana of [0, 2, 9]) {
+      const { s, me } = combatSetup(41, []);
+      me.stats.mana = mana;
+      const acts = AI.plan(s, 0);
+      assert.equal(acts[acts.length - 1].type, 'draw', 'Mana ' + mana + ': Nachziehen');
+      assert.equal(AI.basePlan(s, 0).pop().type, 'draw', 'Mana ' + mana + ': Basis-KI zieht nach');
+    }
+    const { s, me } = combatSetup(41, []);   // Gratis-Nachziehen geht vor
+    me.stats.mana = 1; me.stats.freeDraws = 1;
+    assert.equal(AI.plan(s, 0).pop().type, 'freeDraw');
+    const e = combatSetup(41, []);   // kein Deck mehr: nichts zum Nachziehen, dann bleibt Erholen
+    e.me.deck.draw = []; e.me.deck.discard = []; e.me.stats.mana = 1;
+    assert.equal(AI.plan(e.s, 0).pop().type, 'recover');
+  });
+});

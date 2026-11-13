@@ -191,6 +191,10 @@ function candidates(state, pid) {
   if (side.ctrl !== pid) return [];
   const d = side.deck, s = side.stats, hand = handList(d), out = [];
   const payOk = s.mana >= M.drawManaCost(state, pid), drawable = canDraw(d) && payOk;
+  // Leere Hand (seit 0.13.4): Mana lässt sich ohne Karten nicht einsetzen, Karten ohne Mana aber schon (Verteidigung in der überlegenen Farbe ist gratis). Kann die Seite nachziehen, stehen deshalb nur die Nachzieh-Züge zur Wahl, Erholen und Passen entfallen.
+  const emptyDraw = phase => { if (hand.length) return null; const o = []; if (M.allowed(state, phase, 'draw') && drawable) o.push({ acts: [A({ type: 'draw' })], kind: 'draw', prior: 0 }); if (phase === 'attack' && s.freeDraws > 0 && canDraw(d)) return [{ acts: [A({ type: 'freeDraw' })], kind: 'freeDraw', prior: 1 }]; return o.length ? o : null; };   // ein Gratis-Nachziehen kostet keine Aktion und geht deshalb vor
+  const onlyDraw = emptyDraw(c.action === 'attack' ? 'attack' : 'defense');
+  if (onlyDraw) return onlyDraw;
   if (c.action === 'attack') {
     if (M.allowed(state, 'attack', 'attack')) out.push(...attackOptions(state, side, opp, hand, A));
     if (M.allowed(state, 'attack', 'recover') && s.mana < s.maxMana) out.push({ acts: [A({ type: 'recover' })], kind: 'recover', prior: 0 });

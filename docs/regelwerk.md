@@ -690,6 +690,12 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Tests:** Drei Tests angepasst (Nachziehmarker Weltphase, Nachziehlimit Kauf, Nachziehlimit Weltphase; der Marker-Reset läuft jetzt über den Händler), neuer Test „Magie kaufen und Upgrades sind keine Aktion mehr“. `tests/golden.json` ist neu erzeugt (absichtliche Regeländerung).
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
 
+## Änderung 0.13.4 (13.11.)
+
+- Keine Regeländerung, nur der Computergegner: Mit leerer Hand zieht er im Kampf immer nach, solange Nachziehen möglich ist (ein Gratis-Nachziehen zuerst). Bisher wählte die Vorausschau (`src/ai/40-suche.js`) in dieser Lage meist Erholen oder Passen: in sechs Probepartien 105-mal Erholen und 103-mal Passen gegenüber 58-mal Nachziehen.
+- Begründung: Mana lässt sich ohne Karten nicht einsetzen. Karten ohne Mana sind dagegen nutzbar, weil die Verteidigung in der überlegenen Farbe gratis ist (ebenso offen liegende Hellsichtkarten).
+- Umsetzung: `candidates` bietet bei leerer Hand nur noch die Nachzieh-Züge an. Die Basis-KI zog im Angriffszug schon nach; in der Reaktion ohne Angriff und unter Angriff (beides nur, wenn Nachziehen in der Verteidigungsphase eingeschaltet ist) zieht sie bei leerer Hand jetzt ebenfalls nach. Bleibt nichts zum Nachziehen (keine Karten mehr im Deck), gilt die alte Wahl.
+
 ## Änderung 0.13.3 (12.11.)
 
 - Keine Regeländerung, nur Anzeige: Die Upgrade-Punkte im Tempel zeigen die Veränderung durch ein eingestelltes Opfer in Grün und durch einen Kauf in Rot (wie die anderen Werte). Der Hinweis unter dem Raster nennt die Zahl „Tempelpunkte“ statt „Punkte“.

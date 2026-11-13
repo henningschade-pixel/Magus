@@ -1,9 +1,10 @@
 /* ---------- Versionen: Versionsnummer und Versionsbeschreibung (Seite „Neu in Version …“) ---------- */
 // Aktuelle Versionsnummer: einzige Stelle, an der sie gesetzt wird (Menü-Link und Über-Seite lesen sie von hier; bei jedem Schritt hochzählen)
-const MAGUS_VERSION = '0.13.3';
+const MAGUS_VERSION = '0.13.4';
 // Versionsbeschreibung: ein Eintrag je Version, die neueste zuerst. Bei jedem Schritt oben einen Eintrag [Nummer, Text] ergänzen;
 // der erste Eintrag gehört zu MAGUS_VERSION und erscheint unter „Neu in Version …“.
 const VERSIONEN = [
+  ['0.13.4', '<b>Computergegner zieht bei leerer Hand nach:</b> Hatte der Computergegner im Kampf keine Karte mehr auf der Hand, erholte er sich oft (Mana) oder passte, statt nachzuziehen. Mana lässt sich ohne Karten aber nicht einsetzen, Karten ohne Mana schon: Die Verteidigung in der überlegenen Farbe ist gratis. Mit leerer Hand zieht er jetzt immer nach, solange das möglich ist (zuerst mit einem Gratis-Nachziehen). An den Regeln ändert sich nichts.'],
   ['0.13.3', '<b>Upgrade-Punkte mit Vorschau:</b> Im Tempel zeigt die Zeile „Du“ beim Einstellen eines Opfers die neue Zahl der Upgrade-Punkte in Grün, beim Überfahren eines Kauf-Knopfes die sinkende Zahl in Rot, wie bei Gold, HP und Mana. Der Hinweis „+6 Punkte“ war missverständlich und heißt jetzt „+6 Tempelpunkte“.'],
   ['0.13.2.3', '<b>Wieder zwei Ausbauten je Wert:</b> Die Obergrenze für HP und Mana aus Version 0.13.2.2 ist zurückgenommen. Es gilt wieder eine Regel für alles: Jeder Wert (HP, Mana, Ausspiellimit, Handkarten) lässt sich zweimal ausbauen, der erste Schritt kostet 1 Gold, der zweite 2. Die HP reichen damit von 4 bis 6, das Mana von 4 bis 6. Grund: Am Tisch ist die einheitliche Regel einfacher, und die Messung zeigte keinen Nutzen der aufgehobenen Grenze.'],
   ['0.13.2.2', '<b>HP und Mana ohne Obergrenze:</b> Die maximalen HP und das maximale Mana lassen sich beliebig oft ausbauen (bisher höchstens zweimal). Jeder weitere Schritt kostet 1 Gold mehr als der vorige (1, 2, 3, 4 …), der Preis begrenzt den Ausbau also von selbst. Ausspiellimit (3), Handkarten (5) und Magie (3) behalten ihre Höchstwerte. Der Computergegner baut HP und Mana weiter bis 6 aus und steckt übriges Gold in die Magie; erst wenn alle Magie auf Stufe 3 steht, kauft er darüber hinaus HP und Mana.'],
