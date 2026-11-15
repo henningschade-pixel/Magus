@@ -2794,10 +2794,11 @@ let hpHold = null, curseHold = {}, stageSeen = 1, endSnd = null, G = null, hold 
 
 /* ---------- Versionen: Versionsnummer und Versionsbeschreibung (Seite „Neu in Version …“) ---------- */
 // Aktuelle Versionsnummer: einzige Stelle, an der sie gesetzt wird (Menü-Link und Über-Seite lesen sie von hier; bei jedem Schritt hochzählen)
-const MAGUS_VERSION = '0.14.2.2';
+const MAGUS_VERSION = '0.14.2.3';
 // Versionsbeschreibung: ein Eintrag je Version, die neueste zuerst. Bei jedem Schritt oben einen Eintrag [Nummer, Text] ergänzen;
 // der erste Eintrag gehört zu MAGUS_VERSION und erscheint unter „Neu in Version …“.
 const VERSIONEN = [
+  ['0.14.2.3', '<b>Update-Text gekürzt:</b> Der Text „Neu in Version …“ zeigt nur noch die Änderungen ab Version 0.14.'],
   ['0.14.2.2', '<b>Nicht spielbare Kombos transparent:</b> In der Kombo-Übersicht erscheinen Kombos und Ultimates, die gerade nicht spielbar sind (zu niedriges Ausspiellimit, fehlende Karten einer Farbe auf der Hand, zu wenig Mana, Kombos in der Phase abgeschaltet), transparent. Der Hinweis beim Darüberfahren nennt den Grund.'],
   ['0.14.2.1', '<b>Plakette entfernt:</b> Die Plakette „Aktion“ / „Reaktion“ in der Kampfmitte entfällt; der farbige Rahmen am Rand zeigt weiterhin, wer in der Reaktion ist. Geprüft: Todesfluch und Erschöpfung wirken am Ende der eigenen Aktion (Angriffsphase), nach der Reaktion der Gegenseite; das war schon so und ist unverändert.'],
   ['0.14.2', '<b>Protokoll gleich groß:</b> Das Protokoll links hat in der Weltphase und im Kampf jetzt dieselbe Breite und Höhe.'],
@@ -2928,8 +2929,10 @@ const VERSIONEN = [
   ['0.7.0.1', 'Die <b>Kombo-Übersicht</b> ordnet alle Kombos nach Farbe der ersten Karte; die Ultimate steht unter ihrer Farbe (Feuer <b>Todesfluch</b>, Wasser Regenbogenschild, Erde Meditation) und alles ist ohne Scrollen sichtbar. Der Todes-Fluch heißt jetzt Todesfluch.'],
   ['0.7', '<b>Ultimates nach Farbe der ersten Karte:</b> Feuer wirkt wie bisher als Todesfluch, Erde legt einen <b>Meditation</b> (grüne Marker mit Plus heilen dich am Ende jeder deiner Angriffsphasen), Wasser einen <b>Regenbogenschild</b> (wirkt gegen jede Farbe wie ein Spiegel, verbraucht sich aber nicht). Alle drei Marker entfernt nur die Läuterung. <b>Gold opfern</b> geht ohne Obergrenze. <b>Karten</b> lassen sich unabhängig von der entwickelten Magie kaufen. Die <b>Strafe des roten Nachziehmarkers</b> (Mana und Gold) wächst mit dem Abschnitt (1/2/3); vor dem Nachziehen warnt eine Abfrage. Der Hinweistext zur Schildwirkung entfällt.'],
 ];
+// Anzeige (seit 0.14.2.3): nur Version 0.14 und alle späteren (0.14.x, 0.15 …); die älteren Einträge bleiben in der Liste erhalten, werden aber nicht mehr angezeigt
+const versionAnzeigen = e => { const [a, b] = e[0].split('.').map(Number); return a > 0 || b >= 14; };
 function versionenHTML() {
-  return VERSIONEN.map((e, i) => (i ? '<b>Version ' + e[0] + ':</b> ' : '<b>Neu in Version ' + MAGUS_VERSION + ':</b> ') + e[1]).join(' ');
+  return VERSIONEN.filter(versionAnzeigen).map((e, i) => (i ? '<b>Version ' + e[0] + ':</b> ' : '<b>Neu in Version ' + MAGUS_VERSION + ':</b> ') + e[1]).join(' ');
 }
 /* ---------- Layout: alle Maße der 1280×800-Bühne an einer Stelle ---------- */
 const CW = 128, CH = 194;                                   // Kartengröße
