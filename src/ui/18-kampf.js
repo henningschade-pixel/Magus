@@ -152,7 +152,19 @@ function comboRef(cx) {
     let fs = 20;   // Schriftgrad der Zeilen: füllt die Höhe des Fensters (seit 0.7.1.1); Texte und Hinweise skalieren mit
     // Zeile der Übersicht (seit 0.13.0.1): Der Hintergrund verläuft von der Primärfarbe (links) zur Sekundärfarbe (rechts), die dritte Farbe einer Ultimate bleibt dabei außen vor. Primär-, Sekundär- und Tertiärfarbe stehen in festen Spalten, also in allen Zeilen untereinander; die erreichte Stufe steht vor dem Text.
     const TINT = { F: '255,122,61', W: '82,166,245', E: '147,194,79' };
-    const row = (name, els, lvl, text, on, tip) => '<div' + (tip ? ' title="' + esc(tip) + '"' : '') + ' class="cref grad q' + els[0] + (on ? ' on' : '') + '" style="--c1:' + TINT[els[0]] + ';--c2:' + TINT[els[1] || els[0]] + ';padding:0 8px;margin-bottom:0;font-size:' + fs + 'px;flex:1 1 0;display:flex;flex-direction:column;justify-content:center;gap:0"><div class="chead"><b>' + name + '</b>' + els.map((e, i) => (i ? '<span class="cplus">+</span>' : '') + '<span class="cel ' + e + '">' + NAMES[e] + '</span>').join('') + '</div>' + (text || lvl ? '<small style="font-size:' + Math.round(fs * 0.72) + 'px">' + (lvl ? '<b>Stufe ' + lvl + '</b>' + (text ? ' · ' : '') : '') + (text || '') + '</small>' : '') + '</div>';
+    // Spielbarkeit (seit 0.14.2.2): Kombos, die mit Ausspiellimit, Handkarten oder Mana gerade nicht spielbar sind, erscheinen transparent; der Tooltip nennt den Grund
+    const phase = cx.c && cx.c.action === 'defense' ? 'defense' : 'attack', comboOk = M.allowed(G, phase, 'combo');
+    const handCards = cx.mine.deck.hand.filter(Boolean).map(c => ({ el: M.parseCard(c.id), free: !!c.free })).filter(x => !x.el.curse).map(x => ({ el: x.el.el, free: x.free }));
+    const unplayable = els => {
+      const why = [], n = els.length;
+      if (n > 1 && !comboOk) why.push('Kombos sind in dieser Phase abgeschaltet');
+      if (cx.myStats.limit < n) why.push('Ausspiellimit ' + cx.myStats.limit + ' (nötig: ' + n + ')');
+      const miss = els.filter(e => !handCards.some(x => x.el === e));
+      if (miss.length) why.push('keine ' + miss.map(e => NAMES[e]).join('- und ') + '-Karte auf der Hand');
+      else { const cost = els.filter(e => !handCards.some(x => x.el === e && x.free)).length; if (cx.myStats.mana < cost) why.push('zu wenig Mana (' + cx.myStats.mana + ' von ' + cost + ')'); }
+      return why.length ? 'Gerade nicht spielbar: ' + why.join(', ') + '.' : '';
+    };
+    const row = (name, els, lvl, text, on, tip) => { const bad = on ? '' : unplayable(els); return '<div' + (tip || bad ? ' title="' + esc((bad ? bad + (tip ? ' ' : '') : '') + (tip || '')) + '"' : '') + ' class="cref grad q' + els[0] + (on ? ' on' : '') + (bad ? ' off' : '') + '" style="--c1:' + TINT[els[0]] + ';--c2:' + TINT[els[1] || els[0]] + ';padding:0 8px;margin-bottom:0;font-size:' + fs + 'px;flex:1 1 0;display:flex;flex-direction:column;justify-content:center;gap:0"><div class="chead"><b>' + name + '</b>' + els.map((e, i) => (i ? '<span class="cplus">+</span>' : '') + '<span class="cel ' + e + '">' + NAMES[e] + '</span>').join('') + '</div>' + (text || lvl ? '<small style="font-size:' + Math.round(fs * 0.72) + 'px">' + (lvl ? '<b>Stufe ' + lvl + '</b>' + (text ? ' · ' : '') : '') + (text || '') + '</small>' : '') + '</div>'; };
     // Die Sekundärfarbe bestimmt den Charakter (Rot Schaden, Blau variabel, Grün Heilung); die Liste ist seit 0.9.9.12 nach der Primärfarbe sortiert, die Primärfarbe steht in jeder Zeile vorn. Die Ultimate (alle drei Farben) steht unter der Farbe ihrer Schlusskarte: Rot Todesfluch, Blau Erleuchtung, Grün Meditation.
     const ULTI_NAME = { F: 'Todesfluch', W: 'Erleuchtung', E: 'Meditation' }, SEC = ['F', 'W', 'E'];
     // Ultimate (seit 0.11.0.9): Reihenfolge Primär-, Sekundär-, Tertiärfarbe; die Sekundärfarbe bestimmt Namen, Wirkung und Tönung, die Tertiärfarbe löst sie nur aus

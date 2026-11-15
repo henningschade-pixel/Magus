@@ -1,9 +1,10 @@
 /* ---------- Versionen: Versionsnummer und Versionsbeschreibung (Seite „Neu in Version …“) ---------- */
 // Aktuelle Versionsnummer: einzige Stelle, an der sie gesetzt wird (Menü-Link und Über-Seite lesen sie von hier; bei jedem Schritt hochzählen)
-const MAGUS_VERSION = '0.14.2.1';
+const MAGUS_VERSION = '0.14.2.2';
 // Versionsbeschreibung: ein Eintrag je Version, die neueste zuerst. Bei jedem Schritt oben einen Eintrag [Nummer, Text] ergänzen;
 // der erste Eintrag gehört zu MAGUS_VERSION und erscheint unter „Neu in Version …“.
 const VERSIONEN = [
+  ['0.14.2.2', '<b>Nicht spielbare Kombos transparent:</b> In der Kombo-Übersicht erscheinen Kombos und Ultimates, die gerade nicht spielbar sind (zu niedriges Ausspiellimit, fehlende Karten einer Farbe auf der Hand, zu wenig Mana, Kombos in der Phase abgeschaltet), transparent. Der Hinweis beim Darüberfahren nennt den Grund.'],
   ['0.14.2.1', '<b>Plakette entfernt:</b> Die Plakette „Aktion“ / „Reaktion“ in der Kampfmitte entfällt; der farbige Rahmen am Rand zeigt weiterhin, wer in der Reaktion ist. Geprüft: Todesfluch und Erschöpfung wirken am Ende der eigenen Aktion (Angriffsphase), nach der Reaktion der Gegenseite; das war schon so und ist unverändert.'],
   ['0.14.2', '<b>Protokoll gleich groß:</b> Das Protokoll links hat in der Weltphase und im Kampf jetzt dieselbe Breite und Höhe.'],
   ['0.14.1', '<b>Bibliothek wieder rechts, Protokoll links:</b> Mit dem Tempel ist in der Weltphase viel Platz frei geworden. Die Bibliothek steht wieder rechts, wo sie früher war. Das Protokoll ist links wieder fest eingeblendet; der runde Protokoll-Knopf oben neben der Statistik entfällt.'],

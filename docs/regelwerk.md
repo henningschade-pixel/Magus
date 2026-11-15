@@ -690,6 +690,11 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Tests:** Drei Tests angepasst (Nachziehmarker Weltphase, Nachziehlimit Kauf, Nachziehlimit Weltphase; der Marker-Reset läuft jetzt über den Händler), neuer Test „Magie kaufen und Upgrades sind keine Aktion mehr“. `tests/golden.json` ist neu erzeugt (absichtliche Regeländerung).
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
 
+## Änderung 0.14.2.2 (15.11.)
+
+- **Oberfläche (keine Regeländerung):** In der Kombo-Übersicht (`comboRef`, `src/ui/18-kampf.js`) erscheinen Zeilen transparent (`.cref.off`), die gerade nicht spielbar sind: Ausspiellimit kleiner als die Kartenzahl der Kombo (2, bei Ultimates 3), keine Karte einer benötigten Farbe auf der Hand, Mana kleiner als die Kosten (je Karte 1, offene Hellsichtkarten kosten nichts) oder Kombos in der aktuellen Phase abgeschaltet. Der Tooltip nennt den Grund. Die gewählte Kombo (grün) bleibt voll sichtbar.
+- Die Versionsbeschreibung im Spiel nennt die Änderung.
+
 ## Änderung 0.14.2.1 (15.11.)
 
 - **Oberfläche (keine Regeländerung):** Die Plakette „Aktion“ / „Reaktion“ in der Kampfmitte (`phaseBadge`, `.phasebadge`) ist entfernt. Der farbige Zugrahmen (Gold in der Aktion, Blau in der Reaktion) bleibt.

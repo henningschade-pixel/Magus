@@ -265,6 +265,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .cref{padding:2px 7px;border:1px solid #44444c;border-radius:8px;margin-bottom:3px;font-size:14px;background:rgba(255,255,255,.02)}.cref.on{border-color:var(--good);background:rgba(127,208,138,.12)}.cref small{display:block;color:var(--mute);font-size:12.5px;line-height:1.15;margin-top:0}.cref .note{font-size:13px}
 /* Kombo-Übersicht (seit 0.13.0.1): Hintergrund und Rand verlaufen von der Primärfarbe (links, --c1) zur Sekundärfarbe (rechts, --c2); die dritte Farbe einer Ultimate zählt dabei nicht. Die Farben stehen in festen Spalten untereinander. Abstand zwischen den Gruppen gleicher Primärfarbe. */
 .cref.grad{position:relative}
+.cref.off{opacity:.35}   /* nicht spielbar (Limit, Karten, Mana): transparent, seit 0.14.2.2 */
 .cref.grad:not(.on){background:linear-gradient(90deg,rgba(var(--c1),.20),rgba(var(--c2),.20));border-color:transparent}
 .cref.grad:not(.on)::before{content:'';position:absolute;inset:-1px;border-radius:inherit;padding:1px;background:linear-gradient(90deg,rgba(var(--c1),.6),rgba(var(--c2),.6));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
 .cref .chead{display:grid;grid-template-columns:minmax(0,1fr) 3em .8em 3em .8em 3em;align-items:baseline;line-height:1.15;white-space:nowrap}

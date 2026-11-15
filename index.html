@@ -275,6 +275,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .cref{padding:2px 7px;border:1px solid #44444c;border-radius:8px;margin-bottom:3px;font-size:14px;background:rgba(255,255,255,.02)}.cref.on{border-color:var(--good);background:rgba(127,208,138,.12)}.cref small{display:block;color:var(--mute);font-size:12.5px;line-height:1.15;margin-top:0}.cref .note{font-size:13px}
 /* Kombo-Übersicht (seit 0.13.0.1): Hintergrund und Rand verlaufen von der Primärfarbe (links, --c1) zur Sekundärfarbe (rechts, --c2); die dritte Farbe einer Ultimate zählt dabei nicht. Die Farben stehen in festen Spalten untereinander. Abstand zwischen den Gruppen gleicher Primärfarbe. */
 .cref.grad{position:relative}
+.cref.off{opacity:.35}   /* nicht spielbar (Limit, Karten, Mana): transparent, seit 0.14.2.2 */
 .cref.grad:not(.on){background:linear-gradient(90deg,rgba(var(--c1),.20),rgba(var(--c2),.20));border-color:transparent}
 .cref.grad:not(.on)::before{content:'';position:absolute;inset:-1px;border-radius:inherit;padding:1px;background:linear-gradient(90deg,rgba(var(--c1),.6),rgba(var(--c2),.6));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
 .cref .chead{display:grid;grid-template-columns:minmax(0,1fr) 3em .8em 3em .8em 3em;align-items:baseline;line-height:1.15;white-space:nowrap}
@@ -2793,10 +2794,11 @@ let hpHold = null, curseHold = {}, stageSeen = 1, endSnd = null, G = null, hold 
 
 /* ---------- Versionen: Versionsnummer und Versionsbeschreibung (Seite „Neu in Version …“) ---------- */
 // Aktuelle Versionsnummer: einzige Stelle, an der sie gesetzt wird (Menü-Link und Über-Seite lesen sie von hier; bei jedem Schritt hochzählen)
-const MAGUS_VERSION = '0.14.2.1';
+const MAGUS_VERSION = '0.14.2.2';
 // Versionsbeschreibung: ein Eintrag je Version, die neueste zuerst. Bei jedem Schritt oben einen Eintrag [Nummer, Text] ergänzen;
 // der erste Eintrag gehört zu MAGUS_VERSION und erscheint unter „Neu in Version …“.
 const VERSIONEN = [
+  ['0.14.2.2', '<b>Nicht spielbare Kombos transparent:</b> In der Kombo-Übersicht erscheinen Kombos und Ultimates, die gerade nicht spielbar sind (zu niedriges Ausspiellimit, fehlende Karten einer Farbe auf der Hand, zu wenig Mana, Kombos in der Phase abgeschaltet), transparent. Der Hinweis beim Darüberfahren nennt den Grund.'],
   ['0.14.2.1', '<b>Plakette entfernt:</b> Die Plakette „Aktion“ / „Reaktion“ in der Kampfmitte entfällt; der farbige Rahmen am Rand zeigt weiterhin, wer in der Reaktion ist. Geprüft: Todesfluch und Erschöpfung wirken am Ende der eigenen Aktion (Angriffsphase), nach der Reaktion der Gegenseite; das war schon so und ist unverändert.'],
   ['0.14.2', '<b>Protokoll gleich groß:</b> Das Protokoll links hat in der Weltphase und im Kampf jetzt dieselbe Breite und Höhe.'],
   ['0.14.1', '<b>Bibliothek wieder rechts, Protokoll links:</b> Mit dem Tempel ist in der Weltphase viel Platz frei geworden. Die Bibliothek steht wieder rechts, wo sie früher war. Das Protokoll ist links wieder fest eingeblendet; der runde Protokoll-Knopf oben neben der Statistik entfällt.'],
@@ -3916,7 +3918,19 @@ function comboRef(cx) {
     let fs = 20;   // Schriftgrad der Zeilen: füllt die Höhe des Fensters (seit 0.7.1.1); Texte und Hinweise skalieren mit
     // Zeile der Übersicht (seit 0.13.0.1): Der Hintergrund verläuft von der Primärfarbe (links) zur Sekundärfarbe (rechts), die dritte Farbe einer Ultimate bleibt dabei außen vor. Primär-, Sekundär- und Tertiärfarbe stehen in festen Spalten, also in allen Zeilen untereinander; die erreichte Stufe steht vor dem Text.
     const TINT = { F: '255,122,61', W: '82,166,245', E: '147,194,79' };
-    const row = (name, els, lvl, text, on, tip) => '<div' + (tip ? ' title="' + esc(tip) + '"' : '') + ' class="cref grad q' + els[0] + (on ? ' on' : '') + '" style="--c1:' + TINT[els[0]] + ';--c2:' + TINT[els[1] || els[0]] + ';padding:0 8px;margin-bottom:0;font-size:' + fs + 'px;flex:1 1 0;display:flex;flex-direction:column;justify-content:center;gap:0"><div class="chead"><b>' + name + '</b>' + els.map((e, i) => (i ? '<span class="cplus">+</span>' : '') + '<span class="cel ' + e + '">' + NAMES[e] + '</span>').join('') + '</div>' + (text || lvl ? '<small style="font-size:' + Math.round(fs * 0.72) + 'px">' + (lvl ? '<b>Stufe ' + lvl + '</b>' + (text ? ' · ' : '') : '') + (text || '') + '</small>' : '') + '</div>';
+    // Spielbarkeit (seit 0.14.2.2): Kombos, die mit Ausspiellimit, Handkarten oder Mana gerade nicht spielbar sind, erscheinen transparent; der Tooltip nennt den Grund
+    const phase = cx.c && cx.c.action === 'defense' ? 'defense' : 'attack', comboOk = M.allowed(G, phase, 'combo');
+    const handCards = cx.mine.deck.hand.filter(Boolean).map(c => ({ el: M.parseCard(c.id), free: !!c.free })).filter(x => !x.el.curse).map(x => ({ el: x.el.el, free: x.free }));
+    const unplayable = els => {
+      const why = [], n = els.length;
+      if (n > 1 && !comboOk) why.push('Kombos sind in dieser Phase abgeschaltet');
+      if (cx.myStats.limit < n) why.push('Ausspiellimit ' + cx.myStats.limit + ' (nötig: ' + n + ')');
+      const miss = els.filter(e => !handCards.some(x => x.el === e));
+      if (miss.length) why.push('keine ' + miss.map(e => NAMES[e]).join('- und ') + '-Karte auf der Hand');
+      else { const cost = els.filter(e => !handCards.some(x => x.el === e && x.free)).length; if (cx.myStats.mana < cost) why.push('zu wenig Mana (' + cx.myStats.mana + ' von ' + cost + ')'); }
+      return why.length ? 'Gerade nicht spielbar: ' + why.join(', ') + '.' : '';
+    };
+    const row = (name, els, lvl, text, on, tip) => { const bad = on ? '' : unplayable(els); return '<div' + (tip || bad ? ' title="' + esc((bad ? bad + (tip ? ' ' : '') : '') + (tip || '')) + '"' : '') + ' class="cref grad q' + els[0] + (on ? ' on' : '') + (bad ? ' off' : '') + '" style="--c1:' + TINT[els[0]] + ';--c2:' + TINT[els[1] || els[0]] + ';padding:0 8px;margin-bottom:0;font-size:' + fs + 'px;flex:1 1 0;display:flex;flex-direction:column;justify-content:center;gap:0"><div class="chead"><b>' + name + '</b>' + els.map((e, i) => (i ? '<span class="cplus">+</span>' : '') + '<span class="cel ' + e + '">' + NAMES[e] + '</span>').join('') + '</div>' + (text || lvl ? '<small style="font-size:' + Math.round(fs * 0.72) + 'px">' + (lvl ? '<b>Stufe ' + lvl + '</b>' + (text ? ' · ' : '') : '') + (text || '') + '</small>' : '') + '</div>'; };
     // Die Sekundärfarbe bestimmt den Charakter (Rot Schaden, Blau variabel, Grün Heilung); die Liste ist seit 0.9.9.12 nach der Primärfarbe sortiert, die Primärfarbe steht in jeder Zeile vorn. Die Ultimate (alle drei Farben) steht unter der Farbe ihrer Schlusskarte: Rot Todesfluch, Blau Erleuchtung, Grün Meditation.
     const ULTI_NAME = { F: 'Todesfluch', W: 'Erleuchtung', E: 'Meditation' }, SEC = ['F', 'W', 'E'];
     // Ultimate (seit 0.11.0.9): Reihenfolge Primär-, Sekundär-, Tertiärfarbe; die Sekundärfarbe bestimmt Namen, Wirkung und Tönung, die Tertiärfarbe löst sie nur aus
