@@ -194,10 +194,10 @@ function renderInner() {
   const logLines = from => G.log.filter(e => e.n > from).slice(-300).map(e => '<div class="' + (e.pid === ME ? 'me' : e.pid === null ? '' : 'op') + '">' + esc(e.txt) + '</div>').join('');
   if (cx.combat) {   // links: nur der Kampflog (Einträge seit Kampfbeginn)
     const from = cx.c.logFrom || 0;
-    logEl.className = 'logpanel'; logEl.style.cssText = box(LAYOUT.combo);
+    logEl.className = 'logpanel'; logEl.style.cssText = box(LAYOUT.log);
     logEl.innerHTML = '<h3><button class="logdl" title="Spiellog exportieren (Alt-Klick: in die Zwischenablage)">⤓</button>Kampflog</h3><div class="logl">' + logLines(from) + '</div>';
   } else {   // Weltphase: links das Protokoll der ganzen Partie (seit 0.14.1 wieder fest eingeblendet, ohne runden Knopf)
-    logEl.className = 'logpanel'; logEl.style.cssText = box(LAYOUT.worldLog);
+    logEl.className = 'logpanel'; logEl.style.cssText = box(LAYOUT.log);
     logEl.innerHTML = '<h3><button class="logdl" title="Spiellog exportieren (Alt-Klick: in die Zwischenablage)">⤓</button>Protokoll</h3><div class="logst">Abschnitt ' + G.stage + '/3 · Showdowns ' + G.showdown + '/3<br>Siegpunkte ' + G.players[ME].sp + ' : ' + G.players[OPP].sp + '</div><div class="logl">' + logLines(0) + '</div>';
   }
   { const lg = logEl.querySelector('.logl'); if (lg) lg.scrollTop = lgKeep === null ? lg.scrollHeight : lgKeep; }

@@ -2797,10 +2797,11 @@ let hpHold = null, curseHold = {}, stageSeen = 1, endSnd = null, G = null, hold 
 
 /* ---------- Versionen: Versionsnummer und Versionsbeschreibung (Seite „Neu in Version …“) ---------- */
 // Aktuelle Versionsnummer: einzige Stelle, an der sie gesetzt wird (Menü-Link und Über-Seite lesen sie von hier; bei jedem Schritt hochzählen)
-const MAGUS_VERSION = '0.14.1';
+const MAGUS_VERSION = '0.14.2';
 // Versionsbeschreibung: ein Eintrag je Version, die neueste zuerst. Bei jedem Schritt oben einen Eintrag [Nummer, Text] ergänzen;
 // der erste Eintrag gehört zu MAGUS_VERSION und erscheint unter „Neu in Version …“.
 const VERSIONEN = [
+  ['0.14.2', '<b>Protokoll gleich groß:</b> Das Protokoll links hat in der Weltphase und im Kampf jetzt dieselbe Breite und Höhe.'],
   ['0.14.1', '<b>Bibliothek wieder rechts, Protokoll links:</b> Mit dem Tempel ist in der Weltphase viel Platz frei geworden. Die Bibliothek steht wieder rechts, wo sie früher war. Das Protokoll ist links wieder fest eingeblendet; der runde Protokoll-Knopf oben neben der Statistik entfällt.'],
   ['0.14', '<b>Kein Tempel mehr, Magie kostet Gold:</b> Der Tempel mit seinen Tempelpunkten und Upgrade-Punkten ist abgeschafft. Gold lässt sich nicht mehr opfern; die Magie wird wie alle anderen Verbesserungen direkt mit Gold gekauft. Die Preise bleiben dieselben Zahlen wie bisher in Upgrade-Punkten: die erste Magiestufe kostet 1 Gold, die zweite 2, die dritte 3 und so weiter (jeder Kauf, egal in welcher Farbe, macht den nächsten um 1 teurer; für den vollen Ausbau aller drei Magien sind es 1 + 2 + … + 6 = 21 Gold). Die Zahl in der Mitte des Magiekreises zeigt weiter den Preis der nächsten Stufe, jetzt in Gold; die Magie-Knöpfe am Rand des Kreises sind golden. Die Tempelstufe entscheidet nicht mehr über den Sieg: Bei Gleichstand an Siegpunkten zählt nur noch das Gold. Das Feld rechts in der Weltphase, in dem der Tempel stand, bleibt vorerst frei. <b>Computergegner:</b> Er kauft Magie nicht mehr über Opfer, sondern wie bisher mit dem Gold, das nach den Verbesserungen übrig ist; seine Gewichte sind dafür noch nicht neu abgestimmt.'],
   ['0.13.6', '<b>Computergegner greift wieder an:</b> Der Computergegner wartete im Kampf oft ab (Erholen, Passen, Nachziehen), obwohl er angreifen konnte, sogar gegen einen Gegner ohne Handkarten. Der Grund: Er rechnete fest damit, dass der Gegner in sein Abwarten hinein angreift und dabei seine Karten verbraucht. Jetzt prüft er auch den Fall, dass der Gegner ebenfalls abwartet, und rechnet mit dem für ihn schlechteren Ausgang. Hat der Gegner keine Handkarten und keine Falle, greift er immer an, sobald ein Angriff Schaden macht. Gegen einen Gegner, der nur passt, dauerte ein Kampf bisher im Mittel 20 Züge (mit leerer Hand 25), jetzt 12 (11). An den Regeln ändert sich nichts.'],
@@ -2938,12 +2939,11 @@ const LAYOUT0 = {
   oppPanel:  { left: 920, top: 8,   w: 336, h: 160 },       // Gegner (oben rechts)
   mePanel:   { left: 920, top: 610, w: 336, h: 176 },       // eigener Spielerstatus (unten rechts)
   library:   { left: 920, top: 182, w: 336, h: 408 },       // Bibliothek (Weltphase, rechts; seit 0.14.1 wieder dort, wo bis 0.13 der Tempel stand)
-  worldLog:  { left: 24,  top: 182, w: 260, h: 408 },       // Protokoll (Weltphase, links; seit 0.14.1 wieder fest eingeblendet)
+  log:       { left: 24,  top: 182, w: 260, h: 408 },       // Protokoll links, in Weltphase und Kampf gleich groß (seit 0.14.2; vorher im Kampf 336 × 310)
   monsters:  { left: 296, top: 182, step: 212, w: 188, h: 408, diceY: 317 },   // diceY: Oberkante der Würfel, von der Kartenoberkante aus (direkt über dem Kämpfen-Knopf)
   banner:    { left: 372, top: 230, w: 536 },
   turnflag:  { left: 372, top: 126, w: 536 },
   combat:    { left: 372, top: 182, w: 536, h: 310 },       // Kampfmitte
-  combo:     { left: 24,  top: 182, w: 336, h: 310 },
   oppInfo:   { left: 920, top: 182, w: 336, h: 310 },
   combatLog: { left: 372, top: 510, w: 536 },               // zwei letzte Protokollzeilen im Kampf
   combatSub: { left: 372, top: 490, w: 536 },               // Abschnitts-/Siegpunktzeile im Kampf
@@ -5666,10 +5666,10 @@ function renderInner() {
   const logLines = from => G.log.filter(e => e.n > from).slice(-300).map(e => '<div class="' + (e.pid === ME ? 'me' : e.pid === null ? '' : 'op') + '">' + esc(e.txt) + '</div>').join('');
   if (cx.combat) {   // links: nur der Kampflog (Einträge seit Kampfbeginn)
     const from = cx.c.logFrom || 0;
-    logEl.className = 'logpanel'; logEl.style.cssText = box(LAYOUT.combo);
+    logEl.className = 'logpanel'; logEl.style.cssText = box(LAYOUT.log);
     logEl.innerHTML = '<h3><button class="logdl" title="Spiellog exportieren (Alt-Klick: in die Zwischenablage)">⤓</button>Kampflog</h3><div class="logl">' + logLines(from) + '</div>';
   } else {   // Weltphase: links das Protokoll der ganzen Partie (seit 0.14.1 wieder fest eingeblendet, ohne runden Knopf)
-    logEl.className = 'logpanel'; logEl.style.cssText = box(LAYOUT.worldLog);
+    logEl.className = 'logpanel'; logEl.style.cssText = box(LAYOUT.log);
     logEl.innerHTML = '<h3><button class="logdl" title="Spiellog exportieren (Alt-Klick: in die Zwischenablage)">⤓</button>Protokoll</h3><div class="logst">Abschnitt ' + G.stage + '/3 · Showdowns ' + G.showdown + '/3<br>Siegpunkte ' + G.players[ME].sp + ' : ' + G.players[OPP].sp + '</div><div class="logl">' + logLines(0) + '</div>';
   }
   { const lg = logEl.querySelector('.logl'); if (lg) lg.scrollTop = lgKeep === null ? lg.scrollHeight : lgKeep; }

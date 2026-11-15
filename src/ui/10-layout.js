@@ -5,12 +5,11 @@ const LAYOUT0 = {
   oppPanel:  { left: 920, top: 8,   w: 336, h: 160 },       // Gegner (oben rechts)
   mePanel:   { left: 920, top: 610, w: 336, h: 176 },       // eigener Spielerstatus (unten rechts)
   library:   { left: 920, top: 182, w: 336, h: 408 },       // Bibliothek (Weltphase, rechts; seit 0.14.1 wieder dort, wo bis 0.13 der Tempel stand)
-  worldLog:  { left: 24,  top: 182, w: 260, h: 408 },       // Protokoll (Weltphase, links; seit 0.14.1 wieder fest eingeblendet)
+  log:       { left: 24,  top: 182, w: 260, h: 408 },       // Protokoll links, in Weltphase und Kampf gleich groß (seit 0.14.2; vorher im Kampf 336 × 310)
   monsters:  { left: 296, top: 182, step: 212, w: 188, h: 408, diceY: 317 },   // diceY: Oberkante der Würfel, von der Kartenoberkante aus (direkt über dem Kämpfen-Knopf)
   banner:    { left: 372, top: 230, w: 536 },
   turnflag:  { left: 372, top: 126, w: 536 },
   combat:    { left: 372, top: 182, w: 536, h: 310 },       // Kampfmitte
-  combo:     { left: 24,  top: 182, w: 336, h: 310 },
   oppInfo:   { left: 920, top: 182, w: 336, h: 310 },
   combatLog: { left: 372, top: 510, w: 536 },               // zwei letzte Protokollzeilen im Kampf
   combatSub: { left: 372, top: 490, w: 536 },               // Abschnitts-/Siegpunktzeile im Kampf
