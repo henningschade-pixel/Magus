@@ -690,6 +690,11 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Tests:** Drei Tests angepasst (Nachziehmarker Weltphase, Nachziehlimit Kauf, Nachziehlimit Weltphase; der Marker-Reset läuft jetzt über den Händler), neuer Test „Magie kaufen und Upgrades sind keine Aktion mehr“. `tests/golden.json` ist neu erzeugt (absichtliche Regeländerung).
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
 
+## Änderung 0.14.2.4 (15.11.)
+
+- **Oberfläche (keine Regeländerung):** Das Protokoll (Weltphase und Kampflog) zeigt vor jeder Zeile ein Symbol in der Farbe ihrer Art (`LOGKINDS` in `src/ui/26a-darstellung.js`, erkannt am Text; die Engine bleibt unverändert). **Verbesserungen des Gegners** (HP, Mana, Limit, Handplätze, Nachziehlimit, Magie, auch die des Computers) sind golden hinterlegt und fett (`.upop`); eigene Verbesserungen stehen golden (`.upme`). Der Export des Spiellogs bleibt reiner Text.
+- Die Versionsbeschreibung im Spiel nennt die Änderung.
+
 ## Änderung 0.14.2.3 (15.11.)
 
 - **Oberfläche (keine Regeländerung):** Der Update-Text („Neu in Version …“ im Menü und auf der Über-Seite) zeigt nur noch die Einträge ab Version 0.14 (`versionenHTML` filtert). Die älteren Einträge bleiben in `VERSIONEN` erhalten.

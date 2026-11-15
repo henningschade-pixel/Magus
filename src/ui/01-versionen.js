@@ -1,9 +1,10 @@
 /* ---------- Versionen: Versionsnummer und Versionsbeschreibung (Seite „Neu in Version …“) ---------- */
 // Aktuelle Versionsnummer: einzige Stelle, an der sie gesetzt wird (Menü-Link und Über-Seite lesen sie von hier; bei jedem Schritt hochzählen)
-const MAGUS_VERSION = '0.14.2.3';
+const MAGUS_VERSION = '0.14.2.4';
 // Versionsbeschreibung: ein Eintrag je Version, die neueste zuerst. Bei jedem Schritt oben einen Eintrag [Nummer, Text] ergänzen;
 // der erste Eintrag gehört zu MAGUS_VERSION und erscheint unter „Neu in Version …“.
 const VERSIONEN = [
+  ['0.14.2.4', '<b>Protokoll lesbarer:</b> Jede Zeile trägt ein Symbol in der Farbe ihrer Art (Angriff, Kombo, Heilung, Mana, Schild, Fluch, Nachziehen, Sieg, Verbesserung). Verbesserungen des Gegners, auch des Computers, sind zusätzlich golden hinterlegt und fett; eigene Verbesserungen stehen golden.'],
   ['0.14.2.3', '<b>Update-Text gekürzt:</b> Der Text „Neu in Version …“ zeigt nur noch die Änderungen ab Version 0.14.'],
   ['0.14.2.2', '<b>Nicht spielbare Kombos transparent:</b> In der Kombo-Übersicht erscheinen Kombos und Ultimates, die gerade nicht spielbar sind (zu niedriges Ausspiellimit, fehlende Karten einer Farbe auf der Hand, zu wenig Mana, Kombos in der Phase abgeschaltet), transparent. Der Hinweis beim Darüberfahren nennt den Grund.'],
   ['0.14.2.1', '<b>Plakette entfernt:</b> Die Plakette „Aktion“ / „Reaktion“ in der Kampfmitte entfällt; der farbige Rahmen am Rand zeigt weiterhin, wer in der Reaktion ist. Geprüft: Todesfluch und Erschöpfung wirken am Ende der eigenen Aktion (Angriffsphase), nach der Reaktion der Gegenseite; das war schon so und ist unverändert.'],

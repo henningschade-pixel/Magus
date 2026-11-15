@@ -183,6 +183,16 @@ function render() {   // läuft der Ergebnis-Bildschirm, wird der Endstand des K
   if (html && !ov) { ov = document.createElement('div'); ov.id = 'endov'; stage.appendChild(ov); }
   if (ov) { if (html) { if (ov.dataset.k !== html) { ov.innerHTML = html; ov.dataset.k = html; } ov.style.display = 'block'; } else { ov.style.display = 'none'; ov.dataset.k = ''; } }
 }
+// Protokollzeilen (seit 0.14.2.4): Symbol und Farbe je Art des Eintrags, erkannt am Text (die Engine bleibt unverändert)
+const LOGKINDS = [
+  [/^(Abschnitt|Showdown|Alle drei|Stillstand|Gleichstand)| verlor den Showdown/, 'head', '§'],
+  [/ verbessert | steigert /, 'up', '▲'], [/tauscht in der Bibliothek/, 'lib', '▤'],
+  [/Todesfluch|Erschöpfung|Zermürbung/, 'dark', '☠'], [/Meditation|heilt /, 'heal', '✚'], [/Erleuchtung|erholt sich|regeneriert/, 'mana', '◆'],
+  [/Schild| verteidigt /, 'shield', '◈'], [/wirkt (einen Kombo|eine Ultimate)|stellt nach/, 'combo', '✦'], [/ greift (.+ )?an[ .(]/, 'atk', '⚔'],
+  [/zieht .*Karten nach|Gratis-Nachziehen|Hellsicht|Falle/, 'draw', '▭'], [/ passt[ .]| reagiert nicht|flieht|zieht sich zurück/, 'pass', '…'],
+  [/besiegt|gewinnt|Siegpunkt|erhält .*Gold|Spielende|Ausgleich/, 'win', '★']
+];
+function logKind(t) { for (const [re, k, ic] of LOGKINDS) if (re.test(t)) return { k, ic }; return { k: 'misc', ic: '·' }; }
 function renderInner() {
   if (!G) return;
   const cx = ctx();
@@ -191,7 +201,8 @@ function renderInner() {
   else h += libraryPanel() + monsterCards() + (G.over ? '' : worldRoundNote());
   panels.innerHTML = h;
   const lg0 = logEl.querySelector('.logl'), lgKeep = lg0 && lg0.scrollHeight - lg0.scrollTop - lg0.clientHeight > 24 ? lg0.scrollTop : null;   // nicht am Ende: Leseposition merken
-  const logLines = from => G.log.filter(e => e.n > from).slice(-300).map(e => '<div class="' + (e.pid === ME ? 'me' : e.pid === null ? '' : 'op') + '">' + esc(e.txt) + '</div>').join('');
+  const logLines = from => G.log.filter(e => e.n > from).slice(-300).map(e => { const k = logKind(e.txt), up = k.k === 'up' && e.pid !== null && e.pid !== ME;   // Upgrades des Gegners (auch der KI) sind hervorgehoben
+    return '<div class="' + (e.pid === ME ? 'me' : e.pid === null ? '' : 'op') + (up ? ' upop' : k.k === 'up' ? ' upme' : '') + '"' + (up ? ' title="Verbesserung des Gegners"' : '') + '><i class="lk ' + k.k + '">' + k.ic + '</i>' + esc(e.txt) + '</div>'; }).join('');
   if (cx.combat) {   // links: nur der Kampflog (Einträge seit Kampfbeginn)
     const from = cx.c.logFrom || 0;
     logEl.className = 'logpanel'; logEl.style.cssText = box(LAYOUT.log);

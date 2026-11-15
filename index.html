@@ -216,6 +216,11 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 #log.logpanel .logl div{opacity:.62;padding:2px 0 2px 8px;border-left:2px solid transparent;line-height:1.25}
 #log.logpanel .logl div.me{border-left-color:var(--gold)}#log.logpanel .logl div.op{border-left-color:var(--mute)}
 #log.logpanel .logl div:last-child{opacity:1}
+/* Symbole und Farben im Protokoll (seit 0.14.2.4) */
+.lk{font-style:normal;display:inline-block;width:1.25em;margin-right:5px;text-align:center;font-size:.95em}
+.lk.up{color:var(--gold)}.lk.lib{color:#c9a96a}.lk.dark{color:#d25a5a}.lk.heal{color:#7fd08a}.lk.mana{color:#6eaae6}.lk.shield{color:#9cc7f0}.lk.combo{color:#c58bdc}.lk.atk{color:#e8806a}.lk.draw{color:var(--mute)}.lk.pass{color:var(--mute)}.lk.win{color:var(--gold)}.lk.head{color:var(--gold)}.lk.misc{color:var(--mute)}
+#log.logpanel .logl div.upme{opacity:1;color:var(--gold)}
+#log.logpanel .logl div.upop{opacity:1;color:#ffe08a;font-weight:600;background:rgba(210,173,79,.18);border-left-color:var(--gold);border-radius:0 6px 6px 0;margin:2px 0;padding:3px 4px 3px 8px}
 #log.logpanel .logst{flex:none;color:var(--mute);font-size:15px;line-height:1.3;padding-bottom:8px;margin-bottom:6px;border-bottom:1px solid var(--line)}
 
 /* Kopfzeile des Spielerstatus: Name, Siegpunkte (rechtsbündig) */
@@ -2794,10 +2799,11 @@ let hpHold = null, curseHold = {}, stageSeen = 1, endSnd = null, G = null, hold 
 
 /* ---------- Versionen: Versionsnummer und Versionsbeschreibung (Seite „Neu in Version …“) ---------- */
 // Aktuelle Versionsnummer: einzige Stelle, an der sie gesetzt wird (Menü-Link und Über-Seite lesen sie von hier; bei jedem Schritt hochzählen)
-const MAGUS_VERSION = '0.14.2.3';
+const MAGUS_VERSION = '0.14.2.4';
 // Versionsbeschreibung: ein Eintrag je Version, die neueste zuerst. Bei jedem Schritt oben einen Eintrag [Nummer, Text] ergänzen;
 // der erste Eintrag gehört zu MAGUS_VERSION und erscheint unter „Neu in Version …“.
 const VERSIONEN = [
+  ['0.14.2.4', '<b>Protokoll lesbarer:</b> Jede Zeile trägt ein Symbol in der Farbe ihrer Art (Angriff, Kombo, Heilung, Mana, Schild, Fluch, Nachziehen, Sieg, Verbesserung). Verbesserungen des Gegners, auch des Computers, sind zusätzlich golden hinterlegt und fett; eigene Verbesserungen stehen golden.'],
   ['0.14.2.3', '<b>Update-Text gekürzt:</b> Der Text „Neu in Version …“ zeigt nur noch die Änderungen ab Version 0.14.'],
   ['0.14.2.2', '<b>Nicht spielbare Kombos transparent:</b> In der Kombo-Übersicht erscheinen Kombos und Ultimates, die gerade nicht spielbar sind (zu niedriges Ausspiellimit, fehlende Karten einer Farbe auf der Hand, zu wenig Mana, Kombos in der Phase abgeschaltet), transparent. Der Hinweis beim Darüberfahren nennt den Grund.'],
   ['0.14.2.1', '<b>Plakette entfernt:</b> Die Plakette „Aktion“ / „Reaktion“ in der Kampfmitte entfällt; der farbige Rahmen am Rand zeigt weiterhin, wer in der Reaktion ist. Geprüft: Todesfluch und Erschöpfung wirken am Ende der eigenen Aktion (Angriffsphase), nach der Reaktion der Gegenseite; das war schon so und ist unverändert.'],
@@ -5662,6 +5668,16 @@ function render() {   // läuft der Ergebnis-Bildschirm, wird der Endstand des K
   if (html && !ov) { ov = document.createElement('div'); ov.id = 'endov'; stage.appendChild(ov); }
   if (ov) { if (html) { if (ov.dataset.k !== html) { ov.innerHTML = html; ov.dataset.k = html; } ov.style.display = 'block'; } else { ov.style.display = 'none'; ov.dataset.k = ''; } }
 }
+// Protokollzeilen (seit 0.14.2.4): Symbol und Farbe je Art des Eintrags, erkannt am Text (die Engine bleibt unverändert)
+const LOGKINDS = [
+  [/^(Abschnitt|Showdown|Alle drei|Stillstand|Gleichstand)| verlor den Showdown/, 'head', '§'],
+  [/ verbessert | steigert /, 'up', '▲'], [/tauscht in der Bibliothek/, 'lib', '▤'],
+  [/Todesfluch|Erschöpfung|Zermürbung/, 'dark', '☠'], [/Meditation|heilt /, 'heal', '✚'], [/Erleuchtung|erholt sich|regeneriert/, 'mana', '◆'],
+  [/Schild| verteidigt /, 'shield', '◈'], [/wirkt (einen Kombo|eine Ultimate)|stellt nach/, 'combo', '✦'], [/ greift (.+ )?an[ .(]/, 'atk', '⚔'],
+  [/zieht .*Karten nach|Gratis-Nachziehen|Hellsicht|Falle/, 'draw', '▭'], [/ passt[ .]| reagiert nicht|flieht|zieht sich zurück/, 'pass', '…'],
+  [/besiegt|gewinnt|Siegpunkt|erhält .*Gold|Spielende|Ausgleich/, 'win', '★']
+];
+function logKind(t) { for (const [re, k, ic] of LOGKINDS) if (re.test(t)) return { k, ic }; return { k: 'misc', ic: '·' }; }
 function renderInner() {
   if (!G) return;
   const cx = ctx();
@@ -5670,7 +5686,8 @@ function renderInner() {
   else h += libraryPanel() + monsterCards() + (G.over ? '' : worldRoundNote());
   panels.innerHTML = h;
   const lg0 = logEl.querySelector('.logl'), lgKeep = lg0 && lg0.scrollHeight - lg0.scrollTop - lg0.clientHeight > 24 ? lg0.scrollTop : null;   // nicht am Ende: Leseposition merken
-  const logLines = from => G.log.filter(e => e.n > from).slice(-300).map(e => '<div class="' + (e.pid === ME ? 'me' : e.pid === null ? '' : 'op') + '">' + esc(e.txt) + '</div>').join('');
+  const logLines = from => G.log.filter(e => e.n > from).slice(-300).map(e => { const k = logKind(e.txt), up = k.k === 'up' && e.pid !== null && e.pid !== ME;   // Upgrades des Gegners (auch der KI) sind hervorgehoben
+    return '<div class="' + (e.pid === ME ? 'me' : e.pid === null ? '' : 'op') + (up ? ' upop' : k.k === 'up' ? ' upme' : '') + '"' + (up ? ' title="Verbesserung des Gegners"' : '') + '><i class="lk ' + k.k + '">' + k.ic + '</i>' + esc(e.txt) + '</div>'; }).join('');
   if (cx.combat) {   // links: nur der Kampflog (Einträge seit Kampfbeginn)
     const from = cx.c.logFrom || 0;
     logEl.className = 'logpanel'; logEl.style.cssText = box(LAYOUT.log);
