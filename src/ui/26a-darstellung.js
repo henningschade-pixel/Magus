@@ -183,16 +183,44 @@ function render() {   // läuft der Ergebnis-Bildschirm, wird der Endstand des K
   if (html && !ov) { ov = document.createElement('div'); ov.id = 'endov'; stage.appendChild(ov); }
   if (ov) { if (html) { if (ov.dataset.k !== html) { ov.innerHTML = html; ov.dataset.k = html; } ov.style.display = 'block'; } else { ov.style.display = 'none'; ov.dataset.k = ''; } }
 }
-// Protokollzeilen (seit 0.14.2.4): Symbol und Farbe je Art des Eintrags, erkannt am Text (die Engine bleibt unverändert)
-const LOGKINDS = [
-  [/^(Abschnitt|Showdown|Alle drei|Stillstand|Gleichstand)| verlor den Showdown/, 'head', '§'],
-  [/ verbessert | steigert /, 'up', '▲'], [/tauscht in der Bibliothek/, 'lib', '▤'],
-  [/Todesfluch|Erschöpfung|Zermürbung/, 'dark', '☠'], [/Meditation|heilt /, 'heal', '✚'], [/Erleuchtung|erholt sich|regeneriert/, 'mana', '◆'],
-  [/Schild| verteidigt /, 'shield', '◈'], [/wirkt (einen Kombo|eine Ultimate)|stellt nach/, 'combo', '✦'], [/ greift (.+ )?an[ .(]/, 'atk', '⚔'],
-  [/zieht .*Karten nach|Gratis-Nachziehen|Hellsicht|Falle/, 'draw', '▭'], [/ passt[ .]| reagiert nicht|flieht|zieht sich zurück/, 'pass', '…'],
-  [/besiegt|gewinnt|Siegpunkt|erhält .*Gold|Spielende|Ausgleich/, 'win', '★']
+// Protokollzeilen (seit 0.14.2.5): Jede Aktion hat ihr eigenes Symbol in eigener Farbe, erkannt am Text (die Engine bleibt unverändert).
+// Eine Zeile zeigt bis zu drei Symbole: die Hauptaktion zuerst, danach Zusatzwirkungen (Todesfluch, Schild, Echo, Siegpunkt …). Bibliothekstausch wird kurz als „1F + 1F ➜ 2E“ gezeigt.
+const LOGICON = {
+  head: ['§', 'Abschnitt / Spielstand'], show: ['✪', 'Showdown'], end: ['■', 'Spielende'], win: ['★', 'Siegpunkt erhalten'], lose: ['☆', 'Siegpunkt verloren'], gold: ['●', 'Gold'],
+  up: ['▲', 'Verbesserung'], uhp: ['♥', 'max. HP'], umana: ['◆', 'max. Mana'], ulim: ['⇧', 'Ausspiellimit'], uhand: ['▦', 'Handplätze'], udraw: ['▭', 'Nachziehlimit'], umagF: ['✦', 'Feuer-Magie'], umagE: ['✦', 'Erd-Magie'], umagW: ['✦', 'Wasser-Magie'],
+  lib: ['⇄', 'Tausch in der Bibliothek'], atk: ['⚔', 'Angriff'], fight: ['⚑', 'Kampf beginnt'], def: ['◐', 'Verteidigung'], hit: ['✖', 'Schaden hingenommen'], pass: ['‖', 'passt / reagiert nicht'],
+  draw: ['▭', 'Karten nachgezogen'], rec: ['↻', 'Mana erholt'], won: ['✔', 'Kampf entschieden / Monster besiegt'], flee: ['↩', 'Rückzug'],
+  combo: ['✦', 'Kombo'], echo: ['≈', 'Echo'], purge: ['✧', 'Läuterung'], palsy: ['☒', 'Lähmung'], shield: ['◈', 'Schild'], heal: ['✚', 'Heilung'], mana: ['✺', 'Mana-Regeneration'],
+  curse: ['☠', 'Todesfluch'], exh: ['☾', 'Erschöpfung'], wear: ['◔', 'Zermürbung'], trap: ['⚠', 'Falle'], sight: ['◎', 'Hellsicht']
+};
+const LOGBASE = [   // Hauptaktion: die erste passende Regel gilt
+  [/^Abschnitt|^Stillstand|^Gleichstand/, 'head'], [/Showdown/, 'show'], [/^Spielende|^Alle drei Monster/, 'end'],
+  [/^Erschöpfung/, 'exh'], [/^Todesfluch:/, 'curse'], [/^Meditation:/, 'heal'], [/^Erleuchtung:/, 'mana'], [/^Zermürbung/, 'wear'], [/^Schild:/, 'shield'], [/^Ausgleich|^Jeder Spieler erhält/, 'gold'],
+  [/ (verbessert|steigert) /, 'up'], [/tauscht in der Bibliothek/, 'lib'],
+  [/ greift (.+ )?an \(/, 'atk'], [/ greift .+ an\. /, 'fight'], [/ verteidigt \(Block/, 'def'], [/ passt und nimmt/, 'hit'], [/ passt\.| reagiert nicht/, 'pass'],
+  [/zieht Karten nach|Gratis-Nachziehen/, 'draw'], [/ erholt sich/, 'rec'], [/ gewinnt den Kampf| besiegt /, 'won'], [/ zieht sich zurück| flieht/, 'flee'],
+  [/ wirkt (einen Kombo|eine Ultimate)/, 'combo'], [/ stellt nach der Verteidigung/, 'shield'], [/ heilt nach der Verteidigung/, 'heal'], [/Falle/, 'trap'], [/Hellsicht/, 'sight']
 ];
-function logKind(t) { for (const [re, k, ic] of LOGKINDS) if (re.test(t)) return { k, ic }; return { k: 'misc', ic: '·' }; }
+const LOGEXTRA = [   // Zusatzwirkungen in derselben Zeile
+  [/Ultimate \d+ \([^)]*\): Todesfluch/, 'curse'], [/Ultimate \d+ \([^)]*\): Meditation/, 'heal'], [/Ultimate \d+ \([^)]*\): Erleuchtung/, 'mana'],
+  [/Schild \d+ \(\d+ Ladung/, 'shield'], [/Heilung \d+: \+/, 'heal'], [/Echo \(/, 'echo'], [/Läuterung/, 'purge'], [/Lähmung/, 'palsy'],
+  [/erhält .*Siegpunkt|\(\+\d+ Siegpunkt/, 'win'], [/verliert \d+ Siegpunkt/, 'lose'], [/erhält \d+ Gold/, 'gold']
+];
+function logIcons(t) {
+  const base = (LOGBASE.find(([re]) => re.test(t)) || [0, null])[1], out = [];
+  if (base === 'up') {   // Verbesserung: ▲ und das, was verbessert wurde (Magie in der Farbe des Elements)
+    out.push('up'); const m = /(Feuer|Erde|Wasser) auf Stufe/.exec(t);
+    out.push(m ? 'umag' + { Feuer: 'F', Erde: 'E', Wasser: 'W' }[m[1]] : /max\. HP/.test(t) ? 'uhp' : /max\. Mana/.test(t) ? 'umana' : /Ausspiellimit/.test(t) ? 'ulim' : /Handplätze/.test(t) ? 'uhand' : /Nachziehlimit/.test(t) ? 'udraw' : null);
+  } else { if (base) out.push(base); LOGEXTRA.forEach(([re, k]) => { if (re.test(t) && !out.includes(k)) out.push(k); }); }
+  return out.filter(Boolean).slice(0, 3).map(k => ({ k, ic: LOGICON[k][0], tip: LOGICON[k][1] }));
+}
+// Text einer Zeile: Bibliothekstausch kompakt („Du: 1F + 1F ➜ 2E“, Karte = Stufe und Element in Elementfarbe), sonst unverändert
+function logText(t) {
+  const m = /^(.*?) tauscht in der Bibliothek (?:(.+?) gegen |und erhält )([FEW][1-3])\.$/.exec(t);
+  if (!m) return esc(t);
+  const chip = id => '<b class="lc ' + id[0] + '">' + id[1] + id[0] + '</b>';
+  return esc(m[1]) + ': ' + (m[2] ? m[2].split(' + ').map(c => /^[FEW][1-3]$/.test(c) ? chip(c) : esc(c)).join(' + ') : '<span class="lfree">gratis</span>') + ' <span class="lar">➜</span> ' + chip(m[3]);
+}
 function renderInner() {
   if (!G) return;
   const cx = ctx();
@@ -201,8 +229,8 @@ function renderInner() {
   else h += libraryPanel() + monsterCards() + (G.over ? '' : worldRoundNote());
   panels.innerHTML = h;
   const lg0 = logEl.querySelector('.logl'), lgKeep = lg0 && lg0.scrollHeight - lg0.scrollTop - lg0.clientHeight > 24 ? lg0.scrollTop : null;   // nicht am Ende: Leseposition merken
-  const logLines = from => G.log.filter(e => e.n > from).slice(-300).map(e => { const k = logKind(e.txt), up = k.k === 'up' && e.pid !== null && e.pid !== ME;   // Upgrades des Gegners (auch der KI) sind hervorgehoben
-    return '<div class="' + (e.pid === ME ? 'me' : e.pid === null ? '' : 'op') + (up ? ' upop' : k.k === 'up' ? ' upme' : '') + '"' + (up ? ' title="Verbesserung des Gegners"' : '') + '><i class="lk ' + k.k + '">' + k.ic + '</i>' + esc(e.txt) + '</div>'; }).join('');
+  const logLines = from => G.log.filter(e => e.n > from).slice(-300).map(e => { const ic = logIcons(e.txt), up = ic.length > 0 && ic[0].k === 'up' && e.pid !== null && e.pid !== ME;   // Verbesserungen des Gegners (auch der KI) sind hervorgehoben
+    return '<div class="' + (e.pid === ME ? 'me' : e.pid === null ? '' : 'op') + (up ? ' upop' : ic.length && ic[0].k === 'up' ? ' upme' : '') + '"' + (up ? ' title="Verbesserung des Gegners"' : '') + '><span class="lks">' + (ic.length ? ic.map(i => '<i class="lk ' + i.k + '" title="' + i.tip + '">' + i.ic + '</i>').join('') : '<i class="lk misc">·</i>') + '</span><span class="ltx">' + logText(e.txt) + '</span></div>'; }).join('');
   if (cx.combat) {   // links: nur der Kampflog (Einträge seit Kampfbeginn)
     const from = cx.c.logFrom || 0;
     logEl.className = 'logpanel'; logEl.style.cssText = box(LAYOUT.log);

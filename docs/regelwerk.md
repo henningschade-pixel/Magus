@@ -690,6 +690,11 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Tests:** Drei Tests angepasst (Nachziehmarker Weltphase, Nachziehlimit Kauf, Nachziehlimit Weltphase; der Marker-Reset läuft jetzt über den Händler), neuer Test „Magie kaufen und Upgrades sind keine Aktion mehr“. `tests/golden.json` ist neu erzeugt (absichtliche Regeländerung).
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
 
+## Änderung 0.14.2.5 (15.11.)
+
+- **Oberfläche (keine Regeländerung):** Jede Protokollzeile zeigt bis zu drei Symbole (`LOGICON`, `LOGBASE`, `LOGEXTRA`, `logIcons` in `src/ui/26a-darstellung.js`): zuerst die Hauptaktion, dann Zusatzwirkungen derselben Zeile (Todesfluch, Schild, Heilung, Echo, Läuterung, Siegpunkt, Gold). Verbesserungen zeigen ▲ plus das Verbesserte (♥ max. HP, ◆ max. Mana, ⇧ Ausspiellimit, ▦ Handplätze, ▭ Nachziehlimit, ✦ Magie in der Elementfarbe). Der Bibliothekstausch steht kompakt als „Name: 1F + 1F ➜ 2E“ (Stufe, Element in Elementfarbe; `logText`). Der Tooltip jedes Symbols nennt die Aktion; Erkennung am Text, Engine und Export unverändert.
+- Die Versionsbeschreibung im Spiel nennt die Änderung.
+
 ## Änderung 0.14.2.4 (15.11.)
 
 - **Oberfläche (keine Regeländerung):** Das Protokoll (Weltphase und Kampflog) zeigt vor jeder Zeile ein Symbol in der Farbe ihrer Art (`LOGKINDS` in `src/ui/26a-darstellung.js`, erkannt am Text; die Engine bleibt unverändert). **Verbesserungen des Gegners** (HP, Mana, Limit, Handplätze, Nachziehlimit, Magie, auch die des Computers) sind golden hinterlegt und fett (`.upop`); eigene Verbesserungen stehen golden (`.upme`). Der Export des Spiellogs bleibt reiner Text.

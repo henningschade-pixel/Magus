@@ -216,9 +216,16 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 #log.logpanel .logl div{opacity:.62;padding:2px 0 2px 8px;border-left:2px solid transparent;line-height:1.25}
 #log.logpanel .logl div.me{border-left-color:var(--gold)}#log.logpanel .logl div.op{border-left-color:var(--mute)}
 #log.logpanel .logl div:last-child{opacity:1}
-/* Symbole und Farben im Protokoll (seit 0.14.2.4) */
-.lk{font-style:normal;display:inline-block;width:1.25em;margin-right:5px;text-align:center;font-size:.95em}
-.lk.up{color:var(--gold)}.lk.lib{color:#c9a96a}.lk.dark{color:#d25a5a}.lk.heal{color:#7fd08a}.lk.mana{color:#6eaae6}.lk.shield{color:#9cc7f0}.lk.combo{color:#c58bdc}.lk.atk{color:#e8806a}.lk.draw{color:var(--mute)}.lk.pass{color:var(--mute)}.lk.win{color:var(--gold)}.lk.head{color:var(--gold)}.lk.misc{color:var(--mute)}
+/* Symbole und Farben im Protokoll (seit 0.14.2.4, je Aktion eigenes Symbol seit 0.14.2.5) */
+#log.logpanel .logl>div{display:flex;gap:5px;align-items:flex-start}
+.lks{flex:none;min-width:3.3em;white-space:nowrap}.ltx{flex:1;min-width:0}
+.lk{font-style:normal;display:inline-block;width:1.05em;text-align:center;font-size:.95em;cursor:help}
+.lk.head,.lk.show,.lk.end,.lk.win,.lk.gold,.lk.up,.lk.ulim,.lk.uhand,.lk.udraw{color:var(--gold)}.lk.lose{color:var(--bad)}
+.lk.uhp{color:#e46a6a}.lk.umana,.lk.rec{color:#6eaae6}.lk.umagF{color:var(--fire)}.lk.umagE{color:var(--earth)}.lk.umagW{color:var(--water)}
+.lk.lib{color:#d8b878}.lk.atk,.lk.fight{color:#e8806a}.lk.def,.lk.shield{color:#9cc7f0}.lk.hit{color:var(--bad)}.lk.pass,.lk.flee,.lk.misc,.lk.wear{color:var(--mute)}
+.lk.draw{color:#c9c9d6}.lk.won{color:var(--good)}.lk.combo{color:#c58bdc}.lk.echo{color:#7fd0d0}.lk.purge{color:#e8e8a0}.lk.palsy{color:#a0a0b8}
+.lk.heal{color:var(--good)}.lk.mana{color:#6eaae6}.lk.curse{color:#d25a5a}.lk.exh{color:#b86a6a}.lk.trap{color:#e8b04a}.lk.sight{color:#8ad0e8}
+.lc{font-weight:700;padding:0 3px;border-radius:4px;background:rgba(255,255,255,.07)}.lar{color:var(--gold)}.lfree{color:var(--mute)}
 #log.logpanel .logl div.upme{opacity:1;color:var(--gold)}
 #log.logpanel .logl div.upop{opacity:1;color:#ffe08a;font-weight:600;background:rgba(210,173,79,.18);border-left-color:var(--gold);border-radius:0 6px 6px 0;margin:2px 0;padding:3px 4px 3px 8px}
 #log.logpanel .logst{flex:none;color:var(--mute);font-size:15px;line-height:1.3;padding-bottom:8px;margin-bottom:6px;border-bottom:1px solid var(--line)}
@@ -2799,10 +2806,11 @@ let hpHold = null, curseHold = {}, stageSeen = 1, endSnd = null, G = null, hold 
 
 /* ---------- Versionen: Versionsnummer und Versionsbeschreibung (Seite „Neu in Version …“) ---------- */
 // Aktuelle Versionsnummer: einzige Stelle, an der sie gesetzt wird (Menü-Link und Über-Seite lesen sie von hier; bei jedem Schritt hochzählen)
-const MAGUS_VERSION = '0.14.2.4';
+const MAGUS_VERSION = '0.14.2.5';
 // Versionsbeschreibung: ein Eintrag je Version, die neueste zuerst. Bei jedem Schritt oben einen Eintrag [Nummer, Text] ergänzen;
 // der erste Eintrag gehört zu MAGUS_VERSION und erscheint unter „Neu in Version …“.
 const VERSIONEN = [
+  ['0.14.2.5', '<b>Protokoll eindeutiger:</b> Jede Aktion hat ihr eigenes Symbol in eigener Farbe (Angriff, Verteidigung, Passen, Erholen, Nachziehen, Kombo, Echo, Läuterung, Schild, Heilung, Todesfluch, Erschöpfung, Siegpunkt, Gold …); eine Zeile zeigt bis zu drei Symbole für Hauptaktion und Zusatzwirkung. Verbesserungen zeigen ▲ und das Verbesserte (♥ HP, ◆ Mana, ⇧ Limit, ▦ Handplätze, ▭ Nachziehlimit, ✦ Magie in Elementfarbe). Bibliothekstausch steht kurz als „1F + 1F ➜ 2E“.'],
   ['0.14.2.4', '<b>Protokoll lesbarer:</b> Jede Zeile trägt ein Symbol in der Farbe ihrer Art (Angriff, Kombo, Heilung, Mana, Schild, Fluch, Nachziehen, Sieg, Verbesserung). Verbesserungen des Gegners, auch des Computers, sind zusätzlich golden hinterlegt und fett; eigene Verbesserungen stehen golden.'],
   ['0.14.2.3', '<b>Update-Text gekürzt:</b> Der Text „Neu in Version …“ zeigt nur noch die Änderungen ab Version 0.14.'],
   ['0.14.2.2', '<b>Nicht spielbare Kombos transparent:</b> In der Kombo-Übersicht erscheinen Kombos und Ultimates, die gerade nicht spielbar sind (zu niedriges Ausspiellimit, fehlende Karten einer Farbe auf der Hand, zu wenig Mana, Kombos in der Phase abgeschaltet), transparent. Der Hinweis beim Darüberfahren nennt den Grund.'],
@@ -5668,16 +5676,44 @@ function render() {   // läuft der Ergebnis-Bildschirm, wird der Endstand des K
   if (html && !ov) { ov = document.createElement('div'); ov.id = 'endov'; stage.appendChild(ov); }
   if (ov) { if (html) { if (ov.dataset.k !== html) { ov.innerHTML = html; ov.dataset.k = html; } ov.style.display = 'block'; } else { ov.style.display = 'none'; ov.dataset.k = ''; } }
 }
-// Protokollzeilen (seit 0.14.2.4): Symbol und Farbe je Art des Eintrags, erkannt am Text (die Engine bleibt unverändert)
-const LOGKINDS = [
-  [/^(Abschnitt|Showdown|Alle drei|Stillstand|Gleichstand)| verlor den Showdown/, 'head', '§'],
-  [/ verbessert | steigert /, 'up', '▲'], [/tauscht in der Bibliothek/, 'lib', '▤'],
-  [/Todesfluch|Erschöpfung|Zermürbung/, 'dark', '☠'], [/Meditation|heilt /, 'heal', '✚'], [/Erleuchtung|erholt sich|regeneriert/, 'mana', '◆'],
-  [/Schild| verteidigt /, 'shield', '◈'], [/wirkt (einen Kombo|eine Ultimate)|stellt nach/, 'combo', '✦'], [/ greift (.+ )?an[ .(]/, 'atk', '⚔'],
-  [/zieht .*Karten nach|Gratis-Nachziehen|Hellsicht|Falle/, 'draw', '▭'], [/ passt[ .]| reagiert nicht|flieht|zieht sich zurück/, 'pass', '…'],
-  [/besiegt|gewinnt|Siegpunkt|erhält .*Gold|Spielende|Ausgleich/, 'win', '★']
+// Protokollzeilen (seit 0.14.2.5): Jede Aktion hat ihr eigenes Symbol in eigener Farbe, erkannt am Text (die Engine bleibt unverändert).
+// Eine Zeile zeigt bis zu drei Symbole: die Hauptaktion zuerst, danach Zusatzwirkungen (Todesfluch, Schild, Echo, Siegpunkt …). Bibliothekstausch wird kurz als „1F + 1F ➜ 2E“ gezeigt.
+const LOGICON = {
+  head: ['§', 'Abschnitt / Spielstand'], show: ['✪', 'Showdown'], end: ['■', 'Spielende'], win: ['★', 'Siegpunkt erhalten'], lose: ['☆', 'Siegpunkt verloren'], gold: ['●', 'Gold'],
+  up: ['▲', 'Verbesserung'], uhp: ['♥', 'max. HP'], umana: ['◆', 'max. Mana'], ulim: ['⇧', 'Ausspiellimit'], uhand: ['▦', 'Handplätze'], udraw: ['▭', 'Nachziehlimit'], umagF: ['✦', 'Feuer-Magie'], umagE: ['✦', 'Erd-Magie'], umagW: ['✦', 'Wasser-Magie'],
+  lib: ['⇄', 'Tausch in der Bibliothek'], atk: ['⚔', 'Angriff'], fight: ['⚑', 'Kampf beginnt'], def: ['◐', 'Verteidigung'], hit: ['✖', 'Schaden hingenommen'], pass: ['‖', 'passt / reagiert nicht'],
+  draw: ['▭', 'Karten nachgezogen'], rec: ['↻', 'Mana erholt'], won: ['✔', 'Kampf entschieden / Monster besiegt'], flee: ['↩', 'Rückzug'],
+  combo: ['✦', 'Kombo'], echo: ['≈', 'Echo'], purge: ['✧', 'Läuterung'], palsy: ['☒', 'Lähmung'], shield: ['◈', 'Schild'], heal: ['✚', 'Heilung'], mana: ['✺', 'Mana-Regeneration'],
+  curse: ['☠', 'Todesfluch'], exh: ['☾', 'Erschöpfung'], wear: ['◔', 'Zermürbung'], trap: ['⚠', 'Falle'], sight: ['◎', 'Hellsicht']
+};
+const LOGBASE = [   // Hauptaktion: die erste passende Regel gilt
+  [/^Abschnitt|^Stillstand|^Gleichstand/, 'head'], [/Showdown/, 'show'], [/^Spielende|^Alle drei Monster/, 'end'],
+  [/^Erschöpfung/, 'exh'], [/^Todesfluch:/, 'curse'], [/^Meditation:/, 'heal'], [/^Erleuchtung:/, 'mana'], [/^Zermürbung/, 'wear'], [/^Schild:/, 'shield'], [/^Ausgleich|^Jeder Spieler erhält/, 'gold'],
+  [/ (verbessert|steigert) /, 'up'], [/tauscht in der Bibliothek/, 'lib'],
+  [/ greift (.+ )?an \(/, 'atk'], [/ greift .+ an\. /, 'fight'], [/ verteidigt \(Block/, 'def'], [/ passt und nimmt/, 'hit'], [/ passt\.| reagiert nicht/, 'pass'],
+  [/zieht Karten nach|Gratis-Nachziehen/, 'draw'], [/ erholt sich/, 'rec'], [/ gewinnt den Kampf| besiegt /, 'won'], [/ zieht sich zurück| flieht/, 'flee'],
+  [/ wirkt (einen Kombo|eine Ultimate)/, 'combo'], [/ stellt nach der Verteidigung/, 'shield'], [/ heilt nach der Verteidigung/, 'heal'], [/Falle/, 'trap'], [/Hellsicht/, 'sight']
 ];
-function logKind(t) { for (const [re, k, ic] of LOGKINDS) if (re.test(t)) return { k, ic }; return { k: 'misc', ic: '·' }; }
+const LOGEXTRA = [   // Zusatzwirkungen in derselben Zeile
+  [/Ultimate \d+ \([^)]*\): Todesfluch/, 'curse'], [/Ultimate \d+ \([^)]*\): Meditation/, 'heal'], [/Ultimate \d+ \([^)]*\): Erleuchtung/, 'mana'],
+  [/Schild \d+ \(\d+ Ladung/, 'shield'], [/Heilung \d+: \+/, 'heal'], [/Echo \(/, 'echo'], [/Läuterung/, 'purge'], [/Lähmung/, 'palsy'],
+  [/erhält .*Siegpunkt|\(\+\d+ Siegpunkt/, 'win'], [/verliert \d+ Siegpunkt/, 'lose'], [/erhält \d+ Gold/, 'gold']
+];
+function logIcons(t) {
+  const base = (LOGBASE.find(([re]) => re.test(t)) || [0, null])[1], out = [];
+  if (base === 'up') {   // Verbesserung: ▲ und das, was verbessert wurde (Magie in der Farbe des Elements)
+    out.push('up'); const m = /(Feuer|Erde|Wasser) auf Stufe/.exec(t);
+    out.push(m ? 'umag' + { Feuer: 'F', Erde: 'E', Wasser: 'W' }[m[1]] : /max\. HP/.test(t) ? 'uhp' : /max\. Mana/.test(t) ? 'umana' : /Ausspiellimit/.test(t) ? 'ulim' : /Handplätze/.test(t) ? 'uhand' : /Nachziehlimit/.test(t) ? 'udraw' : null);
+  } else { if (base) out.push(base); LOGEXTRA.forEach(([re, k]) => { if (re.test(t) && !out.includes(k)) out.push(k); }); }
+  return out.filter(Boolean).slice(0, 3).map(k => ({ k, ic: LOGICON[k][0], tip: LOGICON[k][1] }));
+}
+// Text einer Zeile: Bibliothekstausch kompakt („Du: 1F + 1F ➜ 2E“, Karte = Stufe und Element in Elementfarbe), sonst unverändert
+function logText(t) {
+  const m = /^(.*?) tauscht in der Bibliothek (?:(.+?) gegen |und erhält )([FEW][1-3])\.$/.exec(t);
+  if (!m) return esc(t);
+  const chip = id => '<b class="lc ' + id[0] + '">' + id[1] + id[0] + '</b>';
+  return esc(m[1]) + ': ' + (m[2] ? m[2].split(' + ').map(c => /^[FEW][1-3]$/.test(c) ? chip(c) : esc(c)).join(' + ') : '<span class="lfree">gratis</span>') + ' <span class="lar">➜</span> ' + chip(m[3]);
+}
 function renderInner() {
   if (!G) return;
   const cx = ctx();
@@ -5686,8 +5722,8 @@ function renderInner() {
   else h += libraryPanel() + monsterCards() + (G.over ? '' : worldRoundNote());
   panels.innerHTML = h;
   const lg0 = logEl.querySelector('.logl'), lgKeep = lg0 && lg0.scrollHeight - lg0.scrollTop - lg0.clientHeight > 24 ? lg0.scrollTop : null;   // nicht am Ende: Leseposition merken
-  const logLines = from => G.log.filter(e => e.n > from).slice(-300).map(e => { const k = logKind(e.txt), up = k.k === 'up' && e.pid !== null && e.pid !== ME;   // Upgrades des Gegners (auch der KI) sind hervorgehoben
-    return '<div class="' + (e.pid === ME ? 'me' : e.pid === null ? '' : 'op') + (up ? ' upop' : k.k === 'up' ? ' upme' : '') + '"' + (up ? ' title="Verbesserung des Gegners"' : '') + '><i class="lk ' + k.k + '">' + k.ic + '</i>' + esc(e.txt) + '</div>'; }).join('');
+  const logLines = from => G.log.filter(e => e.n > from).slice(-300).map(e => { const ic = logIcons(e.txt), up = ic.length > 0 && ic[0].k === 'up' && e.pid !== null && e.pid !== ME;   // Verbesserungen des Gegners (auch der KI) sind hervorgehoben
+    return '<div class="' + (e.pid === ME ? 'me' : e.pid === null ? '' : 'op') + (up ? ' upop' : ic.length && ic[0].k === 'up' ? ' upme' : '') + '"' + (up ? ' title="Verbesserung des Gegners"' : '') + '><span class="lks">' + (ic.length ? ic.map(i => '<i class="lk ' + i.k + '" title="' + i.tip + '">' + i.ic + '</i>').join('') : '<i class="lk misc">·</i>') + '</span><span class="ltx">' + logText(e.txt) + '</span></div>'; }).join('');
   if (cx.combat) {   // links: nur der Kampflog (Einträge seit Kampfbeginn)
     const from = cx.c.logFrom || 0;
     logEl.className = 'logpanel'; logEl.style.cssText = box(LAYOUT.log);
