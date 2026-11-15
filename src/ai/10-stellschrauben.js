@@ -1,32 +1,30 @@
 /* ---------- Stellschrauben ---------- */
 // Alle Gewichte der KI an einer Stelle (abgestimmt per Selbstspiel: Änderungen wurden nur übernommen, wenn sie sich in 800 Partien mit getauschten Plätzen klar durchsetzten). Pro Platz überschreibbar (setParams), damit Varianten gegeneinander spielen können.
 const DEFAULTS = {
-  // Ausbaureihenfolge der Upgrade-Punkte
+  // Ausbaureihenfolge der Verbesserungen (Gold)
   limitA: 1, slotA: 5, manaA: 4, hpA: 6, limitB: 3, slotB: 5, hpB: 6, manaB: 6,   // hpB/manaB (seit 0.13.2.2): bis zu diesen Höchstwerten baut die KI HP und Mana aus (nur von Belang, wenn die Regel maxUpgrades die Grenze aufhebt; erst wenn alle Magie auf der Höchststufe steht, geht übriges Gold weiter in HP und Mana). Selbstspiel, 2000 Partien gegen 6/6/6: hpB 7 50,1 %, 8 46,5 %, 10 44,6 %, ohne Grenze 44,3 %; manaB 5 49,9 %, 7 48,9 %, 8 42,7 %, ohne Grenze 38,6 %; hpA 4 42,6 %, 5 39,7 %, 7 48,9 %, 8 45,7 %
   // Lust, ein Monster anzugreifen
   cBase: 34, cHp: 3, cMana: 1.5, cWt: 3.5, cMon: 0.8, minHp: 1, minMana: 2,
   // Nachziehmarker rot (Nachziehen schenkt dem Gegner Gold bzw. ein Nachziehtoken): dRed Abschlag auf das
-  // Nachziehen in der Weltphase, dTmp Lust, stattdessen 1 Gold im Tempel zu opfern, dVen Lust, ohne Gold
+  // Nachziehen in der Weltphase, dVen Lust, ohne Gold
   // stattdessen gratis in der Bibliothek zu tauschen, rBroke Bonus für einen Monsterangriff, wenn sonst nur das
   // Strafnachziehen bleibt; im Kampf cRed 1: erholen statt nachziehen (auch bei vollem Mana), cRedA:
   // Angriffsschwelle sinkt um so viel
-  // dRedS (seit 0.7.4): Zuschlag je Abschnitt über 1 auf dRed, dTmp und dVen, weil die Strafe des roten Markers mit dem Abschnitt wächst (1/2/3)
-  dRed: 10, dTmp: 10, dVen: 5, rBroke: 400, cRed: 1, cRedA: 0, dRedS: 0,
-  // swapCosts (0.3): Magie kostet Upgrade-Punkte, die es nur aus dem Tempel gibt. sacG 1: Gold opfern, wenn die
-  // Punkte für die nächste Magiestufe nicht reichen; mgGoal: nur solange der Magiefortschritt (Summe der Stufen
-  // über 1, höchstens 6) darunter liegt; sacRes: Gold, das dabei übrig bleiben muss (Vorrang der Verbesserungen)
+  // dRedS (seit 0.7.4): Zuschlag je Abschnitt über 1 auf dRed und dVen, weil die Strafe des roten Markers mit dem Abschnitt wächst (1/2/3)
+  dRed: 10, dVen: 5, rBroke: 400, cRed: 1, cRedA: 0, dRedS: 0,
+  // Magie (seit 0.14 mit Gold bezahlt, vorher mit Tempel-Upgrade-Punkten; die Namen sac* stammen noch vom Opfern): sacG 1: Magie schon vor den
+  // Verbesserungen kaufen, solange der Magiefortschritt (Summe der Stufen über 1, höchstens 6) unter mgGoal liegt; sacRes: Gold, das dabei
+  // übrig bleiben muss (Vorrang der Verbesserungen)
   sacG: 0, mgGoal: 2, sacRes: 0,
-  // sacSur (seit 0.7.7.5): Überschussgold. Kann die KI nichts mehr für Gold verbessern und hat mindestens sacSur Gold, opfert sie es im Tempel für die nächste Magiestufe (auch bei sacG 0 und über mgGoal hinaus); 0 = aus. Vorher blieb die Magie bei Stufe 1 stehen, während sich über 100 Gold ansammelten.
-  sacOpen: 1,   // Eröffnung (seit 0.7.7.8): 1 = Gold nur opfern, wenn die Punkte für die nächste Magiestufe wirklich herauskommen, 0 = wie früher immer 2 bis 3 Gold
-  sacBatch: 1, sacMaxCost: 99,   // Überschussgold: für wie viele Magiestufen auf einmal geopfert wird (1 = sofort die nächste) und welche Stufe höchstens kosten darf (Upgrade-Punkte)
+  // sacSur (seit 0.7.7.5): Überschussgold. Kann die KI nichts mehr für Gold verbessern und hat mindestens sacSur Gold (und reicht es für die nächste Magiestufe), kauft sie Magie (auch bei sacG 0 und über mgGoal hinaus); 0 = aus.
   sacSur: 1,   // abgestimmt (0.7.7.6): Scan 1 bis 20 gegen den Pool, 1 ist am besten (65 % statt 52 % bei 6)
   // rAtk: Angriffslust auf ein Monster, solange der Marker rot ist (statt nachzuziehen und dem Gegner Gold zu
   // schenken); Nachziehlimit (Upgrade-Punkte): dlMax bis zu welcher Stufe die KI es kauft (0 = nie), dlPos
   // Stelle in der Ausbaureihenfolge von pickSpend (0 = vor allem anderen, 4 = nach den A-Zielen, 9 = zuletzt);
-  // tKeep: Gold, das beim Tempel-Opfern zurückbleibt (Notgroschen gegen die Strafe, siehe dTmp); cRedE 1: mit
+  // cRedE 1: mit
   // leerer Hand bei Rot erst erholen (Marker auf Grün), dann nachziehen; dFree: Bonus aufs Nachziehen in der
   // Weltphase, solange der Marker noch grün ist
-  dlMax: 0, dlPos: 4, tKeep: 0, cRedE: 0, dFree: 0, rAtk: 0,
+  dlMax: 0, dlPos: 4, cRedE: 0, dFree: 0, rAtk: 0,
   // Lust, nachzuziehen
   dBase: 7, dCurse: 4, dEmpty: 12, dSlot: 1, dNorm: 5,
   // Bibliotheks-Aufwertung
@@ -65,7 +63,7 @@ const DEFAULTS = {
   // höchstens so vielen Angriffen selbst besiege (0 = nie; 20 gewann 50,9 % gegen 0 in 1600 Partien, 1 bis 4
   // waren wirkungslos, weil der Fall selten vorkommt)
   fleeHits: 20,
-  // Eröffnung (Spielerstrategien): 0 frei, 1 Limit zuerst (Tempel-Gold für Ausspiellimit 2), 2 Fokus (eine
+  // Eröffnung (Spielerstrategien): 0 frei, 1 Limit zuerst (Ausspiellimit 2 vor allem anderen), 2 Fokus (eine
   // Farbe, Handplätze erst nach dem ersten Sieg), 3 zwei Richtungen (zwei Farben auf 2, Handplätze erst nach dem
   // 1. Showdown), 4 wählt je nach Starthand; fHand/fWeak: Farbwahl nach Handkarten bzw. geschwächtem Monster;
   // sLock 0 hebt die Sperre der Handplätze auf

@@ -1,7 +1,7 @@
-/* Magus – Regelkern (Teil 2): Werte, Upgrade-Kosten, Tempel. */
+/* Magus – Regelkern (Teil 2): Werte, Upgrade-Kosten. */
 
 function newStats() {
-  return { gold: 3, hp: 3, maxHp: 3, mana: 4, maxMana: 4, limit: 1, drawLimit: 1, mag: { F: 1, E: 1, W: 1 }, pending: 0, buys: {}, freeDraws: 0, goldGot: 0, upGot: 0 };   // goldGot/upGot: insgesamt erhaltenes Gold und Upgrade-Punkte (für die Statistik)
+  return { gold: 3, hp: 3, maxHp: 3, mana: 4, maxMana: 4, limit: 1, drawLimit: 1, mag: { F: 1, E: 1, W: 1 }, buys: {}, freeDraws: 0, goldGot: 0 };   // goldGot: insgesamt erhaltenes Gold (für die Statistik)
 }
 function regen(stats, n) {   // n = Gewinn an HP und Mana (Regel regenByStage: je Abschnitt 1/2/3)
   n = n || 1;
@@ -9,7 +9,7 @@ function regen(stats, n) {   // n = Gewinn an HP und Mana (Regel regenByStage: j
   stats.mana = Math.min(stats.maxMana, stats.mana + n);
 }
 function regenGain(state) { const r = state.rules.regenByStage; return r ? (r[Math.min(r.length, Math.max(1, state.stage)) - 1] || 1) : 1; }
-// Kosten (in Upgrade-Punkten) für jeden Schritt des Ausspiellimits: limitCost (Standard 2). Ohne limitCost gilt die ältere Staffelung (erster Schritt limitFirstStepCost, danach 1).
+// Kosten (in Gold) für jeden Schritt des Ausspiellimits: limitCost (Standard 2). Ohne limitCost gilt die ältere Staffelung (erster Schritt limitFirstStepCost, danach 1).
 // Steigende Preise (Regel priceRise, seit 0.3.2): Jeder Kauf in einer Kategorie verteuert die nächste Stufe dieser Kategorie um deren Grundpreis (Preis = Grundpreis × (1 + priceRise × bisherige Käufe)).
 // Kategorien: hp, mana, limit, slot, draw (Nachziehlimit) und mag (Magie, alle drei Richtungen zusammen, unabhängig von der Stufe); s.buys zählt die Käufe des Spielers.
 function bought(s, k) { return (s && s.buys && s.buys[k]) || 0; }
@@ -20,20 +20,11 @@ function limitStepCost(state, s) { return risen(state, state.rules.limitCost > 0
 function manaStepCost(state, s) { return risen(state, 1, s, 'mana'); }
 function hpStepCost(state, s) { return risen(state, 1, s, 'hp'); }
 function slotStepCost(state, s) { return risen(state, 1, s, 'slot'); }
-// Bezahlung (Regel swapCosts, seit 0.3 Standard): Magie kostet Upgrade-Punkte (Feld pending), alle übrigen Verbesserungen kosten Gold. Ohne swapCosts umgekehrt (Magie Gold, Verbesserungen Upgrade-Punkte). Tempel und Einnahmen bleiben unverändert.
-function upField(state) { return state.rules.swapCosts ? 'gold' : 'pending'; }
-function magicField(state) { return state.rules.swapCosts ? 'pending' : 'gold'; }
-function payTxt(state, field, n) { return field === 'gold' ? n + ' Gold' : n + ' Upgrade-Punkt' + (n > 1 ? 'e' : ''); }
-// Preis der nächsten Magiestufe (in Gold, mit swapCosts in Upgrade-Punkten): unabhängig von der Stufe, nur die Zahl der bisherigen Magie-Käufe zählt (erstes Upgrade 1, zweites 2, drittes 3 usw.).
+// Bezahlung (seit 0.14): Alles kostet Gold, auch die Magie. Upgrade-Punkte und Tempel gibt es nicht mehr.
+function goldTxt(n) { return n + ' Gold'; }
+// Preis der nächsten Magiestufe in Gold (seit 0.14, vorher in Tempel-Upgrade-Punkten mit denselben Zahlen): unabhängig von der Stufe, nur die Zahl der bisherigen Magie-Käufe zählt (erstes Upgrade 1, zweites 2, drittes 3 usw.).
 function magicCost(state, lv, s) { return risen(state, 1, s, 'mag'); }   // lv bleibt aus Kompatibilitätsgründen Parameter; ohne s der Grundpreis
-// Tempel: n Gold ergeben n(n+1)/2 Punkte; die Stufe k+1 kostet k+1 Punkte und gibt einen Upgrade-Punkt.
-function pointsForGold(n) { return n * (n + 1) / 2; }
-function nextLevelCost(level) { return level + 1; }
-function previewTemple(p, amount) {
-  let pool = p.temple.points + pointsForGold(amount), level = p.temple.level, gained = 0;
-  while (pool >= nextLevelCost(level)) { pool -= nextLevelCost(level); level++; gained++; }
-  return { gained, pool, level, need: nextLevelCost(level), points: pointsForGold(amount) };
-}
+// Verbesserungen der Monster (Listen ‚stage1Temple‘ und ‚temple‘ in 30-monster.js; die Namen stammen noch aus der Zeit des Spieler-Tempels)
 function applyTemple(stats, field) {
   if (field === 'hp') { stats.maxHp++; stats.hp = Math.min(stats.maxHp, stats.hp + 1); }
   else if (field === '-hp') { stats.maxHp = Math.max(1, stats.maxHp - 1); stats.hp = Math.min(stats.maxHp, stats.hp); }   // nur für Monster-Varianten: 1 HP weniger als Preis für etwas anderes

@@ -4,7 +4,7 @@ Dies ist die maßgebliche Fassung der Regeln. Sie ersetzt das Claude-Docs-Dokume
 
 ## Spielidee und Ablauf
 
-Duellspiel für zwei Personen: Deck und Magie ausbauen, Monster besiegen und in bis zu drei Showdowns Siegpunkte holen. Nach dem dritten Showdown entscheidet, wer mehr hat (bei Gleichstand die Tempelstufe, danach das Gold, danach unentschieden; seit 0.8.6.1).
+Duellspiel für zwei Personen: Deck und Magie ausbauen, Monster besiegen und in bis zu drei Showdowns Siegpunkte holen. Nach dem dritten Showdown entscheidet, wer mehr hat (bei Gleichstand das Gold, danach unentschieden; bis 0.13 dazwischen die Tempelstufe).
 
 **Siegpunkte im Überblick (seit v8):** Monsterkampf: besiegt der Angreifer das Monster, erhält er +1; verliert der Angreifer, verliert er 1 (nie unter 0); der Monsterführer gewinnt und verliert dabei nie Siegpunkte. Flucht und Unentschieden zählen nicht. Showdown: Sieger +1, Verlierer −1 (nie unter 0), Unentschieden und Flucht 0/0, kein Trostpreis. Je Abschnitt sind damit höchstens 4 Siegpunkte möglich (drei Monsterkämpfe und der Showdown), nach zwei Abschnitten 8 (`showdownSp`).
 
@@ -20,17 +20,17 @@ Eine Partie hat drei Abschnitte (1, 2, 3). Je Abschnitt gibt es drei Monster (St
 | Mana | 4 | jedes Upgrade +1 Maximum, mit Gold bezahlt (1, dann 2 Gold), höchstens zwei Ausbauten, also höchstens 6 Mana |
 | Magie Feuer / Erde / Wasser | je 1 | höchstens 3 |
 | Ausspiellimit | 1 | seit 0.5.1 (`startLimit`, 0.3 bis 0.4.1: 2); höchstens 3, die Schritte kosten 1 und 2 Gold (`limitCost` 1 mit `priceRise`) |
-| Handplätze | 3 | je Upgrade-Punkt ein weiterer, höchstens 5 |
+| Handplätze | 3 | je Upgrade (Gold) ein weiterer, höchstens 5 |
 
 **Kartenvorrat (neu):** Vom Vorrat jeder Karte gibt es: Stufe 1 je 8 (`supply`), Stufe 2 je 6 (`supply2`), Stufe 3 je 4 (`supply3`), also F1/E1/W1, F2/E2/W2 und F3/E3/W3. Vor der Partie werden die 24 Stufe-1-Karten gemischt und gleichmäßig verteilt: jeder Spieler erhält 12 als Startdeck (`startCards` 0 = alle; die Startdecks sind daher ungleich, zum Beispiel 5/4/3 statt 4/4/4). Im Vorrat der Bibliothek liegen danach nur Stufe-2- und Stufe-3-Karten (je 6 bzw. 4); Stufe-1-Karten tauchen dort erst auf, wenn welche beim Aufwerten zurückgegeben werden. Die Bibliothek zeigt, wie viele Karten jeder Art noch im Vorrat sind; sind sie weg, ist die Karte vergriffen und nicht kaufbar (auch die Gratiskarten F1/E1/W1 nicht). Beim Aufwerten gehen die bezahlten Karten zurück in den Vorrat, die gekaufte Karte kommt heraus. Monsterdecks haben ihren eigenen Vorrat und zählen nicht mit. `supply` 0 schaltet den Vorrat ab (altes Startdeck 3× F1, E1, W1, unbegrenzte Karten). Karten heißen Element plus Stufe (F2 = Feuer, Stufe 2), Stufen 1 bis 3.
 
-**Abschnittsbonus** (zu Beginn jedes Abschnitts, beide Spieler): nur Gold, 1 / 2 / 3 Gold je Monster, also 3 / 6 / 9 Gold in Abschnitt 1 / 2 / 3, keine Upgrade-Punkte (seit 0.4; davor 2/2, 3/3, 4/4 Gold und Punkte).
+**Abschnittsbonus** (zu Beginn jedes Abschnitts, beide Spieler): nur Gold, 1 / 2 / 3 Gold je Monster, also 3 / 6 / 9 Gold in Abschnitt 1 / 2 / 3, (seit 0.4; davor 2/2, 3/3, 4/4 Gold und Punkte; seit 0.14 gibt es keine Upgrade-Punkte mehr).
 
 **Elementkreis:** Feuer schlägt Erde, Erde schlägt Wasser, Wasser schlägt Feuer. „Überlegen“: Wasser gegen Feuer, Feuer gegen Erde, Erde gegen Wasser.
 
 ## Weltphase
 
-Im eigenen Zug genau eine Aktion, danach wechselt der Spieler: **Nachziehen, in der Bibliothek tauschen (Händler) oder einen Kampf beginnen (Angriff)**. Im Tempel Gold opfern, Magie kaufen und jedes Upgrade kaufen (Magiestufe mit Upgrade-Punkten; HP, Mana, Limit, Handkarten, Nachziehlimit mit Gold) sind **keine Aktion** (seit 0.9.3; das Opfern schon seit 0.7.6.4): Der Spieler bleibt am Zug und darf davon beliebig viele ausführen, bevor er eine der drei Aktionen wählt. Upgrade-Punkte und Gold dürfen aufgespart werden. Eine Erholungsphase gibt es nicht.
+Im eigenen Zug genau eine Aktion, danach wechselt der Spieler: **Nachziehen, in der Bibliothek tauschen (Händler) oder einen Kampf beginnen (Angriff)**. Magie kaufen und jedes Upgrade kaufen (Magiestufe, HP, Mana, Limit, Handkarten, Nachziehlimit, alles mit Gold) sind **keine Aktion** (seit 0.9.3): Der Spieler bleibt am Zug und darf davon beliebig viele ausführen, bevor er eine der drei Aktionen wählt. Upgrade-Punkte und Gold dürfen aufgespart werden. Eine Erholungsphase gibt es nicht.
 
 **Regeneration:** Bei jedem Zugwechsel erhält der Spieler, der dran kommt, **HP und Mana in Höhe des Abschnitts** (Abschnitt 1: +1/+1, Abschnitt 2: +2/+2, Abschnitt 3: +3/+3; nicht über das Maximum). Dasselbe bekommt der Verteidiger nach einem Kampf. Alle lebenden Monster regenerieren am Ende jeder Runde +1 HP und +1 Mana (Regel `regenByStage` gilt nur für Spieler).
 
@@ -47,9 +47,9 @@ Im eigenen Zug genau eine Aktion, danach wechselt der Spieler: **Nachziehen, in 
 
 Die bezahlten Karten werden aus dem Deck entfernt, nur die gekaufte kommt auf den Ablagestapel.
 
-**Tempel:** n Gold opfern ergibt n·(n+1)/2 Tempelpunkte; die nächste Tempelstufe kostet (aktuelle Stufe + 1) Punkte, jede erreichte Stufe gibt einen Upgrade-Punkt. Die Tempelstufe ist die Zahl der durch Opfer erlangten Upgrades (kostet die nächste Stufe 4 Punkte, hat man Stufe 3) und zählt als zweites Kriterium der Siegbedingung (nach Siegpunkten, vor dem Gold; seit 0.8.6.1). Die Vorschau (Gold, Punkte, Bruch) zeigt sich schon beim Einstellen mit den Pfeilen.
+**Tempel:** Bis 0.13 gab es einen Tempel (Gold opfern, Tempelpunkte, Upgrade-Punkte). Seit 0.14 ist er abgeschafft; das Feld rechts in der Weltphase bleibt vorerst frei.
 
-**Magie kaufen:** Stufe 2 kostet 1, Stufe 3 kostet 3 **Upgrade-Punkte** (seit 0.3, vorher Gold; siehe „Getauschte Kosten“).
+**Magie kaufen:** mit **Gold** (seit 0.14; von 0.3 bis 0.13 mit Upgrade-Punkten aus dem Tempel). Der Preis hängt nur von der Zahl der bisherigen Magie-Käufe ab, nicht von der Farbe: der erste Kauf kostet 1 Gold, der zweite 2, der dritte 3 … (`priceRise` 1); der volle Ausbau (6 Käufe) kostet 21 Gold.
 
 ## Monsterkampf
 
@@ -688,6 +688,16 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Umsetzung:** `applyWorld` (`src/engine/70-weltphase.js`) ruft `execMagic`, `execDrawLimit` und `execSpend` ohne `endTurn` auf (`endOnOk` entfällt); `markerKind` (`src/engine/80-start.js`) kennt in der Weltphase nur noch Nachziehen als `draw` sowie Händler und Kampf als `other`. Die Oberfläche braucht keine Änderung: Nach dem Kauf ist derselbe Spieler weiter am Zug (`pump`).
 - **KI:** `runTurn` (`src/ai/30-kampf.js`) führt alle Wirtschaftsschritte (`ecoStep`, höchstens 12) vor der eigentlichen Aktion im selben Zug aus; bisher beendete jeder Schritt außer dem Opfern den Zug. Die Stellschrauben bleiben unverändert und sind für die neue Regel nicht nachtrainiert (Messung mit `npm run balance` offen).
 - **Tests:** Drei Tests angepasst (Nachziehmarker Weltphase, Nachziehlimit Kauf, Nachziehlimit Weltphase; der Marker-Reset läuft jetzt über den Händler), neuer Test „Magie kaufen und Upgrades sind keine Aktion mehr“. `tests/golden.json` ist neu erzeugt (absichtliche Regeländerung).
+- Die Versionsbeschreibung im Spiel nennt die Änderung.
+
+## Änderung 0.14 (15.11.)
+
+- **Regeländerung: kein Tempel, keine Tempelpunkte, keine Upgrade-Punkte.** Gold lässt sich nicht mehr opfern. Alles, auch die Magie, kostet Gold.
+- **Magie:** Die Kosten wurden 1:1 von Upgrade-Punkten auf Gold übertragen: Der erste Magie-Kauf kostet 1 Gold, der zweite 2, der dritte 3 und so weiter (egal in welcher Farbe, `priceRise` 1). Voller Ausbau aller drei Magien: 1 + 2 + … + 6 = 21 Gold. Vorher musste man dafür 21 Tempelstufen erreichen.
+- **Sieg:** Die Tempelstufe ist kein zweites Siegmerkmal mehr. Bei Gleichstand an Siegpunkten entscheidet nur das Gold (`sp > Gold`), dann unentschieden. Beim Showdown beginnt der Zurückliegende nach Siegpunkten, Magiefortschritt und Gold (die Tempelpunkte entfallen dort).
+- **Entfernt:** Aktion `temple`, Tempel-Feld mit Raster und Marker, Opfern-Knopf mit Pfeilen, Anzeige der Upgrade-Punkte, Statistik-Kurve „Tempelstufe“, Regeln `swapCosts`, `surplusSp` (Überschusspunkte wurden zu Siegpunkten), `stagePoints`, `loserUp`, `loserUp2`, `lossPoints`. „Upgrades (insgesamt)“ in der Statistik zählt jetzt die Käufe.
+- **Oberfläche:** Das Feld rechts in der Weltphase (vorher Tempel) bleibt vorerst frei. Die Magie-Knöpfe am Magiekreis sind golden, der Preis steht weiter in der Mitte des Kreises (jetzt in Gold).
+- **KI:** Opfern entfällt. Sie kauft Verbesserungen wie bisher zuerst und Magie mit dem Gold, das dann übrig ist (`sacSur`); `sacG`/`mgGoal`/`sacRes` steuern den Magiekauf vor den Verbesserungen (Standard aus). Entfernt: `dTmp`, `tKeep`, `sacOpen`, `sacBatch`, `sacMaxCost`. Die Gewichte sind nicht neu abgestimmt; die Magie ist mit Gold deutlich früher bezahlbar als mit Tempelpunkten (21 Gold statt 231 Tempelpunkte für den vollen Ausbau), ob die KI sie früh genug kauft, ist offen.
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
 
 ## Änderung 0.13.6 (13.11.)

@@ -132,7 +132,6 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .up.mg{background-image:var(--plusg)}.up.mg:hover{background-image:var(--plushg)}
 .up.costly{position:relative}
 .up{position:relative}
-.up.pt.costly::after{background:#7ad78d;color:#0b2a12;box-shadow:0 0 0 1px #0b2a12}
 /* Lifeflow: Marker auf dem Brett anwählen */
 .mtok.lf{cursor:var(--cp);position:relative;padding:0;transition:transform .12s,box-shadow .12s}
 .mtok.lf:hover{transform:scale(1.1)}
@@ -153,13 +152,6 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .upgpts{position:absolute;display:flex;align-items:center;gap:2px;color:var(--good);font-size:28px;pointer-events:auto;z-index:70}
 .upgpts img{width:34px;height:50px;object-fit:contain}
 
-/* Opfern: goldener Münzknopf (Klasse up gc sacbtn) links neben dem Gold, die Pfeile ◀ ▶ stehen links und rechts neben dem Münzknopf; die Spalte der Knöpfe ist dann breiter, die übrigen Knöpfe stehen rechtsbündig unter der Münze */
-.sbody.hasup.hassac .lead{width:56px}
-.lead .up.sacbtn{margin:0}
-.lead .up.sacbtn.sac0{opacity:.38}   /* 0 Münzen (Standard): Knopf steht teiltransparent da, solange Gold zum Opfern da ist (seit 0.5.7.2) */
-.lead .arr{flex:none;align-self:center}
-.lead .arr:disabled{opacity:0;pointer-events:none}   /* Pfeil ohne Wirkung: durchsichtig, Platz bleibt erhalten (seit 0.5.6.7) */
-.arr{background:none;border:0;color:var(--gold);font-size:12px;padding:0 1px;cursor:var(--cp)}.arr:disabled{opacity:.3;cursor:var(--cd)}.arr:hover:not(:disabled){color:#fff}
 
 /* Monster */
 .mon{position:absolute;border:1px solid var(--line);border-radius:12px;background:#000;text-align:center;overflow:hidden;display:flex;flex-direction:column}
@@ -198,25 +190,8 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .libpanel .stk .thumb{width:40px;height:60px}
 .libpanel .stk b{font-size:17px}
 
-/* Tempel (seit 0.11, rechts): Stufenraster mit Holzsteinen */
-.tpanel{display:flex;flex-direction:column}
-.tpanel h3{flex:none;text-align:left}
-.tboard{position:relative;flex:none;margin:2px auto 0}
-.tcell{position:absolute;box-sizing:border-box;border:1px solid rgba(255,255,255,.08);border-radius:4px;background:linear-gradient(180deg,rgba(0,0,0,.32),rgba(0,0,0,.16));color:var(--mute);overflow:hidden}
-.tcell i{position:absolute;left:2px;top:1px;font-style:normal;line-height:1.05;font-variant-numeric:tabular-nums}
-.tcell.lv{border-color:var(--gold);color:#f6dc8c;font-weight:700;background:linear-gradient(180deg,rgba(210,173,79,.32),rgba(210,173,79,.12));box-shadow:0 0 7px rgba(210,173,79,.55),inset 0 0 5px rgba(255,214,110,.22)}
-.tcell.z{color:var(--bone)}
-.tcell.gain{border-color:var(--good);border-style:dashed;background:linear-gradient(180deg,rgba(127,208,138,.3),rgba(127,208,138,.1));color:#d4f7da}
-.tcell.gain.lv{border:1px solid var(--gold);color:#f6dc8c;box-shadow:0 0 8px rgba(210,173,79,.6),inset 0 0 9px rgba(127,208,138,.55)}
-.tinfo{flex:none;min-height:24px;padding-top:5px;font-size:15.5px;line-height:1.25;color:var(--mute)}
-.tinfo b{color:var(--bone)}.tinfo b.pg{color:var(--good)}
-.mk{position:absolute;box-sizing:border-box;border-radius:50%;pointer-events:none;z-index:3;box-shadow:0 1px 3px rgba(0,0,0,.7)}
-.mk.me{background:radial-gradient(circle at 35% 30%,#fff0b8,#e0b84a 55%,#b8902f);border:1.5px solid #6b5016}
-.mk.op{background:radial-gradient(circle at 35% 30%,#e4e4ea,#a0a0aa 55%,#74747e);border:1.5px solid #3c3c44}
-.mk.gh{border:2px dashed #bff3c8;background:rgba(127,208,138,.5);box-shadow:0 0 8px rgba(127,208,138,.85);animation:mkpulse 1.4s ease-in-out infinite}
-.mk.glide,.dmark.glide{transition:left .5s ease-in-out,top .5s ease-in-out,width .5s ease-in-out,height .5s ease-in-out,background .2s}   /* Marker gleiten an ihren neuen Platz (0.11.1) */
+.dmark.glide{transition:left .5s ease-in-out,top .5s ease-in-out,width .5s ease-in-out,height .5s ease-in-out,background .2s}   /* Marker gleiten an ihren neuen Platz (0.11.1) */
 @keyframes mkpulse{0%,100%{opacity:1}50%{opacity:.55}}
-@media (prefers-reduced-motion:reduce){.mk.gh{animation:none}}
 
 .vrow img.ar{width:26px}
 
@@ -233,19 +208,11 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 #log.logpanel .logl div:last-child{opacity:1}
 #log.logpanel .logst{flex:none;color:var(--mute);font-size:15px;line-height:1.3;padding-bottom:8px;margin-bottom:6px;border-bottom:1px solid var(--line)}
 
-/* Kopfzeile des Spielerstatus: Name, Tempelfortschritt, Punkte, Siegpunkte (rechtsbündig) */
+/* Kopfzeile des Spielerstatus: Name, Siegpunkte (rechtsbündig) */
 .hdr{display:flex;align-items:center;gap:8px;width:100%}
 .hn{white-space:nowrap}
-.temple{display:flex;align-items:center;gap:5px;flex:1;min-width:0;font-family:'Alegreya',serif;font-weight:400;font-size:14px;color:var(--mute)}
-.temple .tl{white-space:nowrap}
-.temple .bar.sb{flex:1;min-width:20px}
-.temple .tc{color:var(--gold);white-space:nowrap;font-size:14px}
-.temple .tg{color:var(--good)}
-.bar.tp>i{background:linear-gradient(90deg,#b8923a,#f2c850)}
 
 .mrsel{margin-top:6px}.mrsel b{font-size:20px;margin:0 4px}
-.bar.tp{position:relative}.bar.tp>i{position:absolute;left:0;top:0;bottom:0}.bar.tp>i.pre{background:repeating-linear-gradient(45deg,#6fbf73,#6fbf73 4px,#9bdca0 4px,#9bdca0 8px);opacity:.9}
-.temple .bar.sb{height:12px}
 
 /* Marker (Todes- und Heilmarker) wirken seit 0.7.2.9 wie ausgestanzte Pappmarker: eine dünne, dunkle Kante (gestapelte Schatten ohne Unschärfe, Licht von oben links) und ein weicher Wurfschatten. Die Drehung liegt auf dem Bild, der Filter auf dem Token, damit die Lichtrichtung für alle Marker gleich bleibt. */
 .deathtok,.healtok{position:absolute;z-index:61;display:block;padding:0;border:0;background:none;cursor:help;--edge:#2b2117;filter:drop-shadow(1px 1px 0 var(--edge)) drop-shadow(2px 2px 0 #1b140d) drop-shadow(2px 3px 1px rgba(0,0,0,.65))}
@@ -542,4 +509,3 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 #logpop .logl div.me{border-left-color:var(--gold)}#logpop .logl div.op{border-left-color:var(--mute)}
 #logpop .logl div:last-child{opacity:1}
 
-.tup{margin-top:auto;padding-top:6px;border-top:1px solid rgba(203,185,143,.25);font-size:15px}.tup>div{display:flex;align-items:baseline;gap:6px}.tup span{flex:1}.tup b{font-size:17px}.tup .me{color:#e0b84a}.tup .op{color:#cfd2dc}

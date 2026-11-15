@@ -58,7 +58,7 @@ test('Statistikseite öffnet, zeigt den Verlauf und lässt sich filtern und schl
   } finally { await b.close(); }
 });
 
-test('Weltphase: Bibliothek links, Tempel rechts mit Raster, Markern und Opfer-Vorschau; Protokoll hinter dem runden Knopf', { skip: !chromium && 'Playwright nicht installiert', timeout: 60000 }, async () => {
+test('Weltphase: Bibliothek links, rechts kein Tempel mehr (0.14); Protokoll hinter dem runden Knopf', { skip: !chromium && 'Playwright nicht installiert', timeout: 60000 }, async () => {
   const b = await chromium.launch({ executablePath: exe });
   try {
     const p = await b.newPage({ viewport: { width: 1280, height: 800 } }), errs = [];
@@ -66,23 +66,12 @@ test('Weltphase: Bibliothek links, Tempel rechts mit Raster, Markern und Opfer-V
     await p.goto(url); await p.waitForTimeout(500);
     await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
     const box = async sel => p.locator(sel).first().boundingBox();
-    const lib = await box('.libpanel'), tmp = await box('.tpanel');
-    assert.ok(lib.x < 100 && tmp.x > 800, 'Bibliothek links, Tempel rechts');
+    const lib = await box('.libpanel');
+    assert.ok(lib.x < 100, 'Bibliothek links');
+    assert.equal(await p.locator('.tpanel, .tboard, .tcell, .sacbtn, [data-act="sacup"], [data-act="temple"]').count(), 0, 'kein Tempel, kein Opfern-Knopf');
     assert.equal(await p.locator('#log .logl').count(), 0, 'kein festes Protokoll mehr in der Weltphase');
     const sb = await box('#statsbtn'), lb = await box('#logbtn');
     assert.ok(lb.x > sb.x && Math.abs(lb.y - sb.y) < 2 && Math.abs(lb.width - lb.height) < 1, 'runder Knopf neben der Statistik');
-    assert.deepEqual(await p.$$eval('.tcell.lv i', els => els.map(e => +e.textContent)).then(a => a.slice(0, 6)), [1, 3, 6, 10, 15, 21], 'Stufen-Zahlen sind hervorgehoben');
-    assert.equal(await p.locator('.tpanel .mk.me').count(), 1); assert.equal(await p.locator('.tpanel .mk.op').count(), 1);
-    assert.equal(await p.locator('.tpanel .mk.gh').count(), 0, 'ohne eingestelltes Opfer keine Vorschau');
-    await p.click('[data-act="sacup"]'); await p.click('[data-act="sacup"]');   // 2 Gold = 3 Punkte
-    assert.equal(await p.locator('.tpanel .mk.gh').count(), 1, 'Vorschau-Stein bei eingestelltem Opfer');
-    assert.equal(await p.locator('.tpanel .tcell.gain').count(), 3, 'Felder 1 bis 3 sind als Gewinn markiert');
-    assert.match(await p.textContent('.tinfo'), /2 Gold opfern: \+3 Tempelpunkte \(gesamt 3\)/);
-    assert.equal(await p.locator('.tpanel .tup .me [data-pv="pts"] .pvnew').count(), 1, 'Upgrade-Punkte zeigen das Opfer in Grün (0.13.3)');
-    assert.ok(await p.locator('.tpanel .tcell').count() >= 56, 'das Raster reicht mindestens bis Stufe 10 (55 Punkte)');
-    assert.doesNotMatch(await p.textContent('.tinfo'), /stellst du ein/, 'kein Hinweistext zum Einstellen des Golds');
-    await p.evaluate(() => { const G = window.__magus.state; G.players[1].temple = { level: 21, points: 0 }; window.__magus.pump(); });
-    assert.equal(await p.locator('.tpanel .tcell').count(), 232, 'voller Magieausbau = Stufe 21 = 231 Punkte, Felder 0 bis 231');
     assert.deepEqual(errs, []);
   } finally { await b.close(); }
 });
@@ -95,7 +84,7 @@ test('Zuschauermodus: zwei Computer spielen gegeneinander, Eingaben sind gesperr
     await p.goto(url); await p.waitForTimeout(500);
     await p.click('text=Einzelspieler'); await p.click('text=Zwei Computern zuschauen'); await p.waitForTimeout(500);
     const n0 = await p.evaluate(() => window.__magus.state.logN);
-    await p.evaluate(() => window.__magus.act({ type: 'temple', amount: 1 }));   // Eingabe eines Menschen: wird ignoriert
+    await p.evaluate(() => window.__magus.act({ type: 'draw' }));   // Eingabe eines Menschen: wird ignoriert
     await p.waitForTimeout(6000);
     const r = await p.evaluate(() => ({ n: window.__magus.state.logN, names: window.__magus.state.players.map(x => x.name) }));
     assert.ok(r.n > n0, 'die Partie schreitet von selbst voran');
@@ -219,30 +208,29 @@ test('Nachziehlimit: drei Kreise am Stapel, Plus-Knopf erscheint erst mit Gold u
     await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
     assert.equal(await p.locator('.dlc, .dmark').count(), 0, 'seit 0.12 standardmäßig ohne Nachziehmarker und ohne Kreise');
     await p.evaluate(() => { window.__magus.state.rules.drawMarker = 1; window.__magus.pump(); });   // die Regel bleibt per Schalter testbar
-    await p.evaluate(() => { const st = window.__magus.state.players[0].stats; st.gold = 0; st.pending = 3; window.__magus.pump(); });
-    assert.equal(await p.locator('[data-act="drawlimit"]').count(), 0, 'ohne Gold kein Plus-Knopf, auch mit Upgrade-Punkten');
+    await p.evaluate(() => { const st = window.__magus.state.players[0].stats; st.gold = 0; window.__magus.pump(); });
+    assert.equal(await p.locator('[data-act="drawlimit"]').count(), 0, 'ohne Gold kein Plus-Knopf');
     await p.evaluate(() => { window.__magus.state.players[0].stats.gold = 3; window.__magus.pump(); });
     assert.equal(await p.locator('.dlc').count(), 6, 'drei Kreise je Spieler');
     assert.equal(await p.locator('.dlc.off').count(), 4, 'Stufen über dem Limit sind abgedunkelt');
     await p.click('[data-act="drawlimit"]'); await p.waitForTimeout(2500);
     assert.equal(await p.evaluate(() => window.__magus.state.players[0].stats.drawLimit), 2);
     assert.equal(await p.evaluate(() => window.__magus.state.players[0].stats.gold), 2, '1 Gold bezahlt');
-    assert.equal(await p.evaluate(() => window.__magus.state.players[0].stats.pending), 3, 'Upgrade-Punkte bleiben');
     assert.deepEqual(errs, []);
   } finally { await b.close(); }
 });
 
-test('Magie-Knöpfe: zu teure Stufen durchscheinend und gesperrt, ohne Upgrade-Punkte keine Knöpfe', { skip: !chromium && 'Playwright nicht installiert', timeout: 60000 }, async () => {
+test('Magie-Knöpfe (seit 0.14 mit Gold): zu teure Stufen durchscheinend und gesperrt, ohne Gold keine Knöpfe', { skip: !chromium && 'Playwright nicht installiert', timeout: 60000 }, async () => {
   const b = await chromium.launch({ executablePath: exe });
   try {
     const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
     p.on('pageerror', e => errs.push(e.message));
     await p.goto(url); await p.waitForTimeout(500);
     await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
-    await p.evaluate(() => { const s = window.__magus.state.players[0].stats; s.pending = 1; s.buys = { mag: 1 }; s.mag = { F: 2, E: 1, W: 1 }; window.__magus.pump(); });
-    assert.equal(await p.locator('[data-act="magic"].off[disabled]').count(), 3, 'zweiter Magie-Kauf kostet 2 Punkte: alle gesperrt');
+    await p.evaluate(() => { const s = window.__magus.state.players[0].stats; s.gold = 1; s.buys = { mag: 1 }; s.mag = { F: 2, E: 1, W: 1 }; window.__magus.pump(); });
+    assert.equal(await p.locator('[data-act="magic"].off[disabled]').count(), 3, 'zweiter Magie-Kauf kostet 2 Gold: alle gesperrt');
     assert.equal(await p.locator('[data-act="magic"]:not(.off)').count(), 0);
-    await p.evaluate(() => { window.__magus.state.players[0].stats.pending = 0; window.__magus.pump(); });
+    await p.evaluate(() => { window.__magus.state.players[0].stats.gold = 0; window.__magus.pump(); });
     assert.equal(await p.locator('[data-act="magic"]').count(), 0);
     assert.deepEqual(errs, []);
   } finally { await b.close(); }
@@ -392,7 +380,7 @@ test('Vorschau auf den Bögen: Plus-Knopf (HP) und Angriff (Mana) lassen den bet
     p.on('pageerror', e => errs.push(e.message));
     await p.goto(url); await p.waitForTimeout(500);
     await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(1000);
-    await p.evaluate(() => { window.__magus.state.players[0].stats.pending = 2; window.__magus.pump(); });
+    await p.evaluate(() => { window.__magus.state.players[0].stats.gold = 2; window.__magus.pump(); });
     await p.waitForTimeout(200);
     await p.hover('button.up[data-w="hp"]'); await p.waitForTimeout(300);
     const a = await p.evaluate(() => ({ fx: [...document.querySelectorAll('.arcfx')].map(e => e.getAttribute('class')), tags: document.querySelectorAll('.pvd, .dlt').length, neu: document.querySelectorAll('.pvnew').length }));
@@ -420,7 +408,7 @@ test('Vorschau auf den Bögen: Plus-Knopf (HP) und Angriff (Mana) lassen den bet
   } finally { await b.close(); }
 });
 
-test('Unter der Magiegrafik steht der Preis der nächsten Magiestufe; Opfern im Tempel lässt den Spieler am Zug (0.7.6.4)', { skip: !chromium && 'Playwright nicht installiert', timeout: 60000 }, async () => {
+test('Unter der Magiegrafik steht der Preis der nächsten Magiestufe; ein Magiekauf lässt den Spieler am Zug (0.9.3)', { skip: !chromium && 'Playwright nicht installiert', timeout: 60000 }, async () => {
   const b = await chromium.launch({ executablePath: exe });
   try {
     const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
@@ -430,8 +418,8 @@ test('Unter der Magiegrafik steht der Preis der nächsten Magiestufe; Opfern im 
     const t0 = await p.evaluate(() => { const G = window.__magus.state; return { turn: G.turn, txt: (document.querySelector('.bsp.me') || {}).textContent || '', cost: window.Magus.magicCost(G, 0, G.players[0].stats) }; });
     assert.match(t0.txt, /^(I|II|III|IV|V|VI)$/); assert.equal(t0.txt, ['I', 'II', 'III', 'IV', 'V', 'VI'][t0.cost - 1], 'die römische Zahl ist der Preis');
     if (t0.turn === 0) {
-      const after = await p.evaluate(() => { const G = window.__magus.state; G.players[0].stats.gold = 3; window.__magus.act({ type: 'temple', amount: 1 }); return { turn: G.turn, gold: G.players[0].stats.gold }; });
-      assert.equal(after.turn, 0); assert.equal(after.gold, 2);
+      const after = await p.evaluate(() => { const G = window.__magus.state; G.players[0].stats.gold = 3; window.__magus.act({ type: 'magic', elem: 'F' }); return { turn: G.turn, gold: G.players[0].stats.gold, mag: G.players[0].stats.mag.F }; });
+      assert.equal(after.turn, 0); assert.equal(after.gold, 3 - t0.cost); assert.equal(after.mag, 2);
     }
     assert.deepEqual(errs, []);
   } finally { await b.close(); }

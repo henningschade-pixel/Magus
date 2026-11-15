@@ -1,5 +1,5 @@
 /* ---------- Ablauf ---------- */
-function helpTxt(res) { return res.help ? 'Ausgleich ' + (res.help.both ? 'für beide' : 'für den Verlierer') + ': ' + [res.help.points ? res.help.points + ' Upgrade-Punkt' + (res.help.points > 1 ? 'e' : '') : '', res.help.gold ? res.help.gold + ' Gold' : ''].filter(Boolean).join(' und ') : ''; }
+function helpTxt(res) { return res.help ? 'Ausgleich ' + (res.help.both ? 'für beide' : 'für den Verlierer') + ': ' + res.help.gold + ' Gold' : ''; }
 function newGame(spec) {
   if (MP) mpLeave();
   SPEC = !!spec; clearTimeout(specT); specT = 0; setSpecSpeed(1);
@@ -8,7 +8,7 @@ function newGame(spec) {
   els.forEach(r => r.el.remove()); els.clear();
   G = M.newGame({ seed: (/[?&]seed=(\d+)/.exec(location.search) || [0, (Math.random() * 2 ** 31) | 0])[1] | 0, names: SPEC ? ['Computer A', 'Computer B'] : ['Du', 'Computer'], ai: [SPEC, true], rules: gameRules() });
   M.record(G); G.keepSnap = true;
-  seenCombat = null; upSeen = null; endView = null; modal = null; introSeen = -1; hold = 0; started = true;
+  seenCombat = null; endView = null; modal = null; introSeen = -1; hold = 0; started = true;
   overlay.style.display = 'none'; overlay.innerHTML = '';
   Intro.start();
   pump();
@@ -64,21 +64,19 @@ function checkShowdownIntro() {
   const first = G.log.slice().reverse().find(e => /^Showdown \d/.test(e.txt));
   modal = { title: 'Showdown ' + (G.showdown + 1) + ' von 3', sub: 'Alle Monster sind besiegt: Duell Spieler gegen Spieler', lines: [first ? first.txt : '', 'Wer gewinnt, erhält 1 Siegpunkt, der Verlierer verliert 1 (nie unter 0); bei Gleichstand oder Flucht gibt es keine. Es gewinnt, wer nach drei Showdowns vorn liegt.'].filter(Boolean) };
 }
-// Töne zu eigenen Weltphasen-Aktionen (Tempel, Upgrades, Magie, Bibliothek)
-function worldSound(type, gainedUp, magNow, cardLv) {
+// Töne zu eigenen Weltphasen-Aktionen (Upgrades, Magie, Bibliothek)
+function worldSound(type, magNow, cardLv) {
   if (FAST) return;
-  if (type === 'temple') { Snd.play('coin_sacrifice'); if (gainedUp) Snd.play('temple_level', .45); }
-  else if (type === 'spend' || type === 'drawlimit') Snd.play('spend_upgrade');
+  if (type === 'spend' || type === 'drawlimit') Snd.play('spend_upgrade');
   else if (type === 'magic') { if (magNow === 2) Snd.play('magic_lv2'); else if (magNow === 3) Snd.play('magic_lv3'); }   // Magie auf Stufe 2 bzw. 3 (höher geht es nicht)
   else if (type === 'vendor' && cardLv >= 2) Snd.play('card_lv' + cardLv);   // Karte auf Stufe 2 bzw. 3 aufgewertet
 }
 function act(a) {
   if (!G || G.over || endView || modal || SPEC || Intro.on) return;   // beim Zuschauen gibt es keine Eingaben
   if (markerOnWay()) { toast('Der Zugmarker ist noch unterwegs.'); return; }
-  const full = Object.assign({ pid: ME }, a), prev = G.logN, up0 = G.players[ME].stats.upGot, r = M.apply(G, full);
+  const full = Object.assign({ pid: ME }, a), prev = G.logN, r = M.apply(G, full);
   if (!r.ok) { toast(r.error); return; }
-  if (a.type === 'temple') upSeen = G.players[ME].stats.upGot;   // Upgrade-Punkte aus dem Tempel haben ihren eigenen Ton (Tempelstufe)
-  worldSound(a.type, G.players[ME].stats.upGot > up0, a.type === 'magic' ? G.players[ME].stats.mag[a.elem] : 0, a.type === 'vendor' ? +String(a.result).slice(1) : 0);
+  worldSound(a.type, a.type === 'magic' ? G.players[ME].stats.mag[a.elem] : 0, a.type === 'vendor' ? +String(a.result).slice(1) : 0);
   if (MP) mpPush(full);
   checkCombatEnd(prev); pump();
 }

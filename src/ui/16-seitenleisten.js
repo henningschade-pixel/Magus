@@ -16,7 +16,7 @@ function boardHTML(mag, size, lab, echo, mine) {
     const lv = i + 1;
     h += '<i class="rg ' + (lv <= mag[e] ? 'on' : 'off') + '" data-e="' + e + '" data-lv="' + lv + '" style="left:' + (gx * k - dr).toFixed(1) + 'px;top:' + (gy * k - dr).toFixed(1) + 'px;width:' + (2 * dr).toFixed(1) + 'px;height:' + (2 * dr).toFixed(1) + 'px"></i>';
   });
-  if (lab) h += '<div class="bsp ' + (mine ? 'me' : 'op') + '" title="' + lab.tip + '" style="font-size:' + (size * 0.24).toFixed(1) + 'px"><b>' + lab.txt + '</b></div>';   // Mitte des Magiekreises (seit 0.11.0.3): Tempelpunkte, eigener Spieler golden, Gegner silbern
+  if (lab) h += '<div class="bsp ' + (mine ? 'me' : 'op') + '" title="' + lab.tip + '" style="font-size:' + (size * 0.24).toFixed(1) + 'px"><b>' + lab.txt + '</b></div>';   // Mitte des Magiekreises: Preis der nächsten Magiestufe, eigener Spieler golden, Gegner silbern
   return h + '</div>';
 }
 // HP (links, rot) und Mana (rechts, blau) als gebogene Linien neben der Magiescheibe: je ein Bogen von 90 Grad, von unten nach oben gefüllt; feine Kerben trennen die einzelnen Punkte.
@@ -33,39 +33,31 @@ function arcsHTML(s, bsz, pad, R) {
     arc(135, 225, 1, Math.max(0, s.hp), s.maxHp, 'hp', 'HP ' + Math.max(0, s.hp) + '/' + s.maxHp) +
     arc(45, -45, 0, s.mana, s.maxMana, 'mana', 'Mana ' + s.mana + '/' + s.maxMana) + '</svg>';
 }
-// Mitte des Magiekreises (seit 0.11.0.5): römische Zahl = Preis der nächsten Magiestufe in Upgrade-Punkten, in Spielerfarbe
+// Mitte des Magiekreises (seit 0.11.0.5): römische Zahl = Preis der nächsten Magiestufe (seit 0.14 in Gold), in Spielerfarbe
 function magLevelLabel(s, p, mine) {
   if (!p) return null;
-  const MF = M.magicField(G), mc = M.magicCost(G, 0, s), maxed = M.ELEMENTS.every(e => s.mag[e] >= M.MAX_MAGIC);
+  const mc = M.magicCost(G, 0, s), maxed = M.ELEMENTS.every(e => s.mag[e] >= M.MAX_MAGIC);
   const txt = maxed ? 'IX' : (['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX'][mc - 1] || String(mc));
-  const tip = maxed ? 'Alle drei Magien stehen auf der Höchststufe (IX).' : 'Nächste Magiestufe: ' + txt + '. Die Zahl ist der Preis der nächsten Magiestufe (egal welche Farbe): ' + M.payTxt(G, MF, mc) + '. ' + (mine ? 'Du hast ' : 'Der Gegner hat ') + s[MF] + (MF === 'gold' ? ' Gold' : ' Upgrade-Punkte') + '. Jeder weitere Kauf macht die folgende Stufe teurer.';
+  const tip = maxed ? 'Alle drei Magien stehen auf der Höchststufe (IX).' : 'Nächste Magiestufe: ' + txt + '. Die Zahl ist der Preis der nächsten Magiestufe (egal welche Farbe): ' + M.goldTxt(mc) + '. ' + (mine ? 'Du hast ' : 'Der Gegner hat ') + s.gold + ' Gold. Jeder weitere Kauf macht die folgende Stufe teurer.';
   return { txt, tip };
 }
 function statsBlock(name, s, p, size, up, full) {
   const img = k => '<img src="' + IMG[k] + '">', compact = !full;
   const mk = '', mr = '';
-  const my = myTurn(), anyT = my, UF = M.upField(G), UC = UF === 'gold' ? 'gc' : 'pt', one = M.payTxt(G, UF, 1), pend = up ? s[UF] : 0, lc = up ? M.limitStepCost(G, s) : 1, mc = up ? M.manaStepCost(G, s) : 1, hc = up ? M.hpStepCost(G, s) : 1;
+  const my = myTurn(), anyT = my, UC = 'gc', one = M.goldTxt(1), pend = up ? s.gold : 0, lc = up ? M.limitStepCost(G, s) : 1, mc = up ? M.manaStepCost(G, s) : 1, hc = up ? M.hpStepCost(G, s) : 1;
   const pl = (ok, w, title, attr) => ok ? '<button class="up ' + UC + '" data-act="' + (attr || 'spend') + '" ' + (attr ? 'data-e' : 'data-w') + '="' + w + '" title="' + title + '"></button>' : '';
-  // Schritte, die mehr als 1 Upgrade-Punkt kosten, bleiben sichtbar (abgedunkelt, solange die Punkte fehlen) und tragen eine Kostenzahl.
-  const plc = (show, afford, w, label, c) => !show ? '' : '<button class="up ' + UC + (c > 1 ? ' costly' : '') + (afford ? '' : ' off') + '" data-act="spend" data-w="' + w + '"' + (c > 1 ? ' data-c="' + c + '"' : '') + (afford ? '' : ' disabled') + ' title="' + label + ' (' + M.payTxt(G, UF, c) + (afford ? '' : UF === 'gold' ? ', dir fehlt Gold' : ', dir fehlen Punkte') + ')"></button>';
+  // Schritte, die mehr als 1 Gold kosten, bleiben sichtbar (abgedunkelt, solange das Gold fehlt) und tragen eine Kostenzahl.
+  const plc = (show, afford, w, label, c) => !show ? '' : '<button class="up ' + UC + (c > 1 ? ' costly' : '') + (afford ? '' : ' off') + '" data-act="spend" data-w="' + w + '"' + (c > 1 ? ' data-c="' + c + '"' : '') + (afford ? '' : ' disabled') + ' title="' + label + ' (' + M.goldTxt(c) + (afford ? '' : ', dir fehlt Gold') + ')"></button>';
   const hpPl = M.maxed(s, 'hp', G.rules) ? '' : hc > 1 ? plc(up && anyT && pend > 0, pend >= hc, 'hp', '+' + (G.rules.hpPerPoint || 1) + ' max. HP', hc) : pl(up && anyT && pend > 0, 'hp', '+' + (G.rules.hpPerPoint || 1) + ' max. HP (' + one + ')');
   const manaPl = M.maxed(s, 'mana', G.rules) ? '' : mc > 1 ? plc(up && anyT && pend > 0, pend >= mc, 'mana', '+1 max. Mana', mc) : pl(up && anyT && pend > 0, 'mana', '+1 max. Mana (' + one + ')');
   const limPl = lc > 1 ? plc(up && anyT && pend > 0 && s.limit < M.MAX_LIMIT, pend >= lc, 'limit', '+1 Ausspiellimit', lc) : pl(up && anyT && pend >= lc && s.limit < M.MAX_LIMIT, 'limit', '+1 Ausspiellimit (' + one + ')');
   const lead = b => compact ? '' : '<span class="lead">' + (b || '') + '</span>';   // Upgrade-Knöpfe stehen links neben dem Symbol; ohne Knöpfe schrumpft die Spalte auf 0 (Ausrichtung wie beim Gegner)
-  // Opfern: goldener Münzknopf links neben dem Gold (wie die Upgrade-Knöpfe, die Zahl als Plakette erst ab 2; bei 0 transparent, seit 0.5.6.6); die Pfeile ◀ ▶ daneben stellen die Anzahl ein
-  let sacCoin = '', sacArr = '', sacArr2 = '';
-  if (!compact && p && up && s.gold >= 1) {
-    const n = Math.max(0, Math.min(sacN, s.gold)), pv = M.previewTemple(p, n), okS = my && n > 0;
-    sacCoin = '<button class="up gc sacbtn' + (n > 1 ? ' costly' : '') + (n === 0 ? ' sac0' : '') + (okS ? '' : ' off') + '" data-act="temple" data-n="' + n + '"' + (n > 1 ? ' data-c="' + n + '"' : '') + (okS ? '' : ' disabled') + ' title="Opfern: ' + n + ' Gold im Tempel (+' + pv.points + ' Punkte → ' + (pv.gained ? '+' + pv.gained + ' Upgrade' : 'kein Upgrade') + '). Tempel: Punkte ' + p.temple.points + ', Stufe ' + p.temple.level + ', nächste Stufe kostet ' + M.nextLevelCost(p.temple.level) + '"></button>';
-    sacArr = '<button class="arr" data-act="sacdn" title="Weniger opfern"' + (n > 0 ? '' : ' disabled') + '>◀</button>';
-    sacArr2 = '<button class="arr" data-act="sacup" title="Mehr opfern"' + (n < s.gold ? '' : ' disabled') + '>▶</button>';
-  }
-  const hasUp = !compact && !!(hpPl || manaPl || limPl || sacCoin);
+  const hasUp = !compact && !!(hpPl || manaPl || limPl);
   const hp = '<div class="statrow">' + lead(hpPl) + img('hp') + '<b data-pv="hp">' + Math.max(0, s.hp) + '/' + s.maxHp + '</b></div>';
   const mana = '<div class="statrow">' + lead(manaPl) + img('mana') + '<b data-pv="mana">' + s.mana + '/' + s.maxMana + '</b></div>';
-  let h = '<h3><span class="hdr"><span class="hn">' + name + '</span>@@T@@@@G@@</span></h3><div class="sbody' + (hasUp ? ' hasup' : '') + (sacCoin ? ' hassac' : '') + '"' + (compact ? '' : ' data-lead="1"') + '><div class="scol">';
+  let h = '<h3><span class="hdr"><span class="hn">' + name + '</span>@@T@@@@G@@</span></h3><div class="sbody' + (hasUp ? ' hasup' : '') + '"' + (compact ? '' : ' data-lead="1"') + '><div class="scol">';
   let ptsHdr = '';
-  if (p) ptsHdr = '<span class="spstar ' + (p === G.players[ME] ? 'me' : 'op') + '" title="Siegpunkte">★ <b>' + p.sp + '</b></span>';   // oben rechts im Spielerfenster: Siegpunkte mit Stern (seit 0.11.0.3; die Tempelpunkte stehen in der Mitte des Magiekreises)
+  if (p) ptsHdr = '<span class="spstar ' + (p === G.players[ME] ? 'me' : 'op') + '" title="Siegpunkte">★ <b>' + p.sp + '</b></span>';   // oben rechts im Spielerfenster: Siegpunkte mit Stern (seit 0.11.0.3)
   h = h.replace('@@G@@', ptsHdr);
   if (compact) {
     h += '<div class="statrow">' + img('gold') + '<b data-pv="gold">' + s.gold + '</b></div>' + hp + mana;   // gleiche Reihenfolge wie beim Spieler: Gold, HP, Mana, Limit
@@ -74,7 +66,7 @@ function statsBlock(name, s, p, size, up, full) {
     const ph = '<span class="up ph"></span>';
     const tempRow = '';
     h = h.replace('@@T@@', tempRow);
-    h += '<div class="statrow">' + lead(sacArr + sacCoin + sacArr2) + img('gold') + '<b data-pv="gold">' + s.gold + '</b></div>' + hp + mana;
+    h += '<div class="statrow">' + lead('') + img('gold') + '<b data-pv="gold">' + s.gold + '</b></div>' + hp + mana;
     h += '<div class="statrow">' + lead(limPl) + img('limit') + '<b data-pv="limit">' + s.limit + '</b>' + mk + mr + '</div>';
   }
   h = h.replace('@@G@@', '').replace('@@T@@', '');
@@ -84,10 +76,10 @@ function statsBlock(name, s, p, size, up, full) {
     const dir = { F: -90, E: 30, W: 150 }, diam = 26;   // Richtung wie die Ringe auf dem Brett (Linie von der Mitte durch die Magie); die Scheibe misst 26 px und liegt ganz auf dem äußeren Randband des Bretts (Band von 0,431 bis 0,475 der Bildgröße)
     let btn = '';
     for (const e of M.ELEMENTS) {
-      const MF = M.magicField(G), lv = s.mag[e], mc = M.magicCost(G, lv, s), ok = s[MF] >= mc; if (lv >= M.MAX_MAGIC || s[MF] <= 0) continue;   // wie die Upgrade-Knöpfe: sichtbar, sobald die Währung (Gold, mit swapCosts Upgrade-Punkte) da ist; zu teure Stufen durchscheinend und gesperrt
+      const lv = s.mag[e], mc = M.magicCost(G, lv, s), ok = s.gold >= mc; if (lv >= M.MAX_MAGIC || s.gold <= 0) continue;   // wie die Upgrade-Knöpfe: sichtbar, sobald Gold da ist; zu teure Stufen durchscheinend und gesperrt
       const ang = dir[e] * Math.PI / 180, r = bsz * 0.5;   // seit 0.6.0.2: Mitte der Scheibe auf dem äußeren Rand des Bretts in Richtung der Magie (vorher 0,405: zu weit innen)
       const x = bsz / 2 + Math.cos(ang) * r, y = bsz / 2 + Math.sin(ang) * r;
-      btn += '<button class="up mg ' + (MF === 'gold' ? 'gd' : 'pt') + (mc > 1 ? ' costly' : '') + (ok ? '' : ' off') + '"' + (mc > 1 ? ' data-c="' + mc + '"' : '') + (ok ? '' : ' disabled') + ' style="' + discBox(MF === 'gold', x, y, diam) + '" data-act="magic" data-e="' + e + '" title="' + NAMES[e] + ' Stufe ' + (lv + 1) + ' kaufen (' + M.payTxt(G, MF, mc) + (ok ? '' : ', du hast ' + s[MF]) + ')"></button>';
+      btn += '<button class="up mg gd' + (mc > 1 ? ' costly' : '') + (ok ? '' : ' off') + '"' + (mc > 1 ? ' data-c="' + mc + '"' : '') + (ok ? '' : ' disabled') + ' style="' + discBox(true, x, y, diam) + '" data-act="magic" data-e="' + e + '" title="' + NAMES[e] + ' Stufe ' + (lv + 1) + ' kaufen (' + M.goldTxt(mc) + (ok ? '' : ', du hast ' + s.gold) + ')"></button>';
     }
     bd = bd.replace(/<\/div>$/, btn + '</div>');
   }

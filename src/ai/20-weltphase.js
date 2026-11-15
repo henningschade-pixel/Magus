@@ -27,87 +27,62 @@ function stratPlan(state, pid) {
   return pl;
 }
 const stratSlotLock = (state, p, pid) => { const Q = P(pid), pl = stratPlan(state, pid); return Q.sLock && ((pl.st === 2 && !looted(state, p.stats) && state.showdown === 0) || (pl.st === 3 && state.showdown === 0)); };
-// Währungen (Regel swapCosts): upv = Vorrat für Verbesserungen (HP, Mana, Limit, Handplätze, Nachziehlimit), mgv = Vorrat für Magie.
-const upv = (state, s) => s[M.upField(state)], mgv = (state, s) => s[M.magicField(state)];
-// Welche Verbesserung kauft die KI mit offenen Upgrade-Punkten (mit swapCosts mit Gold)? Liefert null, wenn sie auf den Limit-Schritt spart.
+// Welche Verbesserung kauft die KI mit ihrem Gold? Liefert null, wenn sie auf den Limit-Schritt spart.
 function pickSpend(p, state, pid) {
   const s = p.stats, Q = P(pid);
   const lc = M.limitStepCost(state, s);
-  const canL = lc <= upv(state, s);
-  const canM = !M.maxed(s, 'mana', state.rules) && M.manaStepCost(state, s) <= upv(state, s), canH = !M.maxed(s, 'hp', state.rules) && M.hpStepCost(state, s) <= upv(state, s), canS = p.slots < M.MAX_SLOTS && M.slotStepCost(state, s) <= upv(state, s);   // seit 0.3.2 steigen alle Preise mit jedem Kauf
+  const canL = lc <= s.gold;
+  const canM = !M.maxed(s, 'mana', state.rules) && M.manaStepCost(state, s) <= s.gold, canH = !M.maxed(s, 'hp', state.rules) && M.hpStepCost(state, s) <= s.gold, canS = p.slots < M.MAX_SLOTS && M.slotStepCost(state, s) <= s.gold;   // seit 0.3.2 steigen alle Preise mit jedem Kauf
   const pl = stratPlan(state, pid);
   if (pl.st === 1 && s.limit < 2) return canL ? 'limit' : null;   // auf Ausspiellimit 2 sparen
   const noSlot = stratSlotLock(state, p, pid);
-  const canD = !!state.rules.drawMarker && s.drawLimit < Math.min(Q.dlMax, M.MAX_DRAW_LIMIT) && M.drawLimitCost(state, s) <= upv(state, s);   // Nachziehlimit (Upgrade-Punkte) bis Stufe dlMax, an Stelle dlPos der Reihenfolge
+  const canD = !!state.rules.drawMarker && s.drawLimit < Math.min(Q.dlMax, M.MAX_DRAW_LIMIT) && M.drawLimitCost(state, s) <= s.gold;   // Nachziehlimit (Upgrade-Punkte) bis Stufe dlMax, an Stelle dlPos der Reihenfolge
   const magFull = M.ELEMENTS.every(e => s.mag[e] >= M.MAX_MAGIC);   // alle Magie ausgebaut: Gold hat keine andere Verwendung mehr
   const order = [
     ['limit', s.limit < Q.limitA && canL], ['slot', p.slots < Q.slotA && canS], ['mana', s.maxMana < Q.manaA && canM], ['hp', s.maxHp < Q.hpA && canH],
     ['limit', s.limit < Q.limitB && canL], ['slot', p.slots < Q.slotB && canS], ['hp', (s.maxHp < Q.hpB || magFull) && canH], ['mana', (s.maxMana < Q.manaB || magFull) && canM], ['limit', s.limit < M.MAX_LIMIT && canL],
   ];
   order.splice(Math.max(0, Math.min(order.length, Q.dlPos)), 0, ['drawlimit', canD]);
-  if (s.limit < Q.limitA && !canL && upv(state, s) < lc) return null;   // auf den Limit-Schritt sparen
+  if (s.limit < Q.limitA && !canL && s.gold < lc) return null;   // auf den Limit-Schritt sparen
   for (const [w, ok] of order) if (ok && !(w === 'slot' && noSlot)) return w;
   return null;   // nichts Bezahlbares: sparen
 }
 const spendAct = (A, w) => w === 'drawlimit' ? A({ type: 'drawlimit' }) : A({ type: 'spend', what: w });   // Nachziehlimit ist eine eigene Aktion, die übrigen Punkte gehen über 'spend'
-// Wirtschaftsschritt (Punkte ausgeben, Magie kaufen, Gold opfern); keine Zugaktion (seit 0.9.3), der Zug geht danach weiter.
+// Wirtschaftsschritt (Gold für Verbesserungen und Magie ausgeben); keine Zugaktion (seit 0.9.3), der Zug geht danach weiter.
 function ecoStep(state, pid) {
   const p = state.players[pid], s = p.stats, A = a => Object.assign({ pid }, a), Q = P(pid);
-  const sw = !!state.rules.swapCosts;
-  const spendStep = () => { if (upv(state, s) > 0) { const w = pickSpend(p, state, pid); if (w) return spendAct(A, w); } return null; };
-  if (!sw) { const a = spendStep(); if (a) return a; }   // swapCosts: erst Magie (Upgrade-Punkte), dann Verbesserungen (Gold); der Tempel wandelt Gold in Punkte
-  const pl = stratPlan(state, pid);
-  if (!sw && pl.st === 1 && s.limit < 2 && s.pending < M.limitStepCost(state, s)) {   // Tempel-Gold opfern, damit das Ausspiellimit sofort auf 2 geht
-    const need = M.limitStepCost(state, s) - s.pending;
-    for (let n = 1; n <= s.gold; n++) if (M.previewTemple(p, n).gained >= need) return A({ type: 'temple', amount: n });
-  }
-  // Gold opfern, bis die Punkte für die nächsten batch Magiestufen reichen (bis zu res Gold bleiben übrig). Ein großes Opfer lohnt mehr als mehrere kleine: n Gold ergeben n(n+1)/2 Punkte, ein geteiltes Opfer verschenkt diesen Zuwachs. Darum wartet die KI mit sacBatch > 1, bis das Gold für mehrere Stufen auf einmal reicht, und kauft nur Stufen, die höchstens maxCost Upgrade-Punkte kosten (sonst lieber sparen).
-  const sacMagic = (res, batch, maxCost) => {
-    let left = 0; for (const e of M.ELEMENTS) left += M.MAX_MAGIC - s.mag[e];
-    let need = -s.pending, k = 0;
-    for (let i = 0; i < Math.min(batch, left); i++) {
-      const c = M.magicCost(state, 0, { buys: { mag: ((s.buys && s.buys.mag) || 0) + i } });
-      if (c > maxCost) break;
-      need += c; k++;
-    }
-    if (!k) return null;
-    for (let n = 1; n <= s.gold - res; n++) if (M.previewTemple(p, n).gained >= need) return A({ type: 'temple', amount: n });
-    return null;
-  };
-  const allIds = [...p.deck.draw, ...p.deck.discard, ...p.deck.hand.filter(Boolean)].map(c => c.id);
-  const countEl = e => allIds.filter(id => id[0] === e).length;
-  if ((pl.st === 2 || pl.st === 3) && state.showdown === 0) {   // Eröffnung: nur die gewählte(n) Farbe(n) auf Stufe 2
-    const want = pl.st === 2 ? 1 : 2;
-    if (pl.els.length < want && mgv(state, s) >= 1) {
-      const ranked = M.ELEMENTS.filter(e => !pl.els.includes(e) && s.mag[e] < 2).sort((x, y) => focusScore(state, pid, y) - focusScore(state, pid, x));
-      if (ranked.length && mgv(state, s) >= M.magicCost(state, s.mag[ranked[0]], s)) { pl.els.push(ranked[0]); return A({ type: 'magic', elem: ranked[0] }); }
-    }
-    const foc = pl.st === 2 ? pl.els[0] : null;   // Fokus: danach weiter in dieselbe Farbe (Stufe 3)
-    if (foc && s.mag[foc] < M.MAX_MAGIC && mgv(state, s) >= M.magicCost(state, s.mag[foc], s)) return A({ type: 'magic', elem: foc });
-    if (sw) { const a = spendStep(); if (a) return a; }
-    if (sw && Q.sacOpen) return sacMagic(0, 1, 99);   // nur opfern, wenn die Punkte für die nächste Magiestufe wirklich herauskommen (seit 0.7.7.8); sonst sparen
-    if (s.gold >= 2) return A({ type: 'temple', amount: Math.min(s.gold, 3) });
-    return null;
-  }
-  const opp = state.players[1 - pid].stats, oppTop = M.ELEMENTS.slice().sort((x, y) => opp.mag[y] - opp.mag[x])[0];   // Aufbau des Gegners: seine stärkste Magie, und welche Farbe ihr überlegen ist
-  const planEl = planElement(state, pid);
-  let best = null;
-  for (const e of M.ELEMENTS) {
-    const cost = M.magicCost(state, s.mag[e], s);
-    if (s.mag[e] < M.MAX_MAGIC && mgv(state, s) >= cost) {
+  const spendStep = () => { if (s.gold > 0) { const w = pickSpend(p, state, pid); if (w) return spendAct(A, w); } return null; };
+  // Seit 0.14 kostet auch die Magie Gold (Stufe 1, 2, 3 … kosten 1, 2, 3 … Gold, wie vorher in Tempel-Upgrade-Punkten). Die Reihenfolge bleibt die der früheren Versionen: erst Verbesserungen, dann Magie mit dem Gold, das dafür übrig ist.
+  const buyMagic = res => {   // beste bezahlbare Magiestufe (res Gold bleiben übrig); null, wenn keine bezahlbar ist
+    const allIds = [...p.deck.draw, ...p.deck.discard, ...p.deck.hand.filter(Boolean)].map(c => c.id);
+    const countEl = e => allIds.filter(id => id[0] === e).length;
+    const opp = state.players[1 - pid].stats, oppTop = M.ELEMENTS.slice().sort((x, y) => opp.mag[y] - opp.mag[x])[0];   // Aufbau des Gegners: seine stärkste Magie, und welche Farbe ihr überlegen ist
+    const planEl = planElement(state, pid), cost = M.magicCost(state, 0, s);
+    if (s.gold - res < cost) return null;
+    let best = null;
+    for (const e of M.ELEMENTS) {
+      if (s.mag[e] >= M.MAX_MAGIC) continue;
       const sc = Q.mBase - cost * Q.mCost + countEl(e) * Q.mCnt + (s.mag[e] === Math.max(s.mag.F, s.mag.E, s.mag.W) ? Q.mTop : 0) + (e === M.SUPERIOR[oppTop] ? Q.mCounter * opp.mag[oppTop] : 0) + (e === planEl ? Q.mPlan : 0) + Q.mCatch * Math.max(0, opp.mag[e] - s.mag[e]);
       if (!best || sc > best.sc) best = { sc, a: A({ type: 'magic', elem: e }) };
     }
-  }
-  if (best) return best.a;
-  if (sw) {   // swapCosts: Magie kostet Punkte, die nur der Tempel liefert (Gold opfern); Verbesserungen kosten Gold
-    if (Q.sacG && M.magicProgress(p) < Q.mgGoal) { const a = sacMagic(Q.sacRes, 1, 99); if (a) return a; }
-    const a = spendStep();   // Gold geht in Verbesserungen (oder wird fürs Limit gespart)
-    if (a) return a;
-    if (Q.sacSur > 0 && s.gold >= Q.sacSur) return sacMagic(0, Q.sacBatch, Q.sacMaxCost);   // Überschuss: nichts Bezahlbares mehr, das Gold kauft Magie (seit 0.7.7.5)
+    return best ? best.a : null;
+  };
+  const pl = stratPlan(state, pid);
+  if ((pl.st === 2 || pl.st === 3) && state.showdown === 0) {   // Eröffnung: nur die gewählte(n) Farbe(n) auf Stufe 2
+    const a = spendStep(); if (a) return a;
+    const want = pl.st === 2 ? 1 : 2, cost = M.magicCost(state, 0, s);
+    if (pl.els.length < want && s.gold >= cost) {
+      const ranked = M.ELEMENTS.filter(e => !pl.els.includes(e) && s.mag[e] < 2).sort((x, y) => focusScore(state, pid, y) - focusScore(state, pid, x));
+      if (ranked.length) { pl.els.push(ranked[0]); return A({ type: 'magic', elem: ranked[0] }); }
+    }
+    const foc = pl.st === 2 ? pl.els[0] : null;   // Fokus: danach weiter in dieselbe Farbe (Stufe 3)
+    if (foc && s.mag[foc] < M.MAX_MAGIC && s.gold >= cost) return A({ type: 'magic', elem: foc });
     return null;
   }
-  if (s.gold - Q.tKeep >= 2) return A({ type: 'temple', amount: Math.min(s.gold - Q.tKeep, 3) });
+  if (Q.sacG && M.magicProgress(p) < Q.mgGoal) { const a = buyMagic(Q.sacRes); if (a) return a; }   // sacG 1: Magie vor den Verbesserungen, solange der Magiefortschritt unter mgGoal liegt (sacRes Gold bleiben übrig)
+  const a = spendStep();   // Gold geht in Verbesserungen (oder wird fürs Limit gespart)
+  if (a) return a;
+  if (Q.sacSur > 0 && s.gold >= Q.sacSur) return buyMagic(0);   // Überschuss: nichts Bezahlbares mehr, das Gold kauft Magie
   return null;
 }
 
@@ -169,10 +144,6 @@ const monsterFighter = m => ({ stats: m.stats, deck: { draw: (m.deckIds || []).m
 function worldPlan(state, pid) {
   const p = state.players[pid], s = p.stats, d = p.deck, Q = P(pid);
   const A = a => Object.assign({ pid }, a);
-  if (!state.rules.swapCosts && s.pending > 0) {   // mit swapCosts kauft ecoStep (Magie vor Verbesserungen)
-    const w = pickSpend(p, state, pid);
-    if (w) return [spendAct(A, w)];
-  }
   const hand = handList(d), normals = hand.filter(h => !h.curse), curses = hand.filter(h => h.curse);
   const R = () => state.rng.random() * 0.6;
   const penF = 1 + Q.dRedS * (M.drawPenaltyAmount(state, 'Gold') - 1);   // die Strafe des roten Marker wächst mit dem Abschnitt (1/2/3 Gold): Abschläge und Ausweichen zählen entsprechend mehr
@@ -182,7 +153,6 @@ function worldPlan(state, pid) {
   const countEl = e => allIds.filter(id => id[0] === e).length;
 
   if (canDraw(d)) cands.push({ score: Q.dBase + Q.dCurse * curses.length + (normals.length === 0 ? Q.dEmpty : 0) + emptySlots * Q.dSlot - (normals.length >= 3 ? Q.dNorm : 0) - (p.drawRed ? Q.dRed * penF : 0) + (!p.drawRed ? Q.dFree : 0) + R(), acts: [A({ type: 'draw' })] });
-  // (bis 0.7.5: roter Marker, 1 Gold im Tempel stellte ihn auf grün; seit 0.7.6.4 ist das Opfern kein Zug mehr und ändert den Marker nicht)
   if (p.drawRed && Q.dVen && s.gold < 1) {   // roter Marker ohne Gold: ein Gratis-Tausch in der Bibliothek stellt ihn ebenfalls auf grün (sonst schenkt das Warten dem Gegner jede zweite Runde 1 Gold)
     const best = M.ELEMENTS.slice().sort((a, b) => s.mag[b] - s.mag[a]), free = M.vendorPlans(state, pid).filter(o => o.free).sort((a, b) => best.indexOf(a.result[0]) - best.indexOf(b.result[0]))[0];
     if (free) cands.push({ score: Q.dVen * penF + R(), acts: [A({ type: 'vendor', result: free.result, cost: [] })] });
@@ -191,7 +161,7 @@ function worldPlan(state, pid) {
     const plans = M.vendorPlans(state, pid), mk = o => o.slots.map(sl => A({ type: 'mark', slot: sl }));
     // Wirksamer Wert einer Aufwertung: Eine Karte zählt höchstens mit dem Magielevel ihrer Farbe. Darüber (ohne bald erschwingliche Magie) kostet die Aufwertung nur Zeit.
     const planEl = planElement(state, pid);
-    const worth = o => { const e = o.result[0], t = +o.result[1], soon = Q.vFut > 0 && mgv(state, s) >= M.magicCost(state, s.mag[e], s) && s.mag[e] < M.MAX_MAGIC; return t * (t <= s.mag[e] || soon ? 1 : Q.vOver) * (e === planEl || !planEl ? 1 : Q.vOff); };
+    const worth = o => { const e = o.result[0], t = +o.result[1], soon = Q.vFut > 0 && s.gold >= M.magicCost(state, s.mag[e], s) && s.mag[e] < M.MAX_MAGIC; return t * (t <= s.mag[e] || soon ? 1 : Q.vOver) * (e === planEl || !planEl ? 1 : Q.vOff); };
     const ups = plans.filter(o => !o.free).sort((a, b) => worth(b) - worth(a));
     if (ups.length) cands.push({ score: Q.vUp + worth(ups[0]) * Q.vUpW + R(), acts: [...mk(ups[0]), A({ type: 'vendor', result: ups[0].result, cost: ups[0].cost })] });
     else if (normals.length >= 1 && normals.length < 2 && allIds.length < 12) {

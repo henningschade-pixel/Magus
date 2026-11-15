@@ -14,5 +14,5 @@ let fxUntil = 0, lateN = 0;   // Zeitpunkt, bis zu dem eine Kampfanimation läuf
 let drawAsk = false;   // Nachziehen bei rotem Marker: Warnung wird gezeigt
 let fleeAsk = false;   // Fliehen: Bestätigung wird gezeigt
 let SPEC = false, specT = 0, specSpeed = 1;   // SPEC: Zuschauermodus, zwei Computerspieler spielen gegeneinander
-let upSeen = null, hpHold = null, curseHold = {}, stageSeen = 1, endSnd = null, sacN = 0, G = null, hold = 0, aiTimer = null, endView = null, modal = null, introSeen = -1, preStats = null, seenCombat = null, toastTimer = null, started = false, logOpen = false;   // logOpen: Protokoll-Fenster (runder Knopf oben links) offen
+let hpHold = null, curseHold = {}, stageSeen = 1, endSnd = null, G = null, hold = 0, aiTimer = null, endView = null, modal = null, introSeen = -1, preStats = null, seenCombat = null, toastTimer = null, started = false, logOpen = false;   // logOpen: Protokoll-Fenster (runder Knopf oben links) offen
 

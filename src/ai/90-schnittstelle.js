@@ -1,5 +1,5 @@
 function plan(state, pid) {
-  if (state.phase === 'world') { const st = ecoStep(state, pid); if (st) return [st]; }   // Wirtschaftsschritt (Punkte ausgeben, Magie kaufen, Gold opfern) hat Vorrang; er ist keine Aktion, danach plant die Oberfläche denselben Zug neu
+  if (state.phase === 'world') { const st = ecoStep(state, pid); if (st) return [st]; }   // Wirtschaftsschritt (Gold für Verbesserungen und Magie ausgeben) hat Vorrang; er ist keine Aktion, danach plant die Oberfläche denselben Zug neu
   return state.phase === 'combat' ? searchPlan(state, pid) : worldPlan(state, pid);   // Kampf: Vorausschau (40-suche.js), ohne Durchläufe (setSearch(0)) die Basis-KI
 }
 // Führt einen vollständigen KI-Zug aus; bei Fehlern greift eine sichere Rückfalloption.
@@ -13,7 +13,7 @@ function fallback(state, pid) {
   return [A({ type: 'draw' })];
 }
 function runTurn(state, pid) {
-  const pre = [];   // Opfern, Magie kaufen und Upgrades sind kein Zug (Opfern seit 0.7.6.4, Magie und Upgrades seit 0.9.3): danach geht derselbe Zug weiter
+  const pre = [];   // Magie kaufen und Upgrades sind kein Zug (seit 0.9.3): danach geht derselbe Zug weiter
   if (state.phase === 'world') {
     for (let g = 0; g < 12; g++) {
       const st = ecoStep(state, pid); if (!st) break;

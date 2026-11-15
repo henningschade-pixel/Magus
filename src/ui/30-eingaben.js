@@ -35,9 +35,6 @@ function onAct(d) {
     case 'combat': act({ type: 'combat', elem: d.e }); break;
     case 'vendorres': { const o = M.vendorOffers(G, ME).filter(x => !x.free && x.available && x.result === d.r).sort((x, y) => x.cost.length - y.cost.length)[0]; if (o) act({ type: 'vendor', result: o.result, cost: o.cost }); break; }
     case 'vendor': { const o = M.vendorOffers(G, ME)[+d.i]; if (o) act({ type: 'vendor', result: o.result, cost: o.cost }); break; }
-    case 'sacdn': sacN = Math.max(0, sacN - 1); render(); break;
-    case 'sacup': sacN = sacN + 1; render(); break;   // seit 0.7 ohne festes Limit: höchstens so viel, wie Gold da ist (die Anzeige begrenzt)
-    case 'temple': sacN = 0; act({ type: 'temple', amount: +d.n }); break;
     case 'spend': act({ type: 'spend', what: d.w }); break;
     case 'magic': act({ type: 'magic', elem: d.e }); break;
     case 'drawlimit': act({ type: 'drawlimit' }); break;
@@ -90,16 +87,15 @@ stage.addEventListener('click', e => {
   }
 });
 /* Vorschau beim Überfahren eines Plus-Knopfes: neue Werte in Grün, neue Magiestufe grün eingekreist. Dazu die Knöpfe Verteidigen, Passen, Erholen und der Nachziehstapel: sinkende Werte in Rot, steigende in Grün */
-const PV_SEL = 'button.up, .sacbtn, [data-act="draw"], [data-act="defend"], [data-act="pass"], [data-act="recover"]';
+const PV_SEL = 'button.up, [data-act="draw"], [data-act="defend"], [data-act="pass"], [data-act="recover"]';
 let pvUndo = null;
 function pvClear() { if (pvUndo) { pvUndo(); pvUndo = null; } }
-let pvHover = false;   // true, solange die Maus auf einem Vorschau-Knopf liegt (dann hat dessen Vorschau Vorrang vor der Opfer-Vorschau)
+let pvHover = false;   // true, solange die Maus auf einem Vorschau-Knopf liegt
 function pvSticky() {
   if (pvHover || !G) return; pvClear();
-  const sb = stage.querySelector('.sacbtn:not([disabled])'); if (sb) { pvShow(sb); return; }
   const d = stage.querySelector('[data-act="defend"]'), ps = stage.querySelector('[data-act="pass"]'), b = d && !d.disabled ? d : ps;   // eigene Verteidigung: zu erwartender HP- und Mana-Verlust steht schon vor dem Überfahren (mit markierten Karten wie bei Verteidigen, sonst wie bei Passen)
   if (b) pvShow(b);
-}   // Opfer-Vorschau steht dauerhaft, passend zur Pfeil-Einstellung
+}
 stage.addEventListener('mouseover', e => {
   const b = e.target.closest(PV_SEL); if (!b || b.disabled || b.classList.contains('off')) { if (!b) { pvHover = false; pvSticky(); } return; }
   pvHover = true; pvShow(b);
@@ -108,9 +104,9 @@ function pvShow(b) {
   pvClear();
   const st = G && G.players[ME].stats, w = b.dataset.w, act = b.dataset.act;
   if (!st) return;
-  const UK = M.upField(G) === 'gold' ? 'gold' : 'pts', undos = [], redo = (key, cost) => {   // sinkende Werte (Gold, Upgrade-Punkte) gleichzeitig rot markieren
+  const undos = [], redo = (key, cost) => {   // sinkendes Gold gleichzeitig rot markieren
     const el = stage.querySelector('[data-pv="' + key + '"]'); if (!el || !(cost > 0)) return;
-    const old = el.innerHTML, oldT = el.textContent, cur = key === 'gold' ? st.gold : st.pending;
+    const old = el.innerHTML, oldT = el.textContent, cur = st.gold;
     el.innerHTML = '<span class="pvdn">' + Math.max(0, cur - cost) + '</span>'; undos.push(() => { el.innerHTML = old; }); ArcFx.mark(el, oldT, undos);
   };
   if (act === 'draw' || act === 'defend' || act === 'pass' || act === 'recover') {   // Kampfaktionen und Nachziehen: zu erwartende Veränderungen
@@ -138,12 +134,9 @@ function pvShow(b) {
       if (pd.leftover > 0 || pd.heal > 0) set(ME, 'hp', (pd.hpAfter < cst.hp ? dn(pd.hpAfter) : pd.hpAfter > cst.hp ? up(pd.hpAfter) : pd.hpAfter) + '/' + cst.maxHp);   // Heilung wirkt nach dem Schaden (seit 0.5.4) vor dem Schaden (Kombo zuerst)
       if (pd.refl > 0) { const cs = G.combat.sides.a.ctrl === pd.att ? G.combat.sides.a : G.combat.sides.b; set(pd.att, 'hp', dn(pd.attHpAfter) + '/' + cs.stats.maxHp); }
     }
-  } else if (act === 'temple') {   // Opfern: Gold sinkt (rot)
-    const n = +b.dataset.n;
-    redo('gold', n);
-  } else if (act === 'magic') redo(M.magicField(G) === 'gold' ? 'gold' : 'pts', M.magicCost(G, st.mag[b.dataset.e], st));
-  else if (act === 'drawlimit') redo(UK, M.drawLimitCost(G, st));
-  else if (act === 'spend') redo(UK, w === 'limit' ? M.limitStepCost(G, st) : w === 'mana' ? M.manaStepCost(G, st) : w === 'hp' ? M.hpStepCost(G, st) : w === 'slot' ? M.slotStepCost(G, st) : 1);
+  } else if (act === 'magic') redo('gold', M.magicCost(G, st.mag[b.dataset.e], st));
+  else if (act === 'drawlimit') redo('gold', M.drawLimitCost(G, st));
+  else if (act === 'spend') redo('gold', w === 'limit' ? M.limitStepCost(G, st) : w === 'mana' ? M.manaStepCost(G, st) : w === 'hp' ? M.hpStepCost(G, st) : w === 'slot' ? M.slotStepCost(G, st) : 1);
   if (act === 'magic') {
     const el = b.dataset.e, dot = b.parentElement.querySelector('.rg[data-e="' + el + '"][data-lv="' + (st.mag[el] + 1) + '"]');
     if (dot) { dot.classList.add('pv'); undos.push(() => dot.classList.remove('pv')); }
@@ -193,7 +186,7 @@ function homeSettings() {
   overlay.innerHTML = '<div class="box start" style="width:520px"><h1 style="font-size:44px">Einstellungen</h1><div class="menulist setpage" style="margin-top:10px">' + settingsHTML() + '<button class="btn" data-act="homeback">Zurück</button></div></div>';
 }
 // Klickton für Menü- und Bedienknöpfe (Aktionen mit eigenem Ton ausgenommen)
-const CLICK_ACTS = new Set(['sacdn', 'sacup', 'deckview', 'home', 'resume', 'restart', 'leave', 'newgame', 'newspec', 'specspeed', 'stend', 'finfight', 'logdl', 'stclose', 'stopen', 'sndtoggle', 'rule', 'rulephase', 'menu', 'quit', 'homeset', 'homeback', 'stfit', 'stwho', 'stser', 'dismiss']);
+const CLICK_ACTS = new Set(['deckview', 'home', 'resume', 'restart', 'leave', 'newgame', 'newspec', 'specspeed', 'stend', 'finfight', 'logdl', 'stclose', 'stopen', 'sndtoggle', 'rule', 'rulephase', 'menu', 'quit', 'homeset', 'homeback', 'stfit', 'stwho', 'stser', 'dismiss']);
 stage.addEventListener('pointerdown', e => { const b = e.target.closest('button'); if (b && (b.id === 'homebtn' || b.id === 'statsbtn' || b.id === 'logbtn' || b.classList.contains('logdl') || CLICK_ACTS.has(b.dataset.act))) Snd.play('ui_click'); }, true);
 const homeBtn = document.createElement('button');
 homeBtn.id = 'homebtn'; homeBtn.title = 'Hauptmenü (die Partie bleibt erhalten)'; homeBtn.textContent = '⌂';

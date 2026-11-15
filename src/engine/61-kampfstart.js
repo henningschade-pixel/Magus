@@ -33,7 +33,7 @@ function startCombat(state, attPid, slot) {   // slot: Platz des Monsters (F, E,
 }
 function pickShowdownAttacker(state) {
   // der Zurückliegende beginnt
-  const key = p => [p.sp, p.temple.points, magicProgress(p), p.stats.gold];
+  const key = p => [p.sp, magicProgress(p), p.stats.gold];
   const k0 = key(state.players[0]), k1 = key(state.players[1]);
   for (let i = 0; i < k0.length; i++) { if (k0[i] > k1[i]) return 1; if (k1[i] > k0[i]) return 0; }
   return state.rng.random() < 0.5 ? 0 : 1;

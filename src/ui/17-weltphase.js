@@ -1,4 +1,4 @@
-/* ---------- Weltphase: Bibliothek (links), Tempel (rechts), Monster ---------- */
+/* ---------- Weltphase: Bibliothek (links), Monster (der rechte Bereich bleibt seit 0.14 frei) ---------- */
 function libraryPanel() {
   const p = G.players[ME];
   const offers = M.vendorOffers(G, ME);
@@ -16,47 +16,6 @@ function libraryPanel() {
     h += '</div>';
   }
   return '<div class="panel libpanel" style="' + box(LAYOUT.library, 'overflow-y:auto') + '">' + h + '</div>';
-}
-// Tempel (seit 0.11): Punktefortschritt beider Spieler auf einem Raster aus Feldern 0, 1, 2, 3 … (zeilenweise gezählt). Die Punktzahlen, bei denen eine neue Tempelstufe beginnt
-// (1, 3, 6, 10, 15, 21 … = k(k+1)/2), sind golden hervorgehoben. Runde Marker zeigen, wo die Spieler stehen (eigener golden, Gegner grau); der durchscheinende grüne Marker und die grün gestrichelten Felder
-// zeigen, wohin das eingestellte Opfer (Pfeile am Gold, sacN) den eigenen Stein bringen würde. Die Magie ganz auszubauen kostet 6 Käufe zu 1 + 2 + … + 6 = 21 Upgrade-Punkte,
-// also Tempelstufe 21 = 231 Punkte (weitere Upgrade-Punkte werden zu Siegpunkten); das Raster reicht deshalb bis Feld 231 und zeigt immer nur so viele Felder, wie die Steine brauchen (die Felder werden mit dem Fortschritt kleiner).
-const TEMPLE_FULL = 21;   // Tempelstufe, die für den vollen Magieausbau nötig ist (6 Käufe zu 1 bis 6 Upgrade-Punkten)
-const templeTotal = p => p.temple.level * (p.temple.level + 1) / 2 + p.temple.points;   // alle Tempelpunkte bisher (Stufe k hat k Punkte gekostet, die Schwelle der Stufe k liegt bei k(k+1)/2)
-const templeRow = t => { let r = 0; while ((r + 1) * (r + 2) / 2 <= t) r++; return r; };   // Tempelstufe, in der die Punktzahl t liegt
-function markerHTML(cls, d, x, y, tip) {   // einfacher runder Marker; (x, y) = Mitte
-  return '<div class="mk ' + cls + '" style="width:' + d + 'px;height:' + d + 'px;left:' + (x - d / 2).toFixed(1) + 'px;top:' + (y - d / 2).toFixed(1) + 'px" title="' + esc(tip) + '"></div>';
-}
-function templePanel() {
-  const me = G.players[ME], op = G.players[OPP], s = me.stats;
-  const n = Math.max(0, Math.min(sacN, s.gold)), pv = M.previewTemple(me, n);   // eingestelltes Opfer (wie am Opfern-Knopf, höchstens so viel wie Gold da ist)
-  const tMe = templeTotal(me), tOp = templeTotal(op), tNew = tMe + pv.points;
-  const lastLv = Math.max(templeRow(tMe), templeRow(tOp), templeRow(tNew));
-  const maxLv = Math.min(TEMPLE_FULL, Math.max(10, lastLv + 3)), K = maxLv * (maxLv + 1) / 2 + 1;   // Felder 0 bis zur Schwelle der Stufe maxLv (mindestens Stufe 10 = 55, höchstens Stufe 21 = 231)
-  let cols = 6, cs = 0;   // Spaltenzahl mit den größten Feldern in den Rahmen (306 × 296 px)
-  for (let c = 6; c <= 24; c++) { const z = Math.floor(Math.min(46, 306 / c, 296 / Math.ceil(K / c))); if (z > cs) { cs = z; cols = c; } }
-  const rows = Math.ceil(K / cols), pos = t => { t = Math.min(t, K - 1); return { r: Math.floor(t / cols), c: t % cols }; };
-  let cells = '';
-  for (let t = 0; t < K; t++) {
-    const r = templeRow(t), lv = t > 0 && t === r * (r + 1) / 2, gain = n > 0 && t > tMe && t <= Math.min(tNew, K - 1), q = pos(t);
-    const tip = t === 0 ? 'Start (0 Punkte)' : lv ? 'Tempelstufe ' + r + ' ab ' + t + ' Punkten' : t + ' Punkte (Tempelstufe ' + r + ')';
-    cells += '<div class="tcell' + (lv ? ' lv' : '') + (t === 0 ? ' z' : '') + (gain ? ' gain' : '') + '" title="' + tip + '" style="left:' + q.c * cs + 'px;top:' + q.r * cs + 'px;width:' + cs + 'px;height:' + cs + 'px"><i style="font-size:' + Math.max(8, Math.round(cs * 0.3)) + 'px">' + t + '</i></div>';
-  }
-  const marks = [{ cls: 'op', t: tOp, tip: op.name + ': ' + tOp + ' Tempelpunkte (Stufe ' + op.temple.level + ')' }, { cls: 'me', t: tMe, tip: me.name + ': ' + tMe + ' Tempelpunkte (Stufe ' + me.temple.level + ')' }];
-  if (n > 0) marks.push({ cls: 'gh', t: tNew, tip: 'Opfer von ' + n + ' Gold: ' + tNew + ' Tempelpunkte (Stufe ' + pv.level + ')' });
-  const groups = {}; marks.forEach(m => { const q = pos(m.t); (groups[q.r + ',' + q.c] = groups[q.r + ',' + q.c] || []).push(Object.assign(m, q)); });
-  const md = Math.max(10, Math.round(cs * 0.58));   // Markerdurchmesser (bei kleinen Feldern ragt der Marker über die Zahl)
-  let stones = '';
-  Object.values(groups).forEach(g => g.forEach((m, i) => {   // mehrere Marker auf demselben Feld stehen nebeneinander
-    const off = g.length === 1 ? 0 : (i - (g.length - 1) / 2) * md * 0.7;
-    stones += markerHTML(m.cls, md, m.c * cs + cs / 2 + off, m.r * cs + cs * 0.6, m.tip);
-  }));
-  const pend = me.stats.pending || 0, pendHTML = pv.gained > 0 ? '<span class="pvnew">' + (pend + pv.gained) + '</span>' : pend;   // eingestelltes Opfer: neue Upgrade-Punkte in Grün (wie die übrigen Vorschauwerte; sinkende Werte beim Ausgeben rot über data-pv="pts")
-  const need = M.nextLevelCost(pv.level) - pv.pool;
-  const info = n === 0 ? '' : '<b>' + n + ' Gold</b> opfern: <b class="pg">+' + pv.points + ' Tempelpunkt' + (pv.points === 1 ? '' : 'e') + '</b> (gesamt ' + tNew + ')';   // seit 0.11.0.7 nur noch eine Zeile (die Stufenzeile entfiel)
-  const tip = 'Tempel: Die goldenen Zahlen (1, 3, 6, 10, 15, 21 …) sind der Eintritt in die nächste Tempelstufe und geben je einen Upgrade-Punkt. Opfern von n Gold ergibt n(n+1)/2 Punkte. Die Magie ganz auszubauen kostet 21 Upgrade-Punkte (1 + 2 + … + 6), also Tempelstufe 21 = 231 Punkte.';
-  return '<div class="panel tpanel" title="' + tip + '" style="' + box(LAYOUT.temple) + '"><h3>Tempel</h3>' +
-    '<div class="tboard" style="width:' + cols * cs + 'px;height:' + rows * cs + 'px">' + cells + stones + '</div><div class="tinfo">' + info + '</div><div class="tup" title="Verfügbare Upgrade-Punkte je Spieler"><div class="me"><span>' + me.name + '</span><b data-pv="pts">' + pendHTML + '</b> Upgrade-Punkte</div><div class="op"><span>' + op.name + '</span><b>' + (op.stats.pending || 0) + '</b> Upgrade-Punkte</div></div></div>';
 }
 function monsterCards() {
   let h = '';

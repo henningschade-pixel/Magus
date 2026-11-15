@@ -4,7 +4,7 @@ const LAYOUT0 = {
   zoneLines: [166, 596],                                    // Trennlinien
   oppPanel:  { left: 920, top: 8,   w: 336, h: 160 },       // Gegner (oben rechts)
   mePanel:   { left: 920, top: 610, w: 336, h: 176 },       // eigener Spielerstatus (unten rechts)
-  temple:    { left: 920, top: 182, w: 336, h: 408 },       // Tempel (Weltphase, rechts; bis 0.9.9.16 stand hier die Bibliothek)
+  temple:    { left: 920, top: 182, w: 336, h: 408 },       // rechter Bereich der Weltphase: seit 0.14 frei (bis 0.13 der Tempel)
   library:   { left: 24,  top: 182, w: 260, h: 408 },       // Bibliothek (Weltphase, links; bis 0.9.9.16 stand hier das Protokoll)
   logPop:    { left: 12,  top: 172, w: 280, h: 420 },       // Protokoll: Fenster hinter dem runden Knopf oben links (seit 0.11)
   monsters:  { left: 296, top: 182, step: 212, w: 188, h: 408, diceY: 317 },   // diceY: Oberkante der Würfel, von der Kartenoberkante aus (direkt über dem Kämpfen-Knopf)

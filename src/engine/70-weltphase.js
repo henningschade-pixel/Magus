@@ -1,6 +1,5 @@
 /* Magus – Regelkern (Teil 7): Weltphase (Züge außerhalb des Kampfes).
-   Nur drei Aktionen beenden den Zug (Spielerwechsel): Nachziehen, Bibliothek (Händler) und Kampf. Gold opfern, Magie kaufen und jedes Upgrade (Punkte oder Gold ausgeben, auch das Nachziehlimit) sind keine Aktion (Opfern seit 0.7.6.4, Magie und Upgrades seit 0.9.3): der Spieler bleibt am Zug.
-   Upgrade-Punkte dürfen aufgespart werden. */
+   Nur drei Aktionen beenden den Zug (Spielerwechsel): Nachziehen, Bibliothek (Händler) und Kampf. Magie kaufen und jedes Upgrade (Gold ausgeben, auch das Nachziehlimit) sind keine Aktion (seit 0.9.3): der Spieler bleibt am Zug. Seit 0.14 gibt es keinen Tempel und keine Upgrade-Punkte mehr; alles kostet Gold. */
 
 // Verlauf für die Statistik: ein Messpunkt zu Beginn, nach jedem Zug und nach jedem Kampf (ev = Kampfereignis)
 // avg: durchschnittliche Kartenstufe je Farbe im ganzen Deck (Stapel, Ablage, Hand; ohne Fluchkarten)
@@ -10,7 +9,7 @@ function deckAvg(p) {
   return out;
 }
 function sample(state, ev) {
-  state.hist.push({ ev: ev || null, p: state.players.map(p => Object.assign(deckAvg(p), { sp: p.sp, up: p.stats.upGot, lvl: p.temple.level, F: p.stats.mag.F, E: p.stats.mag.E, W: p.stats.mag.W, slots: p.slots, limit: p.stats.limit, dl: p.stats.drawLimit, hp: p.stats.maxHp, mana: p.stats.maxMana })) });
+  state.hist.push({ ev: ev || null, p: state.players.map(p => Object.assign(deckAvg(p), { sp: p.sp, up: Object.values(p.stats.buys || {}).reduce((a, b) => a + b, 0), F: p.stats.mag.F, E: p.stats.mag.E, W: p.stats.mag.W, slots: p.slots, limit: p.stats.limit, dl: p.stats.drawLimit, hp: p.stats.maxHp, mana: p.stats.maxMana })) });
 }
 // Zermürbung (seit 0.9.7): Die Weltphase hat denselben Rundenzähler wie der Kampf (eine Runde = ein Zug jedes Spielers). Seit 0.9.7.1 zählt ihn state.wearTurns: alle Züge der Weltphase, ein Monsterkampf setzt ihn NICHT zurück (nur ein Showdown, mit dem ein neuer Abschnitt beginnt); state.worldTurns (Züge seit dem letzten Kampf) dient weiter der Monstererholung und der KI. Ist der kritische Wert (exhaustRounds, 0 = aus) erreicht, also ab Runde exhaustRounds + 1, bekommt der Gegner am Ende jedes Zuges, in dem kein Monster angegriffen wurde, Gold in Höhe der Spielstufe (Abschnitt 1/2/3).
 function worldRound(state) { return Math.floor((state.wearTurns || 0) / 2) + 1; }
@@ -36,78 +35,55 @@ function endTurn(state, pid, kind) {
 
 function execSpend(state, pid, what) {
   const p = state.players[pid], s = p.stats, d = p.deck;
-  const f = upField(state);
-  if (s[f] <= 0) return fail(f === 'gold' ? 'Du hast kein Gold.' : 'Keine offenen Upgrade-Punkte.');
+  if (s.gold <= 0) return fail('Du hast kein Gold.');
   let cost = 1;
   if (what === 'hp') {
     if (maxed(s, 'hp', state.rules)) return fail('Die max. HP sind am Maximum (' + state.rules.maxUpgrades + ' Ausbauten).');
     cost = hpStepCost(state, s);
-    if (s[f] < cost) return fail('Die nächsten HP kosten ' + payTxt(state, f, cost) + '.');
+    if (s.gold < cost) return fail('Die nächsten HP kosten ' + goldTxt(cost) + '.');
     const n = state.rules.hpPerPoint || 1; s.maxHp += n; buyCount(s, 'hp');   // Upgrade erhöht nur das Maximum, die aktuellen HP bleiben
   }
   else if (what === 'mana') {
     if (maxed(s, 'mana', state.rules)) return fail('Das max. Mana ist am Maximum (' + state.rules.maxUpgrades + ' Ausbauten).');
     cost = manaStepCost(state, s);
-    if (s[f] < cost) return fail('Der nächste Mana-Schritt kostet ' + payTxt(state, f, cost) + '.');
+    if (s.gold < cost) return fail('Der nächste Mana-Schritt kostet ' + goldTxt(cost) + '.');
     s.maxMana++; buyCount(s, 'mana');   // nur das Maximum steigt, das aktuelle Mana bleibt
   } else if (what === 'limit') {
     if (s.limit >= MAX_LIMIT) return fail('Das Ausspiellimit ist am Maximum (' + MAX_LIMIT + ').');
     cost = limitStepCost(state, s);
-    if (s[f] < cost) return fail('Das nächste Limit kostet ' + payTxt(state, f, cost) + '.');
+    if (s.gold < cost) return fail('Das nächste Limit kostet ' + goldTxt(cost) + '.');
     s.limit++; buyCount(s, 'limit');
   } else if (what === 'slot') {
     if (p.slots >= MAX_SLOTS) return fail('Du hast schon ' + MAX_SLOTS + ' Handplätze.');
     cost = slotStepCost(state, s);
-    if (s[f] < cost) return fail('Der nächste Handplatz kostet ' + payTxt(state, f, cost) + '.');
+    if (s.gold < cost) return fail('Der nächste Handplatz kostet ' + goldTxt(cost) + '.');
     p.slots++; d.hand.push(null); buyCount(s, 'slot');
   } else return fail('Unbekanntes Upgrade.');
-  s[f] -= cost;
+  s.gold -= cost;
   log(state, p.name + ' verbessert ' + { hp: 'max. HP', mana: 'max. Mana', limit: 'das Ausspiellimit', slot: 'die Handplätze' }[what] + '.', pid);
   return { ok: true };
 }
-// Nachziehlimit steigern (kostet Upgrade-Punkte aus dem Tempel, mit swapCosts Gold; drawLimitCost je Schritt): so oft darf man hintereinander nachziehen, bevor der Nachziehmarker auf Rot springt.
+// Nachziehlimit steigern (kostet Gold; drawLimitCost je Schritt): so oft darf man hintereinander nachziehen, bevor der Nachziehmarker auf Rot springt.
 function drawLimitCost(state, s) { const c = state.rules.drawLimitCost, base = Array.isArray(c) ? (c[s.drawLimit - 1] != null ? c[s.drawLimit - 1] : c[c.length - 1]) : (c == null ? 1 : c); return risen(state, base, s, 'draw'); }
 function execDrawLimit(state, pid) {
   const p = state.players[pid], s = p.stats;
   if (!state.rules.drawMarker) return fail('Ohne Nachziehmarker gibt es kein Nachziehlimit.');
   if (s.drawLimit >= MAX_DRAW_LIMIT) return fail('Das Nachziehlimit ist am Maximum (' + MAX_DRAW_LIMIT + ').');
-  const cost = drawLimitCost(state, s), f = upField(state);
-  if (s[f] < cost) return fail('Du brauchst ' + payTxt(state, f, cost) + '.');
-  s[f] -= cost; s.drawLimit++; buyCount(s, 'draw');
-  log(state, p.name + ' steigert das Nachziehlimit auf ' + s.drawLimit + ' (' + payTxt(state, f, cost) + ').', pid);
-  return { ok: true };
-}
-function execTemple(state, pid, amount) {
-  const p = state.players[pid], s = p.stats;
-  const n = amount | 0;
-  if (n <= 0 || n > s.gold) return fail('So viel Gold hast du nicht.');
-  const pv = previewTemple(p, n);
-  s.gold -= n; p.temple.points = pv.pool; p.temple.level = pv.level; s.pending += pv.gained; s.upGot += pv.gained;
-  log(state, p.name + ' opfert ' + n + ' Gold im Tempel (+' + pv.points + ' Punkte, +' + pv.gained + ' Upgrade-Punkt' + (pv.gained === 1 ? '' : 'e') + ').', pid);
+  const cost = drawLimitCost(state, s);
+  if (s.gold < cost) return fail('Du brauchst ' + goldTxt(cost) + '.');
+  s.gold -= cost; s.drawLimit++; buyCount(s, 'draw');
+  log(state, p.name + ' steigert das Nachziehlimit auf ' + s.drawLimit + ' (' + goldTxt(cost) + ').', pid);
   return { ok: true };
 }
 function execMagic(state, pid, e) {
   const p = state.players[pid], s = p.stats;
   if (!ELEMENTS.includes(e)) return fail('Unbekanntes Element.');
   if (s.mag[e] >= MAX_MAGIC) return fail(NAMES[e] + ' ist schon auf Stufe ' + MAX_MAGIC + '.');
-  const cost = magicCost(state, s.mag[e], s), f = magicField(state);
-  if (s[f] < cost) return fail('Du brauchst ' + payTxt(state, f, cost) + '.');
-  s[f] -= cost; buyCount(s, 'mag'); s.mag[e]++;
-  log(state, p.name + ' steigert ' + NAMES[e] + ' auf Stufe ' + s.mag[e] + ' (' + payTxt(state, f, cost) + ').', pid);
+  const cost = magicCost(state, s.mag[e], s);
+  if (s.gold < cost) return fail('Du brauchst ' + goldTxt(cost) + '.');
+  s.gold -= cost; buyCount(s, 'mag'); s.mag[e]++;
+  log(state, p.name + ' steigert ' + NAMES[e] + ' auf Stufe ' + s.mag[e] + ' (' + goldTxt(cost) + ').', pid);
   return { ok: true };
-}
-
-// Überschusspunkte (Regel surplusSp, nur mit swapCosts): Mit swapCosts kaufen Upgrade-Punkte nur noch Magie. Stehen alle drei Magien auf der Höchststufe, wandeln sich offene und neu erhaltene Upgrade-Punkte sofort in Siegpunkte um (surplusSp je Punkt, 0 = aus). Überschüssiges Gold bleibt Gold.
-function convertSurplus(state) {
-  const k = state.rules.surplusSp;
-  if (!k || !state.rules.swapCosts) return;
-  state.players.forEach((p, pid) => {
-    const s = p.stats;
-    if (s.pending > 0 && ELEMENTS.every(e => s.mag[e] >= MAX_MAGIC)) {
-      const n = s.pending, sp = n * k; s.pending = 0; p.sp += sp;
-      log(state, p.name + ' wandelt ' + n + ' überschüssige Upgrade-Punkt' + (n > 1 ? 'e' : '') + ' in ' + sp + ' Siegpunkt' + (sp > 1 ? 'e' : '') + ' um.', pid);
-    }
-  });
 }
 
 function applyWorld(state, a) {
@@ -123,8 +99,7 @@ function applyWorld(state, a) {
       endTurn(state, pid, 'draw'); return { ok: true };
     }
     case 'vendor': return execVendor(state, pid, a);
-    case 'temple': return execTemple(state, pid, a.amount);   // seit 0.7.6.4 kein Zug mehr: der Spieler bleibt am Zug
-    case 'magic': return execMagic(state, pid, a.elem);   // seit 0.9.3 kein Zug mehr (wie Opfern und Upgrades)
+    case 'magic': return execMagic(state, pid, a.elem);   // seit 0.9.3 kein Zug mehr (wie die Upgrades)
     case 'drawlimit': return execDrawLimit(state, pid);   // seit 0.9.3 kein Zug mehr
     case 'spend': return execSpend(state, pid, a.what);   // seit 0.9.3 kein Zug mehr
     case 'combat': {
