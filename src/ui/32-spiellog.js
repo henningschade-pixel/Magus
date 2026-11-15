@@ -13,7 +13,7 @@ function buildExport() {
   };
 }
 // Der Export-Knopf sitzt in der Kopfzeile des Protokoll-Fensters und des Kampflogs (siehe render in 26a-darstellung.js)
-[logEl, logPop].forEach(el => el.addEventListener('click', e => { if (e.target.closest('.logdl')) { e.stopPropagation(); exportLog(e); } }));
+logEl.addEventListener('click', e => { if (e.target.closest('.logdl')) { e.stopPropagation(); exportLog(e); } });
 async function exportLog(e) {
   const d = buildExport(); if (!d) { toast('Noch keine Partie.'); return; }
   const txt = JSON.stringify(d, null, 1);

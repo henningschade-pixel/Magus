@@ -690,6 +690,12 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Tests:** Drei Tests angepasst (Nachziehmarker Weltphase, Nachziehlimit Kauf, Nachziehlimit Weltphase; der Marker-Reset läuft jetzt über den Händler), neuer Test „Magie kaufen und Upgrades sind keine Aktion mehr“. `tests/golden.json` ist neu erzeugt (absichtliche Regeländerung).
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
 
+## Änderung 0.14.1 (15.11.)
+
+- **Oberfläche (keine Regeländerung):** Die **Bibliothek** steht in der Weltphase wieder rechts (Platz des früheren Tempels, 336 px breit, wandert mit dem rechten Rand). Das **Protokoll** der ganzen Partie ist links in der Weltphase wieder fest eingeblendet (Layout-Schlüssel `worldLog`, mit Abschnitt, Showdowns, Siegpunkten und Export-Knopf). Der runde Protokoll-Knopf oben (`#logbtn`) samt Fenster `#logpop` und Esc-Schließen entfällt. Der Kampflog links im Kampf bleibt.
+- **Umsetzung:** `src/ui/10-layout.js` (`library` rechts, `worldLog` statt `temple`/`logPop`), `renderInner` in `src/ui/26a-darstellung.js`, Knopf entfernt in `src/ui/30-eingaben.js`, CSS und `body.html` bereinigt. Test „Oberfläche“ angepasst.
+- Die Versionsbeschreibung im Spiel nennt die Änderung.
+
 ## Änderung 0.14 (15.11.)
 
 - **Regeländerung: kein Tempel, keine Tempelpunkte, keine Upgrade-Punkte.** Gold lässt sich nicht mehr opfern. Alles, auch die Magie, kostet Gold.

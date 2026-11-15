@@ -1,4 +1,4 @@
-/* ---------- Weltphase: Bibliothek (links), Monster (der rechte Bereich bleibt seit 0.14 frei) ---------- */
+/* ---------- Weltphase: Bibliothek (rechts), Monster (links daneben steht das Protokoll) ---------- */
 function libraryPanel() {
   const p = G.players[ME];
   const offers = M.vendorOffers(G, ME);

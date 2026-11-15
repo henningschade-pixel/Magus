@@ -38,11 +38,9 @@ test('Statistikseite öffnet, zeigt den Verlauf und lässt sich filtern und schl
     p.on('pageerror', e => errs.push(e.message));
     await p.goto(url); await p.waitForTimeout(500);
     await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
-    assert.equal(await p.locator('#logpop .logdl').count(), 0, 'das Protokoll ist zu, solange der runde Knopf nicht gedrückt ist');
-    await p.click('#logbtn');
-    assert.equal(await p.locator('#logpop.open .logdl').count(), 1, 'Export-Knopf im Protokoll-Fenster');
-    assert.ok((await p.textContent('#logpop .logl')).length > 0, 'das Protokoll zeigt die Einträge');
-    await p.click('#logbtn'); assert.equal(await p.locator('#logpop.open').count(), 0, 'der Knopf schließt das Fenster wieder');
+    assert.equal(await p.locator('#logbtn, #logpop').count(), 0, 'kein runder Protokoll-Knopf mehr');
+    assert.equal(await p.locator('#log.logpanel .logdl').count(), 1, 'Export-Knopf im festen Protokoll links');
+    assert.ok((await p.textContent('#log .logl')).length > 0, 'das Protokoll zeigt die Einträge');
     await p.click('#statsbtn');
     await p.waitForSelector('.box.stats svg');
     assert.ok(await p.locator('.box.stats polyline, .box.stats circle').count() > 0);
@@ -67,11 +65,10 @@ test('Weltphase: Bibliothek links, rechts kein Tempel mehr (0.14); Protokoll hin
     await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
     const box = async sel => p.locator(sel).first().boundingBox();
     const lib = await box('.libpanel');
-    assert.ok(lib.x < 100, 'Bibliothek links');
+    assert.ok(lib.x > 800, 'Bibliothek rechts');
     assert.equal(await p.locator('.tpanel, .tboard, .tcell, .sacbtn, [data-act="sacup"], [data-act="temple"]').count(), 0, 'kein Tempel, kein Opfern-Knopf');
-    assert.equal(await p.locator('#log .logl').count(), 0, 'kein festes Protokoll mehr in der Weltphase');
-    const sb = await box('#statsbtn'), lb = await box('#logbtn');
-    assert.ok(lb.x > sb.x && Math.abs(lb.y - sb.y) < 2 && Math.abs(lb.width - lb.height) < 1, 'runder Knopf neben der Statistik');
+    const lg = await box('#log');
+    assert.ok(lg.x < 100 && lg.height > 300, 'Protokoll links');
     assert.deepEqual(errs, []);
   } finally { await b.close(); }
 });

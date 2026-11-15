@@ -4,9 +4,8 @@ const LAYOUT0 = {
   zoneLines: [166, 596],                                    // Trennlinien
   oppPanel:  { left: 920, top: 8,   w: 336, h: 160 },       // Gegner (oben rechts)
   mePanel:   { left: 920, top: 610, w: 336, h: 176 },       // eigener Spielerstatus (unten rechts)
-  temple:    { left: 920, top: 182, w: 336, h: 408 },       // rechter Bereich der Weltphase: seit 0.14 frei (bis 0.13 der Tempel)
-  library:   { left: 24,  top: 182, w: 260, h: 408 },       // Bibliothek (Weltphase, links; bis 0.9.9.16 stand hier das Protokoll)
-  logPop:    { left: 12,  top: 172, w: 280, h: 420 },       // Protokoll: Fenster hinter dem runden Knopf oben links (seit 0.11)
+  library:   { left: 920, top: 182, w: 336, h: 408 },       // Bibliothek (Weltphase, rechts; seit 0.14.1 wieder dort, wo bis 0.13 der Tempel stand)
+  worldLog:  { left: 24,  top: 182, w: 260, h: 408 },       // Protokoll (Weltphase, links; seit 0.14.1 wieder fest eingeblendet)
   monsters:  { left: 296, top: 182, step: 212, w: 188, h: 408, diceY: 317 },   // diceY: Oberkante der Würfel, von der Kartenoberkante aus (direkt über dem Kämpfen-Knopf)
   banner:    { left: 372, top: 230, w: 536 },
   turnflag:  { left: 372, top: 126, w: 536 },
@@ -27,7 +26,7 @@ let SW = 1280;
 const LAYOUT = JSON.parse(JSON.stringify(LAYOUT0));
 function layoutFor(W) {
   SW = W; const dx = W - 1280, h = dx / 2, B = LAYOUT0;
-  ['oppPanel', 'mePanel', 'temple', 'oppInfo'].forEach(k => { LAYOUT[k].left = B[k].left + dx; });
+  ['oppPanel', 'mePanel', 'library', 'oppInfo'].forEach(k => { LAYOUT[k].left = B[k].left + dx; });
   ['banner', 'turnflag', 'combat', 'combatLog', 'combatSub', 'monsters'].forEach(k => { LAYOUT[k].left = B[k].left + h; });
   LAYOUT.hand.me.cx = B.hand.me.cx + h; LAYOUT.hand.me.disc.x = B.hand.me.disc.x + dx;
   LAYOUT.hand.opp.cx = B.hand.opp.cx + h; LAYOUT.hand.opp.disc.x = B.hand.opp.disc.x + dx;

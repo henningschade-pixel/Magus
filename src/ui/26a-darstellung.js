@@ -196,14 +196,10 @@ function renderInner() {
     const from = cx.c.logFrom || 0;
     logEl.className = 'logpanel'; logEl.style.cssText = box(LAYOUT.combo);
     logEl.innerHTML = '<h3><button class="logdl" title="Spiellog exportieren (Alt-Klick: in die Zwischenablage)">⤓</button>Kampflog</h3><div class="logl">' + logLines(from) + '</div>';
-  } else { logEl.className = ''; logEl.style.cssText = 'display:none'; logEl.innerHTML = ''; }   // Weltphase: kein festes Protokoll mehr, es steht hinter dem runden Knopf oben links (seit 0.11)
-  { const lp0 = logPop.querySelector('.logl'), lpKeep = lp0 && lp0.scrollHeight - lp0.scrollTop - lp0.clientHeight > 24 ? lp0.scrollTop : null;
-    logBtn.classList.toggle('on', logOpen);
-    if (logOpen) {   // Protokoll-Fenster (ganze Partie, beide Phasen)
-      logPop.className = 'open'; logPop.style.cssText = box(LAYOUT.logPop);
-      logPop.innerHTML = '<h3><button class="logdl" title="Spiellog exportieren (Alt-Klick: in die Zwischenablage)">⤓</button>Protokoll</h3><div class="logst">Abschnitt ' + G.stage + '/3 · Showdowns ' + G.showdown + '/3<br>Siegpunkte ' + G.players[ME].sp + ' : ' + G.players[OPP].sp + '</div><div class="logl">' + logLines(0) + '</div>';
-      const lp = logPop.querySelector('.logl'); if (lp) lp.scrollTop = lpKeep === null ? lp.scrollHeight : lpKeep;
-    } else { logPop.className = ''; logPop.style.cssText = ''; logPop.innerHTML = ''; } }
+  } else {   // Weltphase: links das Protokoll der ganzen Partie (seit 0.14.1 wieder fest eingeblendet, ohne runden Knopf)
+    logEl.className = 'logpanel'; logEl.style.cssText = box(LAYOUT.worldLog);
+    logEl.innerHTML = '<h3><button class="logdl" title="Spiellog exportieren (Alt-Klick: in die Zwischenablage)">⤓</button>Protokoll</h3><div class="logst">Abschnitt ' + G.stage + '/3 · Showdowns ' + G.showdown + '/3<br>Siegpunkte ' + G.players[ME].sp + ' : ' + G.players[OPP].sp + '</div><div class="logl">' + logLines(0) + '</div>';
+  }
   { const lg = logEl.querySelector('.logl'); if (lg) lg.scrollTop = lgKeep === null ? lg.scrollHeight : lgKeep; }
   { const mc = cx.combat && G.combat.mode === 'monster' ? G.combat : null, side = mc ? (G.combat.sides.b.ctrl === ME ? 'bot' : 'top') : '';   // Farbe auf der Seite dessen, der das Monster steuert
     stage.dataset.top = side === 'top' ? mc.elem : ''; stage.dataset.bot = side === 'bot' ? mc.elem : ''; }
