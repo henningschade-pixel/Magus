@@ -690,6 +690,12 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Tests:** Drei Tests angepasst (Nachziehmarker Weltphase, Nachziehlimit Kauf, Nachziehlimit Weltphase; der Marker-Reset läuft jetzt über den Händler), neuer Test „Magie kaufen und Upgrades sind keine Aktion mehr“. `tests/golden.json` ist neu erzeugt (absichtliche Regeländerung).
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
 
+## Änderung 0.14.2.1 (15.11.)
+
+- **Oberfläche (keine Regeländerung):** Die Plakette „Aktion“ / „Reaktion“ in der Kampfmitte (`phaseBadge`, `.phasebadge`) ist entfernt. Der farbige Zugrahmen (Gold in der Aktion, Blau in der Reaktion) bleibt.
+- **Geprüft, unverändert:** Todesfluch und Erschöpfung wirken am Ende der eigenen Angriffsphase (`deathTick`), also nach der Reaktion der Gegenseite (nach Verteidigung) bzw. am Ende einer Aktion ohne Angriff (Passen, Erholen, Nachziehen). Die Tests „Todesfluch aus der Verteidigung…“, „Erschöpfung: …“ und „Niederlagenprüfung 3“ decken das ab.
+- Die Versionsbeschreibung im Spiel nennt die Änderung.
+
 ## Änderung 0.14.2 (15.11.)
 
 - **Oberfläche (keine Regeländerung):** Das Protokoll links (Weltphase) und der Kampflog links (Kampf) haben dieselbe Größe: 260 × 408 px (Layout-Schlüssel `log`, ersetzt `worldLog` und `combo`; der Kampflog war vorher 336 × 310).

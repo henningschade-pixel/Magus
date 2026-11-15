@@ -60,18 +60,11 @@ function lfSummary(cx, lvl) {
   const chips = Object.keys(cnt).map(p => { const [k, e] = p.split(':'); return '<span class="lfchip">' + nm[k] + (e ? ' ' + NAMES[e] : '') + (cnt[p] > 1 ? ' ×' + cnt[p] : '') + '</span>'; }).join('');
   return '<div class="lfsum"><div class="note">Klicke beliebige Marker auf dem Brett (Totenköpfe, Heil- und Manamarker, Schilde, auch deine eigenen). Gewählt: <b>' + picks.length + '/' + lvl + '</b></div><div class="lfchips">' + (chips || '<span class="note">kein Marker gewählt (nur Heilung)</span>') + '</div><button class="mini" data-act="lfauto" title="Wieder die automatische Auswahl verwenden">Automatisch</button></div>';
 }
-// Aktion oder Reaktion (seit 0.9.9.11): Wer die Aktion ausführt (Angriffsphase) und wer reagiert (Verteidigungsphase), steht als Plakette in der Kampfmitte; der Zugrahmen färbt sich bei der Reaktion blau
-function phaseBadge(c, my) {
-  const react = c.action === 'defense', who = my ? 'Du' : esc(c.sides[c.turn].name);
-  const tip = react ? who + (my ? ' reagierst' : ' reagiert') + (c.afterAtk ? ' auf den Angriff' + (c.pending > 0 ? ' (' + c.pending + ' Schaden): Verteidigen oder eine andere erlaubte Reaktion' : ' (ohne Schaden): Erholen, Nachziehen oder Passen, soweit für „nach Angriff“ erlaubt') + '.' : ', denn es erfolgte kein Angriff: Erholen, Nachziehen oder Passen, soweit in den Einstellungen für „ohne Angriff“ erlaubt.') + ' Danach folgt die eigene Aktion.' : who + (my ? ' bist' : ' ist') + ' in der Aktion: Angriff oder eine andere erlaubte Aktion. Danach reagiert der andere Spieler.';
-  return '<div class="phasebadge ' + (react ? 'react' : 'act') + '" title="' + tip + '"><b>' + (react ? 'Reaktion' : 'Aktion') + '</b>' + '</div>';
-}
 let manaPv = 0;   // Manakosten der markierten Karten, als rote Vorschau am Mana-Wert
 function combatCenter(cx) {
   manaPv = 0;
   const c = cx.c, my = myTurn(), atk = c.action === 'attack';
   let h = '<div class="combatcenter"><div class="sc" style="font-size:22px;color:var(--gold)">' + (c.mode === 'showdown' ? 'Showdown' : 'Kampf gegen ' + esc(c.sides.b.name)) + '</div>' + combatRoundNote(c);
-  if (!(c.forced && (c.forced.kind === 'trap' || c.forced.kind === 'sight'))) h += phaseBadge(c, my);
   if (c.forced && (c.forced.kind === 'trap' || c.forced.kind === 'sight')) return '<div class="panel" style="' + box(LAYOUT.combat, 'padding:10px 14px') + '">' + h + combatForcedNote(c) + '</div></div>';
   const pv = my ? combatPreview(cx, c, atk) : { prev: '', canExec: false, val: 0 }, prev = pv.prev, canExec = pv.canExec, val = pv.val;   // val: Wert der markierten Karten (Schaden bzw. Block) für den Knopf
   h += '<div class="preview">' + prev + '</div><div class="btnrow">';

@@ -385,10 +385,6 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 #stage.react.turn-opp::after{box-shadow:inset 0 3px 0 rgba(110,170,230,.95),inset 0 50px 50px -34px rgba(110,170,230,.4);animation:edgeopp-r 1.7s ease-in-out infinite}
 @keyframes edgeme-r{0%,100%{box-shadow:inset 0 -3px 0 rgba(110,170,230,.7),inset 0 -40px 40px -34px rgba(110,170,230,.22)}50%{box-shadow:inset 0 -4px 0 #9cc7f0,inset 0 -60px 60px -34px rgba(156,199,240,.45)}}
 @keyframes edgeopp-r{0%,100%{box-shadow:inset 0 3px 0 rgba(110,170,230,.7),inset 0 40px 40px -34px rgba(110,170,230,.22)}50%{box-shadow:inset 0 4px 0 #9cc7f0,inset 0 60px 60px -34px rgba(156,199,240,.45)}}
-.phasebadge{align-self:center;display:inline-flex;gap:6px;align-items:baseline;padding:2px 14px;margin:2px 0 0;border-radius:14px;font-size:17px;border:1px solid var(--gold);color:var(--gold);background:rgba(210,173,79,.1);cursor:help}
-.phasebadge b{font-family:'Alegreya SC',serif;letter-spacing:.06em;font-size:19px}
-.phasebadge .pbsub{font-size:15px;opacity:.85}
-.phasebadge.react{border-color:#6eaae6;color:#9cc7f0;background:rgba(110,170,230,.12)}
 @media (prefers-reduced-motion:reduce){#stage.turn-me::after,#stage.turn-opp::after{animation:none}}
 /* Startseite */
 .overlay .box.start{align-items:center;padding:34px 44px 30px}
@@ -2797,10 +2793,11 @@ let hpHold = null, curseHold = {}, stageSeen = 1, endSnd = null, G = null, hold 
 
 /* ---------- Versionen: Versionsnummer und Versionsbeschreibung (Seite „Neu in Version …“) ---------- */
 // Aktuelle Versionsnummer: einzige Stelle, an der sie gesetzt wird (Menü-Link und Über-Seite lesen sie von hier; bei jedem Schritt hochzählen)
-const MAGUS_VERSION = '0.14.2';
+const MAGUS_VERSION = '0.14.2.1';
 // Versionsbeschreibung: ein Eintrag je Version, die neueste zuerst. Bei jedem Schritt oben einen Eintrag [Nummer, Text] ergänzen;
 // der erste Eintrag gehört zu MAGUS_VERSION und erscheint unter „Neu in Version …“.
 const VERSIONEN = [
+  ['0.14.2.1', '<b>Plakette entfernt:</b> Die Plakette „Aktion“ / „Reaktion“ in der Kampfmitte entfällt; der farbige Rahmen am Rand zeigt weiterhin, wer in der Reaktion ist. Geprüft: Todesfluch und Erschöpfung wirken am Ende der eigenen Aktion (Angriffsphase), nach der Reaktion der Gegenseite; das war schon so und ist unverändert.'],
   ['0.14.2', '<b>Protokoll gleich groß:</b> Das Protokoll links hat in der Weltphase und im Kampf jetzt dieselbe Breite und Höhe.'],
   ['0.14.1', '<b>Bibliothek wieder rechts, Protokoll links:</b> Mit dem Tempel ist in der Weltphase viel Platz frei geworden. Die Bibliothek steht wieder rechts, wo sie früher war. Das Protokoll ist links wieder fest eingeblendet; der runde Protokoll-Knopf oben neben der Statistik entfällt.'],
   ['0.14', '<b>Kein Tempel mehr, Magie kostet Gold:</b> Der Tempel mit seinen Tempelpunkten und Upgrade-Punkten ist abgeschafft. Gold lässt sich nicht mehr opfern; die Magie wird wie alle anderen Verbesserungen direkt mit Gold gekauft. Die Preise bleiben dieselben Zahlen wie bisher in Upgrade-Punkten: die erste Magiestufe kostet 1 Gold, die zweite 2, die dritte 3 und so weiter (jeder Kauf, egal in welcher Farbe, macht den nächsten um 1 teurer; für den vollen Ausbau aller drei Magien sind es 1 + 2 + … + 6 = 21 Gold). Die Zahl in der Mitte des Magiekreises zeigt weiter den Preis der nächsten Stufe, jetzt in Gold; die Magie-Knöpfe am Rand des Kreises sind golden. Die Tempelstufe entscheidet nicht mehr über den Sieg: Bei Gleichstand an Siegpunkten zählt nur noch das Gold. Das Feld rechts in der Weltphase, in dem der Tempel stand, bleibt vorerst frei. <b>Computergegner:</b> Er kauft Magie nicht mehr über Opfer, sondern wie bisher mit dem Gold, das nach den Verbesserungen übrig ist; seine Gewichte sind dafür noch nicht neu abgestimmt.'],
@@ -3827,18 +3824,11 @@ function lfSummary(cx, lvl) {
   const chips = Object.keys(cnt).map(p => { const [k, e] = p.split(':'); return '<span class="lfchip">' + nm[k] + (e ? ' ' + NAMES[e] : '') + (cnt[p] > 1 ? ' ×' + cnt[p] : '') + '</span>'; }).join('');
   return '<div class="lfsum"><div class="note">Klicke beliebige Marker auf dem Brett (Totenköpfe, Heil- und Manamarker, Schilde, auch deine eigenen). Gewählt: <b>' + picks.length + '/' + lvl + '</b></div><div class="lfchips">' + (chips || '<span class="note">kein Marker gewählt (nur Heilung)</span>') + '</div><button class="mini" data-act="lfauto" title="Wieder die automatische Auswahl verwenden">Automatisch</button></div>';
 }
-// Aktion oder Reaktion (seit 0.9.9.11): Wer die Aktion ausführt (Angriffsphase) und wer reagiert (Verteidigungsphase), steht als Plakette in der Kampfmitte; der Zugrahmen färbt sich bei der Reaktion blau
-function phaseBadge(c, my) {
-  const react = c.action === 'defense', who = my ? 'Du' : esc(c.sides[c.turn].name);
-  const tip = react ? who + (my ? ' reagierst' : ' reagiert') + (c.afterAtk ? ' auf den Angriff' + (c.pending > 0 ? ' (' + c.pending + ' Schaden): Verteidigen oder eine andere erlaubte Reaktion' : ' (ohne Schaden): Erholen, Nachziehen oder Passen, soweit für „nach Angriff“ erlaubt') + '.' : ', denn es erfolgte kein Angriff: Erholen, Nachziehen oder Passen, soweit in den Einstellungen für „ohne Angriff“ erlaubt.') + ' Danach folgt die eigene Aktion.' : who + (my ? ' bist' : ' ist') + ' in der Aktion: Angriff oder eine andere erlaubte Aktion. Danach reagiert der andere Spieler.';
-  return '<div class="phasebadge ' + (react ? 'react' : 'act') + '" title="' + tip + '"><b>' + (react ? 'Reaktion' : 'Aktion') + '</b>' + '</div>';
-}
 let manaPv = 0;   // Manakosten der markierten Karten, als rote Vorschau am Mana-Wert
 function combatCenter(cx) {
   manaPv = 0;
   const c = cx.c, my = myTurn(), atk = c.action === 'attack';
   let h = '<div class="combatcenter"><div class="sc" style="font-size:22px;color:var(--gold)">' + (c.mode === 'showdown' ? 'Showdown' : 'Kampf gegen ' + esc(c.sides.b.name)) + '</div>' + combatRoundNote(c);
-  if (!(c.forced && (c.forced.kind === 'trap' || c.forced.kind === 'sight'))) h += phaseBadge(c, my);
   if (c.forced && (c.forced.kind === 'trap' || c.forced.kind === 'sight')) return '<div class="panel" style="' + box(LAYOUT.combat, 'padding:10px 14px') + '">' + h + combatForcedNote(c) + '</div></div>';
   const pv = my ? combatPreview(cx, c, atk) : { prev: '', canExec: false, val: 0 }, prev = pv.prev, canExec = pv.canExec, val = pv.val;   // val: Wert der markierten Karten (Schaden bzw. Block) für den Knopf
   h += '<div class="preview">' + prev + '</div><div class="btnrow">';
