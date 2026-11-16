@@ -1,9 +1,10 @@
 /* ---------- Versionen: Versionsnummer und Versionsbeschreibung (Seite „Neu in Version …“) ---------- */
 // Aktuelle Versionsnummer: einzige Stelle, an der sie gesetzt wird (Menü-Link und Über-Seite lesen sie von hier; bei jedem Schritt hochzählen)
-const MAGUS_VERSION = '0.14.3';
+const MAGUS_VERSION = '0.14.3.1';
 // Versionsbeschreibung: ein Eintrag je Version, die neueste zuerst. Bei jedem Schritt oben einen Eintrag [Nummer, Text] ergänzen;
 // der erste Eintrag gehört zu MAGUS_VERSION und erscheint unter „Neu in Version …“.
 const VERSIONEN = [
+  ['0.14.3.1', '<b>Läuterung und Gratis-Tokens:</b> Eigene und gegnerische Gratis-Nachziehtokens lassen sich bei der Läuterung wählen und werden dabei nur zerstört, ohne Gutschrift (je zerstörtem Token also kein neues Gratis-Nachziehen). Das war schon so vorgesehen; neu ist ein Test, der es im Kampfbildschirm absichert.'],
   ['0.14.3', '<b>Läuterung ohne Vorauswahl:</b> Beim Vorbereiten einer Läuterung ist kein Marker mehr vorgewählt (bisher wurden Todesmarker und Schilde automatisch markiert und ein Klick darauf nahm sie wieder ab). Gewählt ist nur, was angeklickt wurde; ein Hinweis nennt, wie viele Marker gewählt werden dürfen (Stufe der Läuterung) und wie viele schon gewählt sind. Der Knopf „Automatisch“ entfällt; ohne Wahl entfernt die Läuterung keinen Marker.'],
   ['0.14.2.6', '<b>Protokoll: ▲ entfällt:</b> Bei Verbesserungen steht nur noch das Symbol des Verbesserten (♥ HP, ◆ Mana, ⇧ Limit, ▦ Handplätze, ▭ Nachziehlimit, ✦ Magie); dass in der Weltphase verbessert wird, ist klar. Die goldene Hinterlegung für Verbesserungen des Gegners bleibt.'],
   ['0.14.2.5', '<b>Protokoll eindeutiger:</b> Jede Aktion hat ihr eigenes Symbol in eigener Farbe (Angriff, Verteidigung, Passen, Erholen, Nachziehen, Kombo, Echo, Läuterung, Schild, Heilung, Todesfluch, Erschöpfung, Siegpunkt, Gold …); eine Zeile zeigt bis zu drei Symbole für Hauptaktion und Zusatzwirkung. Verbesserungen zeigen ▲ und das Verbesserte (♥ HP, ◆ Mana, ⇧ Limit, ▦ Handplätze, ▭ Nachziehlimit, ✦ Magie in Elementfarbe). Bibliothekstausch steht kurz als „1F + 1F ➜ 2E“.'],

@@ -338,6 +338,10 @@ Keine Regeländerung, nur die Bedienung des Tempels: Das Opfern läuft wie die U
 
 - **Heilung wieder nach Angriff und Verteidigung:** Die Heilung eines Kombos in der Verteidigung (Erde + Wasser) wirkt erst nach dem Schaden und dem Spiegelrückwurf und gleicht ihn nachträglich aus, höchstens bis zu den maximalen HP; ein sonst tödlicher Restschaden lässt sich so noch ausgleichen (HP − Restschaden + Heilung, nie unter 0, nie über dem Maximum). Zerrüttung, Lähmung, Läuterung und Spiegel wirken wie seit 0.4 **vor** der Verteidigung. Im Angriff ändert sich nichts. Umsetzung: `execDefense` und `defenseComboPre` in `src/engine/65-kampfablauf.js`; Vorschau (`previewDefense`) und Animation folgen derselben Reihenfolge (Heilungseffekt mit `late`).
 
+## Änderung 0.14.3.1 (16.11.)
+
+Keine Regeländerung, nur Absicherung: Bei der Läuterung lassen sich auch Gratis-Nachziehtokens wählen, eigene wie gegnerische. Sie werden nur zerstört; anders als bei anderen entfernten Markern gibt es dafür kein Gratis-Nachziehen. Neuer Browser-Test dazu.
+
 ## Änderung 0.14.3 (16.11.)
 
 **Läuterung ohne Vorauswahl.** Wer eine Läuterung vorbereitet, wählt die Marker selbst: Es ist nichts vorgewählt, und es gibt keine automatische Auswahl mehr (Knopf „Automatisch“ entfällt). Höchstens so viele Marker, wie die Stufe der Läuterung angibt, lassen sich wählen; die Anzeige nennt diese Zahl und die bisher gewählten. Ohne Wahl entfernt die Läuterung keinen Marker (die Heilung bleibt). Die KI wählt weiterhin selbst (die Engine behält ihre Automatik nur für Aufrufer ohne Wahl, die Oberfläche sendet bei einer Läuterung ohne Klick ausdrücklich eine leere Wahl).

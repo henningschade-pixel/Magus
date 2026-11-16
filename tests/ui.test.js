@@ -196,6 +196,33 @@ test('Läuterung: eigene und gegnerische Mana- und Schildmarker sind im Kampfbil
   } finally { await b.close(); }
 });
 
+test('Läuterung: eigene und gegnerische Nachziehtokens sind anklickbar und werden ohne Gutschrift zerstört (0.14.3.1)', { skip: !chromium && 'Playwright nicht installiert', timeout: 60000 }, async () => {
+  const b = await chromium.launch({ executablePath: exe });
+  try {
+    const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
+    p.on('pageerror', e => errs.push(e.message));
+    await p.goto(url); await p.waitForTimeout(500);
+    await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(1000);
+    await p.evaluate(() => {
+      const G = window.__magus.state, M = window.Magus; G.turn = 0; M.apply(G, { pid: 0, type: 'combat', elem: 'F' });
+      const me = G.combat.sides.a, op = G.combat.sides.b; me.stats.limit = 3; me.stats.mag = { F: 3, E: 3, W: 3 }; me.stats.mana = me.stats.maxMana = 9;
+      me.stats.freeDraws = 2; op.stats.freeDraws = 2;
+      ['F2', 'E2'].forEach((id, i) => { me.deck.hand[i] = Object.assign({}, me.deck.hand[i], { id }); });
+      M.apply(G, { pid: 0, type: 'mark', slot: 0 }); M.apply(G, { pid: 0, type: 'mark', slot: 1 }); window.__magus.pump();
+    });
+    await p.waitForTimeout(300);
+    assert.ok(!(await p.evaluate(() => window.__magus.state.combat.lfp)), 'keine Vorauswahl');
+    const ks = await p.$$eval('.freedraw.lf', e => e.map(x => x.dataset.k));
+    assert.ok(ks.includes('st'), 'eigene Nachziehtokens wählbar'); assert.ok(ks.includes('ot'), 'gegnerische Nachziehtokens wählbar');
+    await p.locator('.freedraw.lf[data-k="st"]').click(); await p.locator('.freedraw.lf[data-k="ot"]').click();
+    assert.deepEqual((await p.evaluate(() => window.__magus.state.combat.lfp)).sort(), ['ot', 'st']);
+    await p.click('[data-act="attack"]'); await p.waitForTimeout(600);
+    const fd = await p.evaluate(() => [window.__magus.state.players[0].stats.freeDraws, window.__magus.state.combat.sides.b.stats.freeDraws]);
+    assert.deepEqual(fd, [1, 1], 'je ein Token zerstört, keine Gutschrift');
+    assert.deepEqual(errs, []);
+  } finally { await b.close(); }
+});
+
 test('Nachziehlimit: drei Kreise am Stapel, Plus-Knopf erscheint erst mit Gold und kauft die nächste Stufe', { skip: !chromium && 'Playwright nicht installiert', timeout: 60000 }, async () => {
   const b = await chromium.launch({ executablePath: exe });
   try {
