@@ -208,11 +208,12 @@ const LOGEXTRA = [   // Zusatzwirkungen in derselben Zeile
 ];
 function logIcons(t) {
   const base = (LOGBASE.find(([re]) => re.test(t)) || [0, null])[1], out = [];
-  if (base === 'up') {   // Verbesserung: ▲ und das, was verbessert wurde (Magie in der Farbe des Elements)
-    out.push('up'); const m = /(Feuer|Erde|Wasser) auf Stufe/.exec(t);
+  if (base === 'up') {   // Verbesserung: nur das Symbol des Verbesserten (Magie in der Farbe des Elements); das ▲ entfiel in 0.14.2.6, Verbesserungen gehören zur Weltphase
+    const m = /(Feuer|Erde|Wasser) auf Stufe/.exec(t);
     out.push(m ? 'umag' + { Feuer: 'F', Erde: 'E', Wasser: 'W' }[m[1]] : /max\. HP/.test(t) ? 'uhp' : /max\. Mana/.test(t) ? 'umana' : /Ausspiellimit/.test(t) ? 'ulim' : /Handplätze/.test(t) ? 'uhand' : /Nachziehlimit/.test(t) ? 'udraw' : null);
   } else { if (base) out.push(base); LOGEXTRA.forEach(([re, k]) => { if (re.test(t) && !out.includes(k)) out.push(k); }); }
-  return out.filter(Boolean).slice(0, 3).map(k => ({ k, ic: LOGICON[k][0], tip: LOGICON[k][1] }));
+  const res = out.filter(Boolean).slice(0, 3).map(k => ({ k, ic: LOGICON[k][0], tip: LOGICON[k][1] }));
+  res.up = base === 'up'; return res;
 }
 // Text einer Zeile: Bibliothekstausch kompakt („Du: 1F + 1F ➜ 2E“, Karte = Stufe und Element in Elementfarbe), sonst unverändert
 function logText(t) {
@@ -229,8 +230,8 @@ function renderInner() {
   else h += libraryPanel() + monsterCards() + (G.over ? '' : worldRoundNote());
   panels.innerHTML = h;
   const lg0 = logEl.querySelector('.logl'), lgKeep = lg0 && lg0.scrollHeight - lg0.scrollTop - lg0.clientHeight > 24 ? lg0.scrollTop : null;   // nicht am Ende: Leseposition merken
-  const logLines = from => G.log.filter(e => e.n > from).slice(-300).map(e => { const ic = logIcons(e.txt), up = ic.length > 0 && ic[0].k === 'up' && e.pid !== null && e.pid !== ME;   // Verbesserungen des Gegners (auch der KI) sind hervorgehoben
-    return '<div class="' + (e.pid === ME ? 'me' : e.pid === null ? '' : 'op') + (up ? ' upop' : ic.length && ic[0].k === 'up' ? ' upme' : '') + '"' + (up ? ' title="Verbesserung des Gegners"' : '') + '><span class="lks">' + (ic.length ? ic.map(i => '<i class="lk ' + i.k + '" title="' + i.tip + '">' + i.ic + '</i>').join('') : '<i class="lk misc">·</i>') + '</span><span class="ltx">' + logText(e.txt) + '</span></div>'; }).join('');
+  const logLines = from => G.log.filter(e => e.n > from).slice(-300).map(e => { const ic = logIcons(e.txt), up = ic.up && e.pid !== null && e.pid !== ME;   // Verbesserungen des Gegners (auch der KI) sind hervorgehoben
+    return '<div class="' + (e.pid === ME ? 'me' : e.pid === null ? '' : 'op') + (up ? ' upop' : ic.up ? ' upme' : '') + '"' + (up ? ' title="Verbesserung des Gegners"' : '') + '><span class="lks">' + (ic.length ? ic.map(i => '<i class="lk ' + i.k + '" title="' + i.tip + '">' + i.ic + '</i>').join('') : '<i class="lk misc">·</i>') + '</span><span class="ltx">' + logText(e.txt) + '</span></div>'; }).join('');
   if (cx.combat) {   // links: nur der Kampflog (Einträge seit Kampfbeginn)
     const from = cx.c.logFrom || 0;
     logEl.className = 'logpanel'; logEl.style.cssText = box(LAYOUT.log);

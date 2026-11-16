@@ -690,6 +690,11 @@ Die Stillstandsregel `idleLimit` bleibt aus (Standard 0): Sie lässt sich am Tis
 - **Tests:** Drei Tests angepasst (Nachziehmarker Weltphase, Nachziehlimit Kauf, Nachziehlimit Weltphase; der Marker-Reset läuft jetzt über den Händler), neuer Test „Magie kaufen und Upgrades sind keine Aktion mehr“. `tests/golden.json` ist neu erzeugt (absichtliche Regeländerung).
 - Die Versionsbeschreibung im Spiel nennt die Änderung.
 
+## Änderung 0.14.2.6 (16.11.)
+
+- **Oberfläche (keine Regeländerung):** Im Protokoll entfällt das Symbol ▲ vor Verbesserungen; es bleibt das Symbol des Verbesserten (♥ max. HP, ◆ max. Mana, ⇧ Ausspiellimit, ▦ Handplätze, ▭ Nachziehlimit, ✦ Magie in Elementfarbe). Die Hervorhebung der Verbesserungen des Gegners (golden hinterlegt, fett) bleibt; `logIcons` liefert dafür das Merkmal `up`.
+- Die Versionsbeschreibung im Spiel nennt die Änderung.
+
 ## Änderung 0.14.2.5 (15.11.)
 
 - **Oberfläche (keine Regeländerung):** Jede Protokollzeile zeigt bis zu drei Symbole (`LOGICON`, `LOGBASE`, `LOGEXTRA`, `logIcons` in `src/ui/26a-darstellung.js`): zuerst die Hauptaktion, dann Zusatzwirkungen derselben Zeile (Todesfluch, Schild, Heilung, Echo, Läuterung, Siegpunkt, Gold). Verbesserungen zeigen ▲ plus das Verbesserte (♥ max. HP, ◆ max. Mana, ⇧ Ausspiellimit, ▦ Handplätze, ▭ Nachziehlimit, ✦ Magie in der Elementfarbe). Der Bibliothekstausch steht kompakt als „Name: 1F + 1F ➜ 2E“ (Stufe, Element in Elementfarbe; `logText`). Der Tooltip jedes Symbols nennt die Aktion; Erkennung am Text, Engine und Export unverändert.
