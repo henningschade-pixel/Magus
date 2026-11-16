@@ -25,7 +25,7 @@ const FlowFx = (() => {
   const manaPos = pid => at(panelOf(pid) && panelOf(pid).querySelector('[data-pv="mana"]')) || { x: 1000, y: pid === ME ? 740 : 110 };
   const hpOf = pid => at(panelOf(pid) && panelOf(pid).querySelector('[data-pv="hp"]')) || { x: pid === ME ? 1000 : 1000, y: pid === ME ? 700 : 70 };
   const markOf = pid => { const w = pid === ME ? 's' : 'o', q = deathPos(w, 0); return at(stage.querySelector('.deathtok[data-who="' + w + '"]')) || { x: q.x + 24, y: q.y + 24 }; };
-  const drawOf = pid => { const L = pid === ME ? L_MY : L_OP; return pid === ME ? (at(stage.querySelector('.freedraw:not(.opp)')) || { x: L.draw.x + CW * L.ps / 2, y: L.draw.y - 20 }) : { x: L.draw.x + CW * L.ps / 2, y: L.draw.y + CH * L.ps / 2 }; };
+  const drawOf = pid => { const L = pid === ME ? L_MY : L_OP; return at(stage.querySelector(pid === ME ? '.freedraw:not(.opp)' : '.freedraw.opp')) || (pid === ME ? { x: L.draw.x + CW * L.ps / 2, y: L.draw.y - 20 } : { x: L.draw.x + CW * L.ps / 2, y: L.draw.y + CH * L.ps / 2 }); };
   const pileOf = pid => { const L = pid === ME ? L_MY : L_OP; return { x: L.disc.x + CW * L.ps / 2, y: L.disc.y + CH * L.ps / 2 }; };
   const handOf = pid => { const L = pid === ME ? L_MY : L_OP; return { x: L.cx, y: L.y + CH * L.s / 2 }; };
   function run(dur, fn) {

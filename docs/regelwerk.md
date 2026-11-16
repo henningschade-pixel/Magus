@@ -338,6 +338,10 @@ Keine Regeländerung, nur die Bedienung des Tempels: Das Opfern läuft wie die U
 
 - **Heilung wieder nach Angriff und Verteidigung:** Die Heilung eines Kombos in der Verteidigung (Erde + Wasser) wirkt erst nach dem Schaden und dem Spiegelrückwurf und gleicht ihn nachträglich aus, höchstens bis zu den maximalen HP; ein sonst tödlicher Restschaden lässt sich so noch ausgleichen (HP − Restschaden + Heilung, nie unter 0, nie über dem Maximum). Zerrüttung, Lähmung, Läuterung und Spiegel wirken wie seit 0.4 **vor** der Verteidigung. Im Angriff ändert sich nichts. Umsetzung: `execDefense` und `defenseComboPre` in `src/engine/65-kampfablauf.js`; Vorschau (`previewDefense`) und Animation folgen derselben Reihenfolge (Heilungseffekt mit `late`).
 
+## Änderung 0.14.3.2 (16.11.)
+
+Keine Regeländerung, nur Darstellung: Gratis-Nachziehtokens liegen in der Marker-Spalte (am Ende der Reihe nach Todes-, Heil-, Mana- und Schildmarkern und Fallen) statt am Nachziehstapel.
+
 ## Änderung 0.14.3.1 (16.11.)
 
 Keine Regeländerung, nur Absicherung: Bei der Läuterung lassen sich auch Gratis-Nachziehtokens wählen, eigene wie gegnerische. Sie werden nur zerstört; anders als bei anderen entfernten Markern gibt es dafür kein Gratis-Nachziehen. Neuer Browser-Test dazu.

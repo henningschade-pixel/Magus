@@ -199,7 +199,7 @@ test('Läuterung: eigene und gegnerische Mana- und Schildmarker sind im Kampfbil
 test('Läuterung: eigene und gegnerische Nachziehtokens sind anklickbar und werden ohne Gutschrift zerstört (0.14.3.1)', { skip: !chromium && 'Playwright nicht installiert', timeout: 60000 }, async () => {
   const b = await chromium.launch({ executablePath: exe });
   try {
-    const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
+    const p = await b.newPage({ viewport: { width: 1900, height: 900 } }), errs = [];
     p.on('pageerror', e => errs.push(e.message));
     await p.goto(url); await p.waitForTimeout(500);
     await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(1000);
@@ -214,6 +214,8 @@ test('Läuterung: eigene und gegnerische Nachziehtokens sind anklickbar und werd
     assert.ok(!(await p.evaluate(() => window.__magus.state.combat.lfp)), 'keine Vorauswahl');
     const ks = await p.$$eval('.freedraw.lf', e => e.map(x => x.dataset.k));
     assert.ok(ks.includes('st'), 'eigene Nachziehtokens wählbar'); assert.ok(ks.includes('ot'), 'gegnerische Nachziehtokens wählbar');
+    const bx = await p.$$eval('.freedraw.lf, .healtok, .deathtok', e => e.map(x => x.style.left)), cl = await p.evaluate(() => [...document.querySelectorAll('.freedraw.lf')].map(x => x.style.left));
+    assert.ok(cl.every(l => parseFloat(l) > 700), 'Gratis-Tokens liegen in der Marker-Spalte rechts vom Kampffenster: ' + cl);
     await p.locator('.freedraw.lf[data-k="st"]').click(); await p.locator('.freedraw.lf[data-k="ot"]').click();
     assert.deepEqual((await p.evaluate(() => window.__magus.state.combat.lfp)).sort(), ['ot', 'st']);
     await p.click('[data-act="attack"]'); await p.waitForTimeout(600);

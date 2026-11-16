@@ -64,8 +64,8 @@ function mirrorStack(s, x, y, who) {
 // Marker: einzelne Tokens, leicht verdreht und versetzt (Verteilung: deathPos).
 const TOK = 50, TOK_ROT = [-11, 7, -4, 12, -8, 5, 10, -6], TOK_DX = [-4, 5, -2, 6, 3, -5, 4, -3], TOK_DY = [0, -5, 3, -3, 4, -2, 2, -4];
 function markCounts(s) {   // dargestellte Marker je Art (Todes-, Heil- und Manamarker je ein Token mit Zähler; Schild und Falle) und Gesamtzahl für die Reihe vor den Handkarten
-  const nd = s.death > 0 ? 1 : 0, nh = s.heal > 0 ? 1 : 0, nm = s.manaflow > 0 ? 1 : 0, ns = (s.rainbow > 0 ? 1 : 0) + (s.traps ? s.traps.length : 0);
-  return { nd, nh, nm, ns, total: nd + nh + nm + ns };
+  const nd = s.death > 0 ? 1 : 0, nh = s.heal > 0 ? 1 : 0, nm = s.manaflow > 0 ? 1 : 0, ns = (s.rainbow > 0 ? 1 : 0) + (s.traps ? s.traps.length : 0), nt = s.freeDraws > 0 ? 1 : 0;   // nt: Gratis-Nachziehtokens (seit 0.14.3.2 am Ende der Markerreihe)
+  return { nd, nh, nm, ns, nt, total: nd + nh + nm + ns + nt };
 }
 // seit 0.7.2.10 liegen alle Marker (Todes-, Heil-, Mana- und Schildmarker, seit 0.8 auch die Falle) in einer lockeren Reihe mittig direkt vor den Handkarten ihres Spielers (eigene oberhalb, die des Gegners unterhalb der Hand), jeder leicht verdreht und versetzt; so verdecken sie weder Karten noch Anzeigen. i: laufende Nummer in der Reihe (Todesmarker, Heil-, Mana-, dann Schildmarker und Falle), total: Anzahl aller Marker der Seite.
 const OPEN_SPAN = { s: null, o: null };   // seit 0.12.1: x-Bereich {x1, x2} der offenen Hellsichtkarten je Seite (setzt layoutDeck vor dem Zeichnen der Marker); null ohne Hellsichtkarten
