@@ -55,8 +55,8 @@ function onAct(d) {
     case 'drawyes': drawAsk = false; if (canDrawNow()) act({ type: 'draw' }); else render(); break;
     case 'drawno': drawAsk = false; render(); break;
     case 'freedraw': act({ type: 'freeDraw' }); break;
-    case 'attack': act({ type: 'attack' }); break;
-    case 'defend': act({ type: 'defend' }); break;
+    case 'attack': lfNoAuto(); act({ type: 'attack' }); break;
+    case 'defend': lfNoAuto(); act({ type: 'defend' }); break;
     case 'pass': act({ type: 'pass' }); break;
     case 'recover': act({ type: 'recover' }); break;
     case 'fleeask': fleeAsk = true; render(); break;
@@ -71,7 +71,6 @@ function onAct(d) {
       while (others.length + m > L.lvl && others.length) others.shift();   // voll: die älteste andere Wahl weicht
       act({ type: 'lfp', pick: others.concat(Array(m).fill(key)) }); break;
     }
-    case 'lfauto': act({ type: 'lfp', pick: null }); break;
   }
 }
 stage.addEventListener('click', e => {

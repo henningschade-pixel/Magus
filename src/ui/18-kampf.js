@@ -23,12 +23,7 @@ function ordText(k, lv, short) {
 function lfPicks(cx, lvl) {
   const c = cx.c;
   if (Array.isArray(c.lfp)) return c.lfp.slice(0, lvl);
-  const out = []; let om = cx.theirs.stats.manaflow || 0, sd = cx.myStats.death || 0, orb = cx.theirs.stats.rainbow || 0, oh = cx.theirs.stats.heal || 0;
-  while (out.length < lvl && sd-- > 0) out.push('sd');
-  while (out.length < lvl && orb-- > 0) out.push('or');
-  while (out.length < lvl && om-- > 0) out.push('om');
-  while (out.length < lvl && oh-- > 0) out.push('oh');
-  return out;
+  return [];   // seit 0.14.3 keine Vorauswahl: gewählt ist nur, was angeklickt wurde
 }
 // Lifeflow: Marker direkt auf dem Brett anklicken. lfCtx liefert die Wahl, solange ich einen Lifeflow-Angriff vorbereite.
 function lfCtx() {
@@ -47,6 +42,8 @@ function lfCtx() {
   if (!(lw > 0)) return null;
   return { cx, c, lvl: lw, picks: lfExpand(lfPicks(cx, lw), cx) };
 }
+// Seit 0.14.3: Wurde nichts gewählt, geht ausdrücklich eine leere Wahl an die Engine (sonst wählte deren Automatik beim Ausführen Marker, die die Anzeige nicht gezeigt hat).
+function lfNoAuto() { const L = lfCtx(); if (L && !Array.isArray(L.c.lfp)) act({ type: 'lfp', pick: [] }); }
 // (Seit 0.8 gibt es keine Farbspiegel mehr: die Wahl gilt unverändert.)
 function lfExpand(picks, cx) { return picks.slice(); }
 function lfHave(cx, k, e) {
@@ -58,7 +55,7 @@ function lfSummary(cx, lvl) {
   picks.forEach(p => { cnt[p] = (cnt[p] || 0) + 1; });
   const nm = { sd: 'eigener Todesmarker', od: 'Todesmarker des Gegners', sc: 'eigener Fluch', oc: 'Fluch des Gegners', sm: 'eigener Manamarker', om: 'Manamarker des Gegners', sh: 'eigener Heilmarker', oh: 'Heilmarker des Gegners', sr: 'eigene Schildladung', or: 'Schildladung des Gegners', st: 'eigener Nachziehtoken', ot: 'Nachziehtoken des Gegners' };
   const chips = Object.keys(cnt).map(p => { const [k, e] = p.split(':'); return '<span class="lfchip">' + nm[k] + (e ? ' ' + NAMES[e] : '') + (cnt[p] > 1 ? ' ×' + cnt[p] : '') + '</span>'; }).join('');
-  return '<div class="lfsum"><div class="note">Klicke beliebige Marker auf dem Brett (Totenköpfe, Heil- und Manamarker, Schilde, auch deine eigenen). Gewählt: <b>' + picks.length + '/' + lvl + '</b></div><div class="lfchips">' + (chips || '<span class="note">kein Marker gewählt (nur Heilung)</span>') + '</div><button class="mini" data-act="lfauto" title="Wieder die automatische Auswahl verwenden">Automatisch</button></div>';
+  return '<div class="lfsum"><div class="note">Läuterung: Wähle bis zu <b>' + lvl + '</b> Marker auf dem Brett (Totenköpfe, Heil- und Manamarker, Schilde, Nachziehtokens, auch deine eigenen). Nichts ist vorgewählt; nicht gewählte Marker bleiben. Gewählt: <b>' + picks.length + '/' + lvl + '</b></div><div class="lfchips">' + (chips || '<span class="note">kein Marker gewählt (nur Heilung)</span>') + '</div></div>';
 }
 let manaPv = 0;   // Manakosten der markierten Karten, als rote Vorschau am Mana-Wert
 function combatCenter(cx) {
