@@ -27,7 +27,7 @@ async function exportLog(e) {
     toast('Spiellog exportiert (' + d.actions.length + ' Aktionen).');
   } catch (x) { toast('Export nicht möglich.'); }
 }
-window.__magus = { MirrorFx, stats: () => statsOpen(true), snd: () => Snd.info(), get mp() { return MP && { n: MP.log.length, started: MP.started, seat: MP.seat }; }, get state() { return G; }, act, newGame, pump };
+window.__magus = { MirrorFx, stats: () => statsOpen(true), snd: () => Snd.info(), get mp() { return MP && { n: MP.log.length, started: MP.started, seat: MP.seat }; }, get state() { return G; }, get fx() { return { last: fxLast, same: fxFor === G, played: fxPlayed }; }, plan: pid => { const r = G.rng; G.rng = M.makeRng(12345); try { return AI.plan(G, pid); } finally { G.rng = r; } }, actor: () => M.actor(G), act, newGame, pump };
 showStart();
 mpRestore();
 })();

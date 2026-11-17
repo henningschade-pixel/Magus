@@ -2809,10 +2809,11 @@ let hpHold = null, curseHold = {}, stageSeen = 1, endSnd = null, G = null, hold 
 
 /* ---------- Versionen: Versionsnummer und Versionsbeschreibung (Seite „Neu in Version …“) ---------- */
 // Aktuelle Versionsnummer: einzige Stelle, an der sie gesetzt wird (Menü-Link und Über-Seite lesen sie von hier; bei jedem Schritt hochzählen)
-const MAGUS_VERSION = '0.14.4';
+const MAGUS_VERSION = '0.14.5';
 // Versionsbeschreibung: ein Eintrag je Version, die neueste zuerst. Bei jedem Schritt oben einen Eintrag [Nummer, Text] ergänzen;
 // der erste Eintrag gehört zu MAGUS_VERSION und erscheint unter „Neu in Version …“.
 const VERSIONEN = [
+  ['0.14.5', '<b>Mehrspieler: keine wilden Animationen nach dem Reconnect:</b> Baut ein Gerät nach einem Verbindungsabbruch die Partie neu auf (Abgleich mit dem Gastgeber, „Partie fortsetzen“, abweichende Aktionen), spielt es den bisherigen Verlauf nicht mehr als frische Angriffs-, Fluch- und Heilanimationen ab; nachgeholte Aktionen erscheinen ohne Effekte. Außerdem bleibt der stille Modus nach einer Reparatur nicht mehr dauerhaft an: Sobald beide Geräte übereinstimmen, laufen neue Aktionen wieder mit Animation und Ergebnisbildschirm.'],
   ['0.14.4', '<b>Test: Obergrenzen aufgehoben:</b> Max. HP, Ausspiellimit und Handplätze lassen sich ohne Obergrenze ausbauen; der Preis steigt mit jedem Kauf weiter (1, 2, 3, 4 …). Das Mana bleibt bei zwei Ausbauten (bis 6), die Magie bei Stufe 3 (Karten gibt es nur bis Stufe 3). Der Computergegner nutzt die neue Freiheit nur mit übrigem Gold. Rückgängig mit dem Regelschalter uncapped 0.'],
   ['0.14.3.2', '<b>Gratis-Tokens bei den Markern:</b> Die Gratis-Nachziehtokens (eigene und die des Gegners) liegen jetzt in der Marker-Spalte neben dem Kampffenster, am Ende der Reihe hinter Todes-, Heil-, Mana- und Schildmarkern und Fallen, und nicht mehr am Nachziehstapel. Klicken (Gratis-Nachziehen, Läuterung) und Animationen funktionieren wie bisher.'],
   ['0.14.3.1', '<b>Läuterung und Gratis-Tokens:</b> Eigene und gegnerische Gratis-Nachziehtokens lassen sich bei der Läuterung wählen und werden dabei nur zerstört, ohne Gutschrift (je zerstörtem Token also kein neues Gratis-Nachziehen). Das war schon so vorgesehen; neu ist ein Test, der es im Kampfbildschirm absichert.'],
@@ -5516,7 +5517,7 @@ function worldRoundNote() {   // Rundenzähler der Weltphase (seit 0.9.7), derse
 let sightSel = [];   // Hellsicht: meine Entscheidungen je gezogener Karte ('k' offen vor mich legen, 'a' Ablage)
 const fdSel = new Set();   // Zerrüttung: von mir gewählte Abwurfkarten (Handplätze)
 const forcedMe = () => !!(G && G.phase === 'combat' && G.combat && G.combat.forced && G.combat.forced.pid === ME);
-let curKey = null, curDown = false, mkSeen = null, dthSeen = null, hlSeen = null, rbSeen = null, fxFor = null, fxLast = 0;
+let curKey = null, curDown = false, mkSeen = null, dthSeen = null, hlSeen = null, rbSeen = null, fxFor = null, fxLast = 0, fxPlayed = 0;   // fxPlayed: Zahl der abgespielten Kampfeffekte (nur für Tests)
 // Sekundär ausgelöste Effekte (Spiegel wirft Schaden zurück, Todesfluch zehrt) kurz an der betroffenen Seite einblenden
 // Ton zu einem Kampfeffekt (Angriff und Verteidigung bringen ihre Sounds im Ablauf der Animation selbst mit)
 function fxSound(f) {
@@ -5574,6 +5575,14 @@ function withComboHold(fn) {
     sides.forEach((s, i) => { s.deck.discard = saved[i].disc; Object.keys(s.stats).forEach(k => { delete s.stats[k]; }); Object.assign(s.stats, saved[i].st); });
   }
 }
+// Nachgeholte Aktionen (Wiederverbindung, Neuaufbau der Partie): ihre Effekte gelten als gesehen und werden nicht abgespielt.
+// Ohne das liefe nach dem Neuaufbau der gesamte bisherige Spielverlauf als frische Animation ab (fxLast stünde noch am Anfang).
+function skipFx() {
+  if (!G) return;
+  fxFor = G; fxLast = G.logN; holdFor = G; holdSeen = G.logN; comboHold = [];
+  hpHold = null; curseHold = {}; preStats = null;
+  FlowFx.resetEx();
+}
 // HP-Anzeige einer Seite für ms Millisekunden um add verschoben halten (Todesfluch: +, die Wolke ist noch unterwegs; Meditation: −, die Heilung ist noch unterwegs). Mehrere Wolken derselben Seite addieren sich.
 function holdHp(who, ms, add) {
   const now = Date.now(), prev = curseHold[who] && now < curseHold[who].until ? curseHold[who] : null;
@@ -5586,6 +5595,7 @@ function showFx() {
   for (const e of G.log) {
     if (e.n <= fxLast) continue;
     const go = f => {
+      fxPlayed++;
       if (!FAST) fxSound(f);
       if (f.kind === 'ultimate' && (f.el === 'E' || f.el === 'W')) UltFx.play(f.el);
       if (f.kind === 'lifeflow') FlowFx.lifeflow(f); else if (f.kind === 'aggro') FlowFx.aggro(f); else if (f.kind === 'drain') FlowFx.drain(f); else if (f.kind === 'ruin') FlowFx.ruin(f); else if (f.kind === 'attack') FlowFx.attack(f); else if (f.kind === 'defense') FlowFx.defense(f);
@@ -6279,7 +6289,7 @@ function mpRepair() {
   mpStart(MP.seed, MP.first, MP.rules, true); MP.quiet = true;
   mpEmit('need', { from: 0 });
 }
-function mpQuiet() { if (G.over) return; endView = null; modal = null; introSeen = G.phase === 'combat' && G.combat.mode === 'showdown' ? G.showdown : -1; hold = 0; }   // nachgeholte Aktionen: keine Ergebnis- und Ankündigungsbildschirme von früher
+function mpQuiet() { skipFx(); if (G.over) return; endView = null; modal = null; introSeen = G.phase === 'combat' && G.combat.mode === 'showdown' ? G.showdown : -1; hold = 0; }   // nachgeholte Aktionen: keine Ergebnis- und Ankündigungsbildschirme von früher
 function mpChip() {   // die Rauminformation steht im Home-Menü; der Home-Knopf wird rot, wenn der Mitspieler offline ist
   if (MP && MP.started) { const on = mpOnline(); if (MP.on !== undefined && MP.on !== on) toast(on ? 'Mitspieler wieder verbunden.' : 'Verbindung zum Mitspieler unterbrochen. Sie wird neu aufgebaut …'); MP.on = on; }
   const h = document.getElementById('homebtn'); if (h) h.classList.toggle('off', !!MP && !mpOnline());
@@ -6298,12 +6308,12 @@ async function mpOpen(code, host) {
     if (!MP.started || !G) return; const n = +d.n;
     if (n > MP.log.length) mpEmit('need', { from: MP.log.length }); else if (n < MP.log.length) mpSendLog(n);
     else if (d.h && d.h !== mpHash()) { if (MP.host) mpEmit('resync', {}); else mpRepair(); }
-    else MP.bad = 0;
+    else { MP.bad = 0; MP.quiet = false; }   // beide Geräte stimmen überein: der Abgleich ist abgeschlossen, neue Aktionen laufen wieder mit Animation
   });
   on('resync', () => mpRepair());
   MP.beat = setInterval(mpBeat, 2000);
   on('act', d => mpRecv(+d.i, [d.a]));
-  on('acts', d => mpRecv(+d.from, d.list || []));
+  on('acts', d => mpRecv(+d.from, d.list || [], true));
   MP.subs.push(room.onPeers(() => { mpChip(); if (mpOnline()) mpBeat(); }));   // wieder verbunden: sofort abgleichen
   return true;
 }
@@ -6333,7 +6343,7 @@ function mpSendLog(from) {
     mpEmit('acts', { from: start, list });
   }
 }
-function mpRecv(from, list) {
+function mpRecv(from, list, catchup) {   // catchup: nachgereichte Aktionen (nach Verbindungsabbruch), keine live gespielten
   if (!MP || !MP.started || !G) return;
   if (from > MP.log.length) { mpEmit('need', { from: MP.log.length }); return; }
   let applied = 0;
@@ -6348,7 +6358,7 @@ function mpRecv(from, list) {
     MP.log.push(a); applied++;
     checkCombatEnd(prev);
   }
-  if (applied) { if (applied > 3 || MP.quiet) mpQuiet(); mpSave(); pump(); }
+  if (applied) { if (applied > 3 || MP.quiet || (catchup && applied > 1)) mpQuiet(); mpSave(); pump(); }
 }
 // Gast: Die eigenen Aktionen ab Stelle at weichen denen des Gastgebers. Partie bis dorthin neu aufbauen, die Aktionen des Gastgebers
 // einfügen und die eigenen dahinter erneut ausführen und senden (was dann nicht mehr geht, entfällt).
@@ -7022,7 +7032,7 @@ async function exportLog(e) {
     toast('Spiellog exportiert (' + d.actions.length + ' Aktionen).');
   } catch (x) { toast('Export nicht möglich.'); }
 }
-window.__magus = { MirrorFx, stats: () => statsOpen(true), snd: () => Snd.info(), get mp() { return MP && { n: MP.log.length, started: MP.started, seat: MP.seat }; }, get state() { return G; }, act, newGame, pump };
+window.__magus = { MirrorFx, stats: () => statsOpen(true), snd: () => Snd.info(), get mp() { return MP && { n: MP.log.length, started: MP.started, seat: MP.seat }; }, get state() { return G; }, get fx() { return { last: fxLast, same: fxFor === G, played: fxPlayed }; }, plan: pid => { const r = G.rng; G.rng = M.makeRng(12345); try { return AI.plan(G, pid); } finally { G.rng = r; } }, actor: () => M.actor(G), act, newGame, pump };
 showStart();
 mpRestore();
 })();</script>

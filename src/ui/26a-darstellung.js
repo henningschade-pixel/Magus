@@ -18,7 +18,7 @@ function worldRoundNote() {   // Rundenzähler der Weltphase (seit 0.9.7), derse
 let sightSel = [];   // Hellsicht: meine Entscheidungen je gezogener Karte ('k' offen vor mich legen, 'a' Ablage)
 const fdSel = new Set();   // Zerrüttung: von mir gewählte Abwurfkarten (Handplätze)
 const forcedMe = () => !!(G && G.phase === 'combat' && G.combat && G.combat.forced && G.combat.forced.pid === ME);
-let curKey = null, curDown = false, mkSeen = null, dthSeen = null, hlSeen = null, rbSeen = null, fxFor = null, fxLast = 0;
+let curKey = null, curDown = false, mkSeen = null, dthSeen = null, hlSeen = null, rbSeen = null, fxFor = null, fxLast = 0, fxPlayed = 0;   // fxPlayed: Zahl der abgespielten Kampfeffekte (nur für Tests)
 // Sekundär ausgelöste Effekte (Spiegel wirft Schaden zurück, Todesfluch zehrt) kurz an der betroffenen Seite einblenden
 // Ton zu einem Kampfeffekt (Angriff und Verteidigung bringen ihre Sounds im Ablauf der Animation selbst mit)
 function fxSound(f) {
@@ -76,6 +76,14 @@ function withComboHold(fn) {
     sides.forEach((s, i) => { s.deck.discard = saved[i].disc; Object.keys(s.stats).forEach(k => { delete s.stats[k]; }); Object.assign(s.stats, saved[i].st); });
   }
 }
+// Nachgeholte Aktionen (Wiederverbindung, Neuaufbau der Partie): ihre Effekte gelten als gesehen und werden nicht abgespielt.
+// Ohne das liefe nach dem Neuaufbau der gesamte bisherige Spielverlauf als frische Animation ab (fxLast stünde noch am Anfang).
+function skipFx() {
+  if (!G) return;
+  fxFor = G; fxLast = G.logN; holdFor = G; holdSeen = G.logN; comboHold = [];
+  hpHold = null; curseHold = {}; preStats = null;
+  FlowFx.resetEx();
+}
 // HP-Anzeige einer Seite für ms Millisekunden um add verschoben halten (Todesfluch: +, die Wolke ist noch unterwegs; Meditation: −, die Heilung ist noch unterwegs). Mehrere Wolken derselben Seite addieren sich.
 function holdHp(who, ms, add) {
   const now = Date.now(), prev = curseHold[who] && now < curseHold[who].until ? curseHold[who] : null;
@@ -88,6 +96,7 @@ function showFx() {
   for (const e of G.log) {
     if (e.n <= fxLast) continue;
     const go = f => {
+      fxPlayed++;
       if (!FAST) fxSound(f);
       if (f.kind === 'ultimate' && (f.el === 'E' || f.el === 'W')) UltFx.play(f.el);
       if (f.kind === 'lifeflow') FlowFx.lifeflow(f); else if (f.kind === 'aggro') FlowFx.aggro(f); else if (f.kind === 'drain') FlowFx.drain(f); else if (f.kind === 'ruin') FlowFx.ruin(f); else if (f.kind === 'attack') FlowFx.attack(f); else if (f.kind === 'defense') FlowFx.defense(f);

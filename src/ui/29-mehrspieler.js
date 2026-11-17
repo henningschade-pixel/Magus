@@ -59,7 +59,7 @@ function mpRepair() {
   mpStart(MP.seed, MP.first, MP.rules, true); MP.quiet = true;
   mpEmit('need', { from: 0 });
 }
-function mpQuiet() { if (G.over) return; endView = null; modal = null; introSeen = G.phase === 'combat' && G.combat.mode === 'showdown' ? G.showdown : -1; hold = 0; }   // nachgeholte Aktionen: keine Ergebnis- und Ankündigungsbildschirme von früher
+function mpQuiet() { skipFx(); if (G.over) return; endView = null; modal = null; introSeen = G.phase === 'combat' && G.combat.mode === 'showdown' ? G.showdown : -1; hold = 0; }   // nachgeholte Aktionen: keine Ergebnis- und Ankündigungsbildschirme von früher
 function mpChip() {   // die Rauminformation steht im Home-Menü; der Home-Knopf wird rot, wenn der Mitspieler offline ist
   if (MP && MP.started) { const on = mpOnline(); if (MP.on !== undefined && MP.on !== on) toast(on ? 'Mitspieler wieder verbunden.' : 'Verbindung zum Mitspieler unterbrochen. Sie wird neu aufgebaut …'); MP.on = on; }
   const h = document.getElementById('homebtn'); if (h) h.classList.toggle('off', !!MP && !mpOnline());
@@ -78,12 +78,12 @@ async function mpOpen(code, host) {
     if (!MP.started || !G) return; const n = +d.n;
     if (n > MP.log.length) mpEmit('need', { from: MP.log.length }); else if (n < MP.log.length) mpSendLog(n);
     else if (d.h && d.h !== mpHash()) { if (MP.host) mpEmit('resync', {}); else mpRepair(); }
-    else MP.bad = 0;
+    else { MP.bad = 0; MP.quiet = false; }   // beide Geräte stimmen überein: der Abgleich ist abgeschlossen, neue Aktionen laufen wieder mit Animation
   });
   on('resync', () => mpRepair());
   MP.beat = setInterval(mpBeat, 2000);
   on('act', d => mpRecv(+d.i, [d.a]));
-  on('acts', d => mpRecv(+d.from, d.list || []));
+  on('acts', d => mpRecv(+d.from, d.list || [], true));
   MP.subs.push(room.onPeers(() => { mpChip(); if (mpOnline()) mpBeat(); }));   // wieder verbunden: sofort abgleichen
   return true;
 }
@@ -113,7 +113,7 @@ function mpSendLog(from) {
     mpEmit('acts', { from: start, list });
   }
 }
-function mpRecv(from, list) {
+function mpRecv(from, list, catchup) {   // catchup: nachgereichte Aktionen (nach Verbindungsabbruch), keine live gespielten
   if (!MP || !MP.started || !G) return;
   if (from > MP.log.length) { mpEmit('need', { from: MP.log.length }); return; }
   let applied = 0;
@@ -128,7 +128,7 @@ function mpRecv(from, list) {
     MP.log.push(a); applied++;
     checkCombatEnd(prev);
   }
-  if (applied) { if (applied > 3 || MP.quiet) mpQuiet(); mpSave(); pump(); }
+  if (applied) { if (applied > 3 || MP.quiet || (catchup && applied > 1)) mpQuiet(); mpSave(); pump(); }
 }
 // Gast: Die eigenen Aktionen ab Stelle at weichen denen des Gastgebers. Partie bis dorthin neu aufbauen, die Aktionen des Gastgebers
 // einfügen und die eigenen dahinter erneut ausführen und senden (was dann nicht mehr geht, entfällt).

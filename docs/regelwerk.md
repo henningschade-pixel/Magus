@@ -338,6 +338,10 @@ Keine Regeländerung, nur die Bedienung des Tempels: Das Opfern läuft wie die U
 
 - **Heilung wieder nach Angriff und Verteidigung:** Die Heilung eines Kombos in der Verteidigung (Erde + Wasser) wirkt erst nach dem Schaden und dem Spiegelrückwurf und gleicht ihn nachträglich aus, höchstens bis zu den maximalen HP; ein sonst tödlicher Restschaden lässt sich so noch ausgleichen (HP − Restschaden + Heilung, nie unter 0, nie über dem Maximum). Zerrüttung, Lähmung, Läuterung und Spiegel wirken wie seit 0.4 **vor** der Verteidigung. Im Angriff ändert sich nichts. Umsetzung: `execDefense` und `defenseComboPre` in `src/engine/65-kampfablauf.js`; Vorschau (`previewDefense`) und Animation folgen derselben Reihenfolge (Heilungseffekt mit `late`).
 
+## Änderung 0.14.5 (17.11.)
+
+- Keine Regeländerung. Mehrspieler: Nach einem Neuaufbau der Partie (Reconnect, Abgleich, „Partie fortsetzen“) werden nachgeholte Aktionen ohne Effekte dargestellt; der stille Modus endet, sobald beide Geräte übereinstimmen.
+
 ## Änderung 0.14.4 (17.11.)
 
 - **Regeländerung (Test): Obergrenzen aufgehoben.** Neuer Schalter `uncapped` (Standard 1; 0 = Stand 0.14.3.2). Max. HP, Ausspiellimit und Handplätze der Spieler haben keine Obergrenze mehr (`maxed` für HP, `limitMax`, `slotMax` in `src/engine/20-werte.js`); der Preis steigt weiter um den Grundpreis je Kauf (1, 2, 3, 4 …).

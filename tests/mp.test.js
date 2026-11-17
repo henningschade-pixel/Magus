@@ -85,10 +85,32 @@ test('Mehrspieler: gleichzeitige Aktionen, tote Verbindung, abweichender Stand, 
     await guest.waitForTimeout(5000);
     assert.equal(await guest.evaluate(() => window.__magus.state.players[0].stats.hp), await host.evaluate(() => window.__magus.state.players[0].stats.hp), 'Gast hat den Stand des Gastgebers übernommen');
     s = await same(host, guest, 'nach der Reparatur gleich');
+    // nachgeholte Aktionen dürfen nicht als frische Animationen abgespielt werden: die Effektmarke steht nach dem Neuaufbau am Ende des Protokolls
+    const seen = p => p.evaluate(() => ({ logN: window.__magus.state.logN, fx: window.__magus.fx }));
+    let q = await seen(guest); assert.ok(q.fx.same && q.fx.last === q.logN, 'Gast: nach der Reparatur keine alten Effekte offen (' + JSON.stringify(q) + ')');
+
+    // 3b) Nach einem Kampf mit Effekten: Neuaufbau beim Gast (Abgleich) darf den bisherigen Verlauf nicht als frische Animationen abspielen
+    for (let i = 0; i < 400; i++) {
+      if ((await seen(host)).fx.played > 0) break;
+      const who = await host.evaluate(() => window.__magus.actor()), dev = who === hs ? host : guest;
+      const plan = await dev.evaluate(w => window.__magus.plan(w), who);
+      if (!plan.length) break;
+      await dev.evaluate(l => l.forEach(a => window.__magus.act(a)), plan);
+      if (i % 10 === 9) await same(host, guest, 'Kampf läuft gleich weiter', 20000);
+    }
+    s = await same(host, guest, 'nach dem Kampf gleich', 30000);
+    q = await seen(guest); assert.ok(q.fx.played > 0, 'im Kampf sind Effekte angefallen (' + JSON.stringify(q) + ')');
+    await guest.waitForTimeout(6500);   // Mindestabstand zwischen zwei Reparaturen
+    await guest.evaluate(() => { window.__magus.state.players[0].stats.hp += 3; });
+    await guest.waitForTimeout(6000);
+    s = await same(host, guest, 'nach der zweiten Reparatur gleich');
+    const q2 = await seen(guest);
+    assert.equal(q2.fx.played, q.fx.played, 'Gast spielt nach dem Neuaufbau keine alten Effekte erneut ab');
 
     // 4) Gast lädt die Seite neu: die Partie geht von selbst weiter
     await guest.reload(); await guest.waitForFunction(() => window.__magus.mp && window.__magus.mp.started, null, { timeout: 15000 });
     s = await same(host, guest, 'nach Neuladen des Gastes gleich', 25000);
+    q = await seen(guest); assert.ok(q.fx.same && q.fx.last === q.logN, 'Gast: nach dem Neuladen keine alten Effekte offen (' + JSON.stringify(q) + ')');
     await act(onTurn(), { type: 'draw' }); s = await same(host, guest, 'Zug nach dem Neuladen kommt an');
 
     // 5) Gastgeber verlässt die Partie: kein „Spiel fortsetzen“ gegen den Computer, dafür „Partie fortsetzen“
