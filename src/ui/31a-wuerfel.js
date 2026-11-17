@@ -140,7 +140,8 @@ const DiceBoard = (() => {
   function throwRest() { if (!FAST && items.length) { thrown = true; items.forEach((it, i) => throwItem(i, 0)); } }   // Spielstart beendet oder übersprungen: alle noch nicht geworfenen Würfel
   // Nach jedem Zeichnen: neue Monster -> neue Würfel; sichtbar nur in der Weltphase ohne Überlagerung; geworfen wird, sobald sie sichtbar sind
   function sync() {
-    if (!G || FAST) return;
+    if (!G) return;
+    if (FAST) { if (layer) layer.style.display = 'none'; return; }   // beschleunigtes Zuschauen (ab Tempo ×3): keine Würfel; bereits vorhandene Ebene ausblenden, sonst bleibt sie im Kampf stehen (seit 0.14.6)
     ensure();
     if (mons !== G.monsters) { mons = G.monsters; build(); }
     const visible = G.phase === 'world' && !G.over && !endView && !modal && overlay.style.display === 'none';

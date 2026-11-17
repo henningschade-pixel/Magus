@@ -1,9 +1,10 @@
 /* ---------- Versionen: Versionsnummer und Versionsbeschreibung (Seite „Neu in Version …“) ---------- */
 // Aktuelle Versionsnummer: einzige Stelle, an der sie gesetzt wird (Menü-Link und Über-Seite lesen sie von hier; bei jedem Schritt hochzählen)
-const MAGUS_VERSION = '0.14.5';
+const MAGUS_VERSION = '0.14.6';
 // Versionsbeschreibung: ein Eintrag je Version, die neueste zuerst. Bei jedem Schritt oben einen Eintrag [Nummer, Text] ergänzen;
 // der erste Eintrag gehört zu MAGUS_VERSION und erscheint unter „Neu in Version …“.
 const VERSIONEN = [
+  ['0.14.6', '<b>Zuschauen: Würfel verschwinden im Kampf auch bei hohem Tempo:</b> Beim Zuschauen mit beschleunigten Stufen (ab ×3) blieben die Monsterwürfel der Weltphase im Kampf sichtbar stehen. Sie werden jetzt wie bei normalem Tempo ausgeblendet.'],
   ['0.14.5', '<b>Mehrspieler: keine wilden Animationen nach dem Reconnect:</b> Baut ein Gerät nach einem Verbindungsabbruch die Partie neu auf (Abgleich mit dem Gastgeber, „Partie fortsetzen“, abweichende Aktionen), spielt es den bisherigen Verlauf nicht mehr als frische Angriffs-, Fluch- und Heilanimationen ab; nachgeholte Aktionen erscheinen ohne Effekte. Außerdem bleibt der stille Modus nach einer Reparatur nicht mehr dauerhaft an: Sobald beide Geräte übereinstimmen, laufen neue Aktionen wieder mit Animation und Ergebnisbildschirm.'],
   ['0.14.4', '<b>Test: Obergrenzen aufgehoben:</b> Max. HP, Ausspiellimit und Handplätze lassen sich ohne Obergrenze ausbauen; der Preis steigt mit jedem Kauf weiter (1, 2, 3, 4 …). Das Mana bleibt bei zwei Ausbauten (bis 6), die Magie bei Stufe 3 (Karten gibt es nur bis Stufe 3). Der Computergegner nutzt die neue Freiheit nur mit übrigem Gold. Rückgängig mit dem Regelschalter uncapped 0.'],
   ['0.14.3.2', '<b>Gratis-Tokens bei den Markern:</b> Die Gratis-Nachziehtokens (eigene und die des Gegners) liegen jetzt in der Marker-Spalte neben dem Kampffenster, am Ende der Reihe hinter Todes-, Heil-, Mana- und Schildmarkern und Fallen, und nicht mehr am Nachziehstapel. Klicken (Gratis-Nachziehen, Läuterung) und Animationen funktionieren wie bisher.'],
