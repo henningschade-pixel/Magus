@@ -1,7 +1,7 @@
 /* Magus – Regelkern (Teil 8): Spielstart und Schnittstelle nach außen. */
 
 // Regelwerte (Abstimmungs- und Variantenschalter). ‚curses‘: Fluchsystem, siehe 30-curses.js.
-const DEFAULT_RULES = { maxRounds: 0, exhaustRounds: 10, priceRise: 1, startHp: 4, startLimit: 1, startSp: 3, limitCost: 1, limitFirstStepCost: 1, hpPerPoint: 1, maxUpgrades: 2, stageGold: [0, 3, 6, 9], winLead: 4, winSpFromShowdown: 1, monsterSp: 1, monsterLoot: 0, fleeAllowed: 0, allowAtk: { attack: 1, recover: 1, draw: 1, pass: 1, echo: 1, combo: 1 }, allowDef: { defend: 2, recover: 0, draw: 0, pass: 1, echo: 0, combo: 1 }, idleLimit: 0, drawMarker: 0, drawPenaltyGold: 1, drawPenaltyMana: 1, drawLimitCost: [1, 1], lossHelp: 1, lossGold: [0, 1, 2, 3], lossBoth: 0, showdownSp: 1, lootBoth: true, recoverByStage: [1, 2, 3], regenByStage: [1, 2, 3], supply: 8, supply2: 6, supply3: 4, startCards: 0 };   // Jede gespielte Karte (auch Kombokarten) kostet 1 Mana, nur Verteidigung in der überlegenen Farbe ist gratis. recoverByStage: Mana-Gewinn von „Erholen“ im Kampf je Abschnitt
+const DEFAULT_RULES = { maxRounds: 0, exhaustRounds: 10, priceRise: 1, startHp: 4, startLimit: 1, startSp: 3, limitCost: 1, limitFirstStepCost: 1, hpPerPoint: 1, maxUpgrades: 2, uncapped: 1, stageGold: [0, 3, 6, 9], winLead: 4, winSpFromShowdown: 1, monsterSp: 1, monsterLoot: 0, fleeAllowed: 0, allowAtk: { attack: 1, recover: 1, draw: 1, pass: 1, echo: 1, combo: 1 }, allowDef: { defend: 2, recover: 0, draw: 0, pass: 1, echo: 0, combo: 1 }, idleLimit: 0, drawMarker: 0, drawPenaltyGold: 1, drawPenaltyMana: 1, drawLimitCost: [1, 1], lossHelp: 1, lossGold: [0, 1, 2, 3], lossBoth: 0, showdownSp: 1, lootBoth: true, recoverByStage: [1, 2, 3], regenByStage: [1, 2, 3], supply: 8, supply2: 6, supply3: 4, startCards: 0 };   // Jede gespielte Karte (auch Kombokarten) kostet 1 Mana, nur Verteidigung in der überlegenen Farbe ist gratis. recoverByStage: Mana-Gewinn von „Erholen“ im Kampf je Abschnitt
 
 function newPlayer(state, name, ai, startIds) {
   const p = { name, ai: !!ai, stats: newStats(), sp: state.rules.startSp || 0, slots: MIN_SLOTS, drawRed: false, drawN: 0 };   // drawN: Nachziehvorgänge seit der letzten anderen Aktion (höchstens Nachziehlimit), drawRed: Marker rot
@@ -81,7 +81,7 @@ function actor(state) {
 }
 function handCounts(d) { const c = {}; d.hand.forEach(x => { if (x) c[x.id] = (c[x.id] || 0) + 1; }); return c; }
 
-return { allowed, ELEMENTS, SUPERIOR, NAMES, START_DECK, MAX_MAGIC, MAX_SLOTS, MIN_SLOTS, MAX_LIMIT, MAX_DRAW_LIMIT, MAX_UPGRADES, MONSTER_MAX_LIMIT, DEFAULT_RULES, MONSTER,
+return { allowed, ELEMENTS, SUPERIOR, NAMES, START_DECK, MAX_MAGIC, MAX_SLOTS, MIN_SLOTS, MAX_LIMIT, limitMax, slotMax, MAX_DRAW_LIMIT, MAX_UPGRADES, MONSTER_MAX_LIMIT, DEFAULT_RULES, MONSTER,
   makeRng, parseCard, selection, baseLen, dropSight, newGame, apply, record, prim, actor, other, regen, handCounts,
   vendorOffers, vendorPlans, maxed, limitStepCost, manaStepCost, hpStepCost, slotStepCost, magicCost, drawLimitCost, goldTxt,
   evalAttack, evalDefense, canFlee, stockOf, recoverGain, regenGain, comboLevels, levelsFor,

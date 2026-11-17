@@ -675,6 +675,7 @@ test('Start-HP der Spieler 4 (startHp), Monster beginnen weiter mit eigenen Wert
 test('Steigende Preise (priceRise): jeder Kauf einer Kategorie verteuert die nächste Stufe um den Grundpreis; Einnahmen je Abschnitt 3/6/9 Gold (seit 0.4)', () => {
   assert.deepEqual(M.DEFAULT_RULES.stageGold, [0, 3, 6, 9]); assert.equal(M.DEFAULT_RULES.stagePoints, undefined); assert.deepEqual(M.DEFAULT_RULES.lossGold, [0, 1, 2, 3]); assert.equal(M.DEFAULT_RULES.priceRise, 1);
   const s = M.newGame({ seed: 5, ai: [false, false], first: 0 }), p = s.players[0], st = p.stats;
+  s.rules.uncapped = 0;   // 0.14.4: dieser Test prüft die Grenzen von zwei Ausbauten
   assert.equal(st.gold, 3, 'Start: 3 Gold (3 Monster × 1 Gold, Abschnitt 1)');
   const prices = fn => [0, 1, 2].map(() => { const c = fn(); st.buys = st.buys || {}; return c; });
   const seq = (cat, fn) => { const out = []; for (let i = 0; i < 3; i++) { out.push(fn()); st.buys = st.buys || {}; st.buys[cat] = (st.buys[cat] || 0) + 1; } st.buys[cat] = 0; return out; };
@@ -914,6 +915,7 @@ test('Abschnittsbonus: 3 Gold (Abschnitt 1), 6 (2), 9 (3)', () => {
 test('Jede Entwicklung der Spieler ist auf Stufe 3 begrenzt (zwei Ausbauten), Kosten 1 und 2 Gold (0.5.1)', () => {
   const s = M.newGame({ seed: 5, ai: [false, false], first: 0 }), p = s.players[0], st = p.stats;
   s.rules.drawMarker = 1;   // 0.12: der Nachziehmarker ist standardmäßig aus; dieser Test prüft die Regel
+  s.rules.uncapped = 0;   // 0.14.4: dieser Test prüft die Grenzen; ohne Schalter uncapped gelten sie
   assert.deepEqual([M.MAX_LIMIT, M.MAX_SLOTS, M.MAX_DRAW_LIMIT, M.MAX_UPGRADES, M.MAX_MAGIC], [3, 5, 3, 2, 3]);
   st.gold = 40;
   const run = what => { const out = []; for (let i = 0; i < 3; i++) { s.turn = 0; const g = st.gold, r = M.apply(s, { pid: 0, type: what === 'drawlimit' ? 'drawlimit' : 'spend', what }); out.push(r.ok ? g - st.gold : null); } return out; };
@@ -932,6 +934,23 @@ test('Jede Entwicklung der Spieler ist auf Stufe 3 begrenzt (zwei Ausbauten), Ko
   s.rules.maxUpgrades = 2;
   assert.deepEqual(run('drawlimit'), [1, 2, null], 'Nachziehlimit 1 → 3');
   assert.equal(st.drawLimit, 3);
+});
+
+test('Ohne Obergrenzen (0.14.4, uncapped): HP, Limit und Handplätze unbegrenzt, Mana und Magie begrenzt', () => {
+  const s = M.newGame({ seed: 5, ai: [false, false], first: 0 }), p = s.players[0], st = p.stats;
+  assert.equal(s.rules.uncapped, 1);
+  st.gold = 200;
+  const run = what => { const out = []; for (let i = 0; i < 5; i++) { s.turn = 0; const g = st.gold, r = M.apply(s, { pid: 0, type: 'spend', what }); out.push(r.ok ? g - st.gold : null); } return out; };
+  assert.deepEqual(run('limit'), [1, 2, 3, 4, 5], 'Ausspiellimit über 3 hinaus, Preis steigt');
+  assert.equal(st.limit, 6);
+  assert.deepEqual(run('slot'), [1, 2, 3, 4, 5], 'Handplätze über 5 hinaus');
+  assert.equal(p.slots, 8);
+  assert.equal(p.deck.hand.length, 8, 'die Hand wächst mit');
+  assert.deepEqual(run('hp'), [1, 2, 3, 4, 5], 'max. HP über 6 hinaus');
+  assert.equal(st.maxHp, 9);
+  assert.deepEqual(run('mana'), [1, 2, null, null, null], 'Mana bleibt bei zwei Ausbauten');
+  assert.equal(st.maxMana, 6);
+  assert.equal(M.MAX_MAGIC, 3);
 });
 
 test('Karten lassen sich unabhängig von der entwickelten Magie kaufen (0.7): F3 mit Magie 1', () => {

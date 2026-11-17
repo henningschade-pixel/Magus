@@ -1,9 +1,10 @@
 /* ---------- Versionen: Versionsnummer und Versionsbeschreibung (Seite „Neu in Version …“) ---------- */
 // Aktuelle Versionsnummer: einzige Stelle, an der sie gesetzt wird (Menü-Link und Über-Seite lesen sie von hier; bei jedem Schritt hochzählen)
-const MAGUS_VERSION = '0.14.3.2';
+const MAGUS_VERSION = '0.14.4';
 // Versionsbeschreibung: ein Eintrag je Version, die neueste zuerst. Bei jedem Schritt oben einen Eintrag [Nummer, Text] ergänzen;
 // der erste Eintrag gehört zu MAGUS_VERSION und erscheint unter „Neu in Version …“.
 const VERSIONEN = [
+  ['0.14.4', '<b>Test: Obergrenzen aufgehoben:</b> Max. HP, Ausspiellimit und Handplätze lassen sich ohne Obergrenze ausbauen; der Preis steigt mit jedem Kauf weiter (1, 2, 3, 4 …). Das Mana bleibt bei zwei Ausbauten (bis 6), die Magie bei Stufe 3 (Karten gibt es nur bis Stufe 3). Der Computergegner nutzt die neue Freiheit nur mit übrigem Gold. Rückgängig mit dem Regelschalter uncapped 0.'],
   ['0.14.3.2', '<b>Gratis-Tokens bei den Markern:</b> Die Gratis-Nachziehtokens (eigene und die des Gegners) liegen jetzt in der Marker-Spalte neben dem Kampffenster, am Ende der Reihe hinter Todes-, Heil-, Mana- und Schildmarkern und Fallen, und nicht mehr am Nachziehstapel. Klicken (Gratis-Nachziehen, Läuterung) und Animationen funktionieren wie bisher.'],
   ['0.14.3.1', '<b>Läuterung und Gratis-Tokens:</b> Eigene und gegnerische Gratis-Nachziehtokens lassen sich bei der Läuterung wählen und werden dabei nur zerstört, ohne Gutschrift (je zerstörtem Token also kein neues Gratis-Nachziehen). Das war schon so vorgesehen; neu ist ein Test, der es im Kampfbildschirm absichert.'],
   ['0.14.3', '<b>Läuterung ohne Vorauswahl:</b> Beim Vorbereiten einer Läuterung ist kein Marker mehr vorgewählt (bisher wurden Todesmarker und Schilde automatisch markiert und ein Klick darauf nahm sie wieder ab). Gewählt ist nur, was angeklickt wurde; ein Hinweis nennt, wie viele Marker gewählt werden dürfen (Stufe der Läuterung) und wie viele schon gewählt sind. Der Knopf „Automatisch“ entfällt; ohne Wahl entfernt die Läuterung keinen Marker.'],

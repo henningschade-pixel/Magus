@@ -32,7 +32,7 @@ function pickSpend(p, state, pid) {
   const s = p.stats, Q = P(pid);
   const lc = M.limitStepCost(state, s);
   const canL = lc <= s.gold;
-  const canM = !M.maxed(s, 'mana', state.rules) && M.manaStepCost(state, s) <= s.gold, canH = !M.maxed(s, 'hp', state.rules) && M.hpStepCost(state, s) <= s.gold, canS = p.slots < M.MAX_SLOTS && M.slotStepCost(state, s) <= s.gold;   // seit 0.3.2 steigen alle Preise mit jedem Kauf
+  const canM = !M.maxed(s, 'mana', state.rules) && M.manaStepCost(state, s) <= s.gold, canH = !M.maxed(s, 'hp', state.rules) && M.hpStepCost(state, s) <= s.gold, canS = p.slots < M.slotMax(state.rules) && M.slotStepCost(state, s) <= s.gold;   // seit 0.3.2 steigen alle Preise mit jedem Kauf
   const pl = stratPlan(state, pid);
   if (pl.st === 1 && s.limit < 2) return canL ? 'limit' : null;   // auf Ausspiellimit 2 sparen
   const noSlot = stratSlotLock(state, p, pid);
@@ -40,7 +40,7 @@ function pickSpend(p, state, pid) {
   const magFull = M.ELEMENTS.every(e => s.mag[e] >= M.MAX_MAGIC);   // alle Magie ausgebaut: Gold hat keine andere Verwendung mehr
   const order = [
     ['limit', s.limit < Q.limitA && canL], ['slot', p.slots < Q.slotA && canS], ['mana', s.maxMana < Q.manaA && canM], ['hp', s.maxHp < Q.hpA && canH],
-    ['limit', s.limit < Q.limitB && canL], ['slot', p.slots < Q.slotB && canS], ['hp', (s.maxHp < Q.hpB || magFull) && canH], ['mana', (s.maxMana < Q.manaB || magFull) && canM], ['limit', s.limit < M.MAX_LIMIT && canL],
+    ['limit', s.limit < Q.limitB && canL], ['slot', p.slots < Q.slotB && canS], ['hp', (s.maxHp < Q.hpB || magFull) && canH], ['mana', (s.maxMana < Q.manaB || magFull) && canM], ['limit', s.limit < M.limitMax(state.rules) && canL],
   ];
   order.splice(Math.max(0, Math.min(order.length, Q.dlPos)), 0, ['drawlimit', canD]);
   if (s.limit < Q.limitA && !canL && s.gold < lc) return null;   // auf den Limit-Schritt sparen

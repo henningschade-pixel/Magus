@@ -681,7 +681,10 @@ function regenGain(state) { const r = state.rules.regenByStage; return r ? (r[Ma
 // Kategorien: hp, mana, limit, slot, draw (Nachziehlimit) und mag (Magie, alle drei Richtungen zusammen, unabhängig von der Stufe); s.buys zählt die Käufe des Spielers.
 function bought(s, k) { return (s && s.buys && s.buys[k]) || 0; }
 function risen(state, base, s, k) { return base * (1 + (state.rules.priceRise || 0) * bought(s, k)); }
-function maxed(s, k, rules) { const m = rules ? rules.maxUpgrades : MAX_UPGRADES; return m > 0 && bought(s, k) >= m; }   // HP und Mana der Spieler: höchstens zwei Ausbauten (Regel maxUpgrades 2; 0 = ohne Obergrenze, so nur in 0.13.2.2). Ohne ‚rules‘ gilt die alte feste Grenze
+function maxed(s, k, rules) { if (rules && rules.uncapped && k === 'hp') return false; const m = rules ? rules.maxUpgrades : MAX_UPGRADES; return m > 0 && bought(s, k) >= m; }   // seit 0.14.4 (Regel uncapped 1, Test): HP ohne Obergrenze; Mana behält zwei Ausbauten   // HP und Mana der Spieler: höchstens zwei Ausbauten (Regel maxUpgrades 2; 0 = ohne Obergrenze, so nur in 0.13.2.2). Ohne ‚rules‘ gilt die alte feste Grenze
+// Höchstwerte des Ausspiellimits und der Handplätze der Spieler: seit 0.14.4 ohne Obergrenze (Regel uncapped 1; 0 = wie bisher 3 bzw. 5). Monster behalten MAX_SLOTS und MONSTER_MAX_LIMIT.
+function limitMax(rules) { return rules && rules.uncapped ? Infinity : MAX_LIMIT; }
+function slotMax(rules) { return rules && rules.uncapped ? Infinity : MAX_SLOTS; }
 function buyCount(s, k) { s.buys = s.buys || {}; s.buys[k] = (s.buys[k] || 0) + 1; }
 function limitStepCost(state, s) { return risen(state, state.rules.limitCost > 0 ? state.rules.limitCost : (s.limit <= 1 ? state.rules.limitFirstStepCost : 1), s, 'limit'); }
 function manaStepCost(state, s) { return risen(state, 1, s, 'mana'); }
@@ -1716,12 +1719,12 @@ function execSpend(state, pid, what) {
     if (s.gold < cost) return fail('Der nächste Mana-Schritt kostet ' + goldTxt(cost) + '.');
     s.maxMana++; buyCount(s, 'mana');   // nur das Maximum steigt, das aktuelle Mana bleibt
   } else if (what === 'limit') {
-    if (s.limit >= MAX_LIMIT) return fail('Das Ausspiellimit ist am Maximum (' + MAX_LIMIT + ').');
+    if (s.limit >= limitMax(state.rules)) return fail('Das Ausspiellimit ist am Maximum (' + MAX_LIMIT + ').');
     cost = limitStepCost(state, s);
     if (s.gold < cost) return fail('Das nächste Limit kostet ' + goldTxt(cost) + '.');
     s.limit++; buyCount(s, 'limit');
   } else if (what === 'slot') {
-    if (p.slots >= MAX_SLOTS) return fail('Du hast schon ' + MAX_SLOTS + ' Handplätze.');
+    if (p.slots >= slotMax(state.rules)) return fail('Du hast schon ' + MAX_SLOTS + ' Handplätze.');
     cost = slotStepCost(state, s);
     if (s.gold < cost) return fail('Der nächste Handplatz kostet ' + goldTxt(cost) + '.');
     p.slots++; d.hand.push(null); buyCount(s, 'slot');
@@ -1780,7 +1783,7 @@ function applyWorld(state, a) {
 /* Magus – Regelkern (Teil 8): Spielstart und Schnittstelle nach außen. */
 
 // Regelwerte (Abstimmungs- und Variantenschalter). ‚curses‘: Fluchsystem, siehe 30-curses.js.
-const DEFAULT_RULES = { maxRounds: 0, exhaustRounds: 10, priceRise: 1, startHp: 4, startLimit: 1, startSp: 3, limitCost: 1, limitFirstStepCost: 1, hpPerPoint: 1, maxUpgrades: 2, stageGold: [0, 3, 6, 9], winLead: 4, winSpFromShowdown: 1, monsterSp: 1, monsterLoot: 0, fleeAllowed: 0, allowAtk: { attack: 1, recover: 1, draw: 1, pass: 1, echo: 1, combo: 1 }, allowDef: { defend: 2, recover: 0, draw: 0, pass: 1, echo: 0, combo: 1 }, idleLimit: 0, drawMarker: 0, drawPenaltyGold: 1, drawPenaltyMana: 1, drawLimitCost: [1, 1], lossHelp: 1, lossGold: [0, 1, 2, 3], lossBoth: 0, showdownSp: 1, lootBoth: true, recoverByStage: [1, 2, 3], regenByStage: [1, 2, 3], supply: 8, supply2: 6, supply3: 4, startCards: 0 };   // Jede gespielte Karte (auch Kombokarten) kostet 1 Mana, nur Verteidigung in der überlegenen Farbe ist gratis. recoverByStage: Mana-Gewinn von „Erholen“ im Kampf je Abschnitt
+const DEFAULT_RULES = { maxRounds: 0, exhaustRounds: 10, priceRise: 1, startHp: 4, startLimit: 1, startSp: 3, limitCost: 1, limitFirstStepCost: 1, hpPerPoint: 1, maxUpgrades: 2, uncapped: 1, stageGold: [0, 3, 6, 9], winLead: 4, winSpFromShowdown: 1, monsterSp: 1, monsterLoot: 0, fleeAllowed: 0, allowAtk: { attack: 1, recover: 1, draw: 1, pass: 1, echo: 1, combo: 1 }, allowDef: { defend: 2, recover: 0, draw: 0, pass: 1, echo: 0, combo: 1 }, idleLimit: 0, drawMarker: 0, drawPenaltyGold: 1, drawPenaltyMana: 1, drawLimitCost: [1, 1], lossHelp: 1, lossGold: [0, 1, 2, 3], lossBoth: 0, showdownSp: 1, lootBoth: true, recoverByStage: [1, 2, 3], regenByStage: [1, 2, 3], supply: 8, supply2: 6, supply3: 4, startCards: 0 };   // Jede gespielte Karte (auch Kombokarten) kostet 1 Mana, nur Verteidigung in der überlegenen Farbe ist gratis. recoverByStage: Mana-Gewinn von „Erholen“ im Kampf je Abschnitt
 
 function newPlayer(state, name, ai, startIds) {
   const p = { name, ai: !!ai, stats: newStats(), sp: state.rules.startSp || 0, slots: MIN_SLOTS, drawRed: false, drawN: 0 };   // drawN: Nachziehvorgänge seit der letzten anderen Aktion (höchstens Nachziehlimit), drawRed: Marker rot
@@ -1860,7 +1863,7 @@ function actor(state) {
 }
 function handCounts(d) { const c = {}; d.hand.forEach(x => { if (x) c[x.id] = (c[x.id] || 0) + 1; }); return c; }
 
-return { allowed, ELEMENTS, SUPERIOR, NAMES, START_DECK, MAX_MAGIC, MAX_SLOTS, MIN_SLOTS, MAX_LIMIT, MAX_DRAW_LIMIT, MAX_UPGRADES, MONSTER_MAX_LIMIT, DEFAULT_RULES, MONSTER,
+return { allowed, ELEMENTS, SUPERIOR, NAMES, START_DECK, MAX_MAGIC, MAX_SLOTS, MIN_SLOTS, MAX_LIMIT, limitMax, slotMax, MAX_DRAW_LIMIT, MAX_UPGRADES, MONSTER_MAX_LIMIT, DEFAULT_RULES, MONSTER,
   makeRng, parseCard, selection, baseLen, dropSight, newGame, apply, record, prim, actor, other, regen, handCounts,
   vendorOffers, vendorPlans, maxed, limitStepCost, manaStepCost, hpStepCost, slotStepCost, magicCost, drawLimitCost, goldTxt,
   evalAttack, evalDefense, canFlee, stockOf, recoverGain, regenGain, comboLevels, levelsFor,
@@ -2022,7 +2025,7 @@ function pickSpend(p, state, pid) {
   const s = p.stats, Q = P(pid);
   const lc = M.limitStepCost(state, s);
   const canL = lc <= s.gold;
-  const canM = !M.maxed(s, 'mana', state.rules) && M.manaStepCost(state, s) <= s.gold, canH = !M.maxed(s, 'hp', state.rules) && M.hpStepCost(state, s) <= s.gold, canS = p.slots < M.MAX_SLOTS && M.slotStepCost(state, s) <= s.gold;   // seit 0.3.2 steigen alle Preise mit jedem Kauf
+  const canM = !M.maxed(s, 'mana', state.rules) && M.manaStepCost(state, s) <= s.gold, canH = !M.maxed(s, 'hp', state.rules) && M.hpStepCost(state, s) <= s.gold, canS = p.slots < M.slotMax(state.rules) && M.slotStepCost(state, s) <= s.gold;   // seit 0.3.2 steigen alle Preise mit jedem Kauf
   const pl = stratPlan(state, pid);
   if (pl.st === 1 && s.limit < 2) return canL ? 'limit' : null;   // auf Ausspiellimit 2 sparen
   const noSlot = stratSlotLock(state, p, pid);
@@ -2030,7 +2033,7 @@ function pickSpend(p, state, pid) {
   const magFull = M.ELEMENTS.every(e => s.mag[e] >= M.MAX_MAGIC);   // alle Magie ausgebaut: Gold hat keine andere Verwendung mehr
   const order = [
     ['limit', s.limit < Q.limitA && canL], ['slot', p.slots < Q.slotA && canS], ['mana', s.maxMana < Q.manaA && canM], ['hp', s.maxHp < Q.hpA && canH],
-    ['limit', s.limit < Q.limitB && canL], ['slot', p.slots < Q.slotB && canS], ['hp', (s.maxHp < Q.hpB || magFull) && canH], ['mana', (s.maxMana < Q.manaB || magFull) && canM], ['limit', s.limit < M.MAX_LIMIT && canL],
+    ['limit', s.limit < Q.limitB && canL], ['slot', p.slots < Q.slotB && canS], ['hp', (s.maxHp < Q.hpB || magFull) && canH], ['mana', (s.maxMana < Q.manaB || magFull) && canM], ['limit', s.limit < M.limitMax(state.rules) && canL],
   ];
   order.splice(Math.max(0, Math.min(order.length, Q.dlPos)), 0, ['drawlimit', canD]);
   if (s.limit < Q.limitA && !canL && s.gold < lc) return null;   // auf den Limit-Schritt sparen
@@ -2806,10 +2809,11 @@ let hpHold = null, curseHold = {}, stageSeen = 1, endSnd = null, G = null, hold 
 
 /* ---------- Versionen: Versionsnummer und Versionsbeschreibung (Seite „Neu in Version …“) ---------- */
 // Aktuelle Versionsnummer: einzige Stelle, an der sie gesetzt wird (Menü-Link und Über-Seite lesen sie von hier; bei jedem Schritt hochzählen)
-const MAGUS_VERSION = '0.14.3.2';
+const MAGUS_VERSION = '0.14.4';
 // Versionsbeschreibung: ein Eintrag je Version, die neueste zuerst. Bei jedem Schritt oben einen Eintrag [Nummer, Text] ergänzen;
 // der erste Eintrag gehört zu MAGUS_VERSION und erscheint unter „Neu in Version …“.
 const VERSIONEN = [
+  ['0.14.4', '<b>Test: Obergrenzen aufgehoben:</b> Max. HP, Ausspiellimit und Handplätze lassen sich ohne Obergrenze ausbauen; der Preis steigt mit jedem Kauf weiter (1, 2, 3, 4 …). Das Mana bleibt bei zwei Ausbauten (bis 6), die Magie bei Stufe 3 (Karten gibt es nur bis Stufe 3). Der Computergegner nutzt die neue Freiheit nur mit übrigem Gold. Rückgängig mit dem Regelschalter uncapped 0.'],
   ['0.14.3.2', '<b>Gratis-Tokens bei den Markern:</b> Die Gratis-Nachziehtokens (eigene und die des Gegners) liegen jetzt in der Marker-Spalte neben dem Kampffenster, am Ende der Reihe hinter Todes-, Heil-, Mana- und Schildmarkern und Fallen, und nicht mehr am Nachziehstapel. Klicken (Gratis-Nachziehen, Läuterung) und Animationen funktionieren wie bisher.'],
   ['0.14.3.1', '<b>Läuterung und Gratis-Tokens:</b> Eigene und gegnerische Gratis-Nachziehtokens lassen sich bei der Läuterung wählen und werden dabei nur zerstört, ohne Gutschrift (je zerstörtem Token also kein neues Gratis-Nachziehen). Das war schon so vorgesehen; neu ist ein Test, der es im Kampfbildschirm absichert.'],
   ['0.14.3', '<b>Läuterung ohne Vorauswahl:</b> Beim Vorbereiten einer Läuterung ist kein Marker mehr vorgewählt (bisher wurden Todesmarker und Schilde automatisch markiert und ein Klick darauf nahm sie wieder ab). Gewählt ist nur, was angeklickt wurde; ein Hinweis nennt, wie viele Marker gewählt werden dürfen (Stufe der Läuterung) und wie viele schon gewählt sind. Der Knopf „Automatisch“ entfällt; ohne Wahl entfernt die Läuterung keinen Marker.'],
@@ -3514,7 +3518,7 @@ function renderCards() {
   }
   if (cx.combat) ph += deathTokens(cx.myStats, 's') + deathTokens(cx.oppStats, 'o') + healTokens(cx.myStats, 's') + healTokens(cx.oppStats, 'o') + manaTokens(cx.myStats, 's') + manaTokens(cx.oppStats, 'o');   // Todesmarker als einzelne Tokens auf dem Tisch
   const pnd = G.players[ME].stats.gold, slotC = M.slotStepCost(G, G.players[ME].stats);
-  if (!cx.combat && pnd >= slotC && G.players[ME].slots < M.MAX_SLOTS) {
+  if (!cx.combat && pnd >= slotC && G.players[ME].slots < M.slotMax(G.rules)) {
     const canSlot = myTurn();
     const stp = n > 1 ? Math.min(L_MY.gap, (L_MY.span - CW * L_MY.s) / (n - 1)) : L_MY.gap, nx = slotX(n - 1, n, L_MY) + stp;   // Platz des nächsten Handplatzes
     ph += '<div class="slotgh" style="left:' + nx + 'px;top:' + L_MY.y + 'px"></div>' +
@@ -3658,7 +3662,7 @@ function statsBlock(name, s, p, size, up, full) {
   const plc = (show, afford, w, label, c) => !show ? '' : '<button class="up ' + UC + (c > 1 ? ' costly' : '') + (afford ? '' : ' off') + '" data-act="spend" data-w="' + w + '"' + (c > 1 ? ' data-c="' + c + '"' : '') + (afford ? '' : ' disabled') + ' title="' + label + ' (' + M.goldTxt(c) + (afford ? '' : ', dir fehlt Gold') + ')"></button>';
   const hpPl = M.maxed(s, 'hp', G.rules) ? '' : hc > 1 ? plc(up && anyT && pend > 0, pend >= hc, 'hp', '+' + (G.rules.hpPerPoint || 1) + ' max. HP', hc) : pl(up && anyT && pend > 0, 'hp', '+' + (G.rules.hpPerPoint || 1) + ' max. HP (' + one + ')');
   const manaPl = M.maxed(s, 'mana', G.rules) ? '' : mc > 1 ? plc(up && anyT && pend > 0, pend >= mc, 'mana', '+1 max. Mana', mc) : pl(up && anyT && pend > 0, 'mana', '+1 max. Mana (' + one + ')');
-  const limPl = lc > 1 ? plc(up && anyT && pend > 0 && s.limit < M.MAX_LIMIT, pend >= lc, 'limit', '+1 Ausspiellimit', lc) : pl(up && anyT && pend >= lc && s.limit < M.MAX_LIMIT, 'limit', '+1 Ausspiellimit (' + one + ')');
+  const limPl = lc > 1 ? plc(up && anyT && pend > 0 && s.limit < M.limitMax(G.rules), pend >= lc, 'limit', '+1 Ausspiellimit', lc) : pl(up && anyT && pend >= lc && s.limit < M.limitMax(G.rules), 'limit', '+1 Ausspiellimit (' + one + ')');
   const lead = b => compact ? '' : '<span class="lead">' + (b || '') + '</span>';   // Upgrade-Knöpfe stehen links neben dem Symbol; ohne Knöpfe schrumpft die Spalte auf 0 (Ausrichtung wie beim Gegner)
   const hasUp = !compact && !!(hpPl || manaPl || limPl);
   const hp = '<div class="statrow">' + lead(hpPl) + img('hp') + '<b data-pv="hp">' + Math.max(0, s.hp) + '/' + s.maxHp + '</b></div>';

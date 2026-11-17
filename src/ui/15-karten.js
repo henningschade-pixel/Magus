@@ -150,7 +150,7 @@ function renderCards() {
   }
   if (cx.combat) ph += deathTokens(cx.myStats, 's') + deathTokens(cx.oppStats, 'o') + healTokens(cx.myStats, 's') + healTokens(cx.oppStats, 'o') + manaTokens(cx.myStats, 's') + manaTokens(cx.oppStats, 'o');   // Todesmarker als einzelne Tokens auf dem Tisch
   const pnd = G.players[ME].stats.gold, slotC = M.slotStepCost(G, G.players[ME].stats);
-  if (!cx.combat && pnd >= slotC && G.players[ME].slots < M.MAX_SLOTS) {
+  if (!cx.combat && pnd >= slotC && G.players[ME].slots < M.slotMax(G.rules)) {
     const canSlot = myTurn();
     const stp = n > 1 ? Math.min(L_MY.gap, (L_MY.span - CW * L_MY.s) / (n - 1)) : L_MY.gap, nx = slotX(n - 1, n, L_MY) + stp;   // Platz des nächsten Handplatzes
     ph += '<div class="slotgh" style="left:' + nx + 'px;top:' + L_MY.y + 'px"></div>' +

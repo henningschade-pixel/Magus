@@ -14,7 +14,10 @@ function regenGain(state) { const r = state.rules.regenByStage; return r ? (r[Ma
 // Kategorien: hp, mana, limit, slot, draw (Nachziehlimit) und mag (Magie, alle drei Richtungen zusammen, unabhängig von der Stufe); s.buys zählt die Käufe des Spielers.
 function bought(s, k) { return (s && s.buys && s.buys[k]) || 0; }
 function risen(state, base, s, k) { return base * (1 + (state.rules.priceRise || 0) * bought(s, k)); }
-function maxed(s, k, rules) { const m = rules ? rules.maxUpgrades : MAX_UPGRADES; return m > 0 && bought(s, k) >= m; }   // HP und Mana der Spieler: höchstens zwei Ausbauten (Regel maxUpgrades 2; 0 = ohne Obergrenze, so nur in 0.13.2.2). Ohne ‚rules‘ gilt die alte feste Grenze
+function maxed(s, k, rules) { if (rules && rules.uncapped && k === 'hp') return false; const m = rules ? rules.maxUpgrades : MAX_UPGRADES; return m > 0 && bought(s, k) >= m; }   // seit 0.14.4 (Regel uncapped 1, Test): HP ohne Obergrenze; Mana behält zwei Ausbauten   // HP und Mana der Spieler: höchstens zwei Ausbauten (Regel maxUpgrades 2; 0 = ohne Obergrenze, so nur in 0.13.2.2). Ohne ‚rules‘ gilt die alte feste Grenze
+// Höchstwerte des Ausspiellimits und der Handplätze der Spieler: seit 0.14.4 ohne Obergrenze (Regel uncapped 1; 0 = wie bisher 3 bzw. 5). Monster behalten MAX_SLOTS und MONSTER_MAX_LIMIT.
+function limitMax(rules) { return rules && rules.uncapped ? Infinity : MAX_LIMIT; }
+function slotMax(rules) { return rules && rules.uncapped ? Infinity : MAX_SLOTS; }
 function buyCount(s, k) { s.buys = s.buys || {}; s.buys[k] = (s.buys[k] || 0) + 1; }
 function limitStepCost(state, s) { return risen(state, state.rules.limitCost > 0 ? state.rules.limitCost : (s.limit <= 1 ? state.rules.limitFirstStepCost : 1), s, 'limit'); }
 function manaStepCost(state, s) { return risen(state, 1, s, 'mana'); }

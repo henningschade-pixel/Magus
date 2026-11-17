@@ -338,6 +338,13 @@ Keine Regeländerung, nur die Bedienung des Tempels: Das Opfern läuft wie die U
 
 - **Heilung wieder nach Angriff und Verteidigung:** Die Heilung eines Kombos in der Verteidigung (Erde + Wasser) wirkt erst nach dem Schaden und dem Spiegelrückwurf und gleicht ihn nachträglich aus, höchstens bis zu den maximalen HP; ein sonst tödlicher Restschaden lässt sich so noch ausgleichen (HP − Restschaden + Heilung, nie unter 0, nie über dem Maximum). Zerrüttung, Lähmung, Läuterung und Spiegel wirken wie seit 0.4 **vor** der Verteidigung. Im Angriff ändert sich nichts. Umsetzung: `execDefense` und `defenseComboPre` in `src/engine/65-kampfablauf.js`; Vorschau (`previewDefense`) und Animation folgen derselben Reihenfolge (Heilungseffekt mit `late`).
 
+## Änderung 0.14.4 (17.11.)
+
+- **Regeländerung (Test): Obergrenzen aufgehoben.** Neuer Schalter `uncapped` (Standard 1; 0 = Stand 0.14.3.2). Max. HP, Ausspiellimit und Handplätze der Spieler haben keine Obergrenze mehr (`maxed` für HP, `limitMax`, `slotMax` in `src/engine/20-werte.js`); der Preis steigt weiter um den Grundpreis je Kauf (1, 2, 3, 4 …).
+- **Unverändert:** Mana höchstens zwei Ausbauten (4 → 6, `maxUpgrades` 2); Magie höchstens Stufe 3 je Farbe (Karten gibt es nur bis Stufe 3, Schaden = min(Stufe, Magie)); Monster behalten ihre Grenzen (Limit 5, Hand höchstens 5).
+- **KI:** Die Ausbauwerte (`hpB`, `limitB`, `slotB` usw.) sind nicht neu abgestimmt; mehr als bisher kauft sie nur mit übrigem Gold (alle Magie auf Stufe 3 bzw. letzter Eintrag der Kaufliste).
+- Offen: Anzeige bei mehr als 5 Handplätzen und Balance (Monster sind auf Limit 3 / Hand 5 der Spieler abgestimmt).
+
 ## Änderung 0.14.3.2 (16.11.)
 
 Keine Regeländerung, nur Darstellung: Gratis-Nachziehtokens liegen in der Marker-Spalte (am Ende der Reihe nach Todes-, Heil-, Mana- und Schildmarkern und Fallen) statt am Nachziehstapel.

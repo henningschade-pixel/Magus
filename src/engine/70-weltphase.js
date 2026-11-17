@@ -49,12 +49,12 @@ function execSpend(state, pid, what) {
     if (s.gold < cost) return fail('Der nächste Mana-Schritt kostet ' + goldTxt(cost) + '.');
     s.maxMana++; buyCount(s, 'mana');   // nur das Maximum steigt, das aktuelle Mana bleibt
   } else if (what === 'limit') {
-    if (s.limit >= MAX_LIMIT) return fail('Das Ausspiellimit ist am Maximum (' + MAX_LIMIT + ').');
+    if (s.limit >= limitMax(state.rules)) return fail('Das Ausspiellimit ist am Maximum (' + MAX_LIMIT + ').');
     cost = limitStepCost(state, s);
     if (s.gold < cost) return fail('Das nächste Limit kostet ' + goldTxt(cost) + '.');
     s.limit++; buyCount(s, 'limit');
   } else if (what === 'slot') {
-    if (p.slots >= MAX_SLOTS) return fail('Du hast schon ' + MAX_SLOTS + ' Handplätze.');
+    if (p.slots >= slotMax(state.rules)) return fail('Du hast schon ' + MAX_SLOTS + ' Handplätze.');
     cost = slotStepCost(state, s);
     if (s.gold < cost) return fail('Der nächste Handplatz kostet ' + goldTxt(cost) + '.');
     p.slots++; d.hand.push(null); buyCount(s, 'slot');
