@@ -32,7 +32,7 @@ Eine Partie hat drei Abschnitte (1, 2, 3). Je Abschnitt gibt es drei Monster (St
 
 Im eigenen Zug genau eine Aktion, danach wechselt der Spieler: **Nachziehen, in der Bibliothek tauschen (Händler) oder einen Kampf beginnen (Angriff)**. Magie kaufen und jedes Upgrade kaufen (Magiestufe, HP, Mana, Limit, Handkarten, Nachziehlimit, alles mit Gold) sind **keine Aktion** (seit 0.9.3): Der Spieler bleibt am Zug und darf davon beliebig viele ausführen, bevor er eine der drei Aktionen wählt. Upgrade-Punkte und Gold dürfen aufgespart werden. Eine Erholungsphase gibt es nicht.
 
-**Regeneration:** Bei jedem Zugwechsel erhält der Spieler, der dran kommt, **HP und Mana in Höhe des Abschnitts** (Abschnitt 1: +1/+1, Abschnitt 2: +2/+2, Abschnitt 3: +3/+3; nicht über das Maximum). Dasselbe bekommt der Verteidiger nach einem Kampf. Alle lebenden Monster regenerieren am Ende jeder Runde +1 HP und +1 Mana (Regel `regenByStage` gilt nur für Spieler).
+**Regeneration:** Bei jedem Zugwechsel erhält der Spieler, der dran kommt, **HP und Mana in Höhe des Abschnitts** (Abschnitt 1: +1/+1, Abschnitt 2: +2/+2, Abschnitt 3: +3/+3; nicht über das Maximum). Dasselbe bekommt der Verteidiger nach einem Kampf. Monster regenerieren nicht (seit 0.14.7); `regenByStage` gilt nur für Spieler.
 
 **Nachziehen:** Alle nicht gesperrten Handkarten wandern auf den Ablagestapel, freie Plätze werden aus dem Deck neu gefüllt (Deck leer: Ablagestapel mischen). Rechtsklick sperrt eine Karte. Nachziehen beendet den Zug.
 
@@ -71,7 +71,7 @@ Der aktive Spieler wählt ein lebendes Monster und greift an, der Mitspieler fü
 - Fällt eine Seite auf 0 HP, hat die andere gewonnen; fallen beide gleichzeitig, gibt es keinen Sieger. Geprüft wird in fester Reihenfolge (seit 0.8.3.1): 1) reflektierter Schaden (Falle), 2) Schaden nach der Verteidigung (samt Heilung), 3) Dauereffekte am Ende der Angriffsphase (Todesfluch, Erschöpfung, Meditation und Erleuchtung). Die erste Stufe, in der eine Seite auf 0 HP fällt, entscheidet; spätere Stufen wirken dann nicht mehr.
 - Haben beide 0 Mana, endet der Kampf **nicht mehr automatisch** ohne Sieger. Er geht weiter: Erholen im Angriffszug bringt Mana, der Todesfluch zehrt am Ende der Angriffsphasen. Beenden lässt er sich seit 0.9.1 nur noch durch Sieg, Niederlage oder die **Erschöpfung**; **Fliehen** (möglich, wenn der Gegner 0 Mana hat) ist abgeschaltet (`fleeAllowed` 0, siehe Änderung 0.9.1). Als technische Sicherung endet ein Kampf nach 400 Schritten ohne Sieger.
 - Siegt der Spieler gegen das Monster, gibt es **keine Beute** (`monsterLoot` 0; ohne die Regel gälte das Gold des Monsters 1/2/3, auch für den Monsterführer mit `lootBoth`). Der Angreifer erhält 1 Siegpunkt (`monsterSp`); der Monsterführer verliert nichts. Siegt das Monster, gibt es keine Beute, und das Monster **zieht sich zurück**: Es verlässt das Brett, gilt als besiegt und bringt keine Beute (sonst ließe sich die Hilfe durch absichtliche Niederlagen farmen, die HP stiegen ohne Ende); der Angreifer verliert 1 Siegpunkt (nie unter 0), der Monsterführer gewinnt und verliert dabei nie Siegpunkte. **Ausgleich (seit 0.4, vorher „Hilfe“ für beide):** Gewinnt das Monster, erhält nur der Verlierer (der Angreifer) Gold: 1 / 2 / 3 je Abschnitt (`lossHelp` 1, `lossGold` [0,1,2,3], `lossPoints` 0, `lossBoth` 0; mit `lossBoth` 1 bekämen beide den Ausgleich), ohne Begrenzung. Ohne Sieger (Flucht, beide fallen) gibt es weder Beute noch Siegpunkte, das Monster bleibt am Leben.
-- In Monsterkämpfen bleiben HP und Mana erhalten und regenerieren in der Weltphase; vor und nach einem Showdown sind sie voll.
+- In Monsterkämpfen bleiben HP und Mana der Monster erhalten (seit 0.14.7 gibt es keine Erholung der Monster mehr); vor und nach einem Showdown sind die der Spieler voll.
 
 **Ergebnis-Bildschirm:** Nach der letzten Aktion läuft die Animation zu Ende, die Werte passen sich an, der Bildschirm dunkelt ab und zeigt „Sieg“, „Niederlage“ oder „Unentschieden“ (bei Sieg mit Beute). Erst nach einem Klick geht es in die Weltphase zurück.
 
@@ -337,6 +337,12 @@ Keine Regeländerung, nur die Bedienung des Tempels: Das Opfern läuft wie die U
 ## Änderungen 0.5.4 (04.11.)
 
 - **Heilung wieder nach Angriff und Verteidigung:** Die Heilung eines Kombos in der Verteidigung (Erde + Wasser) wirkt erst nach dem Schaden und dem Spiegelrückwurf und gleicht ihn nachträglich aus, höchstens bis zu den maximalen HP; ein sonst tödlicher Restschaden lässt sich so noch ausgleichen (HP − Restschaden + Heilung, nie unter 0, nie über dem Maximum). Zerrüttung, Lähmung, Läuterung und Spiegel wirken wie seit 0.4 **vor** der Verteidigung. Im Angriff ändert sich nichts. Umsetzung: `execDefense` und `defenseComboPre` in `src/engine/65-kampfablauf.js`; Vorschau (`previewDefense`) und Animation folgen derselben Reihenfolge (Heilungseffekt mit `late`).
+
+## Änderung 0.14.7 (21.11.)
+
+- **Regeländerung: Monster erholen sich in der Weltphase nicht mehr.** Bisher bekamen alle lebenden Monster am Ende jeder Runde (nach den Zügen beider Spieler) +1 HP und +1 Mana. Da jeder Monsterkampf mit einem Gewinner endet, entfällt diese Mechanik.  Da kein Monster mehr verletzt in die Weltphase zurückkehrt, ändert sich am Spielverlauf nichts.
+- **Code:** `regenMonsters` (`src/engine/30-monster.js`) und der Aufruf in `endTurn` (`src/engine/70-weltphase.js`) sind gestrichen. Die Regeneration der Spieler (`regenByStage`) bleibt. `state.worldTurns` zählt weiter, wird aber nur noch von der KI gelesen.
+- **KI:** Keine Änderung am Code; der Computergegner rechnet mit den Monstern, wie sie im Kampf angetroffen werden. `tests/golden.json` bleibt unverändert (Test „Verhalten unverändert“ grün).
 
 ## Änderung 0.14.6 (17.11.)
 

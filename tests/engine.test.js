@@ -1430,7 +1430,7 @@ test('Zermürbung: Rundenzähler der Weltphase, ab Runde exhaustRounds + 1 schen
   const before = gold(); const att = s.turn;
   assert.ok(M.apply(s, { pid: att, type: 'combat', elem: 'F' }).ok); assert.deepEqual(gold(), before, 'Angriff: kein Gold');
   let n = 0; while (s.combat && n < 400) { assert.ok(M.apply(s, { pid: s.combat.sides[s.combat.turn].ctrl, type: 'pass' }).ok); n++; }
-  assert.equal(s.worldTurns, 0, 'worldTurns (Monstererholung, KI) wird weiter zurückgesetzt');
+  assert.equal(s.worldTurns, 0, 'worldTurns (KI) wird weiter zurückgesetzt');
   assert.equal(M.worldRound(s), 3, 'Zähler der Weltphase läuft nach dem Monsterkampf weiter (0.9.7.1)'); assert.equal(M.worldWear(s), true);
   // aus: exhaustRounds 0
   const t = M.newGame({ seed: 11, ai: [false, false], first: 0, rules: { exhaustRounds: 0 } });

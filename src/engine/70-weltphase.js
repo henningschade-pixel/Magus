@@ -11,7 +11,7 @@ function deckAvg(p) {
 function sample(state, ev) {
   state.hist.push({ ev: ev || null, p: state.players.map(p => Object.assign(deckAvg(p), { sp: p.sp, up: Object.values(p.stats.buys || {}).reduce((a, b) => a + b, 0), F: p.stats.mag.F, E: p.stats.mag.E, W: p.stats.mag.W, slots: p.slots, limit: p.stats.limit, dl: p.stats.drawLimit, hp: p.stats.maxHp, mana: p.stats.maxMana })) });
 }
-// Zermürbung (seit 0.9.7): Die Weltphase hat denselben Rundenzähler wie der Kampf (eine Runde = ein Zug jedes Spielers). Seit 0.9.7.1 zählt ihn state.wearTurns: alle Züge der Weltphase, ein Monsterkampf setzt ihn NICHT zurück (nur ein Showdown, mit dem ein neuer Abschnitt beginnt); state.worldTurns (Züge seit dem letzten Kampf) dient weiter der Monstererholung und der KI. Ist der kritische Wert (exhaustRounds, 0 = aus) erreicht, also ab Runde exhaustRounds + 1, bekommt der Gegner am Ende jedes Zuges, in dem kein Monster angegriffen wurde, Gold in Höhe der Spielstufe (Abschnitt 1/2/3).
+// Zermürbung (seit 0.9.7): Die Weltphase hat denselben Rundenzähler wie der Kampf (eine Runde = ein Zug jedes Spielers). Seit 0.9.7.1 zählt ihn state.wearTurns: alle Züge der Weltphase, ein Monsterkampf setzt ihn NICHT zurück (nur ein Showdown, mit dem ein neuer Abschnitt beginnt); state.worldTurns (Züge seit dem letzten Kampf) dient nur noch der KI. Ist der kritische Wert (exhaustRounds, 0 = aus) erreicht, also ab Runde exhaustRounds + 1, bekommt der Gegner am Ende jedes Zuges, in dem kein Monster angegriffen wurde, Gold in Höhe der Spielstufe (Abschnitt 1/2/3).
 function worldRound(state) { return Math.floor((state.wearTurns || 0) / 2) + 1; }
 function worldWear(state) { const ex = state.rules.exhaustRounds || 0; return ex > 0 && state.phase === 'world' && worldRound(state) > ex; }
 function worldWearGold(state) { return Math.max(1, Math.min(3, state.stage || 1)); }
@@ -26,7 +26,6 @@ function endTurn(state, pid, kind) {
   state.wearTurns = (state.wearTurns || 0) + 1;
   state.turn = nx; state.worldTurns++; state.idleTurns++;
   sample(state);
-  if (state.worldTurns % 2 === 0) regenMonsters(state);   // Monster erholen sich am Ende jeder Runde (nach den Zügen beider Spieler)
   if (state.rules.idleLimit > 0 && state.idleTurns >= state.rules.idleLimit && state.phase === 'world') {   // Stillstand: Seit dem letzten entschiedenen Kampf sind idleLimit Züge vergangen, ohne dass ein Monster fiel (Fluchten zählen nicht): der Showdown beginnt sofort
     log(state, 'Stillstand: Seit ' + state.rules.idleLimit + ' Zügen fiel kein Monster. Der Showdown beginnt.');
     startShowdown(state);

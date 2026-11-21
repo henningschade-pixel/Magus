@@ -129,7 +129,6 @@ function monsterHand(m) { return Math.min(MAX_SLOTS, Math.max(2, Math.max(MIN_SL
 function monsterAlive(m) { return m.stats.hp > 0; }
 // Monsterphase vorbei: alle drei Monster sind besiegt.
 function allMonstersDead(state) { return ELEMENTS.every(e => !monsterAlive(state.monsters[e])); }
-function regenMonsters(state) { ELEMENTS.forEach(e => { const m = state.monsters[e]; if (monsterAlive(m)) regen(m.stats); }); }
 
 // Monster eines Abschnitts für ein Spiel: gewürfelt (eigener, vom Spielzufall getrennter Strom) oder feste Grundform.
 function spawnForGame(state, stage) {
