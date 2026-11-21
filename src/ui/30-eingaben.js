@@ -55,8 +55,13 @@ function onAct(d) {
     case 'drawyes': drawAsk = false; if (canDrawNow()) act({ type: 'draw' }); else render(); break;
     case 'drawno': drawAsk = false; render(); break;
     case 'freedraw': act({ type: 'freeDraw' }); break;
-    case 'attack': lfNoAuto(); act({ type: 'attack' }); break;
-    case 'defend': lfNoAuto(); act({ type: 'defend' }); break;
+    case 'attack': case 'defend': {   // Läuterung mit ungewählten Markern: erst warnen (seit 0.14.8), dann ausführen
+      const u = lfUnpicked();
+      if (u && u.fehlt > 0 && !lfAsk) { lfAsk = true; render(); break; }
+      lfAsk = false; lfNoAuto(); act({ type: d.act }); break;
+    }
+    case 'lfyes': { const c = G.combat; lfAsk = false; lfNoAuto(); act({ type: c && c.action === 'defense' ? 'defend' : 'attack' }); break; }
+    case 'lfno': lfAsk = false; render(); break;
     case 'pass': act({ type: 'pass' }); break;
     case 'recover': act({ type: 'recover' }); break;
     case 'fleeask': fleeAsk = true; render(); break;

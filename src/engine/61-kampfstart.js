@@ -23,13 +23,16 @@ function startCombat(state, attPid, slot) {   // slot: Platz des Monsters (F, E,
   const m = state.monsters[slot], el = m.el;
   const mdeck = newDeck(state, m.deckIds, monsterHand(m));
   state.players.forEach(p => { p.stats.freeDraws = 0; });
-  m.stats.freeDraws = 0; m.drawN = 0; m.drawRed = false;   // eigener Nachziehmarker des Monsters (Limit: stats.drawLimit), frisch zu Kampfbeginn
+  m.stats.freeDraws = m.stats.startFree || 0; m.drawN = 0; m.drawRed = false;   // Würfelseite „Gratis-Nachziehen“ (seit 0.14.8): Plus gibt dem Monster, Minus dem Angreifer Gratis-Nachziehen zu Kampfbeginn
+  if (m.stats.attFree) A.stats.freeDraws = m.stats.attFree;   // eigener Nachziehmarker des Monsters (Limit: stats.drawLimit), frisch zu Kampfbeginn
   state.combat = newCombat(state, {
     mode: 'monster', elem: el, slot, att: attPid, def: other(attPid),
     sides: { a: playerSide(state, attPid, 'a'), b: { key: 'b', kind: 'monster', ctrl: other(attPid), name: m.name, stats: m.stats, deck: mdeck, monster: m } },
   });
   state.phase = 'combat'; traceStep(state);
   log(state, A.name + ' greift ' + m.name + ' an. ' + state.players[other(attPid)].name + ' führt das Monster.', attPid);
+  if (m.stats.startFree) log(state, m.name + ' beginnt mit ' + m.stats.startFree + ' Gratis-Nachziehen (Würfel).', other(attPid));
+  if (m.stats.attFree) log(state, A.name + ' beginnt mit ' + m.stats.attFree + ' Gratis-Nachziehen (Würfel).', attPid);
 }
 function pickShowdownAttacker(state) {
   // der Zurückliegende beginnt

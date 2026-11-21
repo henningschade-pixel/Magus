@@ -42,6 +42,13 @@ function lfCtx() {
   if (!(lw > 0)) return null;
   return { cx, c, lvl: lw, picks: lfExpand(lfPicks(cx, lw), cx) };
 }
+// Seit 0.14.8: Wie viele wählbare Marker bleiben ungewählt? Die Läuterung darf lvl Marker entfernen; es zählen alle Marker auf dem Brett (eigene und gegnerische, auch Nachziehtokens). Rückgabe: { fehlt, moeglich, gewaehlt } oder null, wenn keine Läuterung vorbereitet ist.
+function lfUnpicked() {
+  const L = lfCtx(); if (!L) return null;
+  let avail = 0; ['sd', 'od', 'sm', 'om', 'sh', 'oh', 'sr', 'or', 'st', 'ot'].forEach(k => { avail += lfHave(L.cx, k, ''); });
+  const moeglich = Math.min(L.lvl, avail);
+  return { fehlt: Math.max(0, moeglich - L.picks.length), moeglich, gewaehlt: L.picks.length };
+}
 // Seit 0.14.3: Wurde nichts gewählt, geht ausdrücklich eine leere Wahl an die Engine (sonst wählte deren Automatik beim Ausführen Marker, die die Anzeige nicht gezeigt hat).
 function lfNoAuto() { const L = lfCtx(); if (L && !Array.isArray(L.c.lfp)) act({ type: 'lfp', pick: [] }); }
 // (Seit 0.8 gibt es keine Farbspiegel mehr: die Wahl gilt unverändert.)
@@ -74,6 +81,9 @@ function combatCenter(cx) {
   if (atk) h += (AL('attack') ? '<button class="btn danger" data-act="attack" ' + (my && canExec ? '' : 'disabled') + ' title="Angriff ausführen: Schaden der markierten Karten">Angriff (' + val + ')</button>' : '') + bRecover + bDraw + bPass + (G.rules.fleeAllowed ? '<button class="btn" data-act="fleeask" ' + (canFlee ? '' : 'disabled') + ' title="Den Kampf abbrechen: kein Sieger, keine Siegpunkte. Geht nur im eigenen Angriffszug, wenn der Gegner kein Mana mehr hat und du nicht unter einem Todesfluch stehst.">Fliehen</button>' : '');   // Fliehen seit 0.9.1 abgeschaltet (Regel fleeAllowed)
   else if (my) h += (AL('defend') && c.pending > 0 ? '<button class="btn primary" data-act="defend" ' + (canExec ? '' : 'disabled') + ' title="Verteidigung ausführen: Block der markierten Karten">Verteidigen (' + val + ')</button>' : '') + bRecover + bDraw + bPass;
   h += '</div>';
+  const lfU = my ? lfUnpicked() : null;
+  if (!(lfAsk && lfU && lfU.fehlt > 0)) lfAsk = false;
+  if (lfAsk) h += '<div class="fleewarn"><b>Läuterung: Marker nicht gewählt.</b> Du hast ' + lfU.gewaehlt + ' von ' + lfU.moeglich + ' möglichen Markern gewählt. Nicht gewählte Marker bleiben liegen, und für sie gibt es kein Nachziehtoken. Klicke die Marker auf dem Brett an (Totenköpfe, Heil- und Manamarker, Schilde, Nachziehtokens) oder führe die Läuterung so aus.<div class="btnrow" style="margin-top:6px"><button class="btn primary" data-act="lfno">Marker wählen</button><button class="btn" data-act="lfyes">Trotzdem ausführen</button></div></div>';
   if (fleeAsk && canFlee) {   // Warnung: Fliehen muss bestätigt werden
     const nextMe = c.def === ME;
     h += '<div class="fleewarn"><b>Wirklich fliehen?</b> ' + (c.mode === 'showdown' ? 'Der Showdown endet ohne Sieger und ohne Siegpunkte.' : 'Der Kampf endet ohne Sieger. ' + esc(c.sides.b.name) + ' behält seine Verletzungen. ' + (nextMe ? 'Du bist danach am Zug und kannst das Monster selbst angreifen.' : esc(G.players[c.def].name) + ' ist danach am Zug und kann das Monster angreifen.')) + '<div class="btnrow" style="margin-top:6px"><button class="btn danger" data-act="flee">Fliehen</button><button class="btn" data-act="fleeno">Bleiben</button></div></div>';

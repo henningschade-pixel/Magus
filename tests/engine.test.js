@@ -165,18 +165,18 @@ test('Monster-Würfel (0.4): Deckform spitz/breit, ein Plus- und ein Minuswürfe
       assert.equal(m.stats.maxHp, Math.max(1, bh + d('hp')), 'HP ' + m.label);
       assert.equal(m.stats.maxMana, Math.max(1, bm + d('mana')), 'Mana ' + m.label);
       assert.equal(m.stats.limit, Math.min(M.MONSTER_MAX_LIMIT, Math.max(1, limit[st] + d('limit'))), 'Limit ' + m.label);
-      assert.equal(m.stats.handExtra || 0, d('hand')); assert.equal(m.stats.drawLimit, Math.min(M.MAX_DRAW_LIMIT, Math.max(1, 2 + d('draws'))));
+      assert.equal(m.stats.handExtra || 0, d('hand')); assert.equal(m.stats.drawLimit, 2, 'Ziehen-Seite gibt es nicht mehr'); assert.equal(m.stats.startFree || 0, Math.max(0, d('free')), 'Gratis-Nachziehen des Monsters'); assert.equal(m.stats.attFree || 0, Math.max(0, -d('free')), 'Gratis-Nachziehen des Angreifers');
       seenForm[v.d] = 1; seenPlus.add(v.pl); seenMinus.add(v.mi);
     }
   }
   assert.equal(Object.keys(seenForm).length, 2); assert.equal(seenPlus.size, 6); assert.equal(seenMinus.size, 6);
 });
 
-test('Monster-Würfel: sechs Seiten (Plus: HP, Mana, Magie, Ziehen, Hand, leer; Minus: Limit statt Magie), je 1, in allen Stufen gleich', () => {
+test('Monster-Würfel: sechs Seiten (Plus: HP, Mana, Magie, Gratis-Nachziehen, Hand, leer; Minus: Limit statt Magie), je 1, in allen Stufen gleich', () => {
   const D = M.MONSTER.variants.dice;
   assert.equal(D.plus.length, 6); assert.equal(D.minus.length, 6);
-  assert.deepEqual(D.plus.map(f => [f.k, f.n[0]]), [['hp', 1], ['mana', 1], ['mag', 1], ['draws', 1], ['hand', 1], ['none', 0]]);
-  assert.deepEqual(D.minus.map(f => [f.k, f.n[0]]), [['hp', 1], ['mana', 1], ['limit', 1], ['draws', 1], ['hand', 1], ['none', 0]]);
+  assert.deepEqual(D.plus.map(f => [f.k, f.n[0]]), [['hp', 1], ['mana', 1], ['mag', 1], ['free', 1], ['hand', 1], ['none', 0]]);
+  assert.deepEqual(D.minus.map(f => [f.k, f.n[0]]), [['hp', 1], ['mana', 1], ['limit', 1], ['free', 1], ['hand', 1], ['none', 0]]);
   for (const f of D.plus) assert.ok(f.n[0] === f.n[1] && f.n[1] === f.n[2], 'stufenunabhängig: ' + f.k);
 });
 
@@ -1560,3 +1560,24 @@ test('KI in der Reaktion ohne Angriff: Nachziehen bei schwacher Hand und vorhand
   assert.equal(AI.plan(s, op.ctrl)[0].type, 'pass', 'gute Hand, Mana voll: nichts zu tun');
   const r = M.apply(s, { pid: op.ctrl, type: 'pass' }); assert.ok(r.ok);
 });
+
+test('Stufe-I-Spezialist hat eine Karte der unterlegenen Farbe (0.14.8), Generalist unverändert', () => {
+  const V = M.MONSTER.variants;
+  for (const el of M.ELEMENTS) {
+    const P = el, S = M.MONSTER.profile[el].secondary, T = M.ELEMENTS.find(e => e !== P && e !== S);
+    const spitz = V.deck[1][2](P, S, T), breit = V.deck[1][1](P, S, T), n = (d, x) => d.filter(c => c[0] === x).length;
+    assert.equal(spitz.length, 9); assert.deepEqual([n(spitz, P), n(spitz, S), n(spitz, T)], [5, 3, 1]); assert.equal(spitz.filter(c => c === P + '2').length, 4);
+    assert.deepEqual([n(breit, P), n(breit, S), n(breit, T)], [4, 3, 2]);
+  }
+});
+
+test('Würfelseite Gratis-Nachziehen: Plus gibt dem Monster, Minus dem Angreifer ein Gratis-Nachziehen zu Kampfbeginn (0.14.8)', () => {
+  const D = M.MONSTER.variants.dice, saved = [JSON.parse(JSON.stringify(D.plus)), JSON.parse(JSON.stringify(D.minus))], zero = { k: 'none', n: [0, 0, 0] }, free = { k: 'free', n: [1, 1, 1] };
+  try {
+    const start = (pl, mi) => { D.plus.fill(pl); D.minus.fill(mi); const s = M.newGame({ seed: 5, ai: [false, false], first: 0 }); M.apply(s, { pid: 0, type: 'combat', elem: 'F' }); return s.combat; };
+    let c = start(free, zero); assert.equal(c.sides.b.stats.freeDraws, 1, 'Monster'); assert.equal(c.sides.a.stats.freeDraws, 0);
+    c = start(zero, free); assert.equal(c.sides.b.stats.freeDraws, 0); assert.equal(c.sides.a.stats.freeDraws, 1, 'Angreifer');
+    c = start(zero, zero); assert.equal(c.sides.b.stats.freeDraws + c.sides.a.stats.freeDraws, 0);
+  } finally { D.plus.splice(0, 6, ...saved[0]); D.minus.splice(0, 6, ...saved[1]); }
+});
+

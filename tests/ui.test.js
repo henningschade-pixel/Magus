@@ -190,7 +190,10 @@ test('Läuterung: eigene und gegnerische Mana- und Schildmarker sind im Kampfbil
     assert.ok(ks.includes('sm'), 'eigener Manamarker'); assert.ok(ks.includes('or'), 'gegnerisches Schild');
     await p.locator('.manatok.lf[data-k="sm"]').first().click();
     assert.ok((await p.evaluate(() => window.__magus.state.combat.lfp)).includes('sm'));
-    await p.click('[data-act="attack"]'); await p.waitForTimeout(600);
+    await p.click('[data-act="attack"]'); await p.waitForTimeout(300);   // Läuterung 2, aber erst ein Marker gewählt (drei liegen): Warnung (0.14.8)
+    assert.match(await p.textContent('.fleewarn'), /Läuterung: Marker nicht gewählt/); assert.match(await p.textContent('.fleewarn'), /1 von 2/);
+    assert.equal(await p.evaluate(() => window.__magus.state.players[0].stats.manaflow), 2, 'die Warnung hält den Angriff zurück');
+    await p.click('[data-act="lfyes"]'); await p.waitForTimeout(600);
     assert.equal(await p.evaluate(() => window.__magus.state.players[0].stats.manaflow), 1, 'ein eigener Manamarker wurde entfernt');
     assert.deepEqual(errs, []);
   } finally { await b.close(); }
@@ -537,6 +540,34 @@ test('Erschöpfung: Hintergrund dunkelt ab, Ankündigung erscheint, der HP-Abzug
     assert.ok(await p.locator('#stage canvas').count() > 0, 'Abzug als Animation');
     assert.equal(await p.evaluate(() => document.querySelector('.sbody[data-lead] [data-pv="hp"]').textContent.trim()), '50/50', 'HP zeigen bis zum Einschlag den alten Stand');
     await p.waitForFunction(() => document.querySelector('.sbody[data-lead] [data-pv="hp"]').textContent.trim() !== '50/50', null, { timeout: 8000 });
+    assert.deepEqual(errs, []);
+  } finally { await b.close(); }
+});
+
+test('Läuterung: Warnung bei ungewählten Markern, „Marker wählen“ bricht ab, bei vollständiger Wahl keine Warnung (0.14.8)', { skip: !chromium && 'Playwright nicht installiert', timeout: 60000 }, async () => {
+  const b = await chromium.launch({ executablePath: exe });
+  try {
+    const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
+    p.on('pageerror', e => errs.push(e.message));
+    await p.goto(url); await p.waitForTimeout(500);
+    await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(1000);
+    await p.evaluate(() => {
+      const G = window.__magus.state, M = window.Magus; G.turn = 0; M.apply(G, { pid: 0, type: 'combat', elem: 'F' });
+      const me = G.combat.sides.a; me.stats.limit = 3; me.stats.mag = { F: 3, E: 3, W: 3 }; me.stats.mana = me.stats.maxMana = 9;
+      me.stats.death = 2;
+      ['F1', 'E1'].forEach((id, i) => { me.deck.hand[i] = Object.assign({}, me.deck.hand[i], { id }); });   // Läuterung 1
+      M.apply(G, { pid: 0, type: 'mark', slot: 0 }); M.apply(G, { pid: 0, type: 'mark', slot: 1 }); window.__magus.pump();
+    });
+    await p.waitForTimeout(300);
+    await p.click('[data-act="attack"]'); await p.waitForTimeout(300);
+    assert.match(await p.textContent('.fleewarn'), /0 von 1/, 'Warnung: nichts gewählt');
+    await p.click('[data-act="lfno"]'); await p.waitForTimeout(200);
+    assert.equal(await p.$('.fleewarn'), null, 'Warnung geschlossen');
+    assert.equal(await p.evaluate(() => window.__magus.state.phase), 'combat'); assert.equal(await p.evaluate(() => window.__magus.state.combat.turns), 0, 'kein Angriff ausgeführt');
+    await p.locator('button.deathtok.lf[data-k="sd"]').click();
+    await p.click('[data-act="attack"]'); await p.waitForTimeout(600);
+    assert.equal(await p.$('.fleewarn'), null, 'bei vollständiger Wahl keine Warnung');
+    assert.equal(await p.evaluate(() => window.__magus.state.players[0].stats.death), 1, 'ein Todesmarker wurde entfernt');
     assert.deepEqual(errs, []);
   } finally { await b.close(); }
 });

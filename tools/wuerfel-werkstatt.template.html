@@ -84,7 +84,7 @@ textarea{width:100%;height:150px;font:500 12px/1.4 var(--f-mono);resize:vertical
     <div class="panel">
       <h2>Alle Seiten</h2>
       <div class="gal" id="gal"></div>
-      <p class="note" style="margin-top:10px;margin-bottom:0">Beträge wie im Spiel (in allen Stufen gleich): 1 HP, 1 Mana, 1 Limit, 1 Ziehen (Nachziehlimit), 1 Hand (Handkarte), eine Seite leer. Grün macht das Monster in diesem Wert stärker, Rot schwächer; derselbe Wert auf beiden Würfeln hebt sich auf (die Würfel werden dann abgedunkelt).</p>
+      <p class="note" style="margin-top:10px;margin-bottom:0">Beträge wie im Spiel (in allen Stufen gleich): 1 HP, 1 Mana, 1 Limit, 1 Gratis (Gratis-Nachziehen), 1 Hand (Handkarte), eine Seite leer. Grün macht das Monster in diesem Wert stärker, Rot schwächer; derselbe Wert auf beiden Würfeln hebt sich auf (die Würfel werden dann abgedunkelt).</p>
     </div>
   </div>
   <div class="right">
@@ -105,7 +105,7 @@ textarea{width:100%;height:150px;font:500 12px/1.4 var(--f-mono);resize:vertical
 const $ = id => document.getElementById(id);
 const DEF = JSON.parse(JSON.stringify(DiceKit.P));
 const AMOUNTS = [2, 1, 1, 1, 1, 0];   // wie MONSTER.variants.dice im Spiel, alle Stufen gleich
-const FACE_TXT = ['HP', 'Mana', 'Limit', 'Ziehen', 'Hand', 'leer'];
+const FACE_TXT = ['HP', 'Mana', 'Limit', 'Gratis', 'Hand', 'leer'];
 const MON = [{ el: 'F', name: 'Feuer-Spezialist I' }, { el: 'E', name: 'Erd-Generalist I' }, { el: 'W', name: 'Wasser-Spezialist I' }];
 const COL = { F: ['#ff9a4d', '#5a1a08'], E: ['#9bd05a', '#25360f'], W: ['#6cb6ff', '#0f2a4a'] };
 const sel = [{ pl: 4, mi: 0 }, { pl: 1, mi: 5 }, { pl: 5, mi: 2 }];   // gewählte Seiten je Monster (−1 = Zufall)

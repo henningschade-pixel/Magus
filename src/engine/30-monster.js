@@ -23,22 +23,23 @@ const MONSTER = {
   // Dazu kommen zwei Würfel: der Pluswürfel macht das Monster stärker, der Minuswürfel schwächer (gleich starke Ausschläge, die Gesamtstärke bleibt). Die Ausschläge wachsen mit der Stufe: Spalten = Stufe I, II, III.
   variants: {
     deck: {   // Deckformen. Index 0 = Grundform (nur für die feste Form ohne Würfel), 1 = breit (mehr Nebenelement), 2 = spitz (stärkere Spitze, schwächere Basis)
-      1: [null, (P, S, T) => [P + '2', P + '2', P + '1', P + '1', S + '2', S + '1', S + '1', T + '1', T + '1'], (P, S, T) => [P + '2', P + '2', P + '2', P + '2', P + '1', P + '1', S + '2', S + '1', S + '1']],
+      1: [null, (P, S, T) => [P + '2', P + '2', P + '1', P + '1', S + '2', S + '1', S + '1', T + '1', T + '1'], (P, S, T) => [P + '2', P + '2', P + '2', P + '2', P + '1', S + '2', S + '1', S + '1', T + '1']],   // spitz (Spezialist): seit 0.14.8 eine Karte der unterlegenen Farbe statt der zweiten Stufe-1-Karte des Hauptelements (Stärke gemessen unverändert)
       2: [null, (P, S, T) => [P + '3', P + '2', P + '2', S + '3', S + '2', S + '2', T + '1', T + '1', P + '1'], (P, S, T) => [P + '3', P + '3', P + '1', P + '1', S + '3', S + '2', S + '2', T + '1', T + '1']],
       3: [null, (P, S, T) => [P + '3', P + '3', P + '3', P + '2', S + '3', S + '3', S + '2', T + '2', T + '1'], (P, S, T) => [P + '3', P + '3', P + '3', P + '3', P + '1', S + '3', S + '3', T + '2', T + '1']],
     },
     // Die Würfel: sechs Seiten je Würfel, jede Seite ein Wert und sein Ausschlag je Stufe (n: Stufe I, II, III).
     dice: {   // k: Wert, n: Ausschlag je Stufe (seit der Überarbeitung in allen Stufen gleich). Der Minuswürfel dreht das Vorzeichen um; die sechste Seite ist leer. Seit 0.5 trägt der Pluswürfel statt „Limit“ die Seite „mag“: eine Magiestufe mehr auf der Folgemagie des Monsters (Nebenelement seines Profils, seit 0.4 das überlegene Element: Feuer → Wasser, Erde → Feuer, Wasser → Erde)
-      plus:  [{ k: 'hp', n: [1, 1, 1] }, { k: 'mana', n: [1, 1, 1] }, { k: 'mag', n: [1, 1, 1] }, { k: 'draws', n: [1, 1, 1] }, { k: 'hand', n: [1, 1, 1] }, { k: 'none', n: [0, 0, 0] }],
-      minus: [{ k: 'hp', n: [1, 1, 1] }, { k: 'mana', n: [1, 1, 1] }, { k: 'limit', n: [1, 1, 1] }, { k: 'draws', n: [1, 1, 1] }, { k: 'hand', n: [1, 1, 1] }, { k: 'none', n: [0, 0, 0] }],
+      plus:  [{ k: 'hp', n: [1, 1, 1] }, { k: 'mana', n: [1, 1, 1] }, { k: 'mag', n: [1, 1, 1] }, { k: 'free', n: [1, 1, 1] }, { k: 'hand', n: [1, 1, 1] }, { k: 'none', n: [0, 0, 0] }],
+      minus: [{ k: 'hp', n: [1, 1, 1] }, { k: 'mana', n: [1, 1, 1] }, { k: 'limit', n: [1, 1, 1] }, { k: 'free', n: [1, 1, 1] }, { k: 'hand', n: [1, 1, 1] }, { k: 'none', n: [0, 0, 0] }],
     },
-    diceNames: { hp: 'HP', mana: 'Mana', limit: 'Limit', mag: 'Magie', hand: 'Hand', draws: 'Ziehen' },
+    diceNames: { hp: 'HP', mana: 'Mana', limit: 'Limit', mag: 'Magie', hand: 'Hand', free: 'Gratis-Nachziehen', draws: 'Ziehen' },
     diceHints: {
       hp: 'maximale Lebenspunkte',
       mana: 'maximales Mana',
       limit: 'Ausspiellimit (Karten je Zug)',
       mag: 'Magiestufe der Folgemagie des Monsters (das überlegene Element): Feuer → Wasser, Erde → Feuer, Wasser → Erde',
       hand: 'Handkarten',
+      free: 'Gratis-Nachziehen: Plus: das Monster beginnt den Kampf mit mehr Gratis-Nachziehen; Minus: der Angreifer beginnt mit mehr Gratis-Nachziehen',
       draws: 'Ziehen: Nachziehlimit (so oft hintereinander nachziehen, bevor der Marker auf Rot springt)',
     },
   },
@@ -58,6 +59,7 @@ function applyDie(stats, face, sign, stage, el) {
   else if (k === 'mana') { stats.maxMana = Math.max(1, stats.maxMana + n); stats.mana = stats.maxMana; }
   else if (k === 'limit') stats.limit = Math.min(MONSTER_MAX_LIMIT, Math.max(1, stats.limit + n));   // bis auf 1, nie auf 0 (Achtung: Limit 1 führt in Stufe I oft zu Patts, siehe Regelwerk)
   else if (k === 'mag') { const e = MONSTER.profile[el].secondary; stats.mag[e] = Math.min(MAX_MAGIC, Math.max(1, stats.mag[e] + n)); }   // Folgemagie des Monsters (Nebenelement seines Profils)
+  else if (k === 'free') { if (n > 0) stats.startFree = (stats.startFree || 0) + n; else stats.attFree = (stats.attFree || 0) - n; }   // Plus: Gratis-Nachziehen des Monsters zu Kampfbeginn; Minus: die des Angreifers (siehe startCombat)
   else if (k === 'hand') stats.handExtra = (stats.handExtra || 0) + n;
   else if (k === 'draws') stats.drawLimit = Math.min(MAX_DRAW_LIMIT, Math.max(1, stats.drawLimit + n));
 }
@@ -100,7 +102,7 @@ function spawnOne(el, stage, rng, v) {
     const face = die[i], n = face.n[stage - 1];
     applyDie(stats, face, sign, stage, el);
     tags.push((sign > 0 ? '+' : '−') + V.diceNames[face.k]);
-    hints.push((sign > 0 ? 'Pluswürfel' : 'Minuswürfel') + ': ' + (sign > 0 ? '+' : '−') + n + ' ' + V.diceNames[face.k] + ' (' + (sign > 0 ? 'mehr ' : 'weniger ') + V.diceHints[face.k] + ').');
+    hints.push(face.k === 'free' ? (sign > 0 ? 'Pluswürfel: Das Monster beginnt den Kampf mit +' + n + ' Gratis-Nachziehen.' : 'Minuswürfel: Der Angreifer beginnt den Kampf mit +' + n + ' Gratis-Nachziehen.') : (sign > 0 ? 'Pluswürfel' : 'Minuswürfel') + ': ' + (sign > 0 ? '+' : '−') + n + ' ' + V.diceNames[face.k] + ' (' + (sign > 0 ? 'mehr ' : 'weniger ') + V.diceHints[face.k] + ').');
   });
   finalDeck = finalDeck.map(id => id[0] !== 'C' && id[0] !== S && +id[1] > stats.mag[id[0]] ? id[0] + stats.mag[id[0]] : id);   // Eine Karte wirkt höchstens mit der Magie ihrer Farbe: die Anzeige soll das zeigen. Ausnahme: Karten der Folgemagie bleiben auf ihrer höheren Stufe (siehe oben, sie wirken erst mit dem Magiebonus des Pluswürfels)
   rng.shuffle(finalDeck);

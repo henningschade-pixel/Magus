@@ -255,7 +255,7 @@ KI nachgestimmt (`manaA` 5, `vUp` 10,35, `stallDec` −0,05; 60 % gegen die KI d
 
 Jedes Monster hat eine **Deckform** und wird von **zwei Würfeln** verändert. Alles wird beim Erscheinen der Monster eines Abschnitts gewürfelt (aus dem Spielzufall abgeleitet, daher in Mehrspielerpartien auf beiden Geräten gleich).
 
-**Deckform (6 mögliche Monster je Stufe):** Zu jedem der drei Monster (Feuer, Erde, Wasser) gibt es einen **Spezialisten** (spitze Form) und einen **Generalisten** (breite Form), also zum Beispiel „Feuerspezialist II“ und „Feuergeneralist II“, zusammen 3 × 2 = 6 mögliche Monster je Stufe. Davon werden **drei ohne Zurücklegen ausgelost** (20 mögliche Kombinationen, gleich wahrscheinlich): Ein Element kann doppelt vorkommen (dann als Spezialist und als Generalist), ein anderes fehlen. Die Plätze auf dem Brett bleiben Feuer/Erde/Wasser-Plätze in der Reihenfolge der Elemente; das Element steht im Monster selbst. *Spezialist:* stärkere Spitze (mehr Karten der höchsten Stufe), dafür eine schwächere Basis. *Generalist:* mehr Karten im Nebenelement, vielseitiger, dafür schwächere Spitze. Stufe I: Spezialist 4× Hauptelement Stufe 2, 2× Stufe 1, 3× Nebenelement; Generalist 2× Hauptelement Stufe 2, 2× Stufe 1, 3× Nebenelement, 2× drittes Element. Das frühere Nebenelement-Tauschen („Wasser-lastig“) und die Tempel-Varianten „zäh“ und „ausdauernd“ entfallen.
+**Deckform (6 mögliche Monster je Stufe):** Zu jedem der drei Monster (Feuer, Erde, Wasser) gibt es einen **Spezialisten** (spitze Form) und einen **Generalisten** (breite Form), also zum Beispiel „Feuerspezialist II“ und „Feuergeneralist II“, zusammen 3 × 2 = 6 mögliche Monster je Stufe. Davon werden **drei ohne Zurücklegen ausgelost** (20 mögliche Kombinationen, gleich wahrscheinlich): Ein Element kann doppelt vorkommen (dann als Spezialist und als Generalist), ein anderes fehlen. Die Plätze auf dem Brett bleiben Feuer/Erde/Wasser-Plätze in der Reihenfolge der Elemente; das Element steht im Monster selbst. *Spezialist:* stärkere Spitze (mehr Karten der höchsten Stufe), dafür eine schwächere Basis. *Generalist:* mehr Karten im Nebenelement, vielseitiger, dafür schwächere Spitze. Stufe I: Spezialist 4× Hauptelement Stufe 2, 1× Stufe 1, 3× Nebenelement, 1× drittes Element (seit 0.14.8); Generalist 2× Hauptelement Stufe 2, 2× Stufe 1, 3× Nebenelement, 2× drittes Element. Das frühere Nebenelement-Tauschen („Wasser-lastig“) und die Tempel-Varianten „zäh“ und „ausdauernd“ entfallen.
 
 **Pluswürfel und Minuswürfel (je 6 Seiten):** Der Pluswürfel macht das Monster in einem Wert stärker, der Minuswürfel in einem Wert schwächer. Beide haben dieselben sechs Seiten mit demselben Betrag, der Minuswürfel dreht nur das Vorzeichen um. Die Beträge sind **in allen Stufen gleich**:
 
@@ -263,8 +263,8 @@ Jedes Monster hat eine **Deckform** und wird von **zwei Würfeln** verändert. A
 |---|---|---|---|
 | a | +1 HP | −1 HP | maximale Lebenspunkte (mindestens 1) |
 | b | +1 Mana | −1 Mana | maximales Mana (mindestens 1) |
-| c | +1 Limit | −1 Limit | Ausspiellimit (mindestens 1, höchstens 5) |
-| d | +1 Ziehen | −1 Ziehen | Nachziehlimit des Monsters (Grundwert 2, zwischen 1 und 3) |
+| c | +1 Magie (Pluswürfel, seit 0.5) | −1 Limit (Minuswürfel) | Folgemagie bzw. Ausspiellimit (mindestens 1, höchstens 5) |
+| d | +1 Gratis-Nachziehen (Monster) | +1 Gratis-Nachziehen (Angreifer) | seit 0.14.8: Gratis-Nachziehen zu Kampfbeginn (vorher „Ziehen“, ohne Wirkung) |
 | e | +1 Hand | −1 Hand | Handkarten des Monsters (mindestens 2) |
 | f | leer | leer | keine Wirkung, wird nicht angezeigt |
 
@@ -337,6 +337,12 @@ Keine Regeländerung, nur die Bedienung des Tempels: Das Opfern läuft wie die U
 ## Änderungen 0.5.4 (04.11.)
 
 - **Heilung wieder nach Angriff und Verteidigung:** Die Heilung eines Kombos in der Verteidigung (Erde + Wasser) wirkt erst nach dem Schaden und dem Spiegelrückwurf und gleicht ihn nachträglich aus, höchstens bis zu den maximalen HP; ein sonst tödlicher Restschaden lässt sich so noch ausgleichen (HP − Restschaden + Heilung, nie unter 0, nie über dem Maximum). Zerrüttung, Lähmung, Läuterung und Spiegel wirken wie seit 0.4 **vor** der Verteidigung. Im Angriff ändert sich nichts. Umsetzung: `execDefense` und `defenseComboPre` in `src/engine/65-kampfablauf.js`; Vorschau (`previewDefense`) und Animation folgen derselben Reihenfolge (Heilungseffekt mit `late`).
+
+## Änderung 0.14.8 (21.11.)
+
+- **Stufe-I-Spezialist:** Deck jetzt 4× Hauptelement Stufe 2, 1× Stufe 1, Nebenelement 2/1/1, 1× unterlegenes Element Stufe 1 (vorher 2× Stufe 1 des Hauptelements und keine Karte der unterlegenen Farbe). Messung (9000 Angriffe, KI gegen KI, Würfel neutral): Angreifer-Sieg 14,8 % statt 15,3 % bei lauter Spezialisten, 21,2 % statt 21,8 % in der echten Mischung. Die Spezialisten der Stufen II und III hatten diese Karten schon.
+- **Würfelseite „Ziehen“ entfällt, „Gratis-Nachziehen“ (`free`) tritt an ihre Stelle** (beide Würfel, Betrag 1 in allen Stufen). Die alte Seite war ohne Nachziehmarker (`drawMarker` aus) wirkungslos. Pluswürfel: Das Monster beginnt den Kampf mit +1 Gratis-Nachziehen. Minuswürfel: Der Angreifer beginnt den Kampf mit +1 Gratis-Nachziehen. Die Tokens liegen in der Marker-Spalte und lassen sich läutern. Gemessene Verschiebung der Monsterstärke (Prozentpunkte, Stufe I/II/III): Plus +4/+21/+12, Minus +1/−16/−10. Der Nachziehmarker samt `stats.drawLimit` bleibt hinter dem Schalter erhalten.
+- **Läuterung, Warnung (nur Oberfläche, keine Regeländerung):** Ist eine Läuterung vorbereitet und sind weniger Marker gewählt, als gewählt werden dürfen und auf dem Brett liegen (eigene und gegnerische, auch Nachziehtokens), erscheint vor dem Angriff bzw. der Verteidigung eine Warnung mit „Marker wählen“ und „Trotzdem ausführen“. Das Protokoll schreibt weiter „nichts zu entfernen“, wenn nichts gewählt wurde.
 
 ## Änderung 0.14.7 (21.11.)
 
