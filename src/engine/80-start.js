@@ -33,8 +33,9 @@ function newGame(opts) {
   state.turn = opts.first === undefined ? 0 : opts.first;
   const gg1 = (state.rules.stageGold || [])[1] || 0;
   state.players.forEach(p => { p.stats.gold += gg1; p.stats.goldGot += gg1; });
-  log(state, 'Abschnitt 1: Die Monster der Stufe I erscheinen.' + variantLog(state) + (gg1 ? ' Jeder Spieler erhält ' + gg1 + ' Gold.' : ''));
-  if (state.rules.prep) startPrep(state);
+  const l1 = variantLog(state) + (gg1 ? ' Jeder Spieler erhält ' + gg1 + ' Gold.' : '');
+  if (state.rules.prep) { state.openLog = l1; startPrep(state); }   // Vorbereitung: die Monster werden im Protokoll erst nach der Kartenwahl genannt
+  else log(state, 'Abschnitt 1: Die Monster der Stufe I erscheinen.' + l1);
   sample(state);
   return state;
 }

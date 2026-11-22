@@ -1795,9 +1795,9 @@ function applyWorld(state, a) {
   return fail('Unbekannte Aktion.');
 }
 /* Magus – Regelkern (Teil 7b): Vorbereitung (seit 0.15).
-   Die Spieler beginnen ohne Magie (alle drei Stufen 0). Vor dem ersten Zug liegt die Vorbereitung: Die Monster sind aufgedeckt und die Spielerdecks erzeugt, noch ist keine Hand gezogen.
-   Beide Spieler wählen gleichzeitig und verdeckt EINE Karte aus ihrem ganzen Deck. Die Karte kommt auf den Ablagestapel, ihre Farbe ist der erste, kostenlose Magiepunkt (Stufe 1 in dieser Farbe).
-   Erst wenn beide gewählt haben, wird aufgedeckt; danach werden die Starthände gezogen und der erste Zug beginnt. Magie kaufen ist weiterhin offen (in den eigenen Zügen, 1, 2, 3 … Gold); der Gratispunkt zählt dabei nicht mit.
+   Die Spieler beginnen ohne Magie (alle drei Stufen 0). Vor dem ersten Zug liegt die Vorbereitung: Die 24 Stufe-1-Karten sind gemischt und abwechselnd verteilt (je 12), noch ist keine Hand gezogen und die Monster sind noch nicht aufgedeckt (die Oberfläche hält sie verdeckt, das Protokoll nennt sie erst danach).
+   Beide Spieler schauen ihre Karten an und legen gleichzeitig und verdeckt EINE Karte vor sich. Ihre Farbe ist der erste, kostenlose Magiepunkt (Stufe 1 in dieser Farbe).
+   Erst wenn beide gewählt haben, wird aufgedeckt; die Karte geht zurück ins Deck, das Deck wird neu gemischt (Nachziehstapel), die Starthände werden gezogen; danach werden die Monster aufgedeckt (Oberfläche) und der erste Zug beginnt. Magie kaufen ist weiterhin offen (in den eigenen Zügen, 1, 2, 3 … Gold); der Gratispunkt zählt dabei nicht mit.
    state.prep[pid] = uid der gewählten Karte (null = noch nicht gewählt); Aktion { pid, type: 'prepPick', uid }. Wer zuerst fragt, ist egal: die Reihenfolge der beiden Wahlen ändert nichts am Ergebnis. */
 function startPrep(state) {
   state.players.forEach(p => {   // die Starthand geht zurück in den Stapel: gewählt wird aus dem ganzen Deck
@@ -1807,7 +1807,7 @@ function startPrep(state) {
   });
   state.phase = 'prep';
   state.prep = [null, null];
-  log(state, 'Vorbereitung: Beide Spieler wählen gleichzeitig und verdeckt eine Karte aus ihrem Deck. Ihre Farbe wird der erste, kostenlose Magiepunkt.');
+  log(state, 'Vorbereitung: Beide Spieler wählen gleichzeitig und verdeckt eine Karte aus ihrem Deck. Ihre Farbe wird der erste, kostenlose Magiepunkt; die Karte geht danach zurück ins Deck.');
 }
 // Karten, aus denen pid wählen kann (das ganze Deck vor dem ersten Ziehen)
 function prepChoices(state, pid) { const d = state.players[pid].deck; return [].concat(d.draw, d.discard, d.hand.filter(Boolean)); }
@@ -1825,7 +1825,7 @@ function applyPrep(state, a) {
 function finishPrep(state) {
   const picks = state.players.map((p, pid) => {
     const d = p.deck, i = d.draw.findIndex(x => x.uid === state.prep[pid]), c = d.draw.splice(i, 1)[0];
-    d.discard.push(c);
+    d.draw.push(c); state.rng.shuffle(d.draw);   // die Karte kehrt zurück ins Deck, das neu gemischt als Nachziehstapel liegt
     const e = c.id[0];
     p.stats.mag[e] = Math.max(p.stats.mag[e], 1);
     return e;
@@ -1834,6 +1834,7 @@ function finishPrep(state) {
   state.prepPicks = picks;
   state.players.forEach(p => fillHand(state, p.deck));
   state.phase = 'world';
+  log(state, 'Abschnitt 1: Die Monster der Stufe I erscheinen.' + state.openLog); delete state.openLog;
   sample(state);
 }
 /* Magus – Regelkern (Teil 8): Spielstart und Schnittstelle nach außen. */
@@ -1871,8 +1872,9 @@ function newGame(opts) {
   state.turn = opts.first === undefined ? 0 : opts.first;
   const gg1 = (state.rules.stageGold || [])[1] || 0;
   state.players.forEach(p => { p.stats.gold += gg1; p.stats.goldGot += gg1; });
-  log(state, 'Abschnitt 1: Die Monster der Stufe I erscheinen.' + variantLog(state) + (gg1 ? ' Jeder Spieler erhält ' + gg1 + ' Gold.' : ''));
-  if (state.rules.prep) startPrep(state);
+  const l1 = variantLog(state) + (gg1 ? ' Jeder Spieler erhält ' + gg1 + ' Gold.' : '');
+  if (state.rules.prep) { state.openLog = l1; startPrep(state); }   // Vorbereitung: die Monster werden im Protokoll erst nach der Kartenwahl genannt
+  else log(state, 'Abschnitt 1: Die Monster der Stufe I erscheinen.' + l1);
   sample(state);
   return state;
 }
@@ -2885,7 +2887,7 @@ const MAGUS_VERSION = '0.15';
 // Versionsbeschreibung: ein Eintrag je Version, die neueste zuerst. Bei jedem Schritt oben einen Eintrag [Nummer, Text] ergänzen;
 // der erste Eintrag gehört zu MAGUS_VERSION und erscheint unter „Neu in Version …“.
 const VERSIONEN = [
-  ['0.15', '<b>Magie beginnt bei 0, Vorbereitung vor dem Spiel:</b> Die drei Magiestufen starten bei 0. Vor dem ersten Zug wählen beide Spieler gleichzeitig und verdeckt eine Karte aus ihrem ganzen Deck; sie kommt auf die Ablage, ihre Farbe beginnt kostenlos auf Stufe 1. Danach werden aufgedeckt, die Starthände gezogen und das Spiel beginnt (3 Gold Startgold wie bisher). Weitere Magie kauft man offen im Spiel für 1, 2, 3 … Gold; der Gratispunkt zählt dabei nicht mit. Monster behalten ihre Werte. Der Computer wählt die Farbe mit den meisten Karten und kauft Magie früher. Im Mehrspieler wählen beide gleichzeitig.'],
+  ['0.15', '<b>Magie beginnt bei 0, Vorbereitung vor dem Spiel:</b> Die drei Magiestufen starten bei 0. Vor dem ersten Zug schauen beide Spieler ihre 12 Karten an und legen gleichzeitig und verdeckt eine Karte vor sich; ihre Farbe beginnt kostenlos auf Stufe 1. Nach dem Aufdecken geht die Karte zurück ins Deck, das neu gemischt wird; dann werden die Monster aufgedeckt und das Spiel beginnt (3 Gold Startgold wie bisher). Weitere Magie kauft man offen im Spiel für 1, 2, 3 … Gold; der Gratispunkt zählt dabei nicht mit. Monster behalten ihre Werte. Der Computer wählt die Farbe mit den meisten Karten und kauft Magie früher. Im Mehrspieler wählen beide gleichzeitig.'],
   ['0.14.8', '<b>Spezialisten-Deck, Würfelseite „Gratis-Nachziehen“, Läuterungs-Warnung:</b> Der Stufe-I-Spezialist hat jetzt auch eine Karte der unterlegenen Farbe (eine Stufe-1-Karte des Hauptelements wird dazu getauscht; die Stärke bleibt gleich). Die wirkungslose Würfelseite „Ziehen“ ist ersetzt durch „Gratis-Nachziehen“: Plus: Das Monster beginnt den Kampf mit +1 Gratis-Nachziehen, Minus: Der Angreifer beginnt mit +1. Wer eine Läuterung vorbereitet und wählbare Marker nicht angeklickt hat, wird vor dem Ausführen gewarnt und kann „Trotzdem ausführen“ wählen.'],
   ['0.14.7', '<b>Monster erholen sich in der Weltphase nicht mehr:</b> Da jeder Monsterkampf mit einem Gewinner endet, gibt es keine Erholung der Monster mehr. Bisher bekamen lebende Monster am Ende jeder Runde +1 HP und +1 Mana. Die Erholung der Spieler bleibt.'],
   ['0.14.6', '<b>Zuschauen: Würfel verschwinden im Kampf auch bei hohem Tempo:</b> Beim Zuschauen mit beschleunigten Stufen (ab ×3) blieben die Monsterwürfel der Weltphase im Kampf sichtbar stehen. Sie werden jetzt wie bei normalem Tempo ausgeblendet.'],
@@ -6115,7 +6117,7 @@ function newGame(spec) {
   M.record(G); G.keepSnap = true;
   seenCombat = null; endView = null; modal = null; introSeen = -1; hold = 0; started = true;
   overlay.style.display = 'none'; overlay.innerHTML = '';
-  Intro.start();
+  prepWas = false; Intro.start();
   pump();
 }
 function snapStats(c) { return { a: JSON.parse(JSON.stringify(c.sides.a.stats)), b: JSON.parse(JSON.stringify(c.sides.b.stats)) }; }
@@ -6187,6 +6189,7 @@ function act(a) {
 }
 function pump() {
   clearTimeout(aiTimer);
+  prepFlow();
   checkShowdownIntro();
   if (endView || modal) { render(); return; }   // Ergebnis- und Ankündigungsbildschirm: Spiel pausiert bis zum Klick
   render();
@@ -6224,6 +6227,12 @@ function specAdvance() {
 /* ---------- Vorbereitung (seit 0.15) ---------- */
 // Vor dem ersten Zug wählt jeder Spieler verdeckt eine Karte aus seinem ganzen Deck; ihre Farbe ist der erste, kostenlose Magiepunkt. Die Auswahl liegt im Vordergrund (wie die Hellsicht-Auswahl); der Gegner wählt gleichzeitig.
 let prepSel = 0;   // uid der angewählten Karte
+let prepWas = false;   // die Vorbereitung lief bis eben
+// Während der Vorbereitung bleiben die Monsterkarten verdeckt; danach beginnt der Spielstart (Monster aufdecken und würfeln, mischen, austeilen).
+function prepFlow() {
+  if (G && G.phase === 'prep') { stage.dataset.hm = '0 1 2'; prepWas = true; }
+  else if (prepWas) { prepWas = false; delete stage.dataset.hm; Intro.start(); }
+}
 function prepOverlayHTML() {
   if (!G || G.phase !== 'prep' || G.over || Intro.on || SPEC) { prepSel = 0; return ''; }
   if (G.prep[ME]) {
@@ -6234,7 +6243,7 @@ function prepOverlayHTML() {
   if (!cs.some(c => c.uid === prepSel)) prepSel = 0;
   const cnt = M.ELEMENTS.map(e => M.NAMES[e] + ' ' + cs.filter(c => c.id[0] === e).length).join(' · ');
   let h = '<div class="prepbox"><div class="preptitle">Vorbereitung: Erste Magie wählen</div>' +
-    '<div class="prepsub">Alle Magiestufen beginnen bei 0. Wähle eine Karte aus deinem Deck: Sie kommt auf die Ablage, ihre Farbe beginnt kostenlos auf Stufe 1. Dein Gegner wählt gleichzeitig und verdeckt; erst danach werden beide Wahlen aufgedeckt und die Starthände gezogen.</div>' +
+    '<div class="prepsub">Alle Magiestufen beginnen bei 0. Schau dir deine Karten an und lege eine verdeckt vor dich: Ihre Farbe beginnt kostenlos auf Stufe 1. Dein Gegner wählt gleichzeitig und verdeckt; danach werden beide Wahlen aufgedeckt, die Karten kommen zurück ins Deck, das neu gemischt wird. Dann werden die Monster aufgedeckt.</div>' +
     '<div class="prepcnt">Dein Deck: ' + cnt + '</div><div class="prepgrid">';
   cs.forEach((c, i) => { h += '<div class="prepcard' + (c.uid === prepSel ? ' on' : '') + '" data-act="prepsel" data-uid="' + c.uid + '"><img src="' + (IMG[c.id] || IMG.back) + '"></div>'; });
   return h + '</div><button class="btn primary prepok" data-act="prepok" ' + (prepSel ? '' : 'disabled') + '>' + (prepSel ? 'Verdeckt wählen' : 'Karte antippen') + '</button></div>';
@@ -7074,6 +7083,7 @@ const Intro = (() => {
   function stop() { timers.forEach(clearTimeout); timers = []; on = false; monRev = 0; pl = {}; covers.forEach(c => c.remove()); covers = []; delete stage.dataset.hm; if (hint) { hint.remove(); hint = null; } }
   function start() {
     stop();
+    if (G && G.phase === 'prep') return;   // Vorbereitung: der Start (Monster aufdecken, mischen, austeilen) folgt erst nach der Kartenwahl (pump)
     if (!G || FAST || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches) || (navigator.webdriver && !/[?&]intro/.test(location.search))) return;   // Testläufe (Playwright, außer mit ?intro) und reduzierte Bewegung: ohne Vorführung
     const R = LAYOUT.monsters;
     covers = M.ELEMENTS.map((e, i) => {
@@ -7086,21 +7096,19 @@ const Intro = (() => {
     });
     stage.dataset.hm = '0 1 2';   // die echten Monsterkarten bleiben verborgen, bis ihre Abdeckung umgedreht ist
     on = true; monRev = 0; pl = { [ME]: { st: 'disc', k: 0 }, [OPP]: { st: 'disc', k: 0 } };
-    const n = G.players[ME].deck.hand.length || 1, order = [ME, OPP];
+    const n = G.players[ME].deck.hand.length, order = [ME, OPP];
     M.ELEMENTS.forEach((e, i) => {
       const t = T.mon + i * T.monStep;
       later(t, () => { monRev = i + 1; Snd.play('flip', 0, .8); const c = covers[i]; if (c) reveal(c, i); });
       later(t + T.dice, () => DiceBoard.throwItem(i));
     });
-    const prep = G.phase === 'prep', tEnd = prep ? T.mon + 2 * T.monStep + T.dice + 1500 : T.players + 2 * T.plStep + T.end;   // Vorbereitung (seit 0.15): gezeigt werden nur die Monster; Mischen und Austeilen folgen nach der Kartenwahl ohne Vorführung
-    if (prep) pl = {};
-    if (!prep) order.forEach((p, j) => {
+    order.forEach((p, j) => {
       const t = T.players + j * T.plStep;
       later(t, () => { pl[p].st = 'draw'; Snd.play('shuffle', 0, .8); });
       for (let k = 1; k <= n; k++) later(t + T.deal + (k - 1) * T.dealStep, () => { pl[p].st = 'deal'; pl[p].k = k; Snd.play('flip', 0, .7); });
     });
-    later(tEnd, finish);
-    hold = Date.now() + tEnd + 200;   // der Computer wartet
+    later(T.players + 2 * T.plStep + T.end, finish);
+    hold = Date.now() + T.players + 2 * T.plStep + T.end + 200;   // der Computer wartet
     hint = document.createElement('div'); hint.id = 'introhint'; hint.textContent = 'Klick: Spielstart überspringen'; stage.appendChild(hint);
   }
   function reveal(c, i) {   // Volle Drehung (Kartendreh-Werkstatt): die Abdeckung dreht sich um 180° und zeigt dabei eine Kopie der Monsterkarte

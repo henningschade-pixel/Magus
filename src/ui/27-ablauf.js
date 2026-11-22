@@ -10,7 +10,7 @@ function newGame(spec) {
   M.record(G); G.keepSnap = true;
   seenCombat = null; endView = null; modal = null; introSeen = -1; hold = 0; started = true;
   overlay.style.display = 'none'; overlay.innerHTML = '';
-  Intro.start();
+  prepWas = false; Intro.start();
   pump();
 }
 function snapStats(c) { return { a: JSON.parse(JSON.stringify(c.sides.a.stats)), b: JSON.parse(JSON.stringify(c.sides.b.stats)) }; }
@@ -82,6 +82,7 @@ function act(a) {
 }
 function pump() {
   clearTimeout(aiTimer);
+  prepFlow();
   checkShowdownIntro();
   if (endView || modal) { render(); return; }   // Ergebnis- und Ankündigungsbildschirm: Spiel pausiert bis zum Klick
   render();

@@ -1,7 +1,7 @@
 /* Magus – Regelkern (Teil 7b): Vorbereitung (seit 0.15).
-   Die Spieler beginnen ohne Magie (alle drei Stufen 0). Vor dem ersten Zug liegt die Vorbereitung: Die Monster sind aufgedeckt und die Spielerdecks erzeugt, noch ist keine Hand gezogen.
-   Beide Spieler wählen gleichzeitig und verdeckt EINE Karte aus ihrem ganzen Deck. Die Karte kommt auf den Ablagestapel, ihre Farbe ist der erste, kostenlose Magiepunkt (Stufe 1 in dieser Farbe).
-   Erst wenn beide gewählt haben, wird aufgedeckt; danach werden die Starthände gezogen und der erste Zug beginnt. Magie kaufen ist weiterhin offen (in den eigenen Zügen, 1, 2, 3 … Gold); der Gratispunkt zählt dabei nicht mit.
+   Die Spieler beginnen ohne Magie (alle drei Stufen 0). Vor dem ersten Zug liegt die Vorbereitung: Die 24 Stufe-1-Karten sind gemischt und abwechselnd verteilt (je 12), noch ist keine Hand gezogen und die Monster sind noch nicht aufgedeckt (die Oberfläche hält sie verdeckt, das Protokoll nennt sie erst danach).
+   Beide Spieler schauen ihre Karten an und legen gleichzeitig und verdeckt EINE Karte vor sich. Ihre Farbe ist der erste, kostenlose Magiepunkt (Stufe 1 in dieser Farbe).
+   Erst wenn beide gewählt haben, wird aufgedeckt; die Karte geht zurück ins Deck, das Deck wird neu gemischt (Nachziehstapel), die Starthände werden gezogen; danach werden die Monster aufgedeckt (Oberfläche) und der erste Zug beginnt. Magie kaufen ist weiterhin offen (in den eigenen Zügen, 1, 2, 3 … Gold); der Gratispunkt zählt dabei nicht mit.
    state.prep[pid] = uid der gewählten Karte (null = noch nicht gewählt); Aktion { pid, type: 'prepPick', uid }. Wer zuerst fragt, ist egal: die Reihenfolge der beiden Wahlen ändert nichts am Ergebnis. */
 function startPrep(state) {
   state.players.forEach(p => {   // die Starthand geht zurück in den Stapel: gewählt wird aus dem ganzen Deck
@@ -11,7 +11,7 @@ function startPrep(state) {
   });
   state.phase = 'prep';
   state.prep = [null, null];
-  log(state, 'Vorbereitung: Beide Spieler wählen gleichzeitig und verdeckt eine Karte aus ihrem Deck. Ihre Farbe wird der erste, kostenlose Magiepunkt.');
+  log(state, 'Vorbereitung: Beide Spieler wählen gleichzeitig und verdeckt eine Karte aus ihrem Deck. Ihre Farbe wird der erste, kostenlose Magiepunkt; die Karte geht danach zurück ins Deck.');
 }
 // Karten, aus denen pid wählen kann (das ganze Deck vor dem ersten Ziehen)
 function prepChoices(state, pid) { const d = state.players[pid].deck; return [].concat(d.draw, d.discard, d.hand.filter(Boolean)); }
@@ -29,7 +29,7 @@ function applyPrep(state, a) {
 function finishPrep(state) {
   const picks = state.players.map((p, pid) => {
     const d = p.deck, i = d.draw.findIndex(x => x.uid === state.prep[pid]), c = d.draw.splice(i, 1)[0];
-    d.discard.push(c);
+    d.draw.push(c); state.rng.shuffle(d.draw);   // die Karte kehrt zurück ins Deck, das neu gemischt als Nachziehstapel liegt
     const e = c.id[0];
     p.stats.mag[e] = Math.max(p.stats.mag[e], 1);
     return e;
@@ -38,5 +38,6 @@ function finishPrep(state) {
   state.prepPicks = picks;
   state.players.forEach(p => fillHand(state, p.deck));
   state.phase = 'world';
+  log(state, 'Abschnitt 1: Die Monster der Stufe I erscheinen.' + state.openLog); delete state.openLog;
   sample(state);
 }
