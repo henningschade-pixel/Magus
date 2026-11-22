@@ -15,7 +15,7 @@ function prepOverlayHTML() {
     const e = (G.players[ME].deck.draw.find(c => c.uid === G.prep[ME]) || {}).id;
     return '<div class="prepbox"><div class="prephead"><div class="preptitle">Vorbereitung</div><div class="prepsub">Deine Wahl liegt verdeckt' + (e ? ' (' + M.NAMES[e[0]] + ')' : '') + '. Warte auf ' + esc(G.players[OPP].name) + ' …</div></div></div>';
   }
-  const cs = M.prepChoices(G, ME).slice().sort((a, b) => M.ELEMENTS.indexOf(a.id[0]) - M.ELEMENTS.indexOf(b.id[0]) || a.id.localeCompare(b.id) || a.uid - b.uid);
+  const cs = M.prepChoices(G, ME).slice();   // Reihenfolge wie ausgeteilt (gemischt), nicht nach Farbe sortiert
   if (!cs.some(c => c.uid === prepSel)) prepSel = 0;
   const cnt = M.ELEMENTS.map(e => M.NAMES[e] + ' ' + cs.filter(c => c.id[0] === e).length).join(' · ');
   let h = '<div class="prepbox"><div class="prephead"><div class="preptitle">Erste Magie wählen</div>' +

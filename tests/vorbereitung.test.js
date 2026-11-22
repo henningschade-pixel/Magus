@@ -11,7 +11,7 @@ test('Vorbereitung: Start ohne Magie, ohne Hand, ganzes Deck zur Wahl, Monster s
   const s = mk(7);
   assert.ok(s.log.some(l => /Monster der Stufe/.test(l.txt)));
   assert.equal(s.phase, 'prep');
-  s.players.forEach((p, i) => { assert.equal(sum(p), 0); assert.equal(p.deck.hand.filter(Boolean).length, 0); assert.equal(M.prepChoices(s, i).length, 12); assert.equal(p.stats.gold, 3); });
+  s.players.forEach((p, i) => { assert.equal(sum(p), 0); assert.equal(p.deck.hand.filter(Boolean).length, 0); assert.equal(M.prepChoices(s, i).length, 12); assert.equal(p.stats.gold, 5); });
 });
 test('Vorbereitung: Wahl ist unabhängig von der Reihenfolge; Karte kehrt ins Deck zurück, Farbe beginnt auf 1, danach Hände und Spielbeginn', () => {
   const run = order => {
@@ -24,7 +24,7 @@ test('Vorbereitung: Wahl ist unabhängig von der Reihenfolge; Karte kehrt ins De
   assert.equal(a.s.phase, 'world');
   assert.equal(JSON.stringify(a.s.players.map(p => p.stats.mag)), JSON.stringify(b.s.players.map(p => p.stats.mag)));
   assert.equal(JSON.stringify(a.s.players.map(p => p.deck.hand.map(c => c && c.id))), JSON.stringify(b.s.players.map(p => p.deck.hand.map(c => c && c.id))));
-  a.s.players.forEach((p, i) => { assert.equal(sum(p), 1); assert.equal(p.stats.mag[a.els[i]], 1); assert.equal(p.deck.discard.length, 0); assert.equal(p.deck.draw.length + p.deck.hand.filter(Boolean).length, 12, 'die gewählte Karte ist zurück im Deck'); assert.equal(p.deck.hand.filter(Boolean).length, p.deck.hand.length); assert.equal(p.stats.gold, 3); });
+  a.s.players.forEach((p, i) => { assert.equal(sum(p), 1); assert.equal(p.stats.mag[a.els[i]], 1); assert.equal(p.deck.discard.length, 0); assert.equal(p.deck.draw.length + p.deck.hand.filter(Boolean).length, 12, 'die gewählte Karte ist zurück im Deck'); assert.equal(p.deck.hand.filter(Boolean).length, p.deck.hand.length); assert.equal(p.stats.gold, 5); });
 });
 test('Vorbereitung: doppelte Wahl, fremde Karte und andere Aktionen werden abgelehnt', () => {
   const s = mk(3), c = M.prepChoices(s, 0)[0];

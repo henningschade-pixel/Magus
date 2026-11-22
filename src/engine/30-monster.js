@@ -13,7 +13,7 @@ const MONSTER = {
   profile: { F: { primary: 'F', secondary: SUPERIOR.F }, E: { primary: 'E', secondary: SUPERIOR.E }, W: { primary: 'W', secondary: SUPERIOR.W } },   // seit 0.4: das Nebenelement ist das überlegene Element (Feuer → Wasser, Erde → Feuer, Wasser → Erde); bis 0.17 war es das unterlegene (Feuer → Erde, Erde → Wasser, Wasser → Feuer)
   baseHp: 2,                                                              // seit 0.15: Grund-HP aller Monster vor den Schritten (vorher 3; Stufe I: 2 HP, II: 3, III: 5)
   stage1Temple: { F: [], E: [], W: [] },   // seit 0.15 keine Schritte mehr in Stufe I: Mana 4 (bis 0.14.8: Mana 5, Erdmonster 6)
-  temple: { 2: { F: ['limit', 'hp'], E: ['limit', 'hp'], W: ['limit', 'hp'] }, 3: { F: ['limit', 'hp', 'hp', 'mana'], E: ['limit', 'hp', 'hp', 'mana'], W: ['limit', 'hp', 'hp', 'mana'] } },   // Schritte je Stufe (Stufe III kommt auf Stufe II obendrauf); seit 0.15: I = Limit 2, 2 HP, Mana 4; II = Limit 3, 3 HP, Mana 4; III = Limit 4, 5 HP, Mana 5 (bis 0.14.8: 3/4 HP/Mana 5 in II, 4/7 HP/Mana 6 in III)
+  temple: { 2: { F: ['limit', 'hp', 'mana'], E: ['limit', 'hp', 'mana'], W: ['limit', 'hp', 'mana'] }, 3: { F: ['limit', 'hp', 'hp', 'mana'], E: ['limit', 'hp', 'hp', 'mana'], W: ['limit', 'hp', 'hp', 'mana'] } },   // Schritte je Stufe (Stufe III kommt auf Stufe II obendrauf); seit 0.15: I = Limit 2, 2 HP, Mana 4; II = Limit 3, 3 HP, Mana 4; III = Limit 4, 5 HP, Mana 5 (bis 0.14.8: 3/4 HP/Mana 5 in II, 4/7 HP/Mana 6 in III)
   magic: { 1: [2, 1, 1], 2: [3, 2, 1], 3: [3, 2, 1] },                                  // Stufen von Haupt-, Neben- und drittem Element
   deck: {
     2: (P, S, T) => [P + '3', P + '2', P + '2', P + '2', S + '3', S + '2', T + '1', T + '1', P + '1'],

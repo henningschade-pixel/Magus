@@ -150,7 +150,7 @@ test('Monsterwerte je Stufe: Grundform ohne Würfel, mit Würfeln höchstens die
 });
 
 test('Monster-Würfel (0.4): Deckform spitz/breit, ein Plus- und ein Minuswürfel, Name Spezialist/Generalist, Etikett „+X, −Y“, Werte folgen den Seiten', () => {
-  const D = M.MONSTER.variants.dice, base = { 1: { F: [2, 4], E: [2, 4], W: [2, 4] }, 2: { F: [3, 4], E: [3, 4], W: [3, 4] }, 3: { F: [5, 5], E: [5, 5], W: [5, 5] } }, limit = [0, 2, 3, 4];
+  const D = M.MONSTER.variants.dice, base = { 1: { F: [2, 4], E: [2, 4], W: [2, 4] }, 2: { F: [3, 5], E: [3, 5], W: [3, 5] }, 3: { F: [5, 6], E: [5, 6], W: [5, 6] } }, limit = [0, 2, 3, 4];
   const seenForm = {}, seenPlus = new Set(), seenMinus = new Set();
   for (const st of [1, 2, 3]) for (let seed = 1; seed <= 120; seed++) {
     const r = M.spawnMonsters(st, M.newGame({ seed }).rng);
@@ -672,11 +672,11 @@ test('Start-HP der Spieler 4 (startHp), Monster beginnen weiter mit eigenen Wert
   assert.equal(M.spawnMonsters(1, s.rng).F.stats.maxHp >= 1, true);
 });
 
-test('Steigende Preise (priceRise): jeder Kauf einer Kategorie verteuert die nächste Stufe um den Grundpreis; Einnahmen je Abschnitt 3/6/9 Gold (seit 0.4)', () => {
-  assert.deepEqual(M.DEFAULT_RULES.stageGold, [0, 3, 6, 9]); assert.equal(M.DEFAULT_RULES.stagePoints, undefined); assert.deepEqual(M.DEFAULT_RULES.lossGold, [0, 1, 2, 3]); assert.equal(M.DEFAULT_RULES.priceRise, 1);
+test('Steigende Preise (priceRise): jeder Kauf einer Kategorie verteuert die nächste Stufe um den Grundpreis; Einnahmen je Abschnitt 5/6/7 Gold (seit 0.15)', () => {
+  assert.deepEqual(M.DEFAULT_RULES.stageGold, [0, 5, 6, 7]); assert.equal(M.DEFAULT_RULES.stagePoints, undefined); assert.deepEqual(M.DEFAULT_RULES.lossGold, [0, 1, 2, 3]); assert.equal(M.DEFAULT_RULES.priceRise, 1);
   const s = M.newGame({ seed: 5, ai: [false, false], first: 0 }), p = s.players[0], st = p.stats;
   s.rules.uncapped = 0;   // 0.14.4: dieser Test prüft die Grenzen von zwei Ausbauten
-  assert.equal(st.gold, 3, 'Start: 3 Gold (3 Monster × 1 Gold, Abschnitt 1)');
+  assert.equal(st.gold, 5, 'Start: 5 Gold (Abschnittsbonus 1)');
   const prices = fn => [0, 1, 2].map(() => { const c = fn(); st.buys = st.buys || {}; return c; });
   const seq = (cat, fn) => { const out = []; for (let i = 0; i < 3; i++) { out.push(fn()); st.buys = st.buys || {}; st.buys[cat] = (st.buys[cat] || 0) + 1; } st.buys[cat] = 0; return out; };
   assert.deepEqual(seq('hp', () => M.hpStepCost(s, st)), [1, 2, 3], 'HP: 1, 2, 3');
@@ -906,10 +906,10 @@ test('Ausgleich nach einer Monsterniederlage: nur der Verlierer, nur Gold (1/2/3
   }
 });
 
-test('Abschnittsbonus: 3 Gold (Abschnitt 1), 6 (2), 9 (3)', () => {
+test('Abschnittsbonus: 5 Gold (Abschnitt 1), 6 (2), 7 (3) (seit 0.15)', () => {
   const s = M.newGame({ seed: 5, ai: [false, false] });
-  assert.deepEqual(s.players.map(p => p.stats.gold), [3, 3]);
-  assert.deepEqual(M.DEFAULT_RULES.stageGold, [0, 3, 6, 9]);
+  assert.deepEqual(s.players.map(p => p.stats.gold), [5, 5]);
+  assert.deepEqual(M.DEFAULT_RULES.stageGold, [0, 5, 6, 7]);
 });
 
 test('Jede Entwicklung der Spieler ist auf Stufe 3 begrenzt (zwei Ausbauten), Kosten 1 und 2 Gold (0.5.1)', () => {
