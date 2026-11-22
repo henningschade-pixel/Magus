@@ -513,10 +513,10 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 #prepov .preptitle{font-size:20px;color:#e7c46a;white-space:nowrap}
 #prepov .prepsub{font-size:14px;color:#d8cdb4;line-height:1.25;flex:1}
 #prepov .prepcnt{font-size:14px;color:#b9ab8a;white-space:nowrap}
-#prepov .prepgrid{display:flex;flex-wrap:nowrap;gap:12px;flex:1;min-height:0;overflow-x:auto;overflow-y:hidden;padding:10px 4px 2px;align-items:flex-end}
-#prepov .prepcard{height:100%;flex:0 0 auto;cursor:pointer;transition:transform .15s,filter .15s;filter:brightness(.72)}
-#prepov .prepcard img{display:block;height:100%;width:auto;border-radius:8px;box-shadow:0 0 0 2px #1b140d,0 4px 14px rgba(0,0,0,.8)}
-#prepov .prepcard:hover{filter:brightness(.95)}#prepov .prepcard.on{transform:translateY(-10px);filter:none}#prepov .prepcard.on img{box-shadow:0 0 0 3px #e7c46a,0 0 20px rgba(231,196,106,.85)}
+#prepov .prepgrid{position:relative;flex:1;min-height:0;overflow:hidden;margin-top:8px}
+#prepov .prepcard{position:absolute;left:50%;top:6px;height:calc(100% - 12px);cursor:pointer;transition:transform .2s ease,filter .2s ease;filter:brightness(.7)}
+#prepov .prepcard img{display:block;height:100%;width:auto;border-radius:8px;box-shadow:0 0 0 2px #1b140d,-6px 0 14px rgba(0,0,0,.7)}
+#prepov .prepcard.on img{box-shadow:0 0 0 3px #e7c46a,0 0 20px rgba(231,196,106,.85)}
 #prepov .prepok{font-size:16px;padding:4px 16px;white-space:nowrap}
 /* Monsterbewertung (temporär, seit 0.15) */
 .endbox .ratebox{margin-top:16px;padding-top:12px;border-top:1px solid rgba(231,196,106,.35)}

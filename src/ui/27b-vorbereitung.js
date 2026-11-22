@@ -1,6 +1,8 @@
 /* ---------- Vorbereitung (seit 0.15) ---------- */
-// Vor dem ersten Zug wählt jeder Spieler verdeckt eine Karte aus seinem ganzen Deck; ihre Farbe ist der erste, kostenlose Magiepunkt. Die Auswahl liegt als Leiste am unteren Rand (Mausrad scrollt das Deck seitwärts), die Monster bleiben sichtbar; der Gegner wählt gleichzeitig.
+// Vor dem ersten Zug wählt jeder Spieler verdeckt eine Karte aus seinem ganzen Deck; ihre Farbe ist der erste, kostenlose Magiepunkt. Die Auswahl liegt als Leiste am unteren Rand (Mausrad blättert durch das Deck), die Monster bleiben sichtbar; der Gegner wählt gleichzeitig.
 let prepSel = 0;   // uid der angewählten Karte
+let prepPos = -1;   // Mitte der Kartenreihe (Index, kann zwischen zwei Karten liegen)
+let prepSnap = 0;
 let prepWas = false;   // die Vorbereitung lief bis eben
 // Die Monster sind zu Beginn schon ausgelost und aufgedeckt; das Würfeln gehört zur Monsterauslosung (Phase 1); nach der Kartenwahl folgen Mischen und Austeilen.
 function prepFlow() {
@@ -22,15 +24,33 @@ function prepOverlayHTML() {
   cs.forEach((c, i) => { h += '<div class="prepcard' + (c.uid === prepSel ? ' on' : '') + '" data-act="prepsel" data-uid="' + c.uid + '"><img src="' + (IMG[c.id] || IMG.back) + '"></div>'; });
   return h + '</div></div>';
 }
+// Fächer: Die Karte in der Mitte steht vorn, links und rechts davon liegen die übrigen Karten überlappend dahinter.
+function prepLayout() {
+  const g = document.querySelector('#prepov .prepgrid'); if (!g) return;
+  const cs = [].slice.call(g.querySelectorAll('.prepcard')), n = cs.length; if (!n) return;
+  if (prepPos < 0) prepPos = Math.floor((n - 1) / 2);
+  prepPos = Math.max(0, Math.min(n - 1, prepPos));
+  const w = cs[0].offsetWidth || 100, gap = w * 0.38;
+  cs.forEach((c, i) => {
+    const d = i - prepPos, a = Math.abs(d), sc = Math.max(.72, 1 - a * .06), x = d * gap + (d === 0 ? 0 : Math.sign(d) * w * .32 * Math.min(1, a));
+    c.style.transform = 'translateX(calc(-50% + ' + x.toFixed(1) + 'px)) scale(' + sc.toFixed(3) + ')';
+    c.style.zIndex = String(1000 - Math.round(a * 10));
+    c.style.filter = a < .5 ? 'none' : 'brightness(' + Math.max(.45, .8 - a * .06).toFixed(2) + ')';
+  });
+}
+function prepScroll(dy) {
+  prepPos += dy / 90; prepLayout();
+  clearTimeout(prepSnap); prepSnap = setTimeout(() => { prepPos = Math.round(prepPos); prepLayout(); }, 140);
+}
 function prepRender() {
   const html = prepOverlayHTML(); let o = document.getElementById('prepov');
   if (html && !o) {
     o = document.createElement('div'); o.id = 'prepov'; stage.appendChild(o);
-    o.addEventListener('wheel', e => { const g = o.querySelector('.prepgrid'); if (!g) return; e.preventDefault(); g.scrollLeft += (Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY); }, { passive: false });   // Mausrad scrollt das Deck seitwärts
+    o.addEventListener('wheel', e => { if (!o.querySelector('.prepgrid')) return; e.preventDefault(); prepScroll(Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY); }, { passive: false });   // Mausrad blättert durch das Deck
   }
-  if (o) { if (html) { if (o.dataset.k !== html) { const g = o.querySelector('.prepgrid'), sl = g ? g.scrollLeft : 0; o.innerHTML = html; o.dataset.k = html; const g2 = o.querySelector('.prepgrid'); if (g2) g2.scrollLeft = sl; } o.style.display = 'flex'; } else { o.style.display = 'none'; o.dataset.k = ''; } }
+  if (o) { if (html) { if (o.dataset.k !== html) { o.innerHTML = html; o.dataset.k = html; prepLayout(); } o.style.display = 'flex'; } else { o.style.display = 'none'; o.dataset.k = ''; } }
 }
 function prepClick(d) {
-  if (d.act === 'prepsel') { prepSel = +d.uid === prepSel ? 0 : +d.uid; render(); }
+  if (d.act === 'prepsel') { prepSel = +d.uid === prepSel ? 0 : +d.uid; const el = document.querySelector('#prepov .prepcard[data-uid="' + d.uid + '"]'); if (el && el.parentNode) prepPos = [].indexOf.call(el.parentNode.children, el); render(); }
   else if (d.act === 'prepok' && prepSel) { const u = prepSel; prepSel = 0; act({ type: 'prepPick', uid: u }); }
 }

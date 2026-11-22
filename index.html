@@ -523,10 +523,10 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 #prepov .preptitle{font-size:20px;color:#e7c46a;white-space:nowrap}
 #prepov .prepsub{font-size:14px;color:#d8cdb4;line-height:1.25;flex:1}
 #prepov .prepcnt{font-size:14px;color:#b9ab8a;white-space:nowrap}
-#prepov .prepgrid{display:flex;flex-wrap:nowrap;gap:12px;flex:1;min-height:0;overflow-x:auto;overflow-y:hidden;padding:10px 4px 2px;align-items:flex-end}
-#prepov .prepcard{height:100%;flex:0 0 auto;cursor:pointer;transition:transform .15s,filter .15s;filter:brightness(.72)}
-#prepov .prepcard img{display:block;height:100%;width:auto;border-radius:8px;box-shadow:0 0 0 2px #1b140d,0 4px 14px rgba(0,0,0,.8)}
-#prepov .prepcard:hover{filter:brightness(.95)}#prepov .prepcard.on{transform:translateY(-10px);filter:none}#prepov .prepcard.on img{box-shadow:0 0 0 3px #e7c46a,0 0 20px rgba(231,196,106,.85)}
+#prepov .prepgrid{position:relative;flex:1;min-height:0;overflow:hidden;margin-top:8px}
+#prepov .prepcard{position:absolute;left:50%;top:6px;height:calc(100% - 12px);cursor:pointer;transition:transform .2s ease,filter .2s ease;filter:brightness(.7)}
+#prepov .prepcard img{display:block;height:100%;width:auto;border-radius:8px;box-shadow:0 0 0 2px #1b140d,-6px 0 14px rgba(0,0,0,.7)}
+#prepov .prepcard.on img{box-shadow:0 0 0 3px #e7c46a,0 0 20px rgba(231,196,106,.85)}
 #prepov .prepok{font-size:16px;padding:4px 16px;white-space:nowrap}
 /* Monsterbewertung (temporär, seit 0.15) */
 .endbox .ratebox{margin-top:16px;padding-top:12px;border-top:1px solid rgba(231,196,106,.35)}
@@ -2893,7 +2893,7 @@ const MAGUS_VERSION = '0.15';
 // Versionsbeschreibung: ein Eintrag je Version, die neueste zuerst. Bei jedem Schritt oben einen Eintrag [Nummer, Text] ergänzen;
 // der erste Eintrag gehört zu MAGUS_VERSION und erscheint unter „Neu in Version …“.
 const VERSIONEN = [
-  ['0.15', '<b>Experimentelle Version:</b> Magieentwicklung und Monsterwerte sind neu und noch nicht ausbalanciert; nach einem Monsterkampf kannst du mit der Bewertung Rückmeldung geben. <b>Magie beginnt bei 0, Vorbereitung vor dem Spiel:</b> Die drei Magiestufen starten bei 0. Phase 1: Die Monster werden ausgelost, aufgedeckt und gewürfelt. Vor dem ersten Zug schauen beide Spieler ihre 12 Karten an und legen gleichzeitig und verdeckt eine Karte vor sich; ihre Farbe beginnt kostenlos auf Stufe 1. Nach dem Aufdecken geht die Karte zurück ins Deck, das neu gemischt wird; dann beginnt das Spiel (3 Gold Startgold wie bisher). Weitere Magie kauft man offen im Spiel für 1, 2, 3 … Gold; der Gratispunkt zählt dabei nicht mit. Monster behalten ihre Werte. Der Computer wählt die Farbe mit den meisten Karten und kauft Magie früher. Im Mehrspieler wählen beide gleichzeitig. <b>Monster neu skaliert:</b> Stufe I 2 TP, Stufe II 3 TP, Stufe III 5 TP (Mana 4/4/5, Limit 2/3/4); Magie der Monster 2/1/1 in Stufe I, 3/2/1 in Stufe II und III, keine Magie 0. <b>Monsterbewertung (Test):</b> Nach einem Monsterkampf lässt sich das Monster auf einer Vierer-Skala (zu schwer, etwas schwer, etwas leicht, zu leicht) bewerten; die Bewertung wird mit der Monsterkonfiguration gespeichert. Einstellungen: an/aus, Export, Löschen. Die Kartenwahl liegt als Leiste am unteren Rand (Mausrad scrollt das Deck), die Monster bleiben dabei sichtbar.'],
+  ['0.15', '<b>Experimentelle Version:</b> Magieentwicklung und Monsterwerte sind neu und noch nicht ausbalanciert; nach einem Monsterkampf kannst du mit der Bewertung Rückmeldung geben. <b>Magie beginnt bei 0, Vorbereitung vor dem Spiel:</b> Die drei Magiestufen starten bei 0. Phase 1: Die Monster werden ausgelost, aufgedeckt und gewürfelt. Vor dem ersten Zug schauen beide Spieler ihre 12 Karten an und legen gleichzeitig und verdeckt eine Karte vor sich; ihre Farbe beginnt kostenlos auf Stufe 1. Nach dem Aufdecken geht die Karte zurück ins Deck, das neu gemischt wird; dann beginnt das Spiel (3 Gold Startgold wie bisher). Weitere Magie kauft man offen im Spiel für 1, 2, 3 … Gold; der Gratispunkt zählt dabei nicht mit. Monster behalten ihre Werte. Der Computer wählt die Farbe mit den meisten Karten und kauft Magie früher. Im Mehrspieler wählen beide gleichzeitig. <b>Monster neu skaliert:</b> Stufe I 2 TP, Stufe II 3 TP, Stufe III 5 TP (Mana 4/4/5, Limit 2/3/4); Magie der Monster 2/1/1 in Stufe I, 3/2/1 in Stufe II und III, keine Magie 0. <b>Monsterbewertung (Test):</b> Nach einem Monsterkampf lässt sich das Monster auf einer Vierer-Skala (zu schwer, etwas schwer, etwas leicht, zu leicht) bewerten; die Bewertung wird mit der Monsterkonfiguration gespeichert. Einstellungen: an/aus, Export, Löschen. Die Kartenwahl liegt als Leiste am unteren Rand als Fächer (Mausrad blättert, die Karten überlappen links und rechts der Mitte), die Monster bleiben dabei sichtbar.'],
   ['0.14.8', '<b>Spezialisten-Deck, Würfelseite „Gratis-Nachziehen“, Läuterungs-Warnung:</b> Der Stufe-I-Spezialist hat jetzt auch eine Karte der unterlegenen Farbe (eine Stufe-1-Karte des Hauptelements wird dazu getauscht; die Stärke bleibt gleich). Die wirkungslose Würfelseite „Ziehen“ ist ersetzt durch „Gratis-Nachziehen“: Plus: Das Monster beginnt den Kampf mit +1 Gratis-Nachziehen, Minus: Der Angreifer beginnt mit +1. Wer eine Läuterung vorbereitet und wählbare Marker nicht angeklickt hat, wird vor dem Ausführen gewarnt und kann „Trotzdem ausführen“ wählen.'],
   ['0.14.7', '<b>Monster erholen sich in der Weltphase nicht mehr:</b> Da jeder Monsterkampf mit einem Gewinner endet, gibt es keine Erholung der Monster mehr. Bisher bekamen lebende Monster am Ende jeder Runde +1 HP und +1 Mana. Die Erholung der Spieler bleibt.'],
   ['0.14.6', '<b>Zuschauen: Würfel verschwinden im Kampf auch bei hohem Tempo:</b> Beim Zuschauen mit beschleunigten Stufen (ab ×3) blieben die Monsterwürfel der Weltphase im Kampf sichtbar stehen. Sie werden jetzt wie bei normalem Tempo ausgeblendet.'],
@@ -6231,8 +6231,10 @@ function specAdvance() {
   specT = setTimeout(() => { specT = 0; if (SPEC && overlay.style.display !== 'flex') dismissOverlay(); else if (SPEC) specAdvance(); }, 2600);
 }
 /* ---------- Vorbereitung (seit 0.15) ---------- */
-// Vor dem ersten Zug wählt jeder Spieler verdeckt eine Karte aus seinem ganzen Deck; ihre Farbe ist der erste, kostenlose Magiepunkt. Die Auswahl liegt als Leiste am unteren Rand (Mausrad scrollt das Deck seitwärts), die Monster bleiben sichtbar; der Gegner wählt gleichzeitig.
+// Vor dem ersten Zug wählt jeder Spieler verdeckt eine Karte aus seinem ganzen Deck; ihre Farbe ist der erste, kostenlose Magiepunkt. Die Auswahl liegt als Leiste am unteren Rand (Mausrad blättert durch das Deck), die Monster bleiben sichtbar; der Gegner wählt gleichzeitig.
 let prepSel = 0;   // uid der angewählten Karte
+let prepPos = -1;   // Mitte der Kartenreihe (Index, kann zwischen zwei Karten liegen)
+let prepSnap = 0;
 let prepWas = false;   // die Vorbereitung lief bis eben
 // Die Monster sind zu Beginn schon ausgelost und aufgedeckt; das Würfeln gehört zur Monsterauslosung (Phase 1); nach der Kartenwahl folgen Mischen und Austeilen.
 function prepFlow() {
@@ -6254,16 +6256,34 @@ function prepOverlayHTML() {
   cs.forEach((c, i) => { h += '<div class="prepcard' + (c.uid === prepSel ? ' on' : '') + '" data-act="prepsel" data-uid="' + c.uid + '"><img src="' + (IMG[c.id] || IMG.back) + '"></div>'; });
   return h + '</div></div>';
 }
+// Fächer: Die Karte in der Mitte steht vorn, links und rechts davon liegen die übrigen Karten überlappend dahinter.
+function prepLayout() {
+  const g = document.querySelector('#prepov .prepgrid'); if (!g) return;
+  const cs = [].slice.call(g.querySelectorAll('.prepcard')), n = cs.length; if (!n) return;
+  if (prepPos < 0) prepPos = Math.floor((n - 1) / 2);
+  prepPos = Math.max(0, Math.min(n - 1, prepPos));
+  const w = cs[0].offsetWidth || 100, gap = w * 0.38;
+  cs.forEach((c, i) => {
+    const d = i - prepPos, a = Math.abs(d), sc = Math.max(.72, 1 - a * .06), x = d * gap + (d === 0 ? 0 : Math.sign(d) * w * .32 * Math.min(1, a));
+    c.style.transform = 'translateX(calc(-50% + ' + x.toFixed(1) + 'px)) scale(' + sc.toFixed(3) + ')';
+    c.style.zIndex = String(1000 - Math.round(a * 10));
+    c.style.filter = a < .5 ? 'none' : 'brightness(' + Math.max(.45, .8 - a * .06).toFixed(2) + ')';
+  });
+}
+function prepScroll(dy) {
+  prepPos += dy / 90; prepLayout();
+  clearTimeout(prepSnap); prepSnap = setTimeout(() => { prepPos = Math.round(prepPos); prepLayout(); }, 140);
+}
 function prepRender() {
   const html = prepOverlayHTML(); let o = document.getElementById('prepov');
   if (html && !o) {
     o = document.createElement('div'); o.id = 'prepov'; stage.appendChild(o);
-    o.addEventListener('wheel', e => { const g = o.querySelector('.prepgrid'); if (!g) return; e.preventDefault(); g.scrollLeft += (Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY); }, { passive: false });   // Mausrad scrollt das Deck seitwärts
+    o.addEventListener('wheel', e => { if (!o.querySelector('.prepgrid')) return; e.preventDefault(); prepScroll(Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY); }, { passive: false });   // Mausrad blättert durch das Deck
   }
-  if (o) { if (html) { if (o.dataset.k !== html) { const g = o.querySelector('.prepgrid'), sl = g ? g.scrollLeft : 0; o.innerHTML = html; o.dataset.k = html; const g2 = o.querySelector('.prepgrid'); if (g2) g2.scrollLeft = sl; } o.style.display = 'flex'; } else { o.style.display = 'none'; o.dataset.k = ''; } }
+  if (o) { if (html) { if (o.dataset.k !== html) { o.innerHTML = html; o.dataset.k = html; prepLayout(); } o.style.display = 'flex'; } else { o.style.display = 'none'; o.dataset.k = ''; } }
 }
 function prepClick(d) {
-  if (d.act === 'prepsel') { prepSel = +d.uid === prepSel ? 0 : +d.uid; render(); }
+  if (d.act === 'prepsel') { prepSel = +d.uid === prepSel ? 0 : +d.uid; const el = document.querySelector('#prepov .prepcard[data-uid="' + d.uid + '"]'); if (el && el.parentNode) prepPos = [].indexOf.call(el.parentNode.children, el); render(); }
   else if (d.act === 'prepok' && prepSel) { const u = prepSel; prepSel = 0; act({ type: 'prepPick', uid: u }); }
 }
 /* ---------- Monsterbewertung (temporär, seit 0.15) ---------- */

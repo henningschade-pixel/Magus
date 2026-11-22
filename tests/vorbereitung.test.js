@@ -59,7 +59,7 @@ test('Oberfläche: Vorbereitung zeigt das Deck, Wahl startet das Spiel mit gezog
     assert.equal(await p.evaluate(() => window.__magus.state.phase), 'prep');
     assert.equal(await p.locator('#prepov .prepcard').count(), 12, 'zwölf Karten zur Wahl');
     assert.ok(await p.locator('.prepok').isDisabled());
-    await p.locator('#prepov .prepcard').first().click();
+    await p.evaluate(() => document.querySelector('#prepov .prepcard').click());   // Karten überlappen: direkter Klick
     await p.locator('.prepok').click(); await p.waitForTimeout(1800);
     const r = await p.evaluate(() => { const g = window.__magus.state; return { ph: g.phase, mag: g.players[0].stats.mag, hand: g.players[0].deck.hand.filter(Boolean).length }; });
     assert.equal(r.ph, 'world'); assert.equal(r.mag.F + r.mag.E + r.mag.W, 1); assert.ok(r.hand > 0);
