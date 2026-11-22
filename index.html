@@ -517,16 +517,17 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 
 
 /* Vorbereitung (seit 0.15): Wahl der ersten Magie */
-#prepov{position:absolute;inset:0;z-index:320;background:rgba(0,0,0,.8);display:flex;flex-direction:column;align-items:center;justify-content:center}
-#prepov .prepbox{display:flex;flex-direction:column;align-items:center;gap:10px;max-width:1500px;padding:0 40px;text-align:center}
-#prepov .preptitle{font-size:38px;color:#e7c46a}
-#prepov .prepsub{font-size:21px;color:#d8cdb4;max-width:1100px;line-height:1.35}
-#prepov .prepcnt{font-size:20px;color:#b9ab8a}
-#prepov .prepgrid{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;max-width:1300px;margin-top:6px}
-#prepov .prepcard{width:150px;cursor:pointer;transition:transform .15s,filter .15s;filter:brightness(.72)}
-#prepov .prepcard img{display:block;width:100%;border-radius:9px;box-shadow:0 0 0 2px #1b140d,0 5px 18px rgba(0,0,0,.8)}
-#prepov .prepcard:hover{filter:brightness(.95)}#prepov .prepcard.on{transform:translateY(-10px) scale(1.06);filter:none}#prepov .prepcard.on img{box-shadow:0 0 0 3px #e7c46a,0 0 24px rgba(231,196,106,.85)}
-#prepov .prepok{margin-top:10px;font-size:22px;padding:8px 28px}
+#prepov{position:absolute;left:0;right:24%;bottom:0;height:27%;z-index:320;background:rgba(14,10,6,.94);border-top:2px solid #e7c46a;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start}
+#prepov .prepbox{display:flex;flex-direction:column;gap:4px;height:100%;padding:6px 20px 8px;box-sizing:border-box;min-height:0}
+#prepov .prephead{display:flex;align-items:center;gap:18px}
+#prepov .preptitle{font-size:20px;color:#e7c46a;white-space:nowrap}
+#prepov .prepsub{font-size:14px;color:#d8cdb4;line-height:1.25;flex:1}
+#prepov .prepcnt{font-size:14px;color:#b9ab8a;white-space:nowrap}
+#prepov .prepgrid{display:flex;flex-wrap:nowrap;gap:12px;flex:1;min-height:0;overflow-x:auto;overflow-y:hidden;padding:10px 4px 2px;align-items:flex-end}
+#prepov .prepcard{height:100%;flex:0 0 auto;cursor:pointer;transition:transform .15s,filter .15s;filter:brightness(.72)}
+#prepov .prepcard img{display:block;height:100%;width:auto;border-radius:8px;box-shadow:0 0 0 2px #1b140d,0 4px 14px rgba(0,0,0,.8)}
+#prepov .prepcard:hover{filter:brightness(.95)}#prepov .prepcard.on{transform:translateY(-10px);filter:none}#prepov .prepcard.on img{box-shadow:0 0 0 3px #e7c46a,0 0 20px rgba(231,196,106,.85)}
+#prepov .prepok{font-size:16px;padding:4px 16px;white-space:nowrap}
 /* Monsterbewertung (temporär, seit 0.15) */
 .endbox .ratebox{margin-top:16px;padding-top:12px;border-top:1px solid rgba(231,196,106,.35)}
 .endbox .rateq{font-size:22px;color:#e7e0d2}
@@ -2892,7 +2893,7 @@ const MAGUS_VERSION = '0.15';
 // Versionsbeschreibung: ein Eintrag je Version, die neueste zuerst. Bei jedem Schritt oben einen Eintrag [Nummer, Text] ergänzen;
 // der erste Eintrag gehört zu MAGUS_VERSION und erscheint unter „Neu in Version …“.
 const VERSIONEN = [
-  ['0.15', '<b>Experimentelle Version:</b> Magieentwicklung und Monsterwerte sind neu und noch nicht ausbalanciert; nach einem Monsterkampf kannst du mit der Bewertung Rückmeldung geben. <b>Magie beginnt bei 0, Vorbereitung vor dem Spiel:</b> Die drei Magiestufen starten bei 0. Phase 1: Die Monster werden ausgelost, aufgedeckt und gewürfelt. Vor dem ersten Zug schauen beide Spieler ihre 12 Karten an und legen gleichzeitig und verdeckt eine Karte vor sich; ihre Farbe beginnt kostenlos auf Stufe 1. Nach dem Aufdecken geht die Karte zurück ins Deck, das neu gemischt wird; dann beginnt das Spiel (3 Gold Startgold wie bisher). Weitere Magie kauft man offen im Spiel für 1, 2, 3 … Gold; der Gratispunkt zählt dabei nicht mit. Monster behalten ihre Werte. Der Computer wählt die Farbe mit den meisten Karten und kauft Magie früher. Im Mehrspieler wählen beide gleichzeitig. <b>Monster neu skaliert:</b> Stufe I 2 TP, Stufe II 3 TP, Stufe III 5 TP (Mana 4/4/5, Limit 2/3/4); Magie der Monster 2/1/1 in Stufe I, 3/2/1 in Stufe II und III, keine Magie 0. <b>Monsterbewertung (Test):</b> Nach einem Monsterkampf lässt sich das Monster auf einer Vierer-Skala (zu schwer, etwas schwer, etwas leicht, zu leicht) bewerten; die Bewertung wird mit der Monsterkonfiguration gespeichert. Einstellungen: an/aus, Export, Löschen.'],
+  ['0.15', '<b>Experimentelle Version:</b> Magieentwicklung und Monsterwerte sind neu und noch nicht ausbalanciert; nach einem Monsterkampf kannst du mit der Bewertung Rückmeldung geben. <b>Magie beginnt bei 0, Vorbereitung vor dem Spiel:</b> Die drei Magiestufen starten bei 0. Phase 1: Die Monster werden ausgelost, aufgedeckt und gewürfelt. Vor dem ersten Zug schauen beide Spieler ihre 12 Karten an und legen gleichzeitig und verdeckt eine Karte vor sich; ihre Farbe beginnt kostenlos auf Stufe 1. Nach dem Aufdecken geht die Karte zurück ins Deck, das neu gemischt wird; dann beginnt das Spiel (3 Gold Startgold wie bisher). Weitere Magie kauft man offen im Spiel für 1, 2, 3 … Gold; der Gratispunkt zählt dabei nicht mit. Monster behalten ihre Werte. Der Computer wählt die Farbe mit den meisten Karten und kauft Magie früher. Im Mehrspieler wählen beide gleichzeitig. <b>Monster neu skaliert:</b> Stufe I 2 TP, Stufe II 3 TP, Stufe III 5 TP (Mana 4/4/5, Limit 2/3/4); Magie der Monster 2/1/1 in Stufe I, 3/2/1 in Stufe II und III, keine Magie 0. <b>Monsterbewertung (Test):</b> Nach einem Monsterkampf lässt sich das Monster auf einer Vierer-Skala (zu schwer, etwas schwer, etwas leicht, zu leicht) bewerten; die Bewertung wird mit der Monsterkonfiguration gespeichert. Einstellungen: an/aus, Export, Löschen. Die Kartenwahl liegt als Leiste am unteren Rand (Mausrad scrollt das Deck), die Monster bleiben dabei sichtbar.'],
   ['0.14.8', '<b>Spezialisten-Deck, Würfelseite „Gratis-Nachziehen“, Läuterungs-Warnung:</b> Der Stufe-I-Spezialist hat jetzt auch eine Karte der unterlegenen Farbe (eine Stufe-1-Karte des Hauptelements wird dazu getauscht; die Stärke bleibt gleich). Die wirkungslose Würfelseite „Ziehen“ ist ersetzt durch „Gratis-Nachziehen“: Plus: Das Monster beginnt den Kampf mit +1 Gratis-Nachziehen, Minus: Der Angreifer beginnt mit +1. Wer eine Läuterung vorbereitet und wählbare Marker nicht angeklickt hat, wird vor dem Ausführen gewarnt und kann „Trotzdem ausführen“ wählen.'],
   ['0.14.7', '<b>Monster erholen sich in der Weltphase nicht mehr:</b> Da jeder Monsterkampf mit einem Gewinner endet, gibt es keine Erholung der Monster mehr. Bisher bekamen lebende Monster am Ende jeder Runde +1 HP und +1 Mana. Die Erholung der Spieler bleibt.'],
   ['0.14.6', '<b>Zuschauen: Würfel verschwinden im Kampf auch bei hohem Tempo:</b> Beim Zuschauen mit beschleunigten Stufen (ab ×3) blieben die Monsterwürfel der Weltphase im Kampf sichtbar stehen. Sie werden jetzt wie bei normalem Tempo ausgeblendet.'],
@@ -6230,7 +6231,7 @@ function specAdvance() {
   specT = setTimeout(() => { specT = 0; if (SPEC && overlay.style.display !== 'flex') dismissOverlay(); else if (SPEC) specAdvance(); }, 2600);
 }
 /* ---------- Vorbereitung (seit 0.15) ---------- */
-// Vor dem ersten Zug wählt jeder Spieler verdeckt eine Karte aus seinem ganzen Deck; ihre Farbe ist der erste, kostenlose Magiepunkt. Die Auswahl liegt im Vordergrund (wie die Hellsicht-Auswahl); der Gegner wählt gleichzeitig.
+// Vor dem ersten Zug wählt jeder Spieler verdeckt eine Karte aus seinem ganzen Deck; ihre Farbe ist der erste, kostenlose Magiepunkt. Die Auswahl liegt als Leiste am unteren Rand (Mausrad scrollt das Deck seitwärts), die Monster bleiben sichtbar; der Gegner wählt gleichzeitig.
 let prepSel = 0;   // uid der angewählten Karte
 let prepWas = false;   // die Vorbereitung lief bis eben
 // Die Monster sind zu Beginn schon ausgelost und aufgedeckt; das Würfeln gehört zur Monsterauslosung (Phase 1); nach der Kartenwahl folgen Mischen und Austeilen.
@@ -6242,21 +6243,24 @@ function prepOverlayHTML() {
   if (!G || G.phase !== 'prep' || G.over || Intro.on || SPEC) { prepSel = 0; return ''; }
   if (G.prep[ME]) {
     const e = (G.players[ME].deck.draw.find(c => c.uid === G.prep[ME]) || {}).id;
-    return '<div class="prepbox"><div class="preptitle">Vorbereitung</div><div class="prepsub">Deine Wahl liegt verdeckt' + (e ? ' (' + M.NAMES[e[0]] + ')' : '') + '. Warte auf ' + esc(G.players[OPP].name) + ' …</div></div>';
+    return '<div class="prepbox"><div class="prephead"><div class="preptitle">Vorbereitung</div><div class="prepsub">Deine Wahl liegt verdeckt' + (e ? ' (' + M.NAMES[e[0]] + ')' : '') + '. Warte auf ' + esc(G.players[OPP].name) + ' …</div></div></div>';
   }
   const cs = M.prepChoices(G, ME).slice().sort((a, b) => M.ELEMENTS.indexOf(a.id[0]) - M.ELEMENTS.indexOf(b.id[0]) || a.id.localeCompare(b.id) || a.uid - b.uid);
   if (!cs.some(c => c.uid === prepSel)) prepSel = 0;
   const cnt = M.ELEMENTS.map(e => M.NAMES[e] + ' ' + cs.filter(c => c.id[0] === e).length).join(' · ');
-  let h = '<div class="prepbox"><div class="preptitle">Vorbereitung: Erste Magie wählen</div>' +
-    '<div class="prepsub">Alle Magiestufen beginnen bei 0. Schau dir deine Karten an und lege eine verdeckt vor dich: Ihre Farbe beginnt kostenlos auf Stufe 1. Dein Gegner wählt gleichzeitig und verdeckt; danach werden beide Wahlen aufgedeckt, die Karten kommen zurück ins Deck, das neu gemischt wird.</div>' +
-    '<div class="prepcnt">Dein Deck: ' + cnt + '</div><div class="prepgrid">';
+  let h = '<div class="prepbox"><div class="prephead"><div class="preptitle">Erste Magie wählen</div>' +
+    '<div class="prepsub">Lege eine Karte verdeckt vor dich: Ihre Farbe beginnt kostenlos auf Stufe 1. Mausrad: Deck durchblättern.</div>' +
+    '<div class="prepcnt">' + cnt + '</div><button class="btn primary prepok" data-act="prepok" ' + (prepSel ? '' : 'disabled') + '>' + (prepSel ? 'Verdeckt wählen' : 'Karte antippen') + '</button></div><div class="prepgrid">';
   cs.forEach((c, i) => { h += '<div class="prepcard' + (c.uid === prepSel ? ' on' : '') + '" data-act="prepsel" data-uid="' + c.uid + '"><img src="' + (IMG[c.id] || IMG.back) + '"></div>'; });
-  return h + '</div><button class="btn primary prepok" data-act="prepok" ' + (prepSel ? '' : 'disabled') + '>' + (prepSel ? 'Verdeckt wählen' : 'Karte antippen') + '</button></div>';
+  return h + '</div></div>';
 }
 function prepRender() {
   const html = prepOverlayHTML(); let o = document.getElementById('prepov');
-  if (html && !o) { o = document.createElement('div'); o.id = 'prepov'; stage.appendChild(o); }
-  if (o) { if (html) { if (o.dataset.k !== html) { o.innerHTML = html; o.dataset.k = html; } o.style.display = 'flex'; } else { o.style.display = 'none'; o.dataset.k = ''; } }
+  if (html && !o) {
+    o = document.createElement('div'); o.id = 'prepov'; stage.appendChild(o);
+    o.addEventListener('wheel', e => { const g = o.querySelector('.prepgrid'); if (!g) return; e.preventDefault(); g.scrollLeft += (Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY); }, { passive: false });   // Mausrad scrollt das Deck seitwärts
+  }
+  if (o) { if (html) { if (o.dataset.k !== html) { const g = o.querySelector('.prepgrid'), sl = g ? g.scrollLeft : 0; o.innerHTML = html; o.dataset.k = html; const g2 = o.querySelector('.prepgrid'); if (g2) g2.scrollLeft = sl; } o.style.display = 'flex'; } else { o.style.display = 'none'; o.dataset.k = ''; } }
 }
 function prepClick(d) {
   if (d.act === 'prepsel') { prepSel = +d.uid === prepSel ? 0 : +d.uid; render(); }

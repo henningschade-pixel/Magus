@@ -507,16 +507,17 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 
 
 /* Vorbereitung (seit 0.15): Wahl der ersten Magie */
-#prepov{position:absolute;inset:0;z-index:320;background:rgba(0,0,0,.8);display:flex;flex-direction:column;align-items:center;justify-content:center}
-#prepov .prepbox{display:flex;flex-direction:column;align-items:center;gap:10px;max-width:1500px;padding:0 40px;text-align:center}
-#prepov .preptitle{font-size:38px;color:#e7c46a}
-#prepov .prepsub{font-size:21px;color:#d8cdb4;max-width:1100px;line-height:1.35}
-#prepov .prepcnt{font-size:20px;color:#b9ab8a}
-#prepov .prepgrid{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;max-width:1300px;margin-top:6px}
-#prepov .prepcard{width:150px;cursor:pointer;transition:transform .15s,filter .15s;filter:brightness(.72)}
-#prepov .prepcard img{display:block;width:100%;border-radius:9px;box-shadow:0 0 0 2px #1b140d,0 5px 18px rgba(0,0,0,.8)}
-#prepov .prepcard:hover{filter:brightness(.95)}#prepov .prepcard.on{transform:translateY(-10px) scale(1.06);filter:none}#prepov .prepcard.on img{box-shadow:0 0 0 3px #e7c46a,0 0 24px rgba(231,196,106,.85)}
-#prepov .prepok{margin-top:10px;font-size:22px;padding:8px 28px}
+#prepov{position:absolute;left:0;right:24%;bottom:0;height:27%;z-index:320;background:rgba(14,10,6,.94);border-top:2px solid #e7c46a;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start}
+#prepov .prepbox{display:flex;flex-direction:column;gap:4px;height:100%;padding:6px 20px 8px;box-sizing:border-box;min-height:0}
+#prepov .prephead{display:flex;align-items:center;gap:18px}
+#prepov .preptitle{font-size:20px;color:#e7c46a;white-space:nowrap}
+#prepov .prepsub{font-size:14px;color:#d8cdb4;line-height:1.25;flex:1}
+#prepov .prepcnt{font-size:14px;color:#b9ab8a;white-space:nowrap}
+#prepov .prepgrid{display:flex;flex-wrap:nowrap;gap:12px;flex:1;min-height:0;overflow-x:auto;overflow-y:hidden;padding:10px 4px 2px;align-items:flex-end}
+#prepov .prepcard{height:100%;flex:0 0 auto;cursor:pointer;transition:transform .15s,filter .15s;filter:brightness(.72)}
+#prepov .prepcard img{display:block;height:100%;width:auto;border-radius:8px;box-shadow:0 0 0 2px #1b140d,0 4px 14px rgba(0,0,0,.8)}
+#prepov .prepcard:hover{filter:brightness(.95)}#prepov .prepcard.on{transform:translateY(-10px);filter:none}#prepov .prepcard.on img{box-shadow:0 0 0 3px #e7c46a,0 0 20px rgba(231,196,106,.85)}
+#prepov .prepok{font-size:16px;padding:4px 16px;white-space:nowrap}
 /* Monsterbewertung (temporär, seit 0.15) */
 .endbox .ratebox{margin-top:16px;padding-top:12px;border-top:1px solid rgba(231,196,106,.35)}
 .endbox .rateq{font-size:22px;color:#e7e0d2}
