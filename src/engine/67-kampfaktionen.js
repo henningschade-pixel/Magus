@@ -7,7 +7,11 @@ function applyCombat(state, a) {
   if (a.type === 'lock') { const e = toggleLock(mine.deck, a.slot); return e ? fail(e) : { ok: true }; }
   if (side.ctrl !== pid) return fail('Die Gegenseite ist am Zug.');
   switch (a.type) {
-    case 'mark': { const e = toggleMark(side.deck, a.slot, side.stats.limit); return e ? fail(e) : { ok: true }; }
+    case 'mark': {
+      const cd = side.deck.hand[a.slot];   // seit 0.15.3: Karten einer Farbe mit Magie 0 lassen sich im Kampf nicht markieren (Abwählen bleibt möglich)
+      if (cd && !side.deck.marks.includes(a.slot)) { const why = deadColorReason(side.stats, [parseCard(cd.id)]); if (why) return fail(why); }
+      const e = toggleMark(side.deck, a.slot, side.stats.limit); return e ? fail(e) : { ok: true };
+    }
     case 'lfp': {
       if (c.action !== 'attack' && c.action !== 'defense') return fail('Nur im Angriffs- oder Verteidigungszug.');
       const ok = ['sm', 'om', 'sd', 'od', 'sh', 'oh', 'sr', 'or', 'st', 'ot'];

@@ -63,6 +63,7 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .card.bad .face.front{box-shadow:0 0 0 3px var(--bad)}
 .card .lockbtn{position:absolute;right:4px;top:4px;width:30px;height:30px;border-radius:50%;background:rgba(10,8,14,.78) center/60% no-repeat;border:1px solid var(--line);opacity:0;transition:opacity .15s;cursor:var(--cp)}
 .card.myhand:hover .lockbtn,.card.locked .lockbtn{opacity:1}
+.card.dead .face.front{opacity:.38;filter:grayscale(.65)}
 .card.locked .lockbtn{border-color:var(--gold);background-color:rgba(210,173,79,.28)}
 .fxnote{position:absolute;z-index:260;left:920px;width:336px;box-sizing:border-box;padding:8px 14px 8px 12px;border-radius:12px;font-size:19px;line-height:1.25;pointer-events:none;display:flex;gap:10px;align-items:center;background:rgba(14,10,22,.95);border:1px solid var(--gold);box-shadow:0 4px 18px rgba(0,0,0,.6);animation:fxin 3.2s ease-out forwards}
 .fxnote i{font-style:normal;font-size:28px;line-height:1}
@@ -1001,8 +1002,14 @@ function echoBoost(stats, lv, ord, ultiEl) {
 const MAX_LVL_ECHO = 3;
 // Fluchkarten kosten beim Ausspielen je 1 Mana und zählen nicht als Element. Offen liegende Hellsichtkarten (c.free) kosten kein Mana.
 // opt.combo === false: In dieser Phase sind Kombos abgeschaltet (Einstellung allowAtk/allowDef): nur Karten einer Farbe.
+// Seit 0.15.3: Karten einer Farbe, deren Magie 0 ist, lassen sich nicht spielen: weder als erste noch als weitere Karte, im Angriff wie in der Verteidigung, auch nicht, um ein Echo zu setzen. Fluchkarten sind davon ausgenommen (sie haben keine Farbe).
+function deadColorReason(stats, cards) {
+  const c = stats && stats.mag ? cards.find(x => !x.curse && x.el && stats.mag[x.el] === 0) : null;
+  return c ? NAMES[c.el] + '-Magie ist 0: Karten dieser Farbe sind nicht spielbar.' : null;
+}
 function evalAttack(stats, cards, opt) {
   if (!cards.length) return { valid: false, reason: 'Keine Karte gewählt.' };
+  { const dead = deadColorReason(stats, cards); if (dead) return { valid: false, reason: dead }; }
   const curses = cards.filter(c => c.curse), normals = cards.filter(c => !c.curse);
   const prim = normals.length ? normals[0].el : null, lastEl = secondaryEl(normals, prim);   // lastEl (seit 0.11.0.9: Sekundärfarbe, die Farbe der ersten Karte, die nicht der Primärfarbe entspricht) bestimmt die Ultimate; die dritte Farbe löst sie nur aus
   if (opt && opt.combo === false && normals.some(c => c.el !== prim)) return { valid: false, reason: 'Kombos sind in dieser Phase abgeschaltet (Einstellungen): nur Karten einer Farbe.' };
@@ -1018,6 +1025,7 @@ function evalAttack(stats, cards, opt) {
 }
 function evalDefense(stats, cards, color, opt) {
   if (!cards.length) return { valid: true, cost: 0, block: 0, empty: true };
+  { const dead = deadColorReason(stats, cards); if (dead) return { valid: false, reason: dead }; }
   const curses = cards.filter(c => c.curse), normals = cards.filter(c => !c.curse);
   const el = normals.length ? normals[0].el : null, lastEl = secondaryEl(normals, el);   // lastEl = Sekundärfarbe bestimmt die Ultimate (seit 0.11.0.9)
   const same = normals.filter(c => c.el === el), other = normals.filter(c => c.el !== el);
@@ -1593,7 +1601,11 @@ function applyCombat(state, a) {
   if (a.type === 'lock') { const e = toggleLock(mine.deck, a.slot); return e ? fail(e) : { ok: true }; }
   if (side.ctrl !== pid) return fail('Die Gegenseite ist am Zug.');
   switch (a.type) {
-    case 'mark': { const e = toggleMark(side.deck, a.slot, side.stats.limit); return e ? fail(e) : { ok: true }; }
+    case 'mark': {
+      const cd = side.deck.hand[a.slot];   // seit 0.15.3: Karten einer Farbe mit Magie 0 lassen sich im Kampf nicht markieren (Abwählen bleibt möglich)
+      if (cd && !side.deck.marks.includes(a.slot)) { const why = deadColorReason(side.stats, [parseCard(cd.id)]); if (why) return fail(why); }
+      const e = toggleMark(side.deck, a.slot, side.stats.limit); return e ? fail(e) : { ok: true };
+    }
     case 'lfp': {
       if (c.action !== 'attack' && c.action !== 'defense') return fail('Nur im Angriffs- oder Verteidigungszug.');
       const ok = ['sm', 'om', 'sd', 'od', 'sh', 'oh', 'sr', 'or', 'st', 'ot'];
@@ -1925,7 +1937,7 @@ function handCounts(d) { const c = {}; d.hand.forEach(x => { if (x) c[x.id] = (c
 return { allowed, ELEMENTS, SUPERIOR, NAMES, START_DECK, MAX_MAGIC, MAX_SLOTS, MIN_SLOTS, MAX_LIMIT, limitMax, slotMax, MAX_DRAW_LIMIT, MAX_UPGRADES, MONSTER_MAX_LIMIT, DEFAULT_RULES, MONSTER,
   makeRng, parseCard, selection, baseLen, dropSight, newGame, apply, record, prim, actor, other, regen, handCounts,
   vendorOffers, vendorPlans, maxed, limitStepCost, manaStepCost, hpStepCost, slotStepCost, magicCost, drawLimitCost, goldTxt,
-  evalAttack, evalDefense, canFlee, stockOf, recoverGain, regenGain, comboLevels, levelsFor,
+  evalAttack, evalDefense, deadColorReason, canFlee, stockOf, recoverGain, regenGain, comboLevels, levelsFor,
   drawPenaltyAmount, worldRound, worldWear, worldWearGold, monsterAlive, monsterHand, markerOf, drawManaCost, drawGoldPenalty, previewDefense, defenseComboPre, allMonstersDead, magicProgress, prepChoices, spawnMonsters, spawnOne, spawnForGame };
 }));</script>
 <script>/* Magus – einfacher Computergegner. Wählt nur Aktionen, die auch ein Mensch hätte. */
@@ -2880,10 +2892,11 @@ let hpHold = null, curseHold = {}, stageSeen = 1, endSnd = null, G = null, hold 
 
 /* ---------- Versionen: Versionsnummer und Versionsbeschreibung (Seite „Neu in Version …“) ---------- */
 // Aktuelle Versionsnummer: einzige Stelle, an der sie gesetzt wird (Menü-Link und Über-Seite lesen sie von hier; bei jedem Schritt hochzählen)
-const MAGUS_VERSION = '0.15.2';
+const MAGUS_VERSION = '0.15.3';
 // Versionsbeschreibung: ein Eintrag je Version, die neueste zuerst. Bei jedem Schritt oben einen Eintrag [Nummer, Text] ergänzen;
 // der erste Eintrag gehört zu MAGUS_VERSION und erscheint unter „Neu in Version …“.
 const VERSIONEN = [
+  ['0.15.3', '<b>Magie 0 sperrt die Karten dieser Farbe:</b> Eine Karte, deren Farbe mit Magie 0 steht, lässt sich im Kampf nicht mehr spielen, weder als erste noch als weitere Karte, weder im Angriff noch in der Verteidigung, auch nicht, um ein Echo zu setzen. Bisher kostete eine solche Karte Mana und wirkte nicht (eine Kombo mit ihr hatte Stufe 0). Gesperrte Karten erscheinen abgedunkelt, der Tooltip und die Kombo-Übersicht nennen den Grund; das Markieren wird abgelehnt. Die KI hält sich an die Sperre. Karten mit höherer Stufe als die Magie bleiben spielbar (sie zählen mit der Magiestufe).'],
   ['0.15.2', '<b>Kartenfächer: Blättern nach links springt nicht mehr:</b> Beim Durchblättern des Ablagestapels und der Kartenwahl der Vorbereitung sprang die Anzeige zur letzten bzw. mittleren Karte, sobald man über die erste Karte hinaus nach links scrollte. Die Position wird jetzt an der ersten Karte angehalten, wie am rechten Ende.'],
   ['0.15.1', '<b>Monsterbewertung auch für den Monsterführer:</b> Nach einem Monsterkampf fragt der Ergebnis-Bildschirm jetzt nicht nur den Angreifer, sondern auch den Monsterführer, wie er den Kampf erlebt hat (Monster zu stark / etwas stark / etwas schwach / zu schwach). Das gilt auch, wenn der Computer das Monster angreift und du es führst. Jede Bewertung trägt Rolle und einen Schlüssel (Seed, Stufe, Element, Weltrunde), damit sich die Bewertungen beider Geräte einer Partie beim Auswerten zusammenführen lassen. Monsterwerte unverändert (Stufe I weiter 2 TP).'],
   ['0.15', '<b>Experimentelle Version:</b> Magieentwicklung und Monsterwerte sind neu und noch nicht ausbalanciert; nach einem Monsterkampf kannst du mit der Bewertung Rückmeldung geben. <b>Magie beginnt bei 0, Vorbereitung vor dem Spiel:</b> Die drei Magiestufen starten bei 0. Phase 1: Die Monster werden ausgelost, aufgedeckt und gewürfelt. Vor dem ersten Zug schauen beide Spieler ihre 12 Karten an und legen gleichzeitig und verdeckt eine Karte vor sich; ihre Farbe beginnt kostenlos auf Stufe 1. Nach dem Aufdecken geht die Karte zurück ins Deck, das neu gemischt wird; dann beginnt das Spiel (3 Gold Startgold wie bisher). Weitere Magie kauft man offen im Spiel für 1, 2, 3 … Gold; der Gratispunkt zählt dabei nicht mit. Monster behalten ihre Werte. Der Computer wählt die Farbe mit den meisten Karten und kauft Magie früher. Im Mehrspieler wählen beide gleichzeitig. <b>Monster neu skaliert:</b> Stufe I 2 TP, Stufe II 3 TP, Stufe III 5 TP (Mana 4/4/5, Limit 2/3/4); Magie der Monster 2/1/1 in Stufe I, 3/2/1 in Stufe II und III, keine Magie 0. <b>Monsterbewertung (Test):</b> Nach einem Monsterkampf lässt sich das Monster auf einer Vierer-Skala (zu schwer, etwas schwer, etwas leicht, zu leicht) bewerten; die Bewertung wird mit der Monsterkonfiguration gespeichert. Einstellungen: an/aus, Export, Löschen. Die Kartenwahl liegt als Leiste am unteren Rand als Fächer (Mausrad blättert, die Karten überlappen links und rechts der Mitte), die Monster bleiben dabei sichtbar. <b>Mehr Gold früher:</b> Der Abschnittsbonus beträgt 5 / 6 / 7 Gold (vorher 3 / 6 / 9); die Stufe-II-Monster haben dafür 1 Mana mehr. Die Karten der Kartenwahl liegen in zufälliger Reihenfolge. <b>Ablagestapel als Fächer:</b> Ein Klick auf deinen Ablagestapel zeigt die Karten wie in der Kartenwahl; das Balkendiagramm der Deckverteilung entfällt.'],
@@ -3504,7 +3517,7 @@ function place(card, s) {
   if (!held) d.style.transform = rec.final;
   d.style.zIndex = held ? 280 : s.z;
   const wasDown = d.classList.contains('down'), flipped = !isNew && !!s.down !== wasDown && (s.zone === 'hand' || prevZone === 'hand') && !FAST && !reducedMotion();
-  d.classList.toggle('down', !!s.down); d.classList.toggle('marked', !!s.marked); d.classList.toggle('first', !!s.first); d.classList.toggle('fd', !!s.fd); d.classList.toggle('cand', !!s.cand); d.classList.toggle('locked', !!s.locked); d.classList.toggle('sightopen', !!s.free);
+  d.classList.toggle('down', !!s.down); d.classList.toggle('marked', !!s.marked); d.classList.toggle('first', !!s.first); d.classList.toggle('fd', !!s.fd); d.classList.toggle('cand', !!s.cand); d.classList.toggle('locked', !!s.locked); d.classList.toggle('sightopen', !!s.free); d.classList.toggle('dead', !!s.dead); if (s.dead) d.title = s.dead; else if (d.dataset.dead) d.removeAttribute('title'); d.dataset.dead = s.dead ? '1' : '';
   d.classList.toggle('myhand', !!s.mine); d.dataset.slot = s.slot === undefined ? '' : s.slot;
   d.style.pointerEvents = s.mine ? 'auto' : 'none';
   // Volle Drehung (Kartendreh-Werkstatt); nur Karten, die in die Hand kommen oder sie verlassen (Austeilen, Aufdecken); Mischen und Ablegen drehen ohne Animation
@@ -3525,12 +3538,15 @@ function layoutDeck(deck, L, mine) {
   { const ne0 = n - nb, os0 = mine ? 0.5 : 0.7;   // x-Bereich dieser Reihe merken: Die Markerreihe samt Falle weicht ihm aus (deathPos, seit 0.12.1)
     if (ne0 > 0) { const Lo = Object.assign({}, L, { s: L.s * os0, gap: L.gap * 0.62, span: L.span * 0.7 }); OPEN_SPAN[mine ? 's' : 'o'] = { x1: slotX(0, ne0, Lo), x2: slotX(ne0 - 1, ne0, Lo) + CW * Lo.s }; }
     else OPEN_SPAN[mine ? 's' : 'o'] = null; }
+  // Seit 0.15.3: Karten einer Farbe mit Magie 0 sind im Kampf nicht spielbar und erscheinen abgedunkelt (Tooltip nennt den Grund)
+  const cSide = mine && G.phase === 'combat' && G.combat ? ['a', 'b'].map(k => G.combat.sides[k]).find(sd => sd.deck === deck) : null;
+  const deadOf = c => { if (!cSide || !c) return ''; const p = M.parseCard(c.id); return M.deadColorReason(cSide.stats, [p]) || ''; };
   deck.hand.forEach((c, i) => {
     if (!c) return;
     if (!forcedMe()) { fdSel.clear(); sightSel = []; }
     const fdm = mine && forcedMe() && fdSel.has(i), marked = deck.marks.includes(i) || fdm;
     const open = i >= nb, ne = n - nb, os = mine ? 0.5 : 0.7, ox = open ? slotX(i - nb, ne, Object.assign({}, L, { s: L.s * os, gap: L.gap * 0.62, span: L.span * 0.7 })) : 0;
-    place(c, open ? { x: ox, y: (mine ? 497 : 112) + (marked ? (mine ? -14 : 8) : 0), sc: L.s * os, down: false, z: 60 + i + (marked ? 30 : 0), marked, free: true, mine, slot: i, spawn, zone: 'hand', first: mine && marked && isFirstAtk(deck, i) } : { x: slotX(i, nb, L), y: L.y + (marked ? L.raise : 0), sc: L.s, down: !mine, z: 20 + i + (marked ? 30 : 0), marked, fd: fdm, locked: mine && c.locked, mine, slot: i, spawn, zone: 'hand', first: mine && marked && !fdm && isFirstAtk(deck, i)});
+    place(c, open ? { x: ox, y: (mine ? 497 : 112) + (marked ? (mine ? -14 : 8) : 0), sc: L.s * os, down: false, z: 60 + i + (marked ? 30 : 0), marked, free: true, dead: deadOf(c), mine, slot: i, spawn, zone: 'hand', first: mine && marked && isFirstAtk(deck, i) } : { x: slotX(i, nb, L), y: L.y + (marked ? L.raise : 0), sc: L.s, down: !mine, z: 20 + i + (marked ? 30 : 0), marked, fd: fdm, locked: mine && c.locked, dead: deadOf(c), mine, slot: i, spawn, zone: 'hand', first: mine && marked && !fdm && isFirstAtk(deck, i)});
   });
 }
 // Nachziehlimit: drei Kreise unter dem Nachziehstapel (beide Spieler), der rot/grüne Marker liegt auf der Stufe des nächsten freien Nachziehens; Stufen über dem Limit sind abgedunkelt, auf der nächsten sitzt der Plus-Knopf (Upgrade-Punkte)
@@ -4018,8 +4034,11 @@ function comboRef(cx) {
       const why = [], n = els.length;
       if (n > 1 && !comboOk) why.push('Kombos sind in dieser Phase abgeschaltet');
       if (cx.myStats.limit < n) why.push('Ausspiellimit ' + cx.myStats.limit + ' (nötig: ' + n + ')');
+      const zero = els.filter(e => mag[e] === 0);   // seit 0.15.3: Magie 0 sperrt die Karten dieser Farbe
+      if (zero.length) why.push(zero.map(e => NAMES[e]).join('- und ') + '-Magie ist 0');
       const miss = els.filter(e => !handCards.some(x => x.el === e));
-      if (miss.length) why.push('keine ' + miss.map(e => NAMES[e]).join('- und ') + '-Karte auf der Hand');
+      if (zero.length) { /* Grund steht schon da */ }
+      else if (miss.length) why.push('keine ' + miss.map(e => NAMES[e]).join('- und ') + '-Karte auf der Hand');
       else { const cost = els.filter(e => !handCards.some(x => x.el === e && x.free)).length; if (cx.myStats.mana < cost) why.push('zu wenig Mana (' + cx.myStats.mana + ' von ' + cost + ')'); }
       return why.length ? 'Gerade nicht spielbar: ' + why.join(', ') + '.' : '';
     };

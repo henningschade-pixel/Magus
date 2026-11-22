@@ -42,8 +42,14 @@ function echoBoost(stats, lv, ord, ultiEl) {
 const MAX_LVL_ECHO = 3;
 // Fluchkarten kosten beim Ausspielen je 1 Mana und zählen nicht als Element. Offen liegende Hellsichtkarten (c.free) kosten kein Mana.
 // opt.combo === false: In dieser Phase sind Kombos abgeschaltet (Einstellung allowAtk/allowDef): nur Karten einer Farbe.
+// Seit 0.15.3: Karten einer Farbe, deren Magie 0 ist, lassen sich nicht spielen: weder als erste noch als weitere Karte, im Angriff wie in der Verteidigung, auch nicht, um ein Echo zu setzen. Fluchkarten sind davon ausgenommen (sie haben keine Farbe).
+function deadColorReason(stats, cards) {
+  const c = stats && stats.mag ? cards.find(x => !x.curse && x.el && stats.mag[x.el] === 0) : null;
+  return c ? NAMES[c.el] + '-Magie ist 0: Karten dieser Farbe sind nicht spielbar.' : null;
+}
 function evalAttack(stats, cards, opt) {
   if (!cards.length) return { valid: false, reason: 'Keine Karte gewählt.' };
+  { const dead = deadColorReason(stats, cards); if (dead) return { valid: false, reason: dead }; }
   const curses = cards.filter(c => c.curse), normals = cards.filter(c => !c.curse);
   const prim = normals.length ? normals[0].el : null, lastEl = secondaryEl(normals, prim);   // lastEl (seit 0.11.0.9: Sekundärfarbe, die Farbe der ersten Karte, die nicht der Primärfarbe entspricht) bestimmt die Ultimate; die dritte Farbe löst sie nur aus
   if (opt && opt.combo === false && normals.some(c => c.el !== prim)) return { valid: false, reason: 'Kombos sind in dieser Phase abgeschaltet (Einstellungen): nur Karten einer Farbe.' };
@@ -59,6 +65,7 @@ function evalAttack(stats, cards, opt) {
 }
 function evalDefense(stats, cards, color, opt) {
   if (!cards.length) return { valid: true, cost: 0, block: 0, empty: true };
+  { const dead = deadColorReason(stats, cards); if (dead) return { valid: false, reason: dead }; }
   const curses = cards.filter(c => c.curse), normals = cards.filter(c => !c.curse);
   const el = normals.length ? normals[0].el : null, lastEl = secondaryEl(normals, el);   // lastEl = Sekundärfarbe bestimmt die Ultimate (seit 0.11.0.9)
   const same = normals.filter(c => c.el === el), other = normals.filter(c => c.el !== el);

@@ -166,8 +166,11 @@ function comboRef(cx) {
       const why = [], n = els.length;
       if (n > 1 && !comboOk) why.push('Kombos sind in dieser Phase abgeschaltet');
       if (cx.myStats.limit < n) why.push('Ausspiellimit ' + cx.myStats.limit + ' (nötig: ' + n + ')');
+      const zero = els.filter(e => mag[e] === 0);   // seit 0.15.3: Magie 0 sperrt die Karten dieser Farbe
+      if (zero.length) why.push(zero.map(e => NAMES[e]).join('- und ') + '-Magie ist 0');
       const miss = els.filter(e => !handCards.some(x => x.el === e));
-      if (miss.length) why.push('keine ' + miss.map(e => NAMES[e]).join('- und ') + '-Karte auf der Hand');
+      if (zero.length) { /* Grund steht schon da */ }
+      else if (miss.length) why.push('keine ' + miss.map(e => NAMES[e]).join('- und ') + '-Karte auf der Hand');
       else { const cost = els.filter(e => !handCards.some(x => x.el === e && x.free)).length; if (cx.myStats.mana < cost) why.push('zu wenig Mana (' + cx.myStats.mana + ' von ' + cost + ')'); }
       return why.length ? 'Gerade nicht spielbar: ' + why.join(', ') + '.' : '';
     };

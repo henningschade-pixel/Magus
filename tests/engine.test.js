@@ -1582,3 +1582,40 @@ test('Würfelseite Gratis-Nachziehen: Plus gibt dem Monster, Minus dem Angreifer
   } finally { D.plus.splice(0, 6, ...saved[0]); D.minus.splice(0, 6, ...saved[1]); }
 });
 
+
+test('Magie 0 sperrt die Karten dieser Farbe: Angriff, Verteidigung, Markieren, Echo (0.15.3)', () => {
+  const mag0 = STATS({ mag: { F: 2, E: 1, W: 0 } });
+  // Auswertung: jede Karte der Farbe mit Magie 0 macht Angriff und Verteidigung ungültig, auch als zweite Karte
+  assert.equal(M.evalAttack(mag0, cards(['W1'])).valid, false);
+  const hs = M.evalAttack(mag0, cards(['F2', 'W1']));
+  assert.equal(hs.valid, false);
+  assert.match(hs.reason, /Wasser-Magie ist 0/);
+  assert.equal(M.evalDefense(mag0, cards(['W2']), 'F').valid, false);
+  assert.equal(M.evalDefense(mag0, cards(['F1', 'W1']), 'F').valid, false);
+  // Magie ≥ 1: Karte mit höherer Stufe bleibt spielbar und zählt mit der Magiestufe
+  const ok = M.evalAttack(mag0, cards(['F3']));
+  assert.equal(ok.valid, true); assert.equal(ok.damage, 2);
+  assert.equal(M.evalAttack(STATS({ mag: { F: 2, E: 1, W: 1 } }), cards(['F2', 'W1'])).ord.lvl, 1);   // mit Wasser 1 hat die Hellsicht Stufe 1
+  // Fluchkarten haben keine Farbe und sind nicht betroffen
+  assert.equal(M.deadColorReason(mag0, cards(['C1'])), null);
+  // Markieren im Kampf: gesperrte Karte wird abgelehnt (auch für das Echo), erlaubte und das Abwählen gehen
+  const { s, me } = combatSetup(11, ['W1', 'F1', 'E1']);
+  me.stats.mag = { F: 2, E: 1, W: 0 };
+  const r = M.apply(s, { pid: 0, type: 'mark', slot: 0 });
+  assert.equal(r.ok, false); assert.match(r.error, /Wasser-Magie ist 0/);
+  assert.deepEqual(me.deck.marks, []);
+  assert.ok(M.apply(s, { pid: 0, type: 'mark', slot: 1 }).ok);
+  assert.ok(M.apply(s, { pid: 0, type: 'mark', slot: 1 }).ok);   // abwählen
+  assert.deepEqual(me.deck.marks, []);
+  assert.equal(M.apply(s, { pid: 0, type: 'mark', slot: 0 }).ok, false);   // kein Echo-Setzen mit Magie 0
+  // Die KI wählt nie eine gesperrte Karte
+  for (let seed = 1; seed <= 6; seed++) {
+    const g = M.newGame({ seed, ai: [true, true], first: seed & 1, rules: { prep: 1 } });
+    let steps = 0;
+    while (!g.over && steps++ < 30000) {
+      const a = M.actor(g), r2 = AI.runTurn(g, a);
+      assert.ok(r2.ok, 'KI-Zug gültig (Seed ' + seed + ')');
+    }
+    assert.ok(g.over, 'Partie endet (Seed ' + seed + ')');
+  }
+});

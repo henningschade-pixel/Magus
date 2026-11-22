@@ -58,7 +58,7 @@ function place(card, s) {
   if (!held) d.style.transform = rec.final;
   d.style.zIndex = held ? 280 : s.z;
   const wasDown = d.classList.contains('down'), flipped = !isNew && !!s.down !== wasDown && (s.zone === 'hand' || prevZone === 'hand') && !FAST && !reducedMotion();
-  d.classList.toggle('down', !!s.down); d.classList.toggle('marked', !!s.marked); d.classList.toggle('first', !!s.first); d.classList.toggle('fd', !!s.fd); d.classList.toggle('cand', !!s.cand); d.classList.toggle('locked', !!s.locked); d.classList.toggle('sightopen', !!s.free);
+  d.classList.toggle('down', !!s.down); d.classList.toggle('marked', !!s.marked); d.classList.toggle('first', !!s.first); d.classList.toggle('fd', !!s.fd); d.classList.toggle('cand', !!s.cand); d.classList.toggle('locked', !!s.locked); d.classList.toggle('sightopen', !!s.free); d.classList.toggle('dead', !!s.dead); if (s.dead) d.title = s.dead; else if (d.dataset.dead) d.removeAttribute('title'); d.dataset.dead = s.dead ? '1' : '';
   d.classList.toggle('myhand', !!s.mine); d.dataset.slot = s.slot === undefined ? '' : s.slot;
   d.style.pointerEvents = s.mine ? 'auto' : 'none';
   // Volle Drehung (Kartendreh-Werkstatt); nur Karten, die in die Hand kommen oder sie verlassen (Austeilen, Aufdecken); Mischen und Ablegen drehen ohne Animation
@@ -79,12 +79,15 @@ function layoutDeck(deck, L, mine) {
   { const ne0 = n - nb, os0 = mine ? 0.5 : 0.7;   // x-Bereich dieser Reihe merken: Die Markerreihe samt Falle weicht ihm aus (deathPos, seit 0.12.1)
     if (ne0 > 0) { const Lo = Object.assign({}, L, { s: L.s * os0, gap: L.gap * 0.62, span: L.span * 0.7 }); OPEN_SPAN[mine ? 's' : 'o'] = { x1: slotX(0, ne0, Lo), x2: slotX(ne0 - 1, ne0, Lo) + CW * Lo.s }; }
     else OPEN_SPAN[mine ? 's' : 'o'] = null; }
+  // Seit 0.15.3: Karten einer Farbe mit Magie 0 sind im Kampf nicht spielbar und erscheinen abgedunkelt (Tooltip nennt den Grund)
+  const cSide = mine && G.phase === 'combat' && G.combat ? ['a', 'b'].map(k => G.combat.sides[k]).find(sd => sd.deck === deck) : null;
+  const deadOf = c => { if (!cSide || !c) return ''; const p = M.parseCard(c.id); return M.deadColorReason(cSide.stats, [p]) || ''; };
   deck.hand.forEach((c, i) => {
     if (!c) return;
     if (!forcedMe()) { fdSel.clear(); sightSel = []; }
     const fdm = mine && forcedMe() && fdSel.has(i), marked = deck.marks.includes(i) || fdm;
     const open = i >= nb, ne = n - nb, os = mine ? 0.5 : 0.7, ox = open ? slotX(i - nb, ne, Object.assign({}, L, { s: L.s * os, gap: L.gap * 0.62, span: L.span * 0.7 })) : 0;
-    place(c, open ? { x: ox, y: (mine ? 497 : 112) + (marked ? (mine ? -14 : 8) : 0), sc: L.s * os, down: false, z: 60 + i + (marked ? 30 : 0), marked, free: true, mine, slot: i, spawn, zone: 'hand', first: mine && marked && isFirstAtk(deck, i) } : { x: slotX(i, nb, L), y: L.y + (marked ? L.raise : 0), sc: L.s, down: !mine, z: 20 + i + (marked ? 30 : 0), marked, fd: fdm, locked: mine && c.locked, mine, slot: i, spawn, zone: 'hand', first: mine && marked && !fdm && isFirstAtk(deck, i)});
+    place(c, open ? { x: ox, y: (mine ? 497 : 112) + (marked ? (mine ? -14 : 8) : 0), sc: L.s * os, down: false, z: 60 + i + (marked ? 30 : 0), marked, free: true, dead: deadOf(c), mine, slot: i, spawn, zone: 'hand', first: mine && marked && isFirstAtk(deck, i) } : { x: slotX(i, nb, L), y: L.y + (marked ? L.raise : 0), sc: L.s, down: !mine, z: 20 + i + (marked ? 30 : 0), marked, fd: fdm, locked: mine && c.locked, dead: deadOf(c), mine, slot: i, spawn, zone: 'hand', first: mine && marked && !fdm && isFirstAtk(deck, i)});
   });
 }
 // Nachziehlimit: drei Kreise unter dem Nachziehstapel (beide Spieler), der rot/grüne Marker liegt auf der Stufe des nächsten freien Nachziehens; Stufen über dem Limit sind abgedunkelt, auf der nächsten sitzt der Plus-Knopf (Upgrade-Punkte)
