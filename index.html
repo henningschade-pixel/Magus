@@ -527,6 +527,11 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 #prepov .prepcard img{display:block;width:100%;border-radius:9px;box-shadow:0 0 0 2px #1b140d,0 5px 18px rgba(0,0,0,.8)}
 #prepov .prepcard:hover{filter:brightness(.95)}#prepov .prepcard.on{transform:translateY(-10px) scale(1.06);filter:none}#prepov .prepcard.on img{box-shadow:0 0 0 3px #e7c46a,0 0 24px rgba(231,196,106,.85)}
 #prepov .prepok{margin-top:10px;font-size:22px;padding:8px 28px}
+/* Monsterbewertung (temporär, seit 0.15) */
+.endbox .ratebox{margin-top:16px;padding-top:12px;border-top:1px solid rgba(231,196,106,.35)}
+.endbox .rateq{font-size:22px;color:#e7e0d2}
+.endbox .rateb{display:flex;gap:12px;justify-content:center;margin-top:10px}
+.endbox .rateb .btn{font-size:20px;padding:6px 16px}
 
 </style>
 </head>
@@ -726,9 +731,10 @@ function magicProgress(p) { return p.stats.mag.F + p.stats.mag.E + p.stats.mag.W
 // Das Limit steigt nur dort, wo es gewollt ist: Ein Monster mit Limit 2 und vielen HP verwickelt den Angreifer in endlose Angriffe und Fluchten (bis 27 Angriffe je Partie), erst Limit 3 gibt ihm die nötige Gefahr.
 const MONSTER = {
   profile: { F: { primary: 'F', secondary: SUPERIOR.F }, E: { primary: 'E', secondary: SUPERIOR.E }, W: { primary: 'W', secondary: SUPERIOR.W } },   // seit 0.4: das Nebenelement ist das überlegene Element (Feuer → Wasser, Erde → Feuer, Wasser → Erde); bis 0.17 war es das unterlegene (Feuer → Erde, Erde → Wasser, Wasser → Feuer)
-  stage1Temple: { F: ['mana'], E: ['mana', 'mana'], W: ['mana'] },   // Stufe I: Mana 5 (Erdmonster 6; sonst verlor es die Angreifer nur halb so oft)
-  temple: { 2: { F: ['limit', 'hp', 'mana'], E: ['limit', 'hp', 'mana'], W: ['limit', 'hp', 'mana'] }, 3: { F: ['limit', 'hp', 'hp', 'hp', 'mana'], E: ['limit', 'hp', 'hp', 'hp', 'mana'], W: ['limit', 'hp', 'hp', 'hp', 'mana'] } },   // Schritte je Stufe (Stufe III kommt auf Stufe II obendrauf): II = Limit 3, 4 HP, Mana 5; III = Limit 4, 7 HP, Mana 6 (Hand höchstens 5, ein HP mehr als Ausgleich)
-  magic: { 2: [3, 2, 1], 3: [3, 2, 1] },                                  // Stufen von Haupt-, Neben- und drittem Element
+  baseHp: 2,                                                              // seit 0.15: Grund-HP aller Monster vor den Schritten (vorher 3; Stufe I: 2 HP, II: 3, III: 5)
+  stage1Temple: { F: [], E: [], W: [] },   // seit 0.15 keine Schritte mehr in Stufe I: Mana 4 (bis 0.14.8: Mana 5, Erdmonster 6)
+  temple: { 2: { F: ['limit', 'hp'], E: ['limit', 'hp'], W: ['limit', 'hp'] }, 3: { F: ['limit', 'hp', 'hp', 'mana'], E: ['limit', 'hp', 'hp', 'mana'], W: ['limit', 'hp', 'hp', 'mana'] } },   // Schritte je Stufe (Stufe III kommt auf Stufe II obendrauf); seit 0.15: I = Limit 2, 2 HP, Mana 4; II = Limit 3, 3 HP, Mana 4; III = Limit 4, 5 HP, Mana 5 (bis 0.14.8: 3/4 HP/Mana 5 in II, 4/7 HP/Mana 6 in III)
+  magic: { 1: [2, 1, 1], 2: [3, 2, 1], 3: [3, 2, 1] },                                  // Stufen von Haupt-, Neben- und drittem Element
   deck: {
     2: (P, S, T) => [P + '3', P + '2', P + '2', P + '2', S + '3', S + '2', T + '1', T + '1', P + '1'],
     3: (P, S, T) => [P + '3', P + '3', P + '3', P + '2', P + '2', S + '3', S + '3', T + '2', T + '1'],
@@ -788,7 +794,8 @@ function spawnOne(el, stage, rng, v) {
   { const sIdx = deck.indexOf(M.profile[el].secondary + '1'); if (sIdx >= 0) deck[sIdx] = M.profile[el].secondary + '2'; }   // Folgemagie: eine Karte eine Stufe über der Magie (wirkt erst mit dem Magiebonus des Pluswürfels)
   stats.limit = M.startLimit;
   stats.drawLimit = M.startDraws;
-  stats.mag[el] = 2;
+  { const m1 = M.magic[1]; stats.mag[el] = m1[0]; stats.mag[M.profile[el].secondary] = m1[1]; stats.mag[ELEMENTS.find(e => e !== el && e !== M.profile[el].secondary)] = m1[2]; }   // Magie in Stufe I (Haupt, Neben, drittes Element); die Werte sind Abstimmungsdaten, kein Wert unter 1 (sonst lägen tote Karten im Deck)
+  if (M.baseHp) stats.maxHp = stats.hp = M.baseHp;
   if (stage === 1) M.stage1Temple[el].forEach(f => applyTemple(stats, f));   // ab Stufe II zählen nur die Schritte von ‚temple‘
   stats.gold = M.gold[1];
   const prof = M.profile[el];
@@ -1927,7 +1934,7 @@ return { allowed, ELEMENTS, SUPERIOR, NAMES, START_DECK, MAX_MAGIC, MAX_SLOTS, M
   makeRng, parseCard, selection, baseLen, dropSight, newGame, apply, record, prim, actor, other, regen, handCounts,
   vendorOffers, vendorPlans, maxed, limitStepCost, manaStepCost, hpStepCost, slotStepCost, magicCost, drawLimitCost, goldTxt,
   evalAttack, evalDefense, canFlee, stockOf, recoverGain, regenGain, comboLevels, levelsFor,
-  drawPenaltyAmount, worldRound, worldWear, worldWearGold, monsterAlive, monsterHand, markerOf, drawManaCost, drawGoldPenalty, previewDefense, defenseComboPre, allMonstersDead, magicProgress, prepChoices, spawnMonsters, spawnForGame };
+  drawPenaltyAmount, worldRound, worldWear, worldWearGold, monsterAlive, monsterHand, markerOf, drawManaCost, drawGoldPenalty, previewDefense, defenseComboPre, allMonstersDead, magicProgress, prepChoices, spawnMonsters, spawnOne, spawnForGame };
 }));</script>
 <script>/* Magus – einfacher Computergegner. Wählt nur Aktionen, die auch ein Mensch hätte. */
 /* Aufbau: 10 Stellschrauben, 20 Weltphase und 30 Kampf bilden die Basis-KI (bewertet jeden Zug einzeln mit festen Gewichten). Seit 0.13 plant 40 Suche im Kampf voraus: Jeder mögliche Zug wird in vielen möglichen Kampfverläufen durchgespielt, die Basis-KI führt darin beide Seiten. 90 Schnittstelle. (Die erste Zeile dient den Werkzeugen als Erkennungsmerkmal und bleibt, wie sie ist.) */
@@ -2885,7 +2892,7 @@ const MAGUS_VERSION = '0.15';
 // Versionsbeschreibung: ein Eintrag je Version, die neueste zuerst. Bei jedem Schritt oben einen Eintrag [Nummer, Text] ergänzen;
 // der erste Eintrag gehört zu MAGUS_VERSION und erscheint unter „Neu in Version …“.
 const VERSIONEN = [
-  ['0.15', '<b>Magie beginnt bei 0, Vorbereitung vor dem Spiel:</b> Die drei Magiestufen starten bei 0. Phase 1: Die Monster werden ausgelost, aufgedeckt und gewürfelt. Vor dem ersten Zug schauen beide Spieler ihre 12 Karten an und legen gleichzeitig und verdeckt eine Karte vor sich; ihre Farbe beginnt kostenlos auf Stufe 1. Nach dem Aufdecken geht die Karte zurück ins Deck, das neu gemischt wird; dann beginnt das Spiel (3 Gold Startgold wie bisher). Weitere Magie kauft man offen im Spiel für 1, 2, 3 … Gold; der Gratispunkt zählt dabei nicht mit. Monster behalten ihre Werte. Der Computer wählt die Farbe mit den meisten Karten und kauft Magie früher. Im Mehrspieler wählen beide gleichzeitig.'],
+  ['0.15', '<b>Magie beginnt bei 0, Vorbereitung vor dem Spiel:</b> Die drei Magiestufen starten bei 0. Phase 1: Die Monster werden ausgelost, aufgedeckt und gewürfelt. Vor dem ersten Zug schauen beide Spieler ihre 12 Karten an und legen gleichzeitig und verdeckt eine Karte vor sich; ihre Farbe beginnt kostenlos auf Stufe 1. Nach dem Aufdecken geht die Karte zurück ins Deck, das neu gemischt wird; dann beginnt das Spiel (3 Gold Startgold wie bisher). Weitere Magie kauft man offen im Spiel für 1, 2, 3 … Gold; der Gratispunkt zählt dabei nicht mit. Monster behalten ihre Werte. Der Computer wählt die Farbe mit den meisten Karten und kauft Magie früher. Im Mehrspieler wählen beide gleichzeitig. <b>Monster neu skaliert:</b> Stufe I 2 TP, Stufe II 3 TP, Stufe III 5 TP (Mana 4/4/5, Limit 2/3/4); Magie der Monster 2/1/1 in Stufe I, 3/2/1 in Stufe II und III, keine Magie 0. <b>Monsterbewertung (Test):</b> Nach einem Monsterkampf lässt sich das Monster als zu leicht, genau richtig oder zu schwer bewerten; die Bewertung wird mit der Monsterkonfiguration gespeichert. Einstellungen: an/aus, Export, Löschen.'],
   ['0.14.8', '<b>Spezialisten-Deck, Würfelseite „Gratis-Nachziehen“, Läuterungs-Warnung:</b> Der Stufe-I-Spezialist hat jetzt auch eine Karte der unterlegenen Farbe (eine Stufe-1-Karte des Hauptelements wird dazu getauscht; die Stärke bleibt gleich). Die wirkungslose Würfelseite „Ziehen“ ist ersetzt durch „Gratis-Nachziehen“: Plus: Das Monster beginnt den Kampf mit +1 Gratis-Nachziehen, Minus: Der Angreifer beginnt mit +1. Wer eine Läuterung vorbereitet und wählbare Marker nicht angeklickt hat, wird vor dem Ausführen gewarnt und kann „Trotzdem ausführen“ wählen.'],
   ['0.14.7', '<b>Monster erholen sich in der Weltphase nicht mehr:</b> Da jeder Monsterkampf mit einem Gewinner endet, gibt es keine Erholung der Monster mehr. Bisher bekamen lebende Monster am Ende jeder Runde +1 HP und +1 Mana. Die Erholung der Spieler bleibt.'],
   ['0.14.6', '<b>Zuschauen: Würfel verschwinden im Kampf auch bei hohem Tempo:</b> Beim Zuschauen mit beschleunigten Stufen (ab ×3) blieben die Monsterwürfel der Weltphase im Kampf sichtbar stehen. Sie werden jetzt wie bei normalem Tempo ausgeblendet.'],
@@ -6066,7 +6073,7 @@ function rulesHTML() {
 }
 function settingsHTML() {   // Einstellungen (Hauptmenü und Spielmenü): Gruppe Ton (Schalter, zwei Regler) und Gruppe Spiel (seit 0.8.1.1; Aufbau seit 0.8.4)
   const si = Snd.info();
-  return '<section class="setgrp"><div class="sethead"><h3>Ton</h3>' + menuBtn('sndtoggle', si.on ? '🔊 an' : '🔇 aus', ' title="Ton an oder aus"', 'small') + '</div>' + volHTML() + '</section>' + rulesHTML();
+  return '<section class="setgrp"><div class="sethead"><h3>Ton</h3>' + menuBtn('sndtoggle', si.on ? '🔊 an' : '🔇 aus', ' title="Ton an oder aus"', 'small') + '</div>' + volHTML() + '</section>' + rulesHTML() + ratingSettingsHTML();
 }
 function showStart(pg) {
   pg = pg || 'main'; setCursor('human');
@@ -6129,7 +6136,7 @@ function checkCombatEnd(prevLog) {
     if (FAST || !res.snap) { hold = 0; return; }
     const cur = JSON.parse(JSON.stringify(res.snap)), sn = res.snap;
     if (preStats) { cur.sides.a.stats = JSON.parse(JSON.stringify(preStats.a)); cur.sides.b.stats = JSON.parse(JSON.stringify(preStats.b)); }   // bis die Animation durch ist, gelten noch die Werte vor der letzten Aktion
-    endView = Object.assign({ stage: 'anim', cur, snap: sn, res }, endTexts(res, sn, lines));
+    endView = Object.assign({ stage: 'anim', cur, snap: sn, res, rate: ratingPrepare(res, sn) }, endTexts(res, sn, lines));
   }
 }
 // Ton zum Ergebnis-Bildschirm: Sieg, Niederlage oder Unentschieden
@@ -6158,7 +6165,7 @@ function endTick() {
   setTimeout(() => { if (endView && endView.stage === 'values') { endView.stage = 'result'; resultSound(endView); render(); } }, 450);
 }
 function overlayHTML() {
-  if (endView && endView.stage === 'result') return '<div class="endov" data-act="dismiss" style="position:absolute;inset:0"><div class="endbox ' + endView.cls + '"><div class="et">' + esc(endView.title) + '</div><div class="es">' + esc(endView.sub) + '</div>' + (endView.loot ? '<div class="el">' + esc(endView.loot) + '</div>' : '') + (endView.rest.length ? '<div class="er">' + endView.rest.map(esc).join('<br>') + '</div>' : '') + '<small>Klicken, um fortzufahren</small></div></div>';
+  if (endView && endView.stage === 'result') return '<div class="endov" data-act="dismiss" style="position:absolute;inset:0"><div class="endbox ' + endView.cls + '"><div class="et">' + esc(endView.title) + '</div><div class="es">' + esc(endView.sub) + '</div>' + (endView.loot ? '<div class="el">' + esc(endView.loot) + '</div>' : '') + (endView.rest.length ? '<div class="er">' + endView.rest.map(esc).join('<br>') + '</div>' : '') + '' + ratingHTML() + '<small>Klicken, um fortzufahren</small></div></div>';
   if (modal) return '<div class="endov" data-act="dismiss" style="position:absolute;inset:0"><div class="endbox intro"><div class="et">' + esc(modal.title) + '</div><div class="es">' + esc(modal.sub) + '</div>' + (modal.lines.length ? '<div class="er">' + modal.lines.map(esc).join('<br>') + '</div>' : '') + '<small>Klicken, um zu beginnen</small></div></div>';
   return '';
 }
@@ -6254,6 +6261,61 @@ function prepRender() {
 function prepClick(d) {
   if (d.act === 'prepsel') { prepSel = +d.uid === prepSel ? 0 : +d.uid; render(); }
   else if (d.act === 'prepok' && prepSel) { const u = prepSel; prepSel = 0; act({ type: 'prepPick', uid: u }); }
+}
+/* ---------- Monsterbewertung (temporär, seit 0.15) ---------- */
+// Zum Abstimmen der Monsterstärke: Nach einem Monsterkampf, den man als Angreifer geführt hat, fragt der Ergebnis-Bildschirm „zu leicht / genau richtig / zu schwer“. Die Antwort wird mit der Monsterkonfiguration
+// (Form, Würfel, Werte, Deck), dem Kampfausgang und dem Stand der Spieler im Browser gespeichert (localStorage 'magus_monsterbewertung') und lässt sich als JSON exportieren. Im Menü unter Einstellungen ein- und ausschaltbar.
+const RATE_KEY = 'magus_monsterbewertung', RATE_ON_KEY = 'magus_bewertung_an', RATE_MAX = 400;
+let ratingCtx = null;   // Zustand beim Kampfbeginn (Monster und Spieler)
+function ratingOn() { try { return localStorage.getItem(RATE_ON_KEY) !== '0'; } catch (e) { return true; } }
+function ratingSetOn(on) { try { localStorage.setItem(RATE_ON_KEY, on ? '1' : '0'); } catch (e) { } }
+function ratingList() { try { const l = JSON.parse(localStorage.getItem(RATE_KEY) || '[]'); return Array.isArray(l) ? l : []; } catch (e) { return []; } }
+function ratingStore(l) { try { localStorage.setItem(RATE_KEY, JSON.stringify(l.slice(-RATE_MAX))); return true; } catch (e) { return false; } }
+function ratingSideInfo(p) {
+  const cnt = {}; [].concat(p.deck.draw, p.deck.discard, p.deck.hand.filter(Boolean)).forEach(c => { cnt[c.id] = (cnt[c.id] || 0) + 1; });
+  const s = p.stats; return { sp: p.sp, mag: Object.assign({}, s.mag), maxHp: s.maxHp, maxMana: s.maxMana, limit: s.limit, drawLimit: s.drawLimit, slots: p.slots, gold: s.gold, deck: cnt };
+}
+const _applyRate = M.apply;
+M.apply = function (st, a) {   // beim Beginn eines Monsterkampfes die Konfiguration des Monsters und den Stand der Spieler festhalten
+  if (st === G && a && a.type === 'combat' && st.phase === 'world' && st.monsters && st.monsters[a.elem]) {
+    try { ratingCtx = { att: a.pid, elem: a.elem, stage: st.stage, worldTurns: st.worldTurns, seed: st.seed, monster: JSON.parse(JSON.stringify(st.monsters[a.elem])), players: st.players.map(ratingSideInfo), rules: { baseHp: M.MONSTER.baseHp } }; } catch (e) { ratingCtx = null; }
+  }
+  return _applyRate.call(M, st, a);
+};
+// Beim Kampfende (Ergebnis-Bildschirm): Frage vorbereiten, nur für den Angreifer, nicht beim Zuschauen
+function ratingPrepare(res, sn) {
+  if (!ratingOn() || SPEC || !res || res.mode !== 'monster' || !ratingCtx || ratingCtx.att !== ME || (sn && sn.att !== ME)) return null;
+  const mo = ratingCtx.monster;
+  return { value: null, rec: { ts: Date.now(), version: MAGUS_VERSION, seed: ratingCtx.seed, stage: ratingCtx.stage, worldTurns: ratingCtx.worldTurns,
+    monster: { name: mo.name, el: mo.el, label: mo.label, variant: mo.variant, base: mo.base, stats: JSON.parse(JSON.stringify(mo.stats)), deck: mo.deckIds.slice().sort() },
+    fight: { attackerWon: res.winner === 'a', monsterDefeated: !!res.monsterDefeated, reason: res.reason || null, turns: res.turns, fled: res.fled || null },
+    me: ratingCtx.players[ME], opponent: ratingCtx.players[OPP], rating: null } };
+}
+function ratingHTML() {
+  const r = endView && endView.rate; if (!r) return '';
+  if (r.value) return '<div class="ratebox"><div class="rateq">Bewertung gespeichert: ' + ({ easy: 'zu leicht', ok: 'genau richtig', hard: 'zu schwer' })[r.value] + '</div></div>';
+  return '<div class="ratebox"><div class="rateq">Wie schwer war dieses Monster?</div><div class="rateb">' +
+    [['easy', 'Zu leicht'], ['ok', 'Genau richtig'], ['hard', 'Zu schwer']].map(([v, t]) => '<button class="btn" data-act="rate" data-v="' + v + '">' + t + '</button>').join('') + '</div></div>';
+}
+function ratingSave(v) {
+  const r = endView && endView.rate; if (!r || r.value || !['easy', 'ok', 'hard'].includes(v)) return;
+  r.rec.rating = v; r.value = v;
+  const l = ratingList(); l.push(r.rec);
+  if (!ratingStore(l)) toast('Bewertung konnte nicht gespeichert werden.');
+  render();
+}
+function ratingSettingsHTML() {
+  const n = ratingList().length;
+  return '<section class="setgrp"><div class="sethead"><h3>Monsterbewertung (Test)</h3>' + menuBtn('ratetoggle', ratingOn() ? 'an' : 'aus', ' title="Nach einem Monsterkampf fragen, ob das Monster zu leicht oder zu schwer war"', 'small') + '</div>' +
+    '<div class="setbox"><div class="rulerow"><span>Gespeicherte Bewertungen: ' + n + '</span><span>' + menuBtn('rateexport', 'Exportieren', n ? '' : ' disabled', 'small') + ' ' + menuBtn('rateclear', 'Löschen', n ? '' : ' disabled', 'small') + '</span></div></div>' +
+    '<p class="sethint">Nach einem Monsterkampf als Angreifer fragt der Ergebnis-Bildschirm, ob das Monster zu leicht, genau richtig oder zu schwer war. Die Antwort wird zusammen mit der Monsterkonfiguration im Browser gespeichert.</p></section>';
+}
+async function ratingExport() {
+  const l = ratingList(); if (!l.length) { toast('Noch keine Bewertungen.'); return; }
+  const txt = JSON.stringify({ version: MAGUS_VERSION, exported: new Date().toISOString(), ratings: l }, null, 1), fn = 'magus-monsterbewertung-' + new Date().toISOString().slice(0, 16).replace(/[-:T]/g, '') + '.json';
+  let dl = null; try { dl = window.claude && window.claude.use ? await window.claude.use('downloads') : null; } catch (x) { dl = null; }
+  if (dl) { try { await dl.save({ filename: fn, data: txt }); toast('Bewertungen exportiert (' + l.length + ').'); } catch (x) { if (!x || x.code !== 'declined') toast('Export nicht möglich.'); } return; }
+  try { const a = document.createElement('a'), u = URL.createObjectURL(new Blob([txt], { type: 'application/json' })); a.href = u; a.download = fn; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000); toast('Bewertungen exportiert (' + l.length + ').'); } catch (x) { toast('Export nicht möglich.'); }
 }
 /* ---------- PeerJS-Adapter: gleiche Schnittstelle wie die Raum-Funktion von claude.ai ----------
    Direkte Verbindung (WebRTC) zwischen zwei Browsern; PeerJS' kostenloser Vermittlungsserver
@@ -6579,6 +6641,10 @@ function onAct(d) {
     case 'deckview': deckView = !deckView; render(); break;
     case 'deckclose': deckView = false; render(); break;
     case 'dismiss': dismissOverlay(); break;
+    case 'rate': ratingSave(d.v); break;
+    case 'ratetoggle': ratingSetOn(!ratingOn()); menuRedraw(); break;
+    case 'rateexport': ratingExport(); break;
+    case 'rateclear': try { localStorage.removeItem(RATE_KEY); } catch (e) { } toast('Bewertungen gelöscht.'); menuRedraw(); break;
     case 'prepsel': case 'prepok': prepClick(d); break;
     case 'combat': act({ type: 'combat', elem: d.e }); break;
     case 'vendorres': { const o = M.vendorOffers(G, ME).filter(x => !x.free && x.available && x.result === d.r).sort((x, y) => x.cost.length - y.cost.length)[0]; if (o) act({ type: 'vendor', result: o.result, cost: o.cost }); break; }

@@ -134,7 +134,7 @@ test('Stapeln (0.12.1.1): Eine neue Falle ersetzt die liegende nicht mehr', () =
 
 test('Monsterwerte je Stufe: Grundform ohne Würfel, mit Würfeln höchstens die Ausschläge der Seiten', () => {
   const s = M.newGame({ seed: 3, ai: [true, true], first: 0 });
-  const hp = [3, 4, 7], limit = [2, 3, 4], gold = [1, 2, 3], D = M.MONSTER.variants.dice, maxN = (k, st) => Math.max(...D.plus.concat(D.minus).filter(f => f.k === k).map(f => f.n[st - 1]));
+  const hp = [2, 3, 5], limit = [2, 3, 4], gold = [1, 2, 3], D = M.MONSTER.variants.dice, maxN = (k, st) => Math.max(...D.plus.concat(D.minus).filter(f => f.k === k).map(f => f.n[st - 1]));
   [1, 2, 3].forEach((st, i) => {
     const base = M.spawnMonsters(st);
     for (const el of Object.keys(base)) { assert.equal(base[el].stats.maxHp, hp[i]); assert.equal(base[el].stats.limit, limit[i]); assert.equal(base[el].label, ''); }
@@ -150,7 +150,7 @@ test('Monsterwerte je Stufe: Grundform ohne Würfel, mit Würfeln höchstens die
 });
 
 test('Monster-Würfel (0.4): Deckform spitz/breit, ein Plus- und ein Minuswürfel, Name Spezialist/Generalist, Etikett „+X, −Y“, Werte folgen den Seiten', () => {
-  const D = M.MONSTER.variants.dice, base = { 1: { F: [3, 5], E: [3, 6], W: [3, 5] }, 2: { F: [4, 5], E: [4, 5], W: [4, 5] }, 3: { F: [7, 6], E: [7, 6], W: [7, 6] } }, limit = [0, 2, 3, 4];
+  const D = M.MONSTER.variants.dice, base = { 1: { F: [2, 4], E: [2, 4], W: [2, 4] }, 2: { F: [3, 4], E: [3, 4], W: [3, 4] }, 3: { F: [5, 5], E: [5, 5], W: [5, 5] } }, limit = [0, 2, 3, 4];
   const seenForm = {}, seenPlus = new Set(), seenMinus = new Set();
   for (const st of [1, 2, 3]) for (let seed = 1; seed <= 120; seed++) {
     const r = M.spawnMonsters(st, M.newGame({ seed }).rng);
@@ -766,9 +766,9 @@ test('Pluswürfel „Magie“: eine Magiestufe mehr auf der Folgemagie des Monst
   } finally { D.plus.splice(0, D.plus.length, ...save); D.minus.splice(0, D.minus.length, ...saveMinus); }
 });
 
-test('Monster-Hand ist höchstens so groß wie die der Spieler (Stufe III: Limit 4, Hand 5, 7 HP)', () => {
+test('Monster-Hand ist höchstens so groß wie die der Spieler (Stufe III: Limit 4, Hand 5, 5 HP)', () => {
   const r = M.spawnMonsters(3);
-  for (const k of Object.keys(r)) { assert.equal(M.monsterHand(r[k]), M.MAX_SLOTS); assert.equal(r[k].stats.maxHp, 7); assert.equal(r[k].stats.limit, 4); }
+  for (const k of Object.keys(r)) { assert.equal(M.monsterHand(r[k]), M.MAX_SLOTS); assert.equal(r[k].stats.maxHp, 5); assert.equal(r[k].stats.limit, 4); }
 });
 
 test('Monsterkarte (Weltphase): die Standardwerte base enthalten auch die Magie ohne Würfelbonus', () => {
@@ -965,6 +965,7 @@ test('Karten lassen sich unabhängig von der entwickelten Magie kaufen (0.7): F3
 test('Ultimate im Angriff nach Sekundärfarbe: Erde legt Heilmarker, der am Ende der eigenen Angriffsphase heilt', () => {
   const { s, me, op } = combatSetup(11, ['F2', 'E2', 'W2']);
   me.stats.maxHp = 9; me.stats.hp = 2;
+  op.stats.maxHp = op.stats.hp = 12;   // seit 0.15 hat das Stufe-I-Monster nur 2 TP; der Angriff soll es nicht besiegen
   [0, 1, 2].forEach(i => assert.ok(M.apply(s, { pid: 0, type: 'mark', slot: i }).ok));
   assert.ok(M.apply(s, { pid: 0, type: 'attack' }).ok);
   assert.equal(me.stats.heal, 2, 'Heilmarker Stufe 2 bei mir'); assert.equal(op.stats.death || 0, 0, 'kein Todesfluch für den Gegner');

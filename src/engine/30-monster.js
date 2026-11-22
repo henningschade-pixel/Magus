@@ -11,9 +11,10 @@
 // Das Limit steigt nur dort, wo es gewollt ist: Ein Monster mit Limit 2 und vielen HP verwickelt den Angreifer in endlose Angriffe und Fluchten (bis 27 Angriffe je Partie), erst Limit 3 gibt ihm die nötige Gefahr.
 const MONSTER = {
   profile: { F: { primary: 'F', secondary: SUPERIOR.F }, E: { primary: 'E', secondary: SUPERIOR.E }, W: { primary: 'W', secondary: SUPERIOR.W } },   // seit 0.4: das Nebenelement ist das überlegene Element (Feuer → Wasser, Erde → Feuer, Wasser → Erde); bis 0.17 war es das unterlegene (Feuer → Erde, Erde → Wasser, Wasser → Feuer)
-  stage1Temple: { F: ['mana'], E: ['mana', 'mana'], W: ['mana'] },   // Stufe I: Mana 5 (Erdmonster 6; sonst verlor es die Angreifer nur halb so oft)
-  temple: { 2: { F: ['limit', 'hp', 'mana'], E: ['limit', 'hp', 'mana'], W: ['limit', 'hp', 'mana'] }, 3: { F: ['limit', 'hp', 'hp', 'hp', 'mana'], E: ['limit', 'hp', 'hp', 'hp', 'mana'], W: ['limit', 'hp', 'hp', 'hp', 'mana'] } },   // Schritte je Stufe (Stufe III kommt auf Stufe II obendrauf): II = Limit 3, 4 HP, Mana 5; III = Limit 4, 7 HP, Mana 6 (Hand höchstens 5, ein HP mehr als Ausgleich)
-  magic: { 2: [3, 2, 1], 3: [3, 2, 1] },                                  // Stufen von Haupt-, Neben- und drittem Element
+  baseHp: 2,                                                              // seit 0.15: Grund-HP aller Monster vor den Schritten (vorher 3; Stufe I: 2 HP, II: 3, III: 5)
+  stage1Temple: { F: [], E: [], W: [] },   // seit 0.15 keine Schritte mehr in Stufe I: Mana 4 (bis 0.14.8: Mana 5, Erdmonster 6)
+  temple: { 2: { F: ['limit', 'hp'], E: ['limit', 'hp'], W: ['limit', 'hp'] }, 3: { F: ['limit', 'hp', 'hp', 'mana'], E: ['limit', 'hp', 'hp', 'mana'], W: ['limit', 'hp', 'hp', 'mana'] } },   // Schritte je Stufe (Stufe III kommt auf Stufe II obendrauf); seit 0.15: I = Limit 2, 2 HP, Mana 4; II = Limit 3, 3 HP, Mana 4; III = Limit 4, 5 HP, Mana 5 (bis 0.14.8: 3/4 HP/Mana 5 in II, 4/7 HP/Mana 6 in III)
+  magic: { 1: [2, 1, 1], 2: [3, 2, 1], 3: [3, 2, 1] },                                  // Stufen von Haupt-, Neben- und drittem Element
   deck: {
     2: (P, S, T) => [P + '3', P + '2', P + '2', P + '2', S + '3', S + '2', T + '1', T + '1', P + '1'],
     3: (P, S, T) => [P + '3', P + '3', P + '3', P + '2', P + '2', S + '3', S + '3', T + '2', T + '1'],
@@ -73,7 +74,8 @@ function spawnOne(el, stage, rng, v) {
   { const sIdx = deck.indexOf(M.profile[el].secondary + '1'); if (sIdx >= 0) deck[sIdx] = M.profile[el].secondary + '2'; }   // Folgemagie: eine Karte eine Stufe über der Magie (wirkt erst mit dem Magiebonus des Pluswürfels)
   stats.limit = M.startLimit;
   stats.drawLimit = M.startDraws;
-  stats.mag[el] = 2;
+  { const m1 = M.magic[1]; stats.mag[el] = m1[0]; stats.mag[M.profile[el].secondary] = m1[1]; stats.mag[ELEMENTS.find(e => e !== el && e !== M.profile[el].secondary)] = m1[2]; }   // Magie in Stufe I (Haupt, Neben, drittes Element); die Werte sind Abstimmungsdaten, kein Wert unter 1 (sonst lägen tote Karten im Deck)
+  if (M.baseHp) stats.maxHp = stats.hp = M.baseHp;
   if (stage === 1) M.stage1Temple[el].forEach(f => applyTemple(stats, f));   // ab Stufe II zählen nur die Schritte von ‚temple‘
   stats.gold = M.gold[1];
   const prof = M.profile[el];

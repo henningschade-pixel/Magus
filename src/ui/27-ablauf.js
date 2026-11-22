@@ -24,7 +24,7 @@ function checkCombatEnd(prevLog) {
     if (FAST || !res.snap) { hold = 0; return; }
     const cur = JSON.parse(JSON.stringify(res.snap)), sn = res.snap;
     if (preStats) { cur.sides.a.stats = JSON.parse(JSON.stringify(preStats.a)); cur.sides.b.stats = JSON.parse(JSON.stringify(preStats.b)); }   // bis die Animation durch ist, gelten noch die Werte vor der letzten Aktion
-    endView = Object.assign({ stage: 'anim', cur, snap: sn, res }, endTexts(res, sn, lines));
+    endView = Object.assign({ stage: 'anim', cur, snap: sn, res, rate: ratingPrepare(res, sn) }, endTexts(res, sn, lines));
   }
 }
 // Ton zum Ergebnis-Bildschirm: Sieg, Niederlage oder Unentschieden
@@ -53,7 +53,7 @@ function endTick() {
   setTimeout(() => { if (endView && endView.stage === 'values') { endView.stage = 'result'; resultSound(endView); render(); } }, 450);
 }
 function overlayHTML() {
-  if (endView && endView.stage === 'result') return '<div class="endov" data-act="dismiss" style="position:absolute;inset:0"><div class="endbox ' + endView.cls + '"><div class="et">' + esc(endView.title) + '</div><div class="es">' + esc(endView.sub) + '</div>' + (endView.loot ? '<div class="el">' + esc(endView.loot) + '</div>' : '') + (endView.rest.length ? '<div class="er">' + endView.rest.map(esc).join('<br>') + '</div>' : '') + '<small>Klicken, um fortzufahren</small></div></div>';
+  if (endView && endView.stage === 'result') return '<div class="endov" data-act="dismiss" style="position:absolute;inset:0"><div class="endbox ' + endView.cls + '"><div class="et">' + esc(endView.title) + '</div><div class="es">' + esc(endView.sub) + '</div>' + (endView.loot ? '<div class="el">' + esc(endView.loot) + '</div>' : '') + (endView.rest.length ? '<div class="er">' + endView.rest.map(esc).join('<br>') + '</div>' : '') + '' + ratingHTML() + '<small>Klicken, um fortzufahren</small></div></div>';
   if (modal) return '<div class="endov" data-act="dismiss" style="position:absolute;inset:0"><div class="endbox intro"><div class="et">' + esc(modal.title) + '</div><div class="es">' + esc(modal.sub) + '</div>' + (modal.lines.length ? '<div class="er">' + modal.lines.map(esc).join('<br>') + '</div>' : '') + '<small>Klicken, um zu beginnen</small></div></div>';
   return '';
 }

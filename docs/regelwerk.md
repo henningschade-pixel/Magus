@@ -348,7 +348,17 @@ Keine Regeländerung, nur die Bedienung des Tempels: Das Opfern läuft wie die U
 - **KI:** Wählt in der Vorbereitung die Farbe mit den meisten Karten im eigenen Deck, ohne die Wahl des Gegners zu kennen. Kauft Magie vor den Verbesserungen, bis die Summe der Magiestufen 7 erreicht (`sacGP` 1, `mgGoalP` 7; im Selbstspiel 73 % Siegquote gegen die Reihenfolge „erst Verbesserungen“).
 - **Oberfläche und Mehrspieler:** Auswahlfenster mit dem ganzen Deck; das Intro deckt zuerst die Monster auf, nach der Wahl folgen Mischen und Austeilen. Im Mehrspieler wählen beide Geräte gleichzeitig; die Aktionen laufen durch das übliche Protokoll (Reihenfolge der beiden Wahlen ist für das Ergebnis egal). URL-Schalter `?prep=0` startet ohne Vorbereitung (für Tests).
 - Tests: `tests/vorbereitung.test.js` neu; die übrigen Tests laufen mit `prep: 0` (Helfer in `tests/helpers.js`, `?prep=0` in den Browser-Tests), `tests/golden.json` bleibt unverändert.
-- **Offen (Position 2):** Monster neu skalieren (Spezialisten schärfen, Magieprofil, Magie 0 bei Monstern), Auswertung der Monsterschwere durch die Spieler; Respec zurückgestellt.
+- **Monster neu skaliert** (Grundsatz: zu Beginn einer Stufe nicht zu besiegen, mit Ressourceneinsatz schon; kein Monster mit Magie 0, da deren Karten sonst tot im Deck liegen; das Monsterdeck wird analog vorbereitet und nicht spontan angepasst). Weiter 3 × 2 Monster je Stufe (Generalist = breites Deck, Spezialist = spitzes Deck, Würfel unverändert). Werte vor Würfeln:
+
+  | Stufe | TP (vorher) | Mana (vorher) | Limit (vorher) | Magie Haupt/Neben/Dritt |
+  |---|---|---|---|---|
+  | I | 2 (3) | 4 (5, Erde 6) | 2 (2) | 2 / 1 / 1 |
+  | II | 3 (4) | 4 (5) | 3 (3) | 3 / 2 / 1 |
+  | III | 5 (7) | 5 (6) | 4 (4) | 3 / 2 / 1 |
+
+  Tempel: Stufe I ohne Tempelkarten, Stufe II `limit, hp`, Stufe III `limit, hp, hp, mana` (`temple`, `stage1Temple` in `30-monster.js`; `baseHp` 2 für Stufe I). Messung (KI gegen KI, volle Partien, Angreifer-Siegquote Stufe I/II/III): neu 13 / 24 / 23 %; alte Monster im neuen Start 3 / 15 / 11 %; alte Monster im alten Start 29 / 35 / 22 %. Feste Builds: zu Beginn rund 1 %, mit Ressourcen rund 20 bis 30 %; der Spezialist ist schwerer als der Generalist. Die KI-Quote in Stufe I bleibt niedrig (Zeitpunkt der Kämpfe); die Spielerbewertungen sollen weiter eichen. `tests/golden.json` neu erzeugt.
+- **Monsterbewertung (temporäre Testoption):** Nach einem Monsterkampf zeigt der Ergebnis-Bildschirm dem Angreifer („Zu leicht“ / „Genau richtig“ / „Zu schwer“). Nur für den eigenen Angreifer, nicht beim Zuschauen. Die Antwort wird im Browser (`localStorage`, Schlüssel `magus_monsterbewertung`, höchstens 400 Einträge) zusammen mit der Monsterkonfiguration gespeichert: Version, Seed, Stufe, Weltrunden, Monster (Name, Element, Würfeletikett, Variante, Grundwerte, Werte, Deck), Kampfausgang, beide Spieler (Magie, TP, Mana, Limit, Handplätze, Gold, Decks). Menü → Einstellungen → „Monsterbewertung (Test)“: an/aus (Standard an), Anzahl, Exportieren (JSON), Löschen (Schalter `magus_bewertung_an`).
+- **Offen:** Respec zurückgestellt; Feinabstimmung der Monsterwerte nach den Bewertungen.
 
 ## Änderung 0.14.8 (21.11.)
 

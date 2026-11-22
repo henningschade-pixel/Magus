@@ -32,6 +32,10 @@ function onAct(d) {
     case 'deckview': deckView = !deckView; render(); break;
     case 'deckclose': deckView = false; render(); break;
     case 'dismiss': dismissOverlay(); break;
+    case 'rate': ratingSave(d.v); break;
+    case 'ratetoggle': ratingSetOn(!ratingOn()); menuRedraw(); break;
+    case 'rateexport': ratingExport(); break;
+    case 'rateclear': try { localStorage.removeItem(RATE_KEY); } catch (e) { } toast('Bewertungen gelöscht.'); menuRedraw(); break;
     case 'prepsel': case 'prepok': prepClick(d); break;
     case 'combat': act({ type: 'combat', elem: d.e }); break;
     case 'vendorres': { const o = M.vendorOffers(G, ME).filter(x => !x.free && x.available && x.result === d.r).sort((x, y) => x.cost.length - y.cost.length)[0]; if (o) act({ type: 'vendor', result: o.result, cost: o.cost }); break; }
