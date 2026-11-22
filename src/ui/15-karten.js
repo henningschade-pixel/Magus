@@ -79,9 +79,9 @@ function layoutDeck(deck, L, mine) {
   { const ne0 = n - nb, os0 = mine ? 0.5 : 0.7;   // x-Bereich dieser Reihe merken: Die Markerreihe samt Falle weicht ihm aus (deathPos, seit 0.12.1)
     if (ne0 > 0) { const Lo = Object.assign({}, L, { s: L.s * os0, gap: L.gap * 0.62, span: L.span * 0.7 }); OPEN_SPAN[mine ? 's' : 'o'] = { x1: slotX(0, ne0, Lo), x2: slotX(ne0 - 1, ne0, Lo) + CW * Lo.s }; }
     else OPEN_SPAN[mine ? 's' : 'o'] = null; }
-  // Seit 0.15.3: Karten einer Farbe mit Magie 0 sind im Kampf nicht spielbar und erscheinen abgedunkelt (Tooltip nennt den Grund)
+  // Seit 0.15.3: Karten einer Farbe mit Magie 0 sind im Kampf nicht spielbar und erscheinen abgedunkelt (Tooltip nennt den Grund); seit 0.15.3.1 gilt das auch für Fluchkarten
   const cSide = mine && G.phase === 'combat' && G.combat ? ['a', 'b'].map(k => G.combat.sides[k]).find(sd => sd.deck === deck) : null;
-  const deadOf = c => { if (!cSide || !c) return ''; const p = M.parseCard(c.id); return M.deadColorReason(cSide.stats, [p]) || ''; };
+  const deadOf = c => { if (!cSide || !c) return ''; const p = M.parseCard(c.id); if (p.curse) return 'Fluchkarte: nicht spielbar, wird beim Nachziehen abgeworfen.'; return M.deadColorReason(cSide.stats, [p]) || ''; };
   deck.hand.forEach((c, i) => {
     if (!c) return;
     if (!forcedMe()) { fdSel.clear(); sightSel = []; }

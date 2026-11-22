@@ -1,9 +1,10 @@
 /* ---------- Versionen: Versionsnummer und Versionsbeschreibung (Seite „Neu in Version …“) ---------- */
 // Aktuelle Versionsnummer: einzige Stelle, an der sie gesetzt wird (Menü-Link und Über-Seite lesen sie von hier; bei jedem Schritt hochzählen)
-const MAGUS_VERSION = '0.15.3';
+const MAGUS_VERSION = '0.15.3.1';
 // Versionsbeschreibung: ein Eintrag je Version, die neueste zuerst. Bei jedem Schritt oben einen Eintrag [Nummer, Text] ergänzen;
 // der erste Eintrag gehört zu MAGUS_VERSION und erscheint unter „Neu in Version …“.
 const VERSIONEN = [
+  ['0.15.3.1', '<b>Fluchkarten abgedunkelt:</b> Fluchkarten lassen sich nie ausspielen; sie erscheinen jetzt wie Karten einer Farbe mit Magie 0 abgedunkelt, der Tooltip nennt den Grund (sie werden beim Nachziehen abgeworfen). Nur Darstellung.'],
   ['0.15.3', '<b>Magie 0 sperrt die Karten dieser Farbe:</b> Eine Karte, deren Farbe mit Magie 0 steht, lässt sich im Kampf nicht mehr spielen, weder als erste noch als weitere Karte, weder im Angriff noch in der Verteidigung, auch nicht, um ein Echo zu setzen. Bisher kostete eine solche Karte Mana und wirkte nicht (eine Kombo mit ihr hatte Stufe 0). Gesperrte Karten erscheinen abgedunkelt, der Tooltip und die Kombo-Übersicht nennen den Grund; das Markieren wird abgelehnt. Die KI hält sich an die Sperre. Karten mit höherer Stufe als die Magie bleiben spielbar (sie zählen mit der Magiestufe).'],
   ['0.15.2', '<b>Kartenfächer: Blättern nach links springt nicht mehr:</b> Beim Durchblättern des Ablagestapels und der Kartenwahl der Vorbereitung sprang die Anzeige zur letzten bzw. mittleren Karte, sobald man über die erste Karte hinaus nach links scrollte. Die Position wird jetzt an der ersten Karte angehalten, wie am rechten Ende.'],
   ['0.15.1', '<b>Monsterbewertung auch für den Monsterführer:</b> Nach einem Monsterkampf fragt der Ergebnis-Bildschirm jetzt nicht nur den Angreifer, sondern auch den Monsterführer, wie er den Kampf erlebt hat (Monster zu stark / etwas stark / etwas schwach / zu schwach). Das gilt auch, wenn der Computer das Monster angreift und du es führst. Jede Bewertung trägt Rolle und einen Schlüssel (Seed, Stufe, Element, Weltrunde), damit sich die Bewertungen beider Geräte einer Partie beim Auswerten zusammenführen lassen. Monsterwerte unverändert (Stufe I weiter 2 TP).'],

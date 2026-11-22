@@ -338,6 +338,10 @@ Keine Regeländerung, nur die Bedienung des Tempels: Das Opfern läuft wie die U
 
 - **Heilung wieder nach Angriff und Verteidigung:** Die Heilung eines Kombos in der Verteidigung (Erde + Wasser) wirkt erst nach dem Schaden und dem Spiegelrückwurf und gleicht ihn nachträglich aus, höchstens bis zu den maximalen HP; ein sonst tödlicher Restschaden lässt sich so noch ausgleichen (HP − Restschaden + Heilung, nie unter 0, nie über dem Maximum). Zerrüttung, Lähmung, Läuterung und Spiegel wirken wie seit 0.4 **vor** der Verteidigung. Im Angriff ändert sich nichts. Umsetzung: `execDefense` und `defenseComboPre` in `src/engine/65-kampfablauf.js`; Vorschau (`previewDefense`) und Animation folgen derselben Reihenfolge (Heilungseffekt mit `late`).
 
+## Änderung 0.15.3.1 (22.11.)
+
+- **Fluchkarten abgedunkelt (keine Regeländerung):** Fluchkarten auf der Hand lassen sich nie markieren oder spielen. Sie erscheinen im Kampf wie gesperrte Karten abgedunkelt (`.card.dead`, Tooltip „Fluchkarte: nicht spielbar, wird beim Nachziehen abgeworfen.“, `deadOf` in `src/ui/15-karten.js`). Nur Darstellung; `tests/golden.json` bleibt unverändert.
+
 ## Änderung 0.15.3 (22.11.)
 
 - **Magie 0 sperrt die Karten dieser Farbe (Regeländerung):** Im Kampf lässt sich keine Karte spielen, deren Farbe Magiestufe 0 hat: nicht als erste Karte (Angriff, Block), nicht als weitere Karte einer Kombo, auch nicht, um ein Echo zu setzen. Fluchkarten haben keine Farbe und sind nicht betroffen; Karten mit höherer Stufe als die Magie (Magie ≥ 1) bleiben spielbar und zählen mit der Magiestufe. Auslöser war ein Spiellog: Hellsicht (Feuer 2 + Wasser 1) mit Wasser-Magie 0 hatte Kombostufe 0, wählte keine Karte aus und kostete trotzdem Mana. Eine Kombo hat nur dann Stufe 0, wenn die Magie einer ihrer beiden Farben 0 ist; die Sperre beseitigt diesen Fall.
