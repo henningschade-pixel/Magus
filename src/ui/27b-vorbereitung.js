@@ -24,28 +24,58 @@ function prepOverlayHTML() {
   cs.forEach((c, i) => { h += '<div class="prepcard' + (c.uid === prepSel ? ' on' : '') + '" data-act="prepsel" data-uid="' + c.uid + '"><img src="' + (IMG[c.id] || IMG.back) + '"></div>'; });
   return h + '</div></div>';
 }
-// Fächer: Die Karte in der Mitte steht vorn, links und rechts davon liegen die übrigen Karten überlappend dahinter.
-function prepLayout() {
-  const g = document.querySelector('#prepov .prepgrid'); if (!g) return;
-  const cs = [].slice.call(g.querySelectorAll('.prepcard')), n = cs.length; if (!n) return;
-  if (prepPos < 0) prepPos = Math.floor((n - 1) / 2);
-  prepPos = Math.max(0, Math.min(n - 1, prepPos));
+// Fächer (Kartenwahl der Vorbereitung und Ablagestapel): Die Karte in der Mitte steht vorn, links und rechts davon liegen die übrigen Karten überlappend dahinter.
+function fanLayout(g, pos) {
+  const cs = [].slice.call(g.querySelectorAll('.prepcard')), n = cs.length; if (!n) return pos;
+  pos = Math.max(0, Math.min(n - 1, pos));
   const w = cs[0].offsetWidth || 100, gap = w * 0.38;
   cs.forEach((c, i) => {
-    const d = i - prepPos, a = Math.abs(d), sc = Math.max(.72, 1 - a * .06), x = d * gap + (d === 0 ? 0 : Math.sign(d) * w * .32 * Math.min(1, a));
+    const d = i - pos, a = Math.abs(d), sc = Math.max(.72, 1 - a * .06), x = d * gap + (d === 0 ? 0 : Math.sign(d) * w * .32 * Math.min(1, a));
     c.style.transform = 'translateX(calc(-50% + ' + x.toFixed(1) + 'px)) scale(' + sc.toFixed(3) + ')';
     c.style.zIndex = String(1000 - Math.round(a * 10));
     c.style.filter = a < .5 ? 'none' : 'brightness(' + Math.max(.45, .8 - a * .06).toFixed(2) + ')';
   });
+  return pos;
+}
+function prepLayout() {
+  const g = document.querySelector('#prepov .prepgrid'); if (!g) return;
+  const n = g.querySelectorAll('.prepcard').length; if (prepPos < 0) prepPos = Math.floor((n - 1) / 2);
+  prepPos = fanLayout(g, prepPos);
 }
 function prepScroll(dy) {
   prepPos += dy / 90; prepLayout();
   clearTimeout(prepSnap); prepSnap = setTimeout(() => { prepPos = Math.round(prepPos); prepLayout(); }, 140);
 }
+// Ablagestapel (Klick auf den eigenen Ablagestapel): dieselbe Fächer-Darstellung, die Karten liegen in der Reihenfolge des Stapels (links die ältesten, rechts die zuletzt abgelegte). Es gibt keine Auswertung des Decks; zählen und vergleichen muss der Spieler selbst.
+let discPos = -1, discSnap = 0, discWas = false;
+function discLayout() {
+  const g = document.querySelector('#discov .prepgrid'); if (!g) return;
+  const n = g.querySelectorAll('.prepcard').length; if (discPos < 0) discPos = n - 1;
+  discPos = fanLayout(g, discPos);
+}
+function discHTML() {
+  if (!G || !deckView || G.over || Intro.on || SPEC || G.phase === 'prep') return '';
+  const cs = G.players[ME].deck.discard;
+  let h = '<div class="prepbox"><div class="prephead"><div class="preptitle">Dein Ablagestapel: ' + cs.length + (cs.length === 1 ? ' Karte' : ' Karten') + '</div>' +
+    '<div class="prepsub">' + (cs.length ? 'Mausrad: durchblättern. Links liegen die ältesten, rechts die zuletzt abgelegten Karten. Zum Schließen neben die Leiste klicken.' : 'Der Ablagestapel ist leer. Zum Schließen neben die Leiste klicken.') + '</div></div><div class="prepgrid">';
+  cs.forEach(c => { h += '<div class="prepcard" data-uid="' + c.uid + '"><img src="' + (IMG[c.id] || IMG.back) + '"></div>'; });
+  return h + '</div></div>';
+}
+function discRender() {
+  const html = discHTML(); let o = document.getElementById('discov');
+  if (html && !o) {
+    o = document.createElement('div'); o.id = 'discov'; o.className = 'fanov'; stage.appendChild(o);
+    o.addEventListener('wheel', e => { if (!o.querySelector('.prepgrid')) return; e.preventDefault(); discPos += (Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY) / 90; discLayout(); clearTimeout(discSnap); discSnap = setTimeout(() => { discPos = Math.round(discPos); discLayout(); }, 140); }, { passive: false });
+  }
+  if (o) {
+    if (html) { if (!discWas) discPos = -1; discWas = true; if (o.dataset.k !== html) { o.innerHTML = html; o.dataset.k = html; } o.style.display = 'flex'; discLayout(); }
+    else { o.style.display = 'none'; o.dataset.k = ''; discWas = false; }
+  }
+}
 function prepRender() {
   const html = prepOverlayHTML(); let o = document.getElementById('prepov');
   if (html && !o) {
-    o = document.createElement('div'); o.id = 'prepov'; stage.appendChild(o);
+    o = document.createElement('div'); o.id = 'prepov'; o.className = 'fanov'; stage.appendChild(o);
     o.addEventListener('wheel', e => { if (!o.querySelector('.prepgrid')) return; e.preventDefault(); prepScroll(Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY); }, { passive: false });   // Mausrad blättert durch das Deck
   }
   if (o) { if (html) { if (o.dataset.k !== html) { o.innerHTML = html; o.dataset.k = html; prepLayout(); } o.style.display = 'flex'; } else { o.style.display = 'none'; o.dataset.k = ''; } }

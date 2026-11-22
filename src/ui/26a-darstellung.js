@@ -188,6 +188,7 @@ function render() {   // läuft der Ergebnis-Bildschirm, wird der Endstand des K
       } }
     else if (so) so.remove(); }
   prepRender();
+  discRender();
   let ov = document.getElementById('endov');
   const html = overlayHTML();
   if (html && !ov) { ov = document.createElement('div'); ov.id = 'endov'; stage.appendChild(ov); }

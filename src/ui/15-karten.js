@@ -137,9 +137,8 @@ function renderCards() {
   const canDraw = canDrawNow();
   ph += drawWarnHTML();
   ph += '<div class="pilehit ' + (canDraw ? '' : 'off') + '" data-act="draw" title="Nachziehen: nicht gesperrte Karten ablegen und neu füllen" style="left:' + L_MY.draw.x + 'px;top:' + L_MY.draw.y + 'px;width:' + CW * L_MY.ps + 'px;height:' + CH * L_MY.ps + 'px"></div>';
-  ph += '<div class="pilehit" data-act="deckview" title="Dein Deck als Balkendiagramm (Stufen der Karten)" style="left:' + L_MY.disc.x + 'px;top:' + L_MY.disc.y + 'px;width:' + CW * L_MY.ps + 'px;height:' + CH * L_MY.ps + 'px"></div>';
-  $('dimdeck').classList.toggle('on', !!deckView);   // Deckübersicht: Spielfeld dahinter sanft abdunkeln
-  if (deckView) ph += deckPopHTML(cx.myDeck);
+  ph += '<div class="pilehit" data-act="deckview" title="Dein Ablagestapel ansehen" style="left:' + L_MY.disc.x + 'px;top:' + L_MY.disc.y + 'px;width:' + CW * L_MY.ps + 'px;height:' + CH * L_MY.ps + 'px"></div>';
+  $('dimdeck').classList.toggle('on', !!deckView);   // Ablagestapel-Ansicht (Fächer): Spielfeld dahinter sanft abdunkeln; Klick daneben schließt
   if (cx.combat && cx.myStats.freeDraws > 0) {   // eigene Nachziehtokens; im Läuterungs-Angriff stattdessen wählbar (werden zerstört, nicht gutgeschrieben)
     const lf = lfCtx(), sel = lf ? lf.picks.filter(p => p === 'st').length : 0, mc = markCounts(cx.myStats), q = deathPos('s', mc.nd + mc.nh + mc.nm + mc.ns, mc.total), pos = 'left:' + q.x + 'px;top:' + q.y + 'px;--r:' + q.rot + 'deg', inner = '<img src="' + IMG.gratis + '">' + (cx.myStats.freeDraws > 1 ? '<b class="mul">×' + cx.myStats.freeDraws + '</b>' : '') + (sel ? '<i class="lfb">✓' + sel + '</i>' : '');
     ph += lf ? '<button class="freedraw lf' + (sel ? ' sel' : '') + '" data-act="lfm" data-k="st" title="Läuterung: eigene Nachziehtokens zerstören (Klick: einen mehr, nach dem Maximum wieder alle weg). Sie werden nicht gutgeschrieben." style="' + pos + '">' + inner + '</button>' : '<div class="freedraw" data-act="freedraw" title="Gratis-Nachziehen: ' + cx.myStats.freeDraws + 'x (Klick)" style="' + pos + '">' + inner + '</div>';
@@ -164,22 +163,6 @@ function renderCards() {
   glideSet(layerPh, '.dmark', e => e.dataset.own, () => { layerPh.innerHTML = ph; });   // Nachziehmarker gleitet (0.11.1)
 }
 let deckView = false;
-// Deckverteilung: je Kartenart (F1 … W3, Flüche) ein Balken über Stapel, Hand und Ablage
-function deckPopHTML(deck) {
-  const all = deck.draw.concat(deck.discard, deck.hand.filter(Boolean)), cnt = {};
-  all.forEach(c => { cnt[c.id] = (cnt[c.id] || 0) + 1; });
-  const ids = []; M.ELEMENTS.forEach(e => [1, 2, 3].forEach(l => ids.push(e + l)));
-  Object.keys(cnt).filter(k => !ids.includes(k)).sort().forEach(k => ids.push(k));
-  const mx = Math.max(1, ...ids.map(k => cnt[k] || 0)), col = { F: 'var(--fire)', E: 'var(--earth)', W: 'var(--water)' };
-  let bars = '', labs = '';
-  ids.forEach(k => {
-    const n = cnt[k] || 0, e = k[0], zone = [['Stapel', deck.draw], ['Hand', deck.hand.filter(Boolean)], ['Ablage', deck.discard]].map(([nm, l]) => nm + ' ' + l.filter(c => c.id === k).length).join(', ');
-    bars += '<div class="dkcol" title="' + k + ': ' + n + ' (' + zone + ')"><div class="dkn">' + n + '</div><div class="dkbar" style="height:' + Math.round(n / mx * 112) + 'px;background:' + (col[e] || 'var(--curse)') + (n ? '' : ';opacity:.25') + '"></div></div>';
-    labs += '<span class="' + (col[e] ? e : 'C') + '">' + k + '</span>';
-  });
-  const L = L_MY;
-  return '<div class="dkpop" data-act="deckclose" style="left:' + Math.max(10, L.disc.x - 330) + 'px;top:' + Math.max(10, L.y - 270) + 'px"><h4>Dein Deck: ' + all.length + ' Karten</h4><div class="dkbars">' + bars + '</div><div class="dklab">' + labs + '</div><small>Stapel ' + deck.draw.length + ' · Hand ' + deck.hand.filter(Boolean).length + ' · Ablage ' + deck.discard.length + '. Klicken zum Schließen.</small></div>';
-}
 // Strafe, die das Nachziehen jetzt kostet (Kampf: Mana, Weltphase: Gold für den Gegner); 0 bei grünem Marker
 function drawPenaltyNow() { return G.phase === 'combat' ? M.drawManaCost(G, ME) : M.drawGoldPenalty(G, ME); }
 // Warnung vor dem Nachziehen bei rotem Marker (wie beim Fliehen), über dem eigenen Nachziehstapel

@@ -71,15 +71,6 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .pilelabel{position:absolute;font-size:15px;color:var(--mute);text-align:center;width:110px}
 .pilehit{position:absolute;border-radius:12px;cursor:var(--cp);z-index:60}
 .pilehit:hover{box-shadow:0 0 0 2px var(--gold)}
-.dkpop{position:absolute;z-index:150;width:520px;box-sizing:border-box;background:rgba(14,10,22,.96);border:1px solid var(--gold);border-radius:14px;padding:14px 18px 12px;cursor:var(--cp)}
-.dkpop h4{margin:0 0 8px;font-family:'Alegreya SC',serif;font-size:22px;color:var(--gold);font-weight:400}
-.dkpop .dkbars{display:flex;align-items:flex-end;gap:8px;height:150px;border-bottom:1px solid var(--mute);padding:0 4px}
-.dkpop .dkcol{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%}
-.dkpop .dkbar{width:100%;max-width:44px;border-radius:4px 4px 0 0;min-height:2px}
-.dkpop .dkn{font-size:18px;line-height:1.1;margin-bottom:2px}
-.dkpop .dklab{display:flex;gap:8px;padding:3px 4px 0}
-.dkpop .dklab span{flex:1;text-align:center;font-size:17px}
-.dkpop small{display:block;color:var(--mute);font-size:15px;margin-top:6px}
 .pilehit.off{cursor:var(--cd)}.pilehit.off:hover{box-shadow:none}
 .freedraw{position:absolute;z-index:61;display:block;width:44px;height:48px;background:none;border:0;padding:0;cursor:var(--cp);filter:drop-shadow(0 2px 4px rgba(0,0,0,.65))}
 .freedraw img{width:100%;height:100%;object-fit:contain;display:block;transform:rotate(var(--r,0deg))}
@@ -507,17 +498,17 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 
 
 /* Vorbereitung (seit 0.15): Wahl der ersten Magie */
-#prepov{position:absolute;left:0;right:24%;bottom:0;height:27%;z-index:320;background:rgba(14,10,6,.94);border-top:2px solid #e7c46a;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start}
-#prepov .prepbox{display:flex;flex-direction:column;gap:4px;height:100%;padding:6px 20px 8px;box-sizing:border-box;min-height:0}
-#prepov .prephead{display:flex;align-items:center;gap:18px}
-#prepov .preptitle{font-size:20px;color:#e7c46a;white-space:nowrap}
-#prepov .prepsub{font-size:14px;color:#d8cdb4;line-height:1.25;flex:1}
-#prepov .prepcnt{font-size:14px;color:#b9ab8a;white-space:nowrap}
-#prepov .prepgrid{position:relative;flex:1;min-height:0;overflow:hidden;margin-top:8px}
-#prepov .prepcard{position:absolute;left:50%;top:6px;height:calc(100% - 12px);cursor:pointer;transition:transform .2s ease,filter .2s ease;filter:brightness(.7)}
-#prepov .prepcard img{display:block;height:100%;width:auto;border-radius:8px;box-shadow:0 0 0 2px #1b140d,-6px 0 14px rgba(0,0,0,.7)}
-#prepov .prepcard.on img{box-shadow:0 0 0 3px #e7c46a,0 0 20px rgba(231,196,106,.85)}
-#prepov .prepok{font-size:16px;padding:4px 16px;white-space:nowrap}
+.fanov{position:absolute;left:0;right:24%;bottom:0;height:27%;z-index:320;background:rgba(14,10,6,.94);border-top:2px solid #e7c46a;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start}
+.fanov .prepbox{display:flex;flex-direction:column;gap:4px;height:100%;padding:6px 20px 8px;box-sizing:border-box;min-height:0}
+.fanov .prephead{display:flex;align-items:center;gap:18px}
+.fanov .preptitle{font-size:20px;color:#e7c46a;white-space:nowrap}
+.fanov .prepsub{font-size:14px;color:#d8cdb4;line-height:1.25;flex:1}
+.fanov .prepcnt{font-size:14px;color:#b9ab8a;white-space:nowrap}
+.fanov .prepgrid{position:relative;flex:1;min-height:0;overflow:hidden;margin-top:8px}
+.fanov .prepcard{position:absolute;left:50%;top:6px;height:calc(100% - 12px);cursor:pointer;transition:transform .2s ease,filter .2s ease;filter:brightness(.7)}
+.fanov .prepcard img{display:block;height:100%;width:auto;border-radius:8px;box-shadow:0 0 0 2px #1b140d,-6px 0 14px rgba(0,0,0,.7)}
+.fanov .prepcard.on img{box-shadow:0 0 0 3px #e7c46a,0 0 20px rgba(231,196,106,.85)}
+.fanov .prepok{font-size:16px;padding:4px 16px;white-space:nowrap}
 /* Monsterbewertung (temporär, seit 0.15) */
 .endbox .ratebox{margin-top:16px;padding-top:12px;border-top:1px solid rgba(231,196,106,.35)}
 .endbox .rateq{font-size:22px;color:#e7e0d2}
