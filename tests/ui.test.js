@@ -571,3 +571,38 @@ test('Läuterung: Warnung bei ungewählten Markern, „Marker wählen“ bricht 
     assert.deepEqual(errs, []);
   } finally { await b.close(); }
 });
+
+test('Heilung nach der Verteidigung: die HP-Leiste zeigt erst den Schaden, dann die Heilung (0.15.3.2)', { skip: !chromium && 'Playwright nicht installiert', timeout: 90000 }, async () => {
+  const b = await chromium.launch({ executablePath: exe });
+  try {
+    const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
+    p.on('pageerror', e => errs.push(e.message));
+    await p.goto(url + '?prep=0'); await p.waitForTimeout(500);
+    await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
+    await p.evaluate(() => {
+      const G = window.__magus.state, M = window.Magus;
+      M.apply(G, { pid: 0, type: 'combat', elem: 'F' });
+      const me = G.combat.sides.a, op = G.combat.sides.b;
+      me.stats.mag = { F: 3, E: 3, W: 3 }; me.stats.hp = 6; me.stats.maxHp = 8; me.stats.mana = 8; me.stats.limit = 2; op.stats.mana = 9; op.stats.mag = { F: 3, E: 3, W: 3 };
+      me.deck.hand.forEach((x, i) => { if (x) me.deck.hand[i] = { uid: 70000 + i, id: i === 0 ? 'W2' : i === 1 ? 'E2' : 'F1' }; });
+      op.deck.hand.forEach((x, i) => { if (x) op.deck.hand[i] = { uid: 71000 + i, id: 'F3' }; });   // der Gegner greift mit Feuer an
+      window.__magus.pump();
+    });
+    await p.waitForTimeout(400);
+    await p.click('[data-act="pass"]');   // der Gegner greift an
+    await p.waitForFunction(() => window.__magus.state.combat.action === 'defense', null, { timeout: 15000 });
+    await p.waitForTimeout(1500);
+    await p.evaluate(() => { const M = window.Magus, G = window.__magus.state; M.apply(G, { pid: 0, type: 'mark', slot: 0 }); M.apply(G, { pid: 0, type: 'mark', slot: 1 }); window.__magus.pump(); });
+    await p.waitForTimeout(300);
+    const seen = [];
+    const t0 = Date.now();
+    await p.evaluate(() => { window.Magus.apply(window.__magus.state, { pid: 0, type: 'defend' }); window.__magus.pump(); });
+    const hpNow = () => p.evaluate(() => { const e = document.querySelector('[data-pv="hp"]'); return e ? +e.textContent.split('/')[0] : null; });
+    while (Date.now() - t0 < 9000) { const v = await hpNow(); if (v !== null && seen[seen.length - 1] !== v) seen.push(v); await p.waitForTimeout(40); }
+    const r = await p.evaluate(() => { const G = window.__magus.state, f = [].concat(...G.log.map(l => [].concat(l.fx || []))).filter(x => x.kind === 'lifeflow' && x.late && x.heal > 0).pop(); return { final: G.combat.sides.a.stats.hp, heal: f ? f.heal : 0 }; });
+    assert.ok(r.heal > 0, 'die Heilung wurde gespielt');
+    const expect = [6, r.final - r.heal, r.final].filter((v, i, a) => a[i - 1] !== v);   // vor dem Schaden, nach dem Schaden, nach der Heilung
+    assert.deepEqual(seen, expect, 'angezeigte HP nacheinander');
+    assert.deepEqual(errs, []);
+  } finally { await b.close(); }
+});

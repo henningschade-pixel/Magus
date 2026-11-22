@@ -56,7 +56,7 @@ let holdFor = null, holdSeen = 0;
 function withComboHold(fn) {
   if (G && holdFor !== G) { holdFor = G; holdSeen = G.logN; comboHold = []; }
   else if (G && G.logN > holdSeen) {   // neue Kombo-Effekte vor dem Zeichnen vormerken (showFx läuft erst mitten im Zeichnen)
-    for (const e of G.log) if (e.n > holdSeen) [].concat(e.fx || []).forEach(f => holdCombo(f, f.late ? Math.round(1000 * FlowFx.wait()) + 150 : 0));
+    for (const e of G.log) if (e.n > holdSeen) [].concat(e.fx || []).forEach(f => { if (f.late && f.kind === 'lifeflow') return; holdCombo(f, f.late ? Math.round(1000 * FlowFx.wait()) + 150 : 0); });   // seit 0.15.3.2: die späte Heilung der Verteidigung hält showFx über holdHp (dort ist die Wartezeit bekannt)
     holdSeen = G.logN;
   }
   comboHold = comboHold.filter(h => Date.now() < h.until);
@@ -115,7 +115,14 @@ function showFx() {
         if (!FAST) { Snd.play('recover', wait / 1000, 0.9); setTimeout(() => FlowFx.heal(Object.assign({ mana: true }, f)), wait); }
         return;
       }
-      if (f.late) { lateN++; setTimeout(() => { lateN--; go(f); }, Math.round(1000 * FlowFx.wait()) + 150); return; }
+      if (f.late) {
+        const lw = Math.round(1000 * FlowFx.wait()) + 150;
+        if (f.kind === 'lifeflow' && f.heal > 0 && !FAST) {   // seit 0.15.3.2: Heilung nach der Verteidigung: die HP zeigen erst den Stand nach dem Schaden, die Heilung erst, wenn ihre Animation ankommt
+          const hms = lw + Math.round(1000 * comboSeconds(f)) + 40;
+          holdHp(f.who, hms, -f.heal); setTimeout(() => { if (G) render(); }, 0); setTimeout(() => { if (G) render(); }, hms + 30);
+        }
+        lateN++; setTimeout(() => { lateN--; go(f); }, lw); return;
+      }
       if (f.first) preMs = Math.max(preMs, Math.round(1000 * comboSeconds(f)) + 100);   // seit 0.4: Kombo der Verteidigung zuerst
       if (f.kind === 'defense' && preMs > 0 && !FAST) {   // die Verteidigungsanimation beginnt erst, wenn die Kombo-Animation durch ist; bis dahin zeigen die HP-Balken den Stand vor dem Schaden
         const wait = preMs; preMs = 0;

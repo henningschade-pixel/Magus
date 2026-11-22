@@ -338,6 +338,10 @@ Keine Regeländerung, nur die Bedienung des Tempels: Das Opfern läuft wie die U
 
 - **Heilung wieder nach Angriff und Verteidigung:** Die Heilung eines Kombos in der Verteidigung (Erde + Wasser) wirkt erst nach dem Schaden und dem Spiegelrückwurf und gleicht ihn nachträglich aus, höchstens bis zu den maximalen HP; ein sonst tödlicher Restschaden lässt sich so noch ausgleichen (HP − Restschaden + Heilung, nie unter 0, nie über dem Maximum). Zerrüttung, Lähmung, Läuterung und Spiegel wirken wie seit 0.4 **vor** der Verteidigung. Im Angriff ändert sich nichts. Umsetzung: `execDefense` und `defenseComboPre` in `src/engine/65-kampfablauf.js`; Vorschau (`previewDefense`) und Animation folgen derselben Reihenfolge (Heilungseffekt mit `late`).
 
+## Änderung 0.15.3.2 (22.11.)
+
+- **Heilung nach der Verteidigung: HP-Leiste in zwei Schritten (keine Regeländerung):** Die Engine wendet Schaden und die späte Heilung (Blau + Grün in der Verteidigung) in einem Schritt an. Die Oberfläche zeigte deshalb zeitweise sofort den Endwert; das Zeitfenster der Heilungs-Haltung (`withComboHold`) wurde vor dem Start der Verteidigungsanimation berechnet und lief zu früh ab. Jetzt hält `showFx` (`src/ui/26a-darstellung.js`) die späte Heilung über `holdHp`: Die HP zeigen erst den Stand vor dem Schaden, nach dem Einschlag den Stand nach dem Schaden und erst bei der Ankunft der Heilungsanimation den geheilten Wert. `withComboHold` übergeht späte Heilungen. Nur Darstellung; `tests/golden.json` bleibt unverändert. Test: `tests/ui.test.js`.
+
 ## Änderung 0.15.3.1 (22.11.)
 
 - **Fluchkarten abgedunkelt (keine Regeländerung):** Fluchkarten auf der Hand lassen sich nie markieren oder spielen. Sie erscheinen im Kampf wie gesperrte Karten abgedunkelt (`.card.dead`, Tooltip „Fluchkarte: nicht spielbar, wird beim Nachziehen abgeworfen.“, `deadOf` in `src/ui/15-karten.js`). Nur Darstellung; `tests/golden.json` bleibt unverändert.

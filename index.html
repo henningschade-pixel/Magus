@@ -2892,10 +2892,11 @@ let hpHold = null, curseHold = {}, stageSeen = 1, endSnd = null, G = null, hold 
 
 /* ---------- Versionen: Versionsnummer und Versionsbeschreibung (Seite „Neu in Version …“) ---------- */
 // Aktuelle Versionsnummer: einzige Stelle, an der sie gesetzt wird (Menü-Link und Über-Seite lesen sie von hier; bei jedem Schritt hochzählen)
-const MAGUS_VERSION = '0.15.3.1';
+const MAGUS_VERSION = '0.15.3.2';
 // Versionsbeschreibung: ein Eintrag je Version, die neueste zuerst. Bei jedem Schritt oben einen Eintrag [Nummer, Text] ergänzen;
 // der erste Eintrag gehört zu MAGUS_VERSION und erscheint unter „Neu in Version …“.
 const VERSIONEN = [
+  ['0.15.3.2', '<b>Heilung nach der Verteidigung: HP-Leiste in zwei Schritten:</b> Wer Schaden nimmt und im selben Zug mit Blau + Grün heilt, sah die HP-Leiste sofort mit dem Endwert. Jetzt zeigt sie erst den Stand vor dem Schaden, dann den Stand nach dem Schaden und erst, wenn die Heilungsanimation ankommt, den geheilten Wert. Nur Darstellung.'],
   ['0.15.3.1', '<b>Fluchkarten abgedunkelt:</b> Fluchkarten lassen sich nie ausspielen; sie erscheinen jetzt wie Karten einer Farbe mit Magie 0 abgedunkelt, der Tooltip nennt den Grund (sie werden beim Nachziehen abgeworfen). Nur Darstellung.'],
   ['0.15.3', '<b>Magie 0 sperrt die Karten dieser Farbe:</b> Eine Karte, deren Farbe mit Magie 0 steht, lässt sich im Kampf nicht mehr spielen, weder als erste noch als weitere Karte, weder im Angriff noch in der Verteidigung, auch nicht, um ein Echo zu setzen. Bisher kostete eine solche Karte Mana und wirkte nicht (eine Kombo mit ihr hatte Stufe 0). Gesperrte Karten erscheinen abgedunkelt, der Tooltip und die Kombo-Übersicht nennen den Grund; das Markieren wird abgelehnt. Die KI hält sich an die Sperre. Karten mit höherer Stufe als die Magie bleiben spielbar (sie zählen mit der Magiestufe).'],
   ['0.15.2', '<b>Kartenfächer: Blättern nach links springt nicht mehr:</b> Beim Durchblättern des Ablagestapels und der Kartenwahl der Vorbereitung sprang die Anzeige zur letzten bzw. mittleren Karte, sobald man über die erste Karte hinaus nach links scrollte. Die Position wird jetzt an der ersten Karte angehalten, wie am rechten Ende.'],
@@ -5645,7 +5646,7 @@ let holdFor = null, holdSeen = 0;
 function withComboHold(fn) {
   if (G && holdFor !== G) { holdFor = G; holdSeen = G.logN; comboHold = []; }
   else if (G && G.logN > holdSeen) {   // neue Kombo-Effekte vor dem Zeichnen vormerken (showFx läuft erst mitten im Zeichnen)
-    for (const e of G.log) if (e.n > holdSeen) [].concat(e.fx || []).forEach(f => holdCombo(f, f.late ? Math.round(1000 * FlowFx.wait()) + 150 : 0));
+    for (const e of G.log) if (e.n > holdSeen) [].concat(e.fx || []).forEach(f => { if (f.late && f.kind === 'lifeflow') return; holdCombo(f, f.late ? Math.round(1000 * FlowFx.wait()) + 150 : 0); });   // seit 0.15.3.2: die späte Heilung der Verteidigung hält showFx über holdHp (dort ist die Wartezeit bekannt)
     holdSeen = G.logN;
   }
   comboHold = comboHold.filter(h => Date.now() < h.until);
@@ -5704,7 +5705,14 @@ function showFx() {
         if (!FAST) { Snd.play('recover', wait / 1000, 0.9); setTimeout(() => FlowFx.heal(Object.assign({ mana: true }, f)), wait); }
         return;
       }
-      if (f.late) { lateN++; setTimeout(() => { lateN--; go(f); }, Math.round(1000 * FlowFx.wait()) + 150); return; }
+      if (f.late) {
+        const lw = Math.round(1000 * FlowFx.wait()) + 150;
+        if (f.kind === 'lifeflow' && f.heal > 0 && !FAST) {   // seit 0.15.3.2: Heilung nach der Verteidigung: die HP zeigen erst den Stand nach dem Schaden, die Heilung erst, wenn ihre Animation ankommt
+          const hms = lw + Math.round(1000 * comboSeconds(f)) + 40;
+          holdHp(f.who, hms, -f.heal); setTimeout(() => { if (G) render(); }, 0); setTimeout(() => { if (G) render(); }, hms + 30);
+        }
+        lateN++; setTimeout(() => { lateN--; go(f); }, lw); return;
+      }
       if (f.first) preMs = Math.max(preMs, Math.round(1000 * comboSeconds(f)) + 100);   // seit 0.4: Kombo der Verteidigung zuerst
       if (f.kind === 'defense' && preMs > 0 && !FAST) {   // die Verteidigungsanimation beginnt erst, wenn die Kombo-Animation durch ist; bis dahin zeigen die HP-Balken den Stand vor dem Schaden
         const wait = preMs; preMs = 0;
