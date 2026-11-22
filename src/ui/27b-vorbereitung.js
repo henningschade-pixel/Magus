@@ -2,7 +2,7 @@
 // Vor dem ersten Zug wählt jeder Spieler verdeckt eine Karte aus seinem ganzen Deck; ihre Farbe ist der erste, kostenlose Magiepunkt. Die Auswahl liegt im Vordergrund (wie die Hellsicht-Auswahl); der Gegner wählt gleichzeitig.
 let prepSel = 0;   // uid der angewählten Karte
 let prepWas = false;   // die Vorbereitung lief bis eben
-// Die Monster sind zu Beginn schon ausgelost und aufgedeckt; nach der Kartenwahl folgen Mischen, Austeilen und die Konfiguration (Würfeln) der Monster.
+// Die Monster sind zu Beginn schon ausgelost und aufgedeckt; das Würfeln gehört zur Monsterauslosung (Phase 1); nach der Kartenwahl folgen Mischen und Austeilen.
 function prepFlow() {
   if (G && G.phase === 'prep') prepWas = true;
   else if (prepWas) { prepWas = false; Intro.start(true); }
@@ -17,7 +17,7 @@ function prepOverlayHTML() {
   if (!cs.some(c => c.uid === prepSel)) prepSel = 0;
   const cnt = M.ELEMENTS.map(e => M.NAMES[e] + ' ' + cs.filter(c => c.id[0] === e).length).join(' · ');
   let h = '<div class="prepbox"><div class="preptitle">Vorbereitung: Erste Magie wählen</div>' +
-    '<div class="prepsub">Alle Magiestufen beginnen bei 0. Schau dir deine Karten an und lege eine verdeckt vor dich: Ihre Farbe beginnt kostenlos auf Stufe 1. Dein Gegner wählt gleichzeitig und verdeckt; danach werden beide Wahlen aufgedeckt, die Karten kommen zurück ins Deck, das neu gemischt wird. Danach werden die Monster konfiguriert (gewürfelt).</div>' +
+    '<div class="prepsub">Alle Magiestufen beginnen bei 0. Schau dir deine Karten an und lege eine verdeckt vor dich: Ihre Farbe beginnt kostenlos auf Stufe 1. Dein Gegner wählt gleichzeitig und verdeckt; danach werden beide Wahlen aufgedeckt, die Karten kommen zurück ins Deck, das neu gemischt wird.</div>' +
     '<div class="prepcnt">Dein Deck: ' + cnt + '</div><div class="prepgrid">';
   cs.forEach((c, i) => { h += '<div class="prepcard' + (c.uid === prepSel ? ' on' : '') + '" data-act="prepsel" data-uid="' + c.uid + '"><img src="' + (IMG[c.id] || IMG.back) + '"></div>'; });
   return h + '</div><button class="btn primary prepok" data-act="prepok" ' + (prepSel ? '' : 'disabled') + '>' + (prepSel ? 'Verdeckt wählen' : 'Karte antippen') + '</button></div>';

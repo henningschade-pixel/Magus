@@ -120,7 +120,8 @@ test('Mehrspieler: gleichzeitige Aktionen, tote Verbindung, abweichender Stand, 
     await act(onTurn(), { type: 'draw' }); s = await same(host, guest, 'Zug nach dem Neuladen kommt an');
 
     // 5) Gastgeber verlässt die Partie: kein „Spiel fortsetzen“ gegen den Computer, dafür „Partie fortsetzen“
-    await host.click('#homebtn'); await host.click('[data-act="leave"]');
+    await host.evaluate(() => document.getElementById('homebtn').click());   // direkt am Knopf: eine zufällig offene Hellsicht-Auswahl (Vordergrund) darf den Klick nicht abfangen
+    await host.click('[data-act="leave"]');
     assert.equal(await host.evaluate(() => window.__magus.state), null, 'die Partie läuft nicht ohne Raum weiter');
     assert.equal(await host.locator('[data-act="resume"]').count(), 0, 'kein „Spiel fortsetzen“');
     await host.click('[data-act="mpresume"]');

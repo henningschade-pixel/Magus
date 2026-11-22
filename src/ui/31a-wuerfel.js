@@ -145,7 +145,7 @@ const DiceBoard = (() => {
     if (FAST) { if (layer) layer.style.display = 'none'; return; }   // beschleunigtes Zuschauen (ab Tempo ×3): keine Würfel; bereits vorhandene Ebene ausblenden, sonst bleibt sie im Kampf stehen (seit 0.14.6)
     ensure();
     if (mons !== G.monsters) { mons = G.monsters; build(); }
-    const visible = G.phase === 'world' && !G.over && !endView && !modal && overlay.style.display === 'none';
+    const visible = (G.phase === 'world' || G.phase === 'prep') && !G.over && !endView && !modal && overlay.style.display === 'none';
     layer.style.display = visible ? '' : 'none';
     if (!visible) return;
     items.forEach(it => { if (!it) return; const alive = M.monsterAlive(G.monsters[it.slot]); it.pl.style.display = it.mi.style.display = alive ? '' : 'none'; });
