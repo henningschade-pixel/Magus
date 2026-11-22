@@ -1,7 +1,7 @@
 /* Magus – Regelkern (Teil 7b): Vorbereitung (seit 0.15).
-   Die Spieler beginnen ohne Magie (alle drei Stufen 0). Vor dem ersten Zug liegt die Vorbereitung: Die 24 Stufe-1-Karten sind gemischt und abwechselnd verteilt (je 12), noch ist keine Hand gezogen und die Monster sind noch nicht aufgedeckt (die Oberfläche hält sie verdeckt, das Protokoll nennt sie erst danach).
+   Die Spieler beginnen ohne Magie (alle drei Stufen 0). Vor dem ersten Zug liegt die Vorbereitung: Die 24 Stufe-1-Karten sind gemischt und abwechselnd verteilt (je 12), noch ist keine Hand gezogen. Die Monsterauslosung (welche sechs Monster, welche drei erscheinen) steht am Anfang und ist schon aufgedeckt.
    Beide Spieler schauen ihre Karten an und legen gleichzeitig und verdeckt EINE Karte vor sich. Ihre Farbe ist der erste, kostenlose Magiepunkt (Stufe 1 in dieser Farbe).
-   Erst wenn beide gewählt haben, wird aufgedeckt; die Karte geht zurück ins Deck, das Deck wird neu gemischt (Nachziehstapel), die Starthände werden gezogen; danach werden die Monster aufgedeckt (Oberfläche) und der erste Zug beginnt. Magie kaufen ist weiterhin offen (in den eigenen Zügen, 1, 2, 3 … Gold); der Gratispunkt zählt dabei nicht mit.
+   Erst wenn beide gewählt haben, wird aufgedeckt; die Karte geht zurück ins Deck, das Deck wird neu gemischt (Nachziehstapel), die Starthände werden gezogen; danach folgt die Konfiguration der Monster (Würfeln, Oberfläche) und der erste Zug beginnt. Magie kaufen ist weiterhin offen (in den eigenen Zügen, 1, 2, 3 … Gold); der Gratispunkt zählt dabei nicht mit.
    state.prep[pid] = uid der gewählten Karte (null = noch nicht gewählt); Aktion { pid, type: 'prepPick', uid }. Wer zuerst fragt, ist egal: die Reihenfolge der beiden Wahlen ändert nichts am Ergebnis. */
 function startPrep(state) {
   state.players.forEach(p => {   // die Starthand geht zurück in den Stapel: gewählt wird aus dem ganzen Deck
@@ -38,6 +38,5 @@ function finishPrep(state) {
   state.prepPicks = picks;
   state.players.forEach(p => fillHand(state, p.deck));
   state.phase = 'world';
-  log(state, 'Abschnitt 1: Die Monster der Stufe I erscheinen.' + state.openLog); delete state.openLog;
   sample(state);
 }
