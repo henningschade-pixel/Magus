@@ -26,3 +26,24 @@ test('Ablagestapel: Fächer mit allen Karten in Stapelreihenfolge, Mausrad blät
     assert.deepEqual(errs, []);
   } finally { await b.close(); }
 });
+
+test('Fächer: Blättern nach links über die erste Karte hinaus springt nicht (bleibt an der ersten Karte)', { skip: !chromium && 'Playwright nicht installiert', timeout: 60000 }, async () => {
+  const b = await chromium.launch({ executablePath: exe });
+  try {
+    const p = await b.newPage({ viewport: { width: 1600, height: 900 } }), errs = [];
+    p.on('pageerror', e => errs.push(e.message));
+    await p.goto(url); await p.waitForTimeout(500);
+    await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(1500);
+    await p.evaluate(() => { const G = window.__magus.state, d = G.players[0].deck; for (let i = 0; i < 9; i++) { const c = d.draw.shift(); if (c) d.discard.push(c); } window.__magus.pump(); });
+    await p.waitForTimeout(400);
+    await p.evaluate(() => document.querySelector('[data-act="deckview"]').click()); await p.waitForTimeout(400);
+    const seq = await p.evaluate(async () => {
+      const o = document.getElementById('discov'), out = [];
+      for (let k = 0; k < 60; k++) { o.dispatchEvent(new WheelEvent('wheel', { deltaY: -30, bubbles: true, cancelable: true })); await new Promise(r => setTimeout(r, 16)); out.push([...o.querySelectorAll('.prepcard')].findIndex(e => e.style.filter === 'none')); }
+      return out;
+    });
+    for (let i = 1; i < seq.length; i++) assert.ok(seq[i] <= seq[i - 1], 'Vordere Karte darf beim Linksblättern nicht zurückspringen: ' + seq.join(','));
+    assert.equal(seq[seq.length - 1], 0, 'endet an der ersten Karte');
+    assert.deepEqual(errs, []);
+  } finally { await b.close(); }
+});

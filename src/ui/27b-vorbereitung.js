@@ -1,7 +1,7 @@
 /* ---------- Vorbereitung (seit 0.15) ---------- */
 // Vor dem ersten Zug wählt jeder Spieler verdeckt eine Karte aus seinem ganzen Deck; ihre Farbe ist der erste, kostenlose Magiepunkt. Die Auswahl liegt als Leiste am unteren Rand (Mausrad blättert durch das Deck), die Monster bleiben sichtbar; der Gegner wählt gleichzeitig.
 let prepSel = 0;   // uid der angewählten Karte
-let prepPos = -1;   // Mitte der Kartenreihe (Index, kann zwischen zwei Karten liegen)
+let prepPos = null;   // Mitte der Kartenreihe (Index, kann zwischen zwei Karten liegen); null = noch nicht gesetzt (nicht < 0 prüfen: beim Linksblättern wird der Wert kurz negativ)
 let prepSnap = 0;
 let prepWas = false;   // die Vorbereitung lief bis eben
 // Die Monster sind zu Beginn schon ausgelost und aufgedeckt; das Würfeln gehört zur Monsterauslosung (Phase 1); nach der Kartenwahl folgen Mischen und Austeilen.
@@ -39,7 +39,7 @@ function fanLayout(g, pos) {
 }
 function prepLayout() {
   const g = document.querySelector('#prepov .prepgrid'); if (!g) return;
-  const n = g.querySelectorAll('.prepcard').length; if (prepPos < 0) prepPos = Math.floor((n - 1) / 2);
+  const n = g.querySelectorAll('.prepcard').length; if (prepPos === null) prepPos = Math.floor((n - 1) / 2);
   prepPos = fanLayout(g, prepPos);
 }
 function prepScroll(dy) {
@@ -47,10 +47,10 @@ function prepScroll(dy) {
   clearTimeout(prepSnap); prepSnap = setTimeout(() => { prepPos = Math.round(prepPos); prepLayout(); }, 140);
 }
 // Ablagestapel (Klick auf den eigenen Ablagestapel): dieselbe Fächer-Darstellung, die Karten liegen in der Reihenfolge des Stapels (links die ältesten, rechts die zuletzt abgelegte). Es gibt keine Auswertung des Decks; zählen und vergleichen muss der Spieler selbst.
-let discPos = -1, discSnap = 0, discWas = false;
+let discPos = null, discSnap = 0, discWas = false;   // discPos: null = noch nicht gesetzt
 function discLayout() {
   const g = document.querySelector('#discov .prepgrid'); if (!g) return;
-  const n = g.querySelectorAll('.prepcard').length; if (discPos < 0) discPos = n - 1;
+  const n = g.querySelectorAll('.prepcard').length; if (discPos === null) discPos = n - 1;
   discPos = fanLayout(g, discPos);
 }
 function discHTML() {
@@ -68,7 +68,7 @@ function discRender() {
     o.addEventListener('wheel', e => { if (!o.querySelector('.prepgrid')) return; e.preventDefault(); discPos += (Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY) / 90; discLayout(); clearTimeout(discSnap); discSnap = setTimeout(() => { discPos = Math.round(discPos); discLayout(); }, 140); }, { passive: false });
   }
   if (o) {
-    if (html) { if (!discWas) discPos = -1; discWas = true; if (o.dataset.k !== html) { o.innerHTML = html; o.dataset.k = html; } o.style.display = 'flex'; discLayout(); }
+    if (html) { if (!discWas) discPos = null; discWas = true; if (o.dataset.k !== html) { o.innerHTML = html; o.dataset.k = html; } o.style.display = 'flex'; discLayout(); }
     else { o.style.display = 'none'; o.dataset.k = ''; discWas = false; }
   }
 }

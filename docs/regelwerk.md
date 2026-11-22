@@ -338,6 +338,10 @@ Keine Regeländerung, nur die Bedienung des Tempels: Das Opfern läuft wie die U
 
 - **Heilung wieder nach Angriff und Verteidigung:** Die Heilung eines Kombos in der Verteidigung (Erde + Wasser) wirkt erst nach dem Schaden und dem Spiegelrückwurf und gleicht ihn nachträglich aus, höchstens bis zu den maximalen HP; ein sonst tödlicher Restschaden lässt sich so noch ausgleichen (HP − Restschaden + Heilung, nie unter 0, nie über dem Maximum). Zerrüttung, Lähmung, Läuterung und Spiegel wirken wie seit 0.4 **vor** der Verteidigung. Im Angriff ändert sich nichts. Umsetzung: `execDefense` und `defenseComboPre` in `src/engine/65-kampfablauf.js`; Vorschau (`previewDefense`) und Animation folgen derselben Reihenfolge (Heilungseffekt mit `late`).
 
+## Änderung 0.15.2 (22.11.)
+
+- **Kartenfächer (Ablagestapel, Vorbereitung):** Beim Blättern nach links über die erste Karte hinaus sprang die Anzeige zur letzten Karte (Ablagestapel) bzw. zur mittleren (Vorbereitung), weil die Startposition als „kleiner als 0“ erkannt wurde. Jetzt ist die Startposition `null`; die Position wird links wie rechts an der Randkarte angehalten. Keine Regeländerung.
+
 ## Änderung 0.15.1 (22.11.)
 
 - **Monsterbewertung auch für den Monsterführer:** Der Ergebnis-Bildschirm fragt nach jedem Monsterkampf den Spieler des eigenen Geräts: den Angreifer („Wie schwer war dieses Monster?“: Zu schwer / Etwas schwer / Etwas leicht / Zu leicht) und den Monsterführer („Wie hast du den Kampf als Monsterführer erlebt?“: Monster zu stark / Etwas stark / Etwas schwach / Monster zu schwach). Beide Skalen verwenden dieselben gespeicherten Codes (`hard`, `abitHard`, `abitEasy`, `easy`; `hard` = das Monster war für den Angreifer zu schwer, also zu stark). Der Monsterführer wird auch gefragt, wenn der Computer das Monster angreift. Zuschauen fragt nicht.

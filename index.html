@@ -2880,10 +2880,11 @@ let hpHold = null, curseHold = {}, stageSeen = 1, endSnd = null, G = null, hold 
 
 /* ---------- Versionen: Versionsnummer und Versionsbeschreibung (Seite „Neu in Version …“) ---------- */
 // Aktuelle Versionsnummer: einzige Stelle, an der sie gesetzt wird (Menü-Link und Über-Seite lesen sie von hier; bei jedem Schritt hochzählen)
-const MAGUS_VERSION = '0.15.1';
+const MAGUS_VERSION = '0.15.2';
 // Versionsbeschreibung: ein Eintrag je Version, die neueste zuerst. Bei jedem Schritt oben einen Eintrag [Nummer, Text] ergänzen;
 // der erste Eintrag gehört zu MAGUS_VERSION und erscheint unter „Neu in Version …“.
 const VERSIONEN = [
+  ['0.15.2', '<b>Kartenfächer: Blättern nach links springt nicht mehr:</b> Beim Durchblättern des Ablagestapels und der Kartenwahl der Vorbereitung sprang die Anzeige zur letzten bzw. mittleren Karte, sobald man über die erste Karte hinaus nach links scrollte. Die Position wird jetzt an der ersten Karte angehalten, wie am rechten Ende.'],
   ['0.15.1', '<b>Monsterbewertung auch für den Monsterführer:</b> Nach einem Monsterkampf fragt der Ergebnis-Bildschirm jetzt nicht nur den Angreifer, sondern auch den Monsterführer, wie er den Kampf erlebt hat (Monster zu stark / etwas stark / etwas schwach / zu schwach). Das gilt auch, wenn der Computer das Monster angreift und du es führst. Jede Bewertung trägt Rolle und einen Schlüssel (Seed, Stufe, Element, Weltrunde), damit sich die Bewertungen beider Geräte einer Partie beim Auswerten zusammenführen lassen. Monsterwerte unverändert (Stufe I weiter 2 TP).'],
   ['0.15', '<b>Experimentelle Version:</b> Magieentwicklung und Monsterwerte sind neu und noch nicht ausbalanciert; nach einem Monsterkampf kannst du mit der Bewertung Rückmeldung geben. <b>Magie beginnt bei 0, Vorbereitung vor dem Spiel:</b> Die drei Magiestufen starten bei 0. Phase 1: Die Monster werden ausgelost, aufgedeckt und gewürfelt. Vor dem ersten Zug schauen beide Spieler ihre 12 Karten an und legen gleichzeitig und verdeckt eine Karte vor sich; ihre Farbe beginnt kostenlos auf Stufe 1. Nach dem Aufdecken geht die Karte zurück ins Deck, das neu gemischt wird; dann beginnt das Spiel (3 Gold Startgold wie bisher). Weitere Magie kauft man offen im Spiel für 1, 2, 3 … Gold; der Gratispunkt zählt dabei nicht mit. Monster behalten ihre Werte. Der Computer wählt die Farbe mit den meisten Karten und kauft Magie früher. Im Mehrspieler wählen beide gleichzeitig. <b>Monster neu skaliert:</b> Stufe I 2 TP, Stufe II 3 TP, Stufe III 5 TP (Mana 4/4/5, Limit 2/3/4); Magie der Monster 2/1/1 in Stufe I, 3/2/1 in Stufe II und III, keine Magie 0. <b>Monsterbewertung (Test):</b> Nach einem Monsterkampf lässt sich das Monster auf einer Vierer-Skala (zu schwer, etwas schwer, etwas leicht, zu leicht) bewerten; die Bewertung wird mit der Monsterkonfiguration gespeichert. Einstellungen: an/aus, Export, Löschen. Die Kartenwahl liegt als Leiste am unteren Rand als Fächer (Mausrad blättert, die Karten überlappen links und rechts der Mitte), die Monster bleiben dabei sichtbar. <b>Mehr Gold früher:</b> Der Abschnittsbonus beträgt 5 / 6 / 7 Gold (vorher 3 / 6 / 9); die Stufe-II-Monster haben dafür 1 Mana mehr. Die Karten der Kartenwahl liegen in zufälliger Reihenfolge. <b>Ablagestapel als Fächer:</b> Ein Klick auf deinen Ablagestapel zeigt die Karten wie in der Kartenwahl; das Balkendiagramm der Deckverteilung entfällt.'],
   ['0.14.8', '<b>Spezialisten-Deck, Würfelseite „Gratis-Nachziehen“, Läuterungs-Warnung:</b> Der Stufe-I-Spezialist hat jetzt auch eine Karte der unterlegenen Farbe (eine Stufe-1-Karte des Hauptelements wird dazu getauscht; die Stärke bleibt gleich). Die wirkungslose Würfelseite „Ziehen“ ist ersetzt durch „Gratis-Nachziehen“: Plus: Das Monster beginnt den Kampf mit +1 Gratis-Nachziehen, Minus: Der Angreifer beginnt mit +1. Wer eine Läuterung vorbereitet und wählbare Marker nicht angeklickt hat, wird vor dem Ausführen gewarnt und kann „Trotzdem ausführen“ wählen.'],
@@ -6209,7 +6210,7 @@ function specAdvance() {
 /* ---------- Vorbereitung (seit 0.15) ---------- */
 // Vor dem ersten Zug wählt jeder Spieler verdeckt eine Karte aus seinem ganzen Deck; ihre Farbe ist der erste, kostenlose Magiepunkt. Die Auswahl liegt als Leiste am unteren Rand (Mausrad blättert durch das Deck), die Monster bleiben sichtbar; der Gegner wählt gleichzeitig.
 let prepSel = 0;   // uid der angewählten Karte
-let prepPos = -1;   // Mitte der Kartenreihe (Index, kann zwischen zwei Karten liegen)
+let prepPos = null;   // Mitte der Kartenreihe (Index, kann zwischen zwei Karten liegen); null = noch nicht gesetzt (nicht < 0 prüfen: beim Linksblättern wird der Wert kurz negativ)
 let prepSnap = 0;
 let prepWas = false;   // die Vorbereitung lief bis eben
 // Die Monster sind zu Beginn schon ausgelost und aufgedeckt; das Würfeln gehört zur Monsterauslosung (Phase 1); nach der Kartenwahl folgen Mischen und Austeilen.
@@ -6247,7 +6248,7 @@ function fanLayout(g, pos) {
 }
 function prepLayout() {
   const g = document.querySelector('#prepov .prepgrid'); if (!g) return;
-  const n = g.querySelectorAll('.prepcard').length; if (prepPos < 0) prepPos = Math.floor((n - 1) / 2);
+  const n = g.querySelectorAll('.prepcard').length; if (prepPos === null) prepPos = Math.floor((n - 1) / 2);
   prepPos = fanLayout(g, prepPos);
 }
 function prepScroll(dy) {
@@ -6255,10 +6256,10 @@ function prepScroll(dy) {
   clearTimeout(prepSnap); prepSnap = setTimeout(() => { prepPos = Math.round(prepPos); prepLayout(); }, 140);
 }
 // Ablagestapel (Klick auf den eigenen Ablagestapel): dieselbe Fächer-Darstellung, die Karten liegen in der Reihenfolge des Stapels (links die ältesten, rechts die zuletzt abgelegte). Es gibt keine Auswertung des Decks; zählen und vergleichen muss der Spieler selbst.
-let discPos = -1, discSnap = 0, discWas = false;
+let discPos = null, discSnap = 0, discWas = false;   // discPos: null = noch nicht gesetzt
 function discLayout() {
   const g = document.querySelector('#discov .prepgrid'); if (!g) return;
-  const n = g.querySelectorAll('.prepcard').length; if (discPos < 0) discPos = n - 1;
+  const n = g.querySelectorAll('.prepcard').length; if (discPos === null) discPos = n - 1;
   discPos = fanLayout(g, discPos);
 }
 function discHTML() {
@@ -6276,7 +6277,7 @@ function discRender() {
     o.addEventListener('wheel', e => { if (!o.querySelector('.prepgrid')) return; e.preventDefault(); discPos += (Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY) / 90; discLayout(); clearTimeout(discSnap); discSnap = setTimeout(() => { discPos = Math.round(discPos); discLayout(); }, 140); }, { passive: false });
   }
   if (o) {
-    if (html) { if (!discWas) discPos = -1; discWas = true; if (o.dataset.k !== html) { o.innerHTML = html; o.dataset.k = html; } o.style.display = 'flex'; discLayout(); }
+    if (html) { if (!discWas) discPos = null; discWas = true; if (o.dataset.k !== html) { o.innerHTML = html; o.dataset.k = html; } o.style.display = 'flex'; discLayout(); }
     else { o.style.display = 'none'; o.dataset.k = ''; discWas = false; }
   }
 }
