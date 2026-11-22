@@ -26,10 +26,10 @@ test('Monsterbewertung: Frage nach dem Kampf, Speicherung mit Monsterkonfigurati
     await winFight(p);
     assert.equal(await p.locator('#endov [data-act="rate"]').count(), 4, 'vier Antworten');
     await p.click('#endov [data-act="rate"][data-v="hard"]');
-    assert.match(await p.textContent('#endov .rateq'), /zu schwer/);
+    assert.match(await p.textContent('#endov .rateq'), /zu schwer/i);
     const l = await p.evaluate(() => JSON.parse(localStorage.getItem('magus_monsterbewertung')));
     assert.equal(l.length, 1);
-    assert.equal(l[0].rating, 'hard'); assert.equal(l[0].stage, 1); assert.ok(l[0].monster.name && l[0].monster.variant && l[0].monster.stats.maxHp >= 1 && l[0].monster.deck.length === 9, 'Monsterkonfiguration gespeichert');
+    assert.equal(l[0].rating, 'hard'); assert.equal(l[0].role, 'attacker'); assert.ok(l[0].key.startsWith(l[0].seed + ':1:')); assert.equal(l[0].stage, 1); assert.ok(l[0].monster.name && l[0].monster.variant && l[0].monster.stats.maxHp >= 1 && l[0].monster.deck.length === 9, 'Monsterkonfiguration gespeichert');
     assert.equal(l[0].fight.attackerWon, true); assert.ok(l[0].me.mag && l[0].me.deck);
     await p.click('#endov .endov');
     await p.waitForFunction(() => document.getElementById('endov').style.display === 'none');
@@ -45,6 +45,33 @@ test('Monsterbewertung: Frage nach dem Kampf, Speicherung mit Monsterkonfigurati
     await p.click('#overlay >> text=Einstellungen'); await p.waitForSelector('#overlay .setpage');
     const t = await p.evaluate(() => document.getElementById('overlay').innerText);
     assert.ok(/monsterbewertung/i.test(t) && t.includes('Gespeicherte Bewertungen: 1'));
+    assert.deepEqual(errs, []);
+  } finally { await b.close(); }
+});
+
+test('Monsterbewertung: der Monsterführer wird gefragt, wenn der Computer das Monster angreift', { skip: !chromium && 'Playwright nicht installiert', timeout: 90000 }, async () => {
+  const b = await chromium.launch({ executablePath: exe });
+  try {
+    const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
+    p.on('pageerror', e => errs.push(e.message));
+    await p.goto(url); await p.waitForTimeout(500);
+    await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
+    await p.evaluate(() => {   // der Computer (Platz 1) greift das Monster an; es hat 1 TP und keine Handkarten
+      const G = window.__magus.state, M = window.Magus;
+      G.turn = 1; M.apply(G, { pid: 1, type: 'combat', elem: 'F' });
+      const att = G.combat.sides.a, mon = G.combat.sides.b; att.stats.limit = 2; att.stats.mag = { F: 3, E: 3, W: 3 }; mon.stats.hp = 1; mon.deck.hand = mon.deck.hand.map(() => null);
+      att.deck.hand[0] = Object.assign({}, att.deck.hand[0], { id: 'F3' });
+      M.apply(G, { pid: 1, type: 'mark', slot: 0 });
+      window.__magus.act({ pid: 1, type: 'attack' });
+    });
+    await p.waitForTimeout(400);
+    await p.evaluate(() => window.__magus.act({ type: 'defend' }));   // der Monsterführer (Platz 0, ohne Handkarten) verteidigt nicht mehr: das Monster fällt
+    await p.waitForSelector('#endov .endbox', { timeout: 30000 });
+    assert.match(await p.textContent('#endov .rateq'), /Monsterführer/);
+    await p.click('#endov [data-act="rate"][data-v="abitEasy"]');
+    assert.match(await p.textContent('#endov .rateq'), /Etwas schwach/);
+    const l = await p.evaluate(() => JSON.parse(localStorage.getItem('magus_monsterbewertung')));
+    assert.equal(l.length, 1); assert.equal(l[0].role, 'leader'); assert.equal(l[0].rating, 'abitEasy'); assert.equal(l[0].fight.attackerWon, true); assert.equal(l[0].vsHuman, false);
     assert.deepEqual(errs, []);
   } finally { await b.close(); }
 });

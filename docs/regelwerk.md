@@ -338,6 +338,12 @@ Keine Regeländerung, nur die Bedienung des Tempels: Das Opfern läuft wie die U
 
 - **Heilung wieder nach Angriff und Verteidigung:** Die Heilung eines Kombos in der Verteidigung (Erde + Wasser) wirkt erst nach dem Schaden und dem Spiegelrückwurf und gleicht ihn nachträglich aus, höchstens bis zu den maximalen HP; ein sonst tödlicher Restschaden lässt sich so noch ausgleichen (HP − Restschaden + Heilung, nie unter 0, nie über dem Maximum). Zerrüttung, Lähmung, Läuterung und Spiegel wirken wie seit 0.4 **vor** der Verteidigung. Im Angriff ändert sich nichts. Umsetzung: `execDefense` und `defenseComboPre` in `src/engine/65-kampfablauf.js`; Vorschau (`previewDefense`) und Animation folgen derselben Reihenfolge (Heilungseffekt mit `late`).
 
+## Änderung 0.15.1 (22.11.)
+
+- **Monsterbewertung auch für den Monsterführer:** Der Ergebnis-Bildschirm fragt nach jedem Monsterkampf den Spieler des eigenen Geräts: den Angreifer („Wie schwer war dieses Monster?“: Zu schwer / Etwas schwer / Etwas leicht / Zu leicht) und den Monsterführer („Wie hast du den Kampf als Monsterführer erlebt?“: Monster zu stark / Etwas stark / Etwas schwach / Monster zu schwach). Beide Skalen verwenden dieselben gespeicherten Codes (`hard`, `abitHard`, `abitEasy`, `easy`; `hard` = das Monster war für den Angreifer zu schwer, also zu stark). Der Monsterführer wird auch gefragt, wenn der Computer das Monster angreift. Zuschauen fragt nicht.
+- **Neue Felder je Eintrag:** `role` (`attacker` / `leader`), `key` (`Seed:Stufe:Element:Weltrunde`, identifiziert denselben Kampf auf beiden Geräten), `vsHuman` (Mehrspieler). `me` und `opponent` bleiben aus Sicht des Geräts. Im Mehrspieler speichert jedes Gerät seine eigene Bewertung; beim Auswerten werden die Dateien beider Geräte über `key` zusammengeführt.
+- **Monsterwerte unverändert:** Stufe I bleibt bei 2 TP (Messung 0.15: Angreifer-Sieg 13 % gegen die KI; Ziel „zu Beginn kaum zu besiegen“). Ob 2 TP zu dünn sind, entscheiden die Bewertungen.
+
 ## Änderung 0.15 (22.11.)
 
 - **Ablagestapel als Fächer:** Ein Klick auf den eigenen Ablagestapel zeigt die abgelegten Karten in derselben Fächer-Darstellung wie die Kartenwahl (links die ältesten, rechts die zuletzt abgelegten; das Mausrad blättert; ein Klick neben die Leiste schließt). Das bisherige Balkendiagramm der Deckverteilung (Stapel, Hand, Ablage) entfällt: Es nahm dem Spieler die Auswertung ab, zum Beispiel was noch im Nachziehstapel liegt. Das Zählen bleibt dem Spieler überlassen, wie am Tisch. Keine Regeländerung.
