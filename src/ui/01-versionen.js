@@ -1,9 +1,10 @@
 /* ---------- Versionen: Versionsnummer und Versionsbeschreibung (Seite „Neu in Version …“) ---------- */
 // Aktuelle Versionsnummer: einzige Stelle, an der sie gesetzt wird (Menü-Link und Über-Seite lesen sie von hier; bei jedem Schritt hochzählen)
-const MAGUS_VERSION = '0.14.8';
+const MAGUS_VERSION = '0.15';
 // Versionsbeschreibung: ein Eintrag je Version, die neueste zuerst. Bei jedem Schritt oben einen Eintrag [Nummer, Text] ergänzen;
 // der erste Eintrag gehört zu MAGUS_VERSION und erscheint unter „Neu in Version …“.
 const VERSIONEN = [
+  ['0.15', '<b>Magie beginnt bei 0, Vorbereitung vor dem Spiel:</b> Die drei Magiestufen starten bei 0. Vor dem ersten Zug wählen beide Spieler gleichzeitig und verdeckt eine Karte aus ihrem ganzen Deck; sie kommt auf die Ablage, ihre Farbe beginnt kostenlos auf Stufe 1. Danach werden aufgedeckt, die Starthände gezogen und das Spiel beginnt (3 Gold Startgold wie bisher). Weitere Magie kauft man offen im Spiel für 1, 2, 3 … Gold; der Gratispunkt zählt dabei nicht mit. Monster behalten ihre Werte. Der Computer wählt die Farbe mit den meisten Karten und kauft Magie früher. Im Mehrspieler wählen beide gleichzeitig.'],
   ['0.14.8', '<b>Spezialisten-Deck, Würfelseite „Gratis-Nachziehen“, Läuterungs-Warnung:</b> Der Stufe-I-Spezialist hat jetzt auch eine Karte der unterlegenen Farbe (eine Stufe-1-Karte des Hauptelements wird dazu getauscht; die Stärke bleibt gleich). Die wirkungslose Würfelseite „Ziehen“ ist ersetzt durch „Gratis-Nachziehen“: Plus: Das Monster beginnt den Kampf mit +1 Gratis-Nachziehen, Minus: Der Angreifer beginnt mit +1. Wer eine Läuterung vorbereitet und wählbare Marker nicht angeklickt hat, wird vor dem Ausführen gewarnt und kann „Trotzdem ausführen“ wählen.'],
   ['0.14.7', '<b>Monster erholen sich in der Weltphase nicht mehr:</b> Da jeder Monsterkampf mit einem Gewinner endet, gibt es keine Erholung der Monster mehr. Bisher bekamen lebende Monster am Ende jeder Runde +1 HP und +1 Mana. Die Erholung der Spieler bleibt.'],
   ['0.14.6', '<b>Zuschauen: Würfel verschwinden im Kampf auch bei hohem Tempo:</b> Beim Zuschauen mit beschleunigten Stufen (ab ×3) blieben die Monsterwürfel der Weltphase im Kampf sichtbar stehen. Sie werden jetzt wie bei normalem Tempo ausgeblendet.'],

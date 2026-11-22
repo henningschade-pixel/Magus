@@ -16,6 +16,8 @@ const DEFAULTS = {
   // Verbesserungen kaufen, solange der Magiefortschritt (Summe der Stufen über 1, höchstens 6) unter mgGoal liegt; sacRes: Gold, das dabei
   // übrig bleiben muss (Vorrang der Verbesserungen)
   sacG: 0, mgGoal: 2, sacRes: 0,
+  // sacGP/mgGoalP (seit 0.15): dasselbe für Partien mit Vorbereitung (Start ohne Magie); mgGoalP zählt die Summe aller Magiestufen (ohne Abzug von 3)
+  sacGP: 1, mgGoalP: 7,
   // sacSur (seit 0.7.7.5): Überschussgold. Kann die KI nichts mehr für Gold verbessern und hat mindestens sacSur Gold (und reicht es für die nächste Magiestufe), kauft sie Magie (auch bei sacG 0 und über mgGoal hinaus); 0 = aus.
   sacSur: 1,   // abgestimmt (0.7.7.6): Scan 1 bis 20 gegen den Pool, 1 ist am besten (65 % statt 52 % bei 6)
   // rAtk: Angriffslust auf ein Monster, solange der Marker rot ist (statt nachzuziehen und dem Gegner Gold zu

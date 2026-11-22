@@ -516,6 +516,17 @@ h2,h3,.sc{font-family:'Alegreya SC','Alegreya',Georgia,serif;font-weight:700;let
 .overlay .box.start>*{flex-shrink:0}
 
 
+/* Vorbereitung (seit 0.15): Wahl der ersten Magie */
+#prepov{position:absolute;inset:0;z-index:320;background:rgba(0,0,0,.8);display:flex;flex-direction:column;align-items:center;justify-content:center}
+#prepov .prepbox{display:flex;flex-direction:column;align-items:center;gap:10px;max-width:1500px;padding:0 40px;text-align:center}
+#prepov .preptitle{font-size:38px;color:#e7c46a}
+#prepov .prepsub{font-size:21px;color:#d8cdb4;max-width:1100px;line-height:1.35}
+#prepov .prepcnt{font-size:20px;color:#b9ab8a}
+#prepov .prepgrid{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;max-width:1300px;margin-top:6px}
+#prepov .prepcard{width:150px;cursor:pointer;transition:transform .15s,filter .15s;filter:brightness(.72)}
+#prepov .prepcard img{display:block;width:100%;border-radius:9px;box-shadow:0 0 0 2px #1b140d,0 5px 18px rgba(0,0,0,.8)}
+#prepov .prepcard:hover{filter:brightness(.95)}#prepov .prepcard.on{transform:translateY(-10px) scale(1.06);filter:none}#prepov .prepcard.on img{box-shadow:0 0 0 3px #e7c46a,0 0 24px rgba(231,196,106,.85)}
+#prepov .prepok{margin-top:10px;font-size:22px;padding:8px 28px}
 
 </style>
 </head>
@@ -701,7 +712,7 @@ function applyTemple(stats, field) {
   else if (field === 'mana') { stats.maxMana++; stats.mana = Math.min(stats.maxMana, stats.mana + 1); }
   else if (field === 'limit') stats.limit++;
 }
-function magicProgress(p) { return (p.stats.mag.F - 1) + (p.stats.mag.E - 1) + (p.stats.mag.W - 1); }
+function magicProgress(p) { return p.stats.mag.F + p.stats.mag.E + p.stats.mag.W; }   // Summe der Magiestufen (seit 0.15 ohne Abzug von 1; die Reihenfolge bleibt gleich)
 /* Magus – Regelkern (Teil 3): Monster. Jeder Abschnitt hat je Element ein Monster.
    Die Werte sind Abstimmungsdaten (abgestimmt mit tools/sim-monster-stufen.js gegen skriptierte Spielerbauten);
    die Monster werden im Kampf vom Gegenspieler gesteuert. */
@@ -1783,13 +1794,56 @@ function applyWorld(state, a) {
   }
   return fail('Unbekannte Aktion.');
 }
+/* Magus – Regelkern (Teil 7b): Vorbereitung (seit 0.15).
+   Die Spieler beginnen ohne Magie (alle drei Stufen 0). Vor dem ersten Zug liegt die Vorbereitung: Die Monster sind aufgedeckt und die Spielerdecks erzeugt, noch ist keine Hand gezogen.
+   Beide Spieler wählen gleichzeitig und verdeckt EINE Karte aus ihrem ganzen Deck. Die Karte kommt auf den Ablagestapel, ihre Farbe ist der erste, kostenlose Magiepunkt (Stufe 1 in dieser Farbe).
+   Erst wenn beide gewählt haben, wird aufgedeckt; danach werden die Starthände gezogen und der erste Zug beginnt. Magie kaufen ist weiterhin offen (in den eigenen Zügen, 1, 2, 3 … Gold); der Gratispunkt zählt dabei nicht mit.
+   state.prep[pid] = uid der gewählten Karte (null = noch nicht gewählt); Aktion { pid, type: 'prepPick', uid }. Wer zuerst fragt, ist egal: die Reihenfolge der beiden Wahlen ändert nichts am Ergebnis. */
+function startPrep(state) {
+  state.players.forEach(p => {   // die Starthand geht zurück in den Stapel: gewählt wird aus dem ganzen Deck
+    const d = p.deck;
+    d.hand.forEach((c, i) => { if (c) { d.draw.push(c); d.hand[i] = null; } });
+    state.rng.shuffle(d.draw);
+  });
+  state.phase = 'prep';
+  state.prep = [null, null];
+  log(state, 'Vorbereitung: Beide Spieler wählen gleichzeitig und verdeckt eine Karte aus ihrem Deck. Ihre Farbe wird der erste, kostenlose Magiepunkt.');
+}
+// Karten, aus denen pid wählen kann (das ganze Deck vor dem ersten Ziehen)
+function prepChoices(state, pid) { const d = state.players[pid].deck; return [].concat(d.draw, d.discard, d.hand.filter(Boolean)); }
+function applyPrep(state, a) {
+  if (a.type !== 'prepPick') return fail('In der Vorbereitung wählt man eine Karte.');
+  const pid = a.pid;
+  if (pid !== 0 && pid !== 1) return fail('Unbekannter Spieler.');
+  if (state.prep[pid]) return fail('Du hast schon gewählt.');
+  const c = prepChoices(state, pid).find(x => x.uid === a.uid);
+  if (!c) return fail('Diese Karte gibt es in deinem Deck nicht.');
+  state.prep[pid] = c.uid;
+  if (state.prep[0] && state.prep[1]) finishPrep(state);
+  return { ok: true };
+}
+function finishPrep(state) {
+  const picks = state.players.map((p, pid) => {
+    const d = p.deck, i = d.draw.findIndex(x => x.uid === state.prep[pid]), c = d.draw.splice(i, 1)[0];
+    d.discard.push(c);
+    const e = c.id[0];
+    p.stats.mag[e] = Math.max(p.stats.mag[e], 1);
+    return e;
+  });
+  state.players.forEach((p, pid) => log(state, p.name + ' wählt ' + NAMES[picks[pid]] + ': ' + NAMES[picks[pid]] + ' beginnt auf Stufe 1.', pid));
+  state.prepPicks = picks;
+  state.players.forEach(p => fillHand(state, p.deck));
+  state.phase = 'world';
+  sample(state);
+}
 /* Magus – Regelkern (Teil 8): Spielstart und Schnittstelle nach außen. */
 
 // Regelwerte (Abstimmungs- und Variantenschalter). ‚curses‘: Fluchsystem, siehe 30-curses.js.
-const DEFAULT_RULES = { maxRounds: 0, exhaustRounds: 10, priceRise: 1, startHp: 4, startLimit: 1, startSp: 3, limitCost: 1, limitFirstStepCost: 1, hpPerPoint: 1, maxUpgrades: 2, uncapped: 1, stageGold: [0, 3, 6, 9], winLead: 4, winSpFromShowdown: 1, monsterSp: 1, monsterLoot: 0, fleeAllowed: 0, allowAtk: { attack: 1, recover: 1, draw: 1, pass: 1, echo: 1, combo: 1 }, allowDef: { defend: 2, recover: 0, draw: 0, pass: 1, echo: 0, combo: 1 }, idleLimit: 0, drawMarker: 0, drawPenaltyGold: 1, drawPenaltyMana: 1, drawLimitCost: [1, 1], lossHelp: 1, lossGold: [0, 1, 2, 3], lossBoth: 0, showdownSp: 1, lootBoth: true, recoverByStage: [1, 2, 3], regenByStage: [1, 2, 3], supply: 8, supply2: 6, supply3: 4, startCards: 0 };   // Jede gespielte Karte (auch Kombokarten) kostet 1 Mana, nur Verteidigung in der überlegenen Farbe ist gratis. recoverByStage: Mana-Gewinn von „Erholen“ im Kampf je Abschnitt
+const DEFAULT_RULES = { prep: 1, maxRounds: 0, exhaustRounds: 10, priceRise: 1, startHp: 4, startLimit: 1, startSp: 3, limitCost: 1, limitFirstStepCost: 1, hpPerPoint: 1, maxUpgrades: 2, uncapped: 1, stageGold: [0, 3, 6, 9], winLead: 4, winSpFromShowdown: 1, monsterSp: 1, monsterLoot: 0, fleeAllowed: 0, allowAtk: { attack: 1, recover: 1, draw: 1, pass: 1, echo: 1, combo: 1 }, allowDef: { defend: 2, recover: 0, draw: 0, pass: 1, echo: 0, combo: 1 }, idleLimit: 0, drawMarker: 0, drawPenaltyGold: 1, drawPenaltyMana: 1, drawLimitCost: [1, 1], lossHelp: 1, lossGold: [0, 1, 2, 3], lossBoth: 0, showdownSp: 1, lootBoth: true, recoverByStage: [1, 2, 3], regenByStage: [1, 2, 3], supply: 8, supply2: 6, supply3: 4, startCards: 0 };   // Jede gespielte Karte (auch Kombokarten) kostet 1 Mana, nur Verteidigung in der überlegenen Farbe ist gratis. recoverByStage: Mana-Gewinn von „Erholen“ im Kampf je Abschnitt
 
 function newPlayer(state, name, ai, startIds) {
   const p = { name, ai: !!ai, stats: newStats(), sp: state.rules.startSp || 0, slots: MIN_SLOTS, drawRed: false, drawN: 0 };   // drawN: Nachziehvorgänge seit der letzten anderen Aktion (höchstens Nachziehlimit), drawRed: Marker rot
+  if (state.rules.prep) p.stats.mag = { F: 0, E: 0, W: 0 };   // seit 0.15: Spieler beginnen ohne Magie; den ersten Magiepunkt wählt die Vorbereitung (Monster behalten ihre Werte)
   p.stats.gold = 0;   // Das Spiel beginnt ohne Gold; Abschnittsboni kommen in newGame
   p.stats.maxHp = p.stats.hp = state.rules.startHp || 3;   // Start-HP der Spieler (Monster beginnen mit 3 und werden eigens abgestimmt)
   p.stats.limit = state.rules.startLimit || 1;   // Ausspiellimit zu Beginn (0.3: 2, seit 0.5.1: 1)
@@ -1818,6 +1872,7 @@ function newGame(opts) {
   const gg1 = (state.rules.stageGold || [])[1] || 0;
   state.players.forEach(p => { p.stats.gold += gg1; p.stats.goldGot += gg1; });
   log(state, 'Abschnitt 1: Die Monster der Stufe I erscheinen.' + variantLog(state) + (gg1 ? ' Jeder Spieler erhält ' + gg1 + ' Gold.' : ''));
+  if (state.rules.prep) startPrep(state);
   sample(state);
   return state;
 }
@@ -1853,6 +1908,7 @@ function applyCore(state, a) {
   return r;
 }
 function dispatch(state, a) {
+  if (state.phase === 'prep') return applyPrep(state, a);
   if (state.phase === 'world') return applyWorld(state, a);
   if (state.phase === 'combat') return applyCombat(state, a);
   return fail('Keine Aktion möglich.');
@@ -1861,6 +1917,7 @@ function dispatch(state, a) {
 // Wer ist gerade am Zug (Spieler-Index) oder null, wenn das Spiel vorbei ist.
 function actor(state) {
   if (state.over) return null;
+  if (state.phase === 'prep') { const i = state.prep.findIndex(x => !x); return i < 0 ? 0 : i; }   // Vorbereitung: beide wählen gleichzeitig; der Ablauf fragt den ersten, der noch nicht gewählt hat
   if (state.phase === 'combat') return state.combat.forced ? state.combat.forced.pid : state.combat.sides[state.combat.turn].ctrl;   // Zerrüttung: erst wählt der Betroffene seine Abwurfkarten
   return state.turn;
 }
@@ -1870,7 +1927,7 @@ return { allowed, ELEMENTS, SUPERIOR, NAMES, START_DECK, MAX_MAGIC, MAX_SLOTS, M
   makeRng, parseCard, selection, baseLen, dropSight, newGame, apply, record, prim, actor, other, regen, handCounts,
   vendorOffers, vendorPlans, maxed, limitStepCost, manaStepCost, hpStepCost, slotStepCost, magicCost, drawLimitCost, goldTxt,
   evalAttack, evalDefense, canFlee, stockOf, recoverGain, regenGain, comboLevels, levelsFor,
-  drawPenaltyAmount, worldRound, worldWear, worldWearGold, monsterAlive, monsterHand, markerOf, drawManaCost, drawGoldPenalty, previewDefense, defenseComboPre, allMonstersDead, magicProgress, spawnMonsters, spawnForGame };
+  drawPenaltyAmount, worldRound, worldWear, worldWearGold, monsterAlive, monsterHand, markerOf, drawManaCost, drawGoldPenalty, previewDefense, defenseComboPre, allMonstersDead, magicProgress, prepChoices, spawnMonsters, spawnForGame };
 }));</script>
 <script>/* Magus – einfacher Computergegner. Wählt nur Aktionen, die auch ein Mensch hätte. */
 /* Aufbau: 10 Stellschrauben, 20 Weltphase und 30 Kampf bilden die Basis-KI (bewertet jeden Zug einzeln mit festen Gewichten). Seit 0.13 plant 40 Suche im Kampf voraus: Jeder mögliche Zug wird in vielen möglichen Kampfverläufen durchgespielt, die Basis-KI führt darin beide Seiten. 90 Schnittstelle. (Die erste Zeile dient den Werkzeugen als Erkennungsmerkmal und bleibt, wie sie ist.) */
@@ -1898,6 +1955,8 @@ const DEFAULTS = {
   // Verbesserungen kaufen, solange der Magiefortschritt (Summe der Stufen über 1, höchstens 6) unter mgGoal liegt; sacRes: Gold, das dabei
   // übrig bleiben muss (Vorrang der Verbesserungen)
   sacG: 0, mgGoal: 2, sacRes: 0,
+  // sacGP/mgGoalP (seit 0.15): dasselbe für Partien mit Vorbereitung (Start ohne Magie); mgGoalP zählt die Summe aller Magiestufen (ohne Abzug von 3)
+  sacGP: 1, mgGoalP: 7,
   // sacSur (seit 0.7.7.5): Überschussgold. Kann die KI nichts mehr für Gold verbessern und hat mindestens sacSur Gold (und reicht es für die nächste Magiestufe), kauft sie Magie (auch bei sacG 0 und über mgGoal hinaus); 0 = aus.
   sacSur: 1,   // abgestimmt (0.7.7.6): Scan 1 bis 20 gegen den Pool, 1 ist am besten (65 % statt 52 % bei 6)
   // rAtk: Angriffslust auf ein Monster, solange der Marker rot ist (statt nachzuziehen und dem Gegner Gold zu
@@ -2075,7 +2134,8 @@ function ecoStep(state, pid) {
     if (foc && s.mag[foc] < M.MAX_MAGIC && s.gold >= cost) return A({ type: 'magic', elem: foc });
     return null;
   }
-  if (Q.sacG && M.magicProgress(p) < Q.mgGoal) { const a = buyMagic(Q.sacRes); if (a) return a; }   // sacG 1: Magie vor den Verbesserungen, solange der Magiefortschritt unter mgGoal liegt (sacRes Gold bleiben übrig)
+  const pr = !!state.rules.prep;   // seit 0.15 beginnen die Spieler ohne Magie: eigene Werte (sacGP, mgGoalP; abgestimmt im Selbstspiel, 73 % gegen sacG 0)
+  if ((pr ? Q.sacGP : Q.sacG) && M.magicProgress(p) < (pr ? Q.mgGoalP : Q.mgGoal)) { const a = buyMagic(Q.sacRes); if (a) return a; }   // sacG 1: Magie vor den Verbesserungen, solange der Magiefortschritt unter mgGoal liegt (sacRes Gold bleiben übrig)
   const a = spendStep();   // Gold geht in Verbesserungen (oder wird fürs Limit gespart)
   if (a) return a;
   if (Q.sacSur > 0 && s.gold >= Q.sacSur) return buyMagic(0);   // Überschuss: nichts Bezahlbares mehr, das Gold kauft Magie
@@ -2754,13 +2814,21 @@ function combatOdds(state, pid, el, n) {
   }
   return cnt ? { v: sum / cnt, win: win / cnt, lose: lose / cnt, n: cnt } : null;
 }
+// Vorbereitung (seit 0.15): Die KI wählt verdeckt, ohne die Wahl des Gegners zu kennen, die Farbe, von der ihr Deck die meisten Karten (und höchsten Stufen) enthält; bei Gleichstand gilt F, E, W.
+function prepPick(state, pid) {
+  const cs = M.prepChoices(state, pid), score = e => cs.filter(c => c.id[0] === e).reduce((n, c) => n + 10 + +c.id.slice(1), 0);
+  const best = M.ELEMENTS.slice().sort((a, b) => score(b) - score(a))[0];
+  return { pid, type: 'prepPick', uid: cs.find(c => c.id[0] === best).uid };
+}
 function plan(state, pid) {
+  if (state.phase === 'prep') return [prepPick(state, pid)];
   if (state.phase === 'world') { const st = ecoStep(state, pid); if (st) return [st]; }   // Wirtschaftsschritt (Gold für Verbesserungen und Magie ausgeben) hat Vorrang; er ist keine Aktion, danach plant die Oberfläche denselben Zug neu
   return state.phase === 'combat' ? searchPlan(state, pid) : worldPlan(state, pid);   // Kampf: Vorausschau (40-suche.js), ohne Durchläufe (setSearch(0)) die Basis-KI
 }
 // Führt einen vollständigen KI-Zug aus; bei Fehlern greift eine sichere Rückfalloption.
 function fallback(state, pid) {
   const A = a => Object.assign({ pid }, a);
+  if (state.phase === 'prep') return [A({ type: 'prepPick', uid: M.prepChoices(state, pid)[0].uid })];
   if (state.phase === 'combat') {
     const c = state.combat;
     if (c.forced) return [A(forcedAct(state, pid))];
@@ -2813,10 +2881,11 @@ let hpHold = null, curseHold = {}, stageSeen = 1, endSnd = null, G = null, hold 
 
 /* ---------- Versionen: Versionsnummer und Versionsbeschreibung (Seite „Neu in Version …“) ---------- */
 // Aktuelle Versionsnummer: einzige Stelle, an der sie gesetzt wird (Menü-Link und Über-Seite lesen sie von hier; bei jedem Schritt hochzählen)
-const MAGUS_VERSION = '0.14.8';
+const MAGUS_VERSION = '0.15';
 // Versionsbeschreibung: ein Eintrag je Version, die neueste zuerst. Bei jedem Schritt oben einen Eintrag [Nummer, Text] ergänzen;
 // der erste Eintrag gehört zu MAGUS_VERSION und erscheint unter „Neu in Version …“.
 const VERSIONEN = [
+  ['0.15', '<b>Magie beginnt bei 0, Vorbereitung vor dem Spiel:</b> Die drei Magiestufen starten bei 0. Vor dem ersten Zug wählen beide Spieler gleichzeitig und verdeckt eine Karte aus ihrem ganzen Deck; sie kommt auf die Ablage, ihre Farbe beginnt kostenlos auf Stufe 1. Danach werden aufgedeckt, die Starthände gezogen und das Spiel beginnt (3 Gold Startgold wie bisher). Weitere Magie kauft man offen im Spiel für 1, 2, 3 … Gold; der Gratispunkt zählt dabei nicht mit. Monster behalten ihre Werte. Der Computer wählt die Farbe mit den meisten Karten und kauft Magie früher. Im Mehrspieler wählen beide gleichzeitig.'],
   ['0.14.8', '<b>Spezialisten-Deck, Würfelseite „Gratis-Nachziehen“, Läuterungs-Warnung:</b> Der Stufe-I-Spezialist hat jetzt auch eine Karte der unterlegenen Farbe (eine Stufe-1-Karte des Hauptelements wird dazu getauscht; die Stärke bleibt gleich). Die wirkungslose Würfelseite „Ziehen“ ist ersetzt durch „Gratis-Nachziehen“: Plus: Das Monster beginnt den Kampf mit +1 Gratis-Nachziehen, Minus: Der Angreifer beginnt mit +1. Wer eine Läuterung vorbereitet und wählbare Marker nicht angeklickt hat, wird vor dem Ausführen gewarnt und kann „Trotzdem ausführen“ wählen.'],
   ['0.14.7', '<b>Monster erholen sich in der Weltphase nicht mehr:</b> Da jeder Monsterkampf mit einem Gewinner endet, gibt es keine Erholung der Monster mehr. Bisher bekamen lebende Monster am Ende jeder Runde +1 HP und +1 Mana. Die Erholung der Spieler bleibt.'],
   ['0.14.6', '<b>Zuschauen: Würfel verschwinden im Kampf auch bei hohem Tempo:</b> Beim Zuschauen mit beschleunigten Stufen (ab ×3) blieben die Monsterwürfel der Weltphase im Kampf sichtbar stehen. Sie werden jetzt wie bei normalem Tempo ausgeblendet.'],
@@ -5703,6 +5772,7 @@ function render() {   // läuft der Ergebnis-Bildschirm, wird der Endstand des K
         o.dataset.k = sh;
       } }
     else if (so) so.remove(); }
+  prepRender();
   let ov = document.getElementById('endov');
   const html = overlayHTML();
   if (html && !ov) { ov = document.createElement('div'); ov.id = 'endov'; stage.appendChild(ov); }
@@ -5978,6 +6048,7 @@ function gameRules() {
   let sv = {}; try { sv = JSON.parse(localStorage.getItem('magus_rules') || '{}') || {}; } catch (e) { sv = {}; }
   const r = Object.assign({}, phaseRules());
   RULE_OPTS.forEach(o => { const v = Math.round(+sv[o.k]); r[o.k] = isFinite(v) && sv[o.k] !== undefined && sv[o.k] !== null ? Math.min(o.max, Math.max(o.min, v)) : M.DEFAULT_RULES[o.k]; });
+  if (/[?&]prep=0/.test(location.search)) r.prep = 0;   // Prüf- und Fehlersuchschalter: ?prep=0 startet ohne Vorbereitung (Magie 1 in allen Farben wie bis 0.14)
   return r;
 }
 function setGameRule(k, d) {
@@ -6149,6 +6220,33 @@ function dismissOverlay() {
 function specAdvance() {
   if (!SPEC || specT || !((endView && endView.stage === 'result') || modal)) return;
   specT = setTimeout(() => { specT = 0; if (SPEC && overlay.style.display !== 'flex') dismissOverlay(); else if (SPEC) specAdvance(); }, 2600);
+}
+/* ---------- Vorbereitung (seit 0.15) ---------- */
+// Vor dem ersten Zug wählt jeder Spieler verdeckt eine Karte aus seinem ganzen Deck; ihre Farbe ist der erste, kostenlose Magiepunkt. Die Auswahl liegt im Vordergrund (wie die Hellsicht-Auswahl); der Gegner wählt gleichzeitig.
+let prepSel = 0;   // uid der angewählten Karte
+function prepOverlayHTML() {
+  if (!G || G.phase !== 'prep' || G.over || Intro.on || SPEC) { prepSel = 0; return ''; }
+  if (G.prep[ME]) {
+    const e = (G.players[ME].deck.draw.find(c => c.uid === G.prep[ME]) || {}).id;
+    return '<div class="prepbox"><div class="preptitle">Vorbereitung</div><div class="prepsub">Deine Wahl liegt verdeckt' + (e ? ' (' + M.NAMES[e[0]] + ')' : '') + '. Warte auf ' + esc(G.players[OPP].name) + ' …</div></div>';
+  }
+  const cs = M.prepChoices(G, ME).slice().sort((a, b) => M.ELEMENTS.indexOf(a.id[0]) - M.ELEMENTS.indexOf(b.id[0]) || a.id.localeCompare(b.id) || a.uid - b.uid);
+  if (!cs.some(c => c.uid === prepSel)) prepSel = 0;
+  const cnt = M.ELEMENTS.map(e => M.NAMES[e] + ' ' + cs.filter(c => c.id[0] === e).length).join(' · ');
+  let h = '<div class="prepbox"><div class="preptitle">Vorbereitung: Erste Magie wählen</div>' +
+    '<div class="prepsub">Alle Magiestufen beginnen bei 0. Wähle eine Karte aus deinem Deck: Sie kommt auf die Ablage, ihre Farbe beginnt kostenlos auf Stufe 1. Dein Gegner wählt gleichzeitig und verdeckt; erst danach werden beide Wahlen aufgedeckt und die Starthände gezogen.</div>' +
+    '<div class="prepcnt">Dein Deck: ' + cnt + '</div><div class="prepgrid">';
+  cs.forEach((c, i) => { h += '<div class="prepcard' + (c.uid === prepSel ? ' on' : '') + '" data-act="prepsel" data-uid="' + c.uid + '"><img src="' + (IMG[c.id] || IMG.back) + '"></div>'; });
+  return h + '</div><button class="btn primary prepok" data-act="prepok" ' + (prepSel ? '' : 'disabled') + '>' + (prepSel ? 'Verdeckt wählen' : 'Karte antippen') + '</button></div>';
+}
+function prepRender() {
+  const html = prepOverlayHTML(); let o = document.getElementById('prepov');
+  if (html && !o) { o = document.createElement('div'); o.id = 'prepov'; stage.appendChild(o); }
+  if (o) { if (html) { if (o.dataset.k !== html) { o.innerHTML = html; o.dataset.k = html; } o.style.display = 'flex'; } else { o.style.display = 'none'; o.dataset.k = ''; } }
+}
+function prepClick(d) {
+  if (d.act === 'prepsel') { prepSel = +d.uid === prepSel ? 0 : +d.uid; render(); }
+  else if (d.act === 'prepok' && prepSel) { const u = prepSel; prepSel = 0; act({ type: 'prepPick', uid: u }); }
 }
 /* ---------- PeerJS-Adapter: gleiche Schnittstelle wie die Raum-Funktion von claude.ai ----------
    Direkte Verbindung (WebRTC) zwischen zwei Browsern; PeerJS' kostenloser Vermittlungsserver
@@ -6474,6 +6572,7 @@ function onAct(d) {
     case 'deckview': deckView = !deckView; render(); break;
     case 'deckclose': deckView = false; render(); break;
     case 'dismiss': dismissOverlay(); break;
+    case 'prepsel': case 'prepok': prepClick(d); break;
     case 'combat': act({ type: 'combat', elem: d.e }); break;
     case 'vendorres': { const o = M.vendorOffers(G, ME).filter(x => !x.free && x.available && x.result === d.r).sort((x, y) => x.cost.length - y.cost.length)[0]; if (o) act({ type: 'vendor', result: o.result, cost: o.cost }); break; }
     case 'vendor': { const o = M.vendorOffers(G, ME)[+d.i]; if (o) act({ type: 'vendor', result: o.result, cost: o.cost }); break; }
@@ -6987,19 +7086,21 @@ const Intro = (() => {
     });
     stage.dataset.hm = '0 1 2';   // die echten Monsterkarten bleiben verborgen, bis ihre Abdeckung umgedreht ist
     on = true; monRev = 0; pl = { [ME]: { st: 'disc', k: 0 }, [OPP]: { st: 'disc', k: 0 } };
-    const n = G.players[ME].deck.hand.length, order = [ME, OPP];
+    const n = G.players[ME].deck.hand.length || 1, order = [ME, OPP];
     M.ELEMENTS.forEach((e, i) => {
       const t = T.mon + i * T.monStep;
       later(t, () => { monRev = i + 1; Snd.play('flip', 0, .8); const c = covers[i]; if (c) reveal(c, i); });
       later(t + T.dice, () => DiceBoard.throwItem(i));
     });
-    order.forEach((p, j) => {
+    const prep = G.phase === 'prep', tEnd = prep ? T.mon + 2 * T.monStep + T.dice + 1500 : T.players + 2 * T.plStep + T.end;   // Vorbereitung (seit 0.15): gezeigt werden nur die Monster; Mischen und Austeilen folgen nach der Kartenwahl ohne Vorführung
+    if (prep) pl = {};
+    if (!prep) order.forEach((p, j) => {
       const t = T.players + j * T.plStep;
       later(t, () => { pl[p].st = 'draw'; Snd.play('shuffle', 0, .8); });
       for (let k = 1; k <= n; k++) later(t + T.deal + (k - 1) * T.dealStep, () => { pl[p].st = 'deal'; pl[p].k = k; Snd.play('flip', 0, .7); });
     });
-    later(T.players + 2 * T.plStep + T.end, finish);
-    hold = Date.now() + T.players + 2 * T.plStep + T.end + 200;   // der Computer wartet
+    later(tEnd, finish);
+    hold = Date.now() + tEnd + 200;   // der Computer wartet
     hint = document.createElement('div'); hint.id = 'introhint'; hint.textContent = 'Klick: Spielstart überspringen'; stage.appendChild(hint);
   }
   function reveal(c, i) {   // Volle Drehung (Kartendreh-Werkstatt): die Abdeckung dreht sich um 180° und zeigt dabei eine Kopie der Monsterkarte

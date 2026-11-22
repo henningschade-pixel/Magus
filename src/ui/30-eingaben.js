@@ -32,6 +32,7 @@ function onAct(d) {
     case 'deckview': deckView = !deckView; render(); break;
     case 'deckclose': deckView = false; render(); break;
     case 'dismiss': dismissOverlay(); break;
+    case 'prepsel': case 'prepok': prepClick(d); break;
     case 'combat': act({ type: 'combat', elem: d.e }); break;
     case 'vendorres': { const o = M.vendorOffers(G, ME).filter(x => !x.free && x.available && x.result === d.r).sort((x, y) => x.cost.length - y.cost.length)[0]; if (o) act({ type: 'vendor', result: o.result, cost: o.cost }); break; }
     case 'vendor': { const o = M.vendorOffers(G, ME)[+d.i]; if (o) act({ type: 'vendor', result: o.result, cost: o.cost }); break; }

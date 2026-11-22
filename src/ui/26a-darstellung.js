@@ -187,6 +187,7 @@ function render() {   // läuft der Ergebnis-Bildschirm, wird der Endstand des K
         o.dataset.k = sh;
       } }
     else if (so) so.remove(); }
+  prepRender();
   let ov = document.getElementById('endov');
   const html = overlayHTML();
   if (html && !ov) { ov = document.createElement('div'); ov.id = 'endov'; stage.appendChild(ov); }

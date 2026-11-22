@@ -58,6 +58,12 @@ test('Mehrspieler: gleichzeitige Aktionen, tote Verbindung, abweichender Stand, 
     await guest.waitForFunction(() => window.__magus.mp && window.__magus.mp.started);
     const hs = await seat(host), gs = await seat(guest);
     let s = await same(host, guest, 'beide starten mit demselben Stand');
+    // 0) Vorbereitung (seit 0.15): beide wählen gleichzeitig verdeckt eine Karte, danach beginnt das Spiel mit gezogenen Händen
+    assert.equal(s.phase, 'prep', 'die Partie beginnt mit der Vorbereitung');
+    const pick = (p, seat) => p.evaluate(sd => window.__magus.act({ type: 'prepPick', uid: window.__magus.state.players[sd].deck.draw[0].uid }), seat);
+    await Promise.all([pick(host, hs), pick(guest, gs)]);
+    s = await same(host, guest, 'nach der Vorbereitung stimmen beide Stände überein');
+    assert.equal(s.phase, 'world', 'nach beiden Wahlen beginnt das Spiel');
     const onTurn = () => (s.turn === hs ? host : guest), offTurn = () => (s.turn === hs ? guest : host);
 
     // 1) Gleichzeitig: der eine zieht nach, der andere markiert außerhalb seines Zuges eine Karte

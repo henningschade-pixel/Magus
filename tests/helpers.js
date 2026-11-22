@@ -1,5 +1,8 @@
 // Gemeinsame Hilfen: Regelkern und KI kommen aus der gebauten index.html (siehe tools/balance/load.js).
 const { M, AI } = require('../tools/balance/load.js');
+// Seit 0.15 beginnen Partien mit Vorbereitung (Magie 0, Kartenwahl). Die älteren Tests gehen von Magie 1 und sofortigem Spielbeginn aus: sie laufen mit prep 0, solange ein Test die Regel nicht selbst setzt.
+const _newGame = M.newGame;
+M.newGame = o => _newGame(Object.assign({}, o, { rules: Object.assign({ prep: 0 }, o && o.rules) }));
 const card = id => Object.assign({ card: { id } }, M.parseCard(id));
 const cards = ids => ids.map(card);
 const STATS = (o) => Object.assign({ mana: 9, maxMana: 9, mag: { F: 3, E: 3, W: 3 }, limit: 3, hp: 9, maxHp: 9 }, o);

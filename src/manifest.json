@@ -87,6 +87,9 @@
   "file": "engine/70-weltphase.js"
  },
  {
+  "file": "engine/75-vorbereitung.js"
+ },
+ {
   "file": "engine/80-start.js"
  },
  {
@@ -208,6 +211,9 @@
  },
  {
   "file": "ui/27-ablauf.js"
+ },
+ {
+  "file": "ui/27b-vorbereitung.js"
  },
  {
   "file": "ui/28-peerjs.js"

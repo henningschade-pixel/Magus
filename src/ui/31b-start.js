@@ -20,19 +20,21 @@ const Intro = (() => {
     });
     stage.dataset.hm = '0 1 2';   // die echten Monsterkarten bleiben verborgen, bis ihre Abdeckung umgedreht ist
     on = true; monRev = 0; pl = { [ME]: { st: 'disc', k: 0 }, [OPP]: { st: 'disc', k: 0 } };
-    const n = G.players[ME].deck.hand.length, order = [ME, OPP];
+    const n = G.players[ME].deck.hand.length || 1, order = [ME, OPP];
     M.ELEMENTS.forEach((e, i) => {
       const t = T.mon + i * T.monStep;
       later(t, () => { monRev = i + 1; Snd.play('flip', 0, .8); const c = covers[i]; if (c) reveal(c, i); });
       later(t + T.dice, () => DiceBoard.throwItem(i));
     });
-    order.forEach((p, j) => {
+    const prep = G.phase === 'prep', tEnd = prep ? T.mon + 2 * T.monStep + T.dice + 1500 : T.players + 2 * T.plStep + T.end;   // Vorbereitung (seit 0.15): gezeigt werden nur die Monster; Mischen und Austeilen folgen nach der Kartenwahl ohne Vorführung
+    if (prep) pl = {};
+    if (!prep) order.forEach((p, j) => {
       const t = T.players + j * T.plStep;
       later(t, () => { pl[p].st = 'draw'; Snd.play('shuffle', 0, .8); });
       for (let k = 1; k <= n; k++) later(t + T.deal + (k - 1) * T.dealStep, () => { pl[p].st = 'deal'; pl[p].k = k; Snd.play('flip', 0, .7); });
     });
-    later(T.players + 2 * T.plStep + T.end, finish);
-    hold = Date.now() + T.players + 2 * T.plStep + T.end + 200;   // der Computer wartet
+    later(tEnd, finish);
+    hold = Date.now() + tEnd + 200;   // der Computer wartet
     hint = document.createElement('div'); hint.id = 'introhint'; hint.textContent = 'Klick: Spielstart überspringen'; stage.appendChild(hint);
   }
   function reveal(c, i) {   // Volle Drehung (Kartendreh-Werkstatt): die Abdeckung dreht sich um 180° und zeigt dabei eine Kopie der Monsterkarte

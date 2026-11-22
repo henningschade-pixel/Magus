@@ -11,7 +11,7 @@ test('Spiel startet, Kampf endet mit Ergebnis-Bildschirm, Klick führt zurück i
   try {
     const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
     p.on('pageerror', e => errs.push(e.message));
-    await p.goto(url); await p.waitForTimeout(500);
+    await p.goto(url + '?prep=0'); await p.waitForTimeout(500);
     await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
     // Kampf gegen das Feuermonster mit angeschlagenem Gegner herbeiführen
     await p.evaluate(() => {
@@ -36,7 +36,7 @@ test('Statistikseite öffnet, zeigt den Verlauf und lässt sich filtern und schl
   try {
     const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
     p.on('pageerror', e => errs.push(e.message));
-    await p.goto(url); await p.waitForTimeout(500);
+    await p.goto(url + '?prep=0'); await p.waitForTimeout(500);
     await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
     assert.equal(await p.locator('#logbtn, #logpop').count(), 0, 'kein runder Protokoll-Knopf mehr');
     assert.equal(await p.locator('#log.logpanel .logdl').count(), 1, 'Export-Knopf im festen Protokoll links');
@@ -61,7 +61,7 @@ test('Weltphase: Bibliothek links, rechts kein Tempel mehr (0.14); Protokoll hin
   try {
     const p = await b.newPage({ viewport: { width: 1280, height: 800 } }), errs = [];
     p.on('pageerror', e => errs.push(e.message));
-    await p.goto(url); await p.waitForTimeout(500);
+    await p.goto(url + '?prep=0'); await p.waitForTimeout(500);
     await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
     const box = async sel => p.locator(sel).first().boundingBox();
     const lib = await box('.libpanel');
@@ -78,7 +78,7 @@ test('Zuschauermodus: zwei Computer spielen gegeneinander, Eingaben sind gesperr
   try {
     const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
     p.on('pageerror', e => errs.push(e.message));
-    await p.goto(url); await p.waitForTimeout(500);
+    await p.goto(url + '?prep=0'); await p.waitForTimeout(500);
     await p.click('text=Einzelspieler'); await p.click('text=Zwei Computern zuschauen'); await p.waitForTimeout(500);
     const n0 = await p.evaluate(() => window.__magus.state.logN);
     await p.evaluate(() => window.__magus.act({ type: 'draw' }));   // Eingabe eines Menschen: wird ignoriert
@@ -95,7 +95,7 @@ test('Am Partieende lassen sich Statistik und Protokoll öffnen und die Statisti
   try {
     const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
     p.on('pageerror', e => errs.push(e.message));
-    await p.goto(url); await p.waitForTimeout(500);
+    await p.goto(url + '?prep=0'); await p.waitForTimeout(500);
     await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(500);
     await p.evaluate(() => { const G = window.__magus.state; G.over = true; G.winner = 0; G.players[0].sp = 4; window.__magus.pump(); });
     await p.waitForSelector('#overlay [data-act="stend"]', { timeout: 5000 });
@@ -111,7 +111,7 @@ test('Statistik: ein Kampf lässt sich anklicken und zeigt seinen Verlauf', { sk
   try {
     const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
     p.on('pageerror', e => errs.push(e.message));
-    await p.goto(url + '?fast'); await p.waitForTimeout(500);
+    await p.goto(url + '?fast&prep=0'); await p.waitForTimeout(500);
     await p.click('text=Einzelspieler'); await p.click('text=Zwei Computern zuschauen');
     await p.waitForFunction(() => window.__magus.state.hist.some(h => h.ev && h.ev.trace), null, { timeout: 60000 });
     await p.evaluate(() => { window.__magus.stats(); });
@@ -129,7 +129,7 @@ test('Fliehen: Knopf ist nur bei Monster ohne Mana bedienbar und beendet den Kam
   try {
     const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
     p.on('pageerror', e => errs.push(e.message));
-    await p.goto(url); await p.waitForTimeout(500);
+    await p.goto(url + '?prep=0'); await p.waitForTimeout(500);
     await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
     await p.evaluate(() => { const G = window.__magus.state; G.rules.fleeAllowed = 1; window.Magus.apply(G, { pid: 0, type: 'combat', elem: 'F' }); window.__magus.pump(); });
     await p.waitForSelector('[data-act="fleeask"]');
@@ -152,7 +152,7 @@ test('Läuterung: Todesmarker beider Seiten sind im Kampfbildschirm anklickbar',
   try {
     const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
     p.on('pageerror', e => errs.push(e.message));
-    await p.goto(url); await p.waitForTimeout(500);
+    await p.goto(url + '?prep=0'); await p.waitForTimeout(500);
     await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(1000);
     await p.evaluate(() => {
       const G = window.__magus.state, M = window.Magus; G.turn = 0; M.apply(G, { pid: 0, type: 'combat', elem: 'F' });
@@ -176,7 +176,7 @@ test('Läuterung: eigene und gegnerische Mana- und Schildmarker sind im Kampfbil
   try {
     const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
     p.on('pageerror', e => errs.push(e.message));
-    await p.goto(url); await p.waitForTimeout(500);
+    await p.goto(url + '?prep=0'); await p.waitForTimeout(500);
     await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(1000);
     await p.evaluate(() => {
       const G = window.__magus.state, M = window.Magus; G.turn = 0; M.apply(G, { pid: 0, type: 'combat', elem: 'F' });
@@ -204,7 +204,7 @@ test('Läuterung: eigene und gegnerische Nachziehtokens sind anklickbar und werd
   try {
     const p = await b.newPage({ viewport: { width: 1900, height: 900 } }), errs = [];
     p.on('pageerror', e => errs.push(e.message));
-    await p.goto(url); await p.waitForTimeout(500);
+    await p.goto(url + '?prep=0'); await p.waitForTimeout(500);
     await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(1000);
     await p.evaluate(() => {
       const G = window.__magus.state, M = window.Magus; G.turn = 0; M.apply(G, { pid: 0, type: 'combat', elem: 'F' });
@@ -233,7 +233,7 @@ test('Nachziehlimit: drei Kreise am Stapel, Plus-Knopf erscheint erst mit Gold u
   try {
     const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
     p.on('pageerror', e => errs.push(e.message));
-    await p.goto(url); await p.waitForTimeout(500);
+    await p.goto(url + '?prep=0'); await p.waitForTimeout(500);
     await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
     assert.equal(await p.locator('.dlc, .dmark').count(), 0, 'seit 0.12 standardmäßig ohne Nachziehmarker und ohne Kreise');
     await p.evaluate(() => { window.__magus.state.rules.drawMarker = 1; window.__magus.pump(); });   // die Regel bleibt per Schalter testbar
@@ -254,7 +254,7 @@ test('Magie-Knöpfe (seit 0.14 mit Gold): zu teure Stufen durchscheinend und ges
   try {
     const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
     p.on('pageerror', e => errs.push(e.message));
-    await p.goto(url); await p.waitForTimeout(500);
+    await p.goto(url + '?prep=0'); await p.waitForTimeout(500);
     await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
     await p.evaluate(() => { const s = window.__magus.state.players[0].stats; s.gold = 1; s.buys = { mag: 1 }; s.mag = { F: 2, E: 1, W: 1 }; window.__magus.pump(); });
     assert.equal(await p.locator('[data-act="magic"].off[disabled]').count(), 3, 'zweiter Magie-Kauf kostet 2 Gold: alle gesperrt');
@@ -270,7 +270,7 @@ test('Schild-Effekt: Die Animation startet dort, wo das Schild angezeigt wurde, 
   try {
     const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
     p.on('pageerror', e => errs.push(e.message));
-    await p.goto(url); await p.waitForTimeout(500);
+    await p.goto(url + '?prep=0'); await p.waitForTimeout(500);
     await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
     const r = await p.evaluate(async () => {
       const mg = window.__magus, G = mg.state, M = window.Magus, out = {}, wait = ms => new Promise(r => setTimeout(r, ms));
@@ -295,7 +295,7 @@ test('Lähmung: die Flüche erscheinen erst im Ablagestapel, wenn die Animation 
   try {
     const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
     p.on('pageerror', e => errs.push(e.message));
-    await p.goto(url); await p.waitForTimeout(500);
+    await p.goto(url + '?prep=0'); await p.waitForTimeout(500);
     await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
     await p.evaluate(() => { const G = window.__magus.state; window.Magus.apply(G, { pid: 0, type: 'combat', elem: 'F' }); window.__magus.pump(); });
     await p.waitForTimeout(600);
@@ -319,7 +319,7 @@ test('Monsterwürfel: je lebendem Monster ein grüner Pluswürfel und ein roter 
   try {
     const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
     p.on('pageerror', e => errs.push(e.message));
-    await p.goto(url); await p.waitForTimeout(500);
+    await p.goto(url + '?prep=0'); await p.waitForTimeout(500);
     await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(3500);   // Wurf (ca. 1,5 s + Versatz) ist vorbei
     const r = await p.evaluate(() => {
       const G = window.__magus.state, dice = [...document.querySelectorAll('#dicelayer .dk-die')];
@@ -338,7 +338,7 @@ test('Hauptmenü: Einzelspieler, Mehrspieler, Einstellungen, Beenden; Einstellun
   try {
     const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
     p.on('pageerror', e => errs.push(e.message));
-    await p.goto(url); await p.waitForTimeout(500);
+    await p.goto(url + '?prep=0'); await p.waitForTimeout(500);
     const txt = () => p.evaluate(() => document.getElementById('overlay').innerText);
     let t = await txt();
     for (const w of ['Einzelspieler', 'Mehrspieler', 'Einstellungen', 'Beenden']) assert.ok(t.includes(w), w + ' fehlt im Hauptmenü');
@@ -361,7 +361,7 @@ test('Fenstergröße ändern (Vollbild): die Würfel wandern mit den Monsterkart
   try {
     const p = await b.newPage({ viewport: { width: 1280, height: 800 } }), errs = [];
     p.on('pageerror', e => errs.push(e.message));
-    await p.goto(url); await p.waitForTimeout(500);
+    await p.goto(url + '?prep=0'); await p.waitForTimeout(500);
     await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(4000);
     const rel = () => p.evaluate(() => { const sr = document.getElementById('stage').getBoundingClientRect(), k = sr.width / document.getElementById('stage').offsetWidth, d = document.querySelector('#dicelayer > *').getBoundingClientRect(), c = document.querySelector('.mon, .monster, [data-slot]'); return { dx: (d.left - sr.left) / k, sw: document.getElementById('stage').offsetWidth }; });
     const a = await rel();
@@ -378,7 +378,7 @@ test('Vorschau beim Überfahren: Nachziehstapel bei rotem Marker (Gold des Gegne
   try {
     const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
     p.on('pageerror', e => errs.push(e.message));
-    await p.goto(url); await p.waitForTimeout(500);
+    await p.goto(url + '?prep=0'); await p.waitForTimeout(500);
     await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
     // Weltphase: roter Nachziehmarker, Mensch am Zug
     await p.evaluate(() => { const G = window.__magus.state; G.rules.drawMarker = 1; G.turn = 0; G.players[0].drawRed = true; G.players[0].drawN = G.players[0].stats.drawLimit || 1; window.__magus.pump(); });
@@ -407,7 +407,7 @@ test('Vorschau auf den Bögen: Plus-Knopf (HP) und Angriff (Mana) lassen den bet
   try {
     const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
     p.on('pageerror', e => errs.push(e.message));
-    await p.goto(url); await p.waitForTimeout(500);
+    await p.goto(url + '?prep=0'); await p.waitForTimeout(500);
     await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(1000);
     await p.evaluate(() => { window.__magus.state.players[0].stats.gold = 2; window.__magus.pump(); });
     await p.waitForTimeout(200);
@@ -442,7 +442,7 @@ test('Unter der Magiegrafik steht der Preis der nächsten Magiestufe; ein Magiek
   try {
     const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
     p.on('pageerror', e => errs.push(e.message));
-    await p.goto(url); await p.waitForTimeout(500);
+    await p.goto(url + '?prep=0'); await p.waitForTimeout(500);
     await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
     const t0 = await p.evaluate(() => { const G = window.__magus.state; return { turn: G.turn, txt: (document.querySelector('.bsp.me') || {}).textContent || '', cost: window.Magus.magicCost(G, 0, G.players[0].stats) }; });
     assert.match(t0.txt, /^(I|II|III|IV|V|VI)$/); assert.equal(t0.txt, ['I', 'II', 'III', 'IV', 'V', 'VI'][t0.cost - 1], 'die römische Zahl ist der Preis');
@@ -459,7 +459,7 @@ test('Spieleinstellungen (in den Einstellungen, Abschnitt Spiel): Runden bis Ers
   try {
     const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
     p.on('pageerror', e => errs.push(e.message));
-    await p.goto(url); await p.waitForTimeout(500);
+    await p.goto(url + '?prep=0'); await p.waitForTimeout(500);
     const txt = () => p.evaluate(() => document.getElementById('overlay').innerText);
     await p.click('text=Einstellungen'); let t = await txt();
     assert.ok(/ton/i.test(t) && /spiel/i.test(t), 'Abschnitte Ton und Spiel');
@@ -482,7 +482,7 @@ test('Endbildschirm: Sieg und Niederlage zeigen Rückblick, Klick überspringt, 
   try {
     const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
     p.on('pageerror', e => errs.push(e.message));
-    await p.goto(url + '?fast'); await p.waitForTimeout(500);
+    await p.goto(url + '?fast&prep=0'); await p.waitForTimeout(500);
     await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(500);
     // KI-Partie simulieren, in der der Computer gewinnt, und als Endstand übernehmen (Du verlierst)
     const seed = await p.evaluate(() => {
@@ -521,7 +521,7 @@ test('Erschöpfung: Hintergrund dunkelt ab, Ankündigung erscheint, der HP-Abzug
   try {
     const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
     p.on('pageerror', e => errs.push(e.message));
-    await p.goto(url); await p.waitForTimeout(500);
+    await p.goto(url + '?prep=0'); await p.waitForTimeout(500);
     await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
     await p.evaluate(() => {
       const G = window.__magus.state, M = window.Magus; G.rules.exhaustRounds = 1; G.rules.allowDef = Object.assign({}, M.DEFAULT_RULES.allowDef, { recover: 0, draw: 0 });   // ohne Reaktion ohne Angriff
@@ -549,7 +549,7 @@ test('Läuterung: Warnung bei ungewählten Markern, „Marker wählen“ bricht 
   try {
     const p = await b.newPage({ viewport: { width: 1300, height: 820 } }), errs = [];
     p.on('pageerror', e => errs.push(e.message));
-    await p.goto(url); await p.waitForTimeout(500);
+    await p.goto(url + '?prep=0'); await p.waitForTimeout(500);
     await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(1000);
     await p.evaluate(() => {
       const G = window.__magus.state, M = window.Magus; G.turn = 0; M.apply(G, { pid: 0, type: 'combat', elem: 'F' });

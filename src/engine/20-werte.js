@@ -34,4 +34,4 @@ function applyTemple(stats, field) {
   else if (field === 'mana') { stats.maxMana++; stats.mana = Math.min(stats.maxMana, stats.mana + 1); }
   else if (field === 'limit') stats.limit++;
 }
-function magicProgress(p) { return (p.stats.mag.F - 1) + (p.stats.mag.E - 1) + (p.stats.mag.W - 1); }
+function magicProgress(p) { return p.stats.mag.F + p.stats.mag.E + p.stats.mag.W; }   // Summe der Magiestufen (seit 0.15 ohne Abzug von 1; die Reihenfolge bleibt gleich)

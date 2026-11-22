@@ -79,7 +79,8 @@ function ecoStep(state, pid) {
     if (foc && s.mag[foc] < M.MAX_MAGIC && s.gold >= cost) return A({ type: 'magic', elem: foc });
     return null;
   }
-  if (Q.sacG && M.magicProgress(p) < Q.mgGoal) { const a = buyMagic(Q.sacRes); if (a) return a; }   // sacG 1: Magie vor den Verbesserungen, solange der Magiefortschritt unter mgGoal liegt (sacRes Gold bleiben übrig)
+  const pr = !!state.rules.prep;   // seit 0.15 beginnen die Spieler ohne Magie: eigene Werte (sacGP, mgGoalP; abgestimmt im Selbstspiel, 73 % gegen sacG 0)
+  if ((pr ? Q.sacGP : Q.sacG) && M.magicProgress(p) < (pr ? Q.mgGoalP : Q.mgGoal)) { const a = buyMagic(Q.sacRes); if (a) return a; }   // sacG 1: Magie vor den Verbesserungen, solange der Magiefortschritt unter mgGoal liegt (sacRes Gold bleiben übrig)
   const a = spendStep();   // Gold geht in Verbesserungen (oder wird fürs Limit gespart)
   if (a) return a;
   if (Q.sacSur > 0 && s.gold >= Q.sacSur) return buyMagic(0);   // Überschuss: nichts Bezahlbares mehr, das Gold kauft Magie

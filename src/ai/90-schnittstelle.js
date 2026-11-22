@@ -1,10 +1,18 @@
+// Vorbereitung (seit 0.15): Die KI wählt verdeckt, ohne die Wahl des Gegners zu kennen, die Farbe, von der ihr Deck die meisten Karten (und höchsten Stufen) enthält; bei Gleichstand gilt F, E, W.
+function prepPick(state, pid) {
+  const cs = M.prepChoices(state, pid), score = e => cs.filter(c => c.id[0] === e).reduce((n, c) => n + 10 + +c.id.slice(1), 0);
+  const best = M.ELEMENTS.slice().sort((a, b) => score(b) - score(a))[0];
+  return { pid, type: 'prepPick', uid: cs.find(c => c.id[0] === best).uid };
+}
 function plan(state, pid) {
+  if (state.phase === 'prep') return [prepPick(state, pid)];
   if (state.phase === 'world') { const st = ecoStep(state, pid); if (st) return [st]; }   // Wirtschaftsschritt (Gold für Verbesserungen und Magie ausgeben) hat Vorrang; er ist keine Aktion, danach plant die Oberfläche denselben Zug neu
   return state.phase === 'combat' ? searchPlan(state, pid) : worldPlan(state, pid);   // Kampf: Vorausschau (40-suche.js), ohne Durchläufe (setSearch(0)) die Basis-KI
 }
 // Führt einen vollständigen KI-Zug aus; bei Fehlern greift eine sichere Rückfalloption.
 function fallback(state, pid) {
   const A = a => Object.assign({ pid }, a);
+  if (state.phase === 'prep') return [A({ type: 'prepPick', uid: M.prepChoices(state, pid)[0].uid })];
   if (state.phase === 'combat') {
     const c = state.combat;
     if (c.forced) return [A(forcedAct(state, pid))];

@@ -38,6 +38,7 @@ function gameRules() {
   let sv = {}; try { sv = JSON.parse(localStorage.getItem('magus_rules') || '{}') || {}; } catch (e) { sv = {}; }
   const r = Object.assign({}, phaseRules());
   RULE_OPTS.forEach(o => { const v = Math.round(+sv[o.k]); r[o.k] = isFinite(v) && sv[o.k] !== undefined && sv[o.k] !== null ? Math.min(o.max, Math.max(o.min, v)) : M.DEFAULT_RULES[o.k]; });
+  if (/[?&]prep=0/.test(location.search)) r.prep = 0;   // Prüf- und Fehlersuchschalter: ?prep=0 startet ohne Vorbereitung (Magie 1 in allen Farben wie bis 0.14)
   return r;
 }
 function setGameRule(k, d) {

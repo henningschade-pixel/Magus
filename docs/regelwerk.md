@@ -18,7 +18,7 @@ Eine Partie hat drei Abschnitte (1, 2, 3). Je Abschnitt gibt es drei Monster (St
 | Siegpunkte | 3 | seit 0.3 (`startSp`, 0.3 bis 0.7.2.23: 2; seit 0.7.2.24: 3): schon die ersten Kämpfe kosten bei einer Niederlage etwas; nie unter 0 |
 | HP | 4 | seit 0.3.1 (`startHp`, vorher 3); jedes Upgrade +1 Maximum (seit 0.13.2.1, `hpPerPoint` 1; vorher +2), mit Gold bezahlt (1, dann 2 Gold), höchstens zwei Ausbauten, also höchstens 6 HP (`maxUpgrades` 2; nur in 0.13.2.2 ohne Obergrenze) |
 | Mana | 4 | jedes Upgrade +1 Maximum, mit Gold bezahlt (1, dann 2 Gold), höchstens zwei Ausbauten, also höchstens 6 Mana |
-| Magie Feuer / Erde / Wasser | je 1 | höchstens 3 |
+| Magie Feuer / Erde / Wasser | je 0 (Spieler; Monster behalten ihre Werte) | höchstens 3; seit 0.15 beginnt jeder Spieler ohne Magie, den ersten Punkt wählt die Vorbereitung (Regel `prep` 1; mit `prep` 0 wie bis 0.14: je 1) |
 | Ausspiellimit | 1 | seit 0.5.1 (`startLimit`, 0.3 bis 0.4.1: 2); höchstens 3, die Schritte kosten 1 und 2 Gold (`limitCost` 1 mit `priceRise`) |
 | Handplätze | 3 | je Upgrade (Gold) ein weiterer, höchstens 5 |
 
@@ -337,6 +337,18 @@ Keine Regeländerung, nur die Bedienung des Tempels: Das Opfern läuft wie die U
 ## Änderungen 0.5.4 (04.11.)
 
 - **Heilung wieder nach Angriff und Verteidigung:** Die Heilung eines Kombos in der Verteidigung (Erde + Wasser) wirkt erst nach dem Schaden und dem Spiegelrückwurf und gleicht ihn nachträglich aus, höchstens bis zu den maximalen HP; ein sonst tödlicher Restschaden lässt sich so noch ausgleichen (HP − Restschaden + Heilung, nie unter 0, nie über dem Maximum). Zerrüttung, Lähmung, Läuterung und Spiegel wirken wie seit 0.4 **vor** der Verteidigung. Im Angriff ändert sich nichts. Umsetzung: `execDefense` und `defenseComboPre` in `src/engine/65-kampfablauf.js`; Vorschau (`previewDefense`) und Animation folgen derselben Reihenfolge (Heilungseffekt mit `late`).
+
+## Änderung 0.15 (22.11.)
+
+- **Magie beginnt bei 0 (Position 1 der Magieentwicklung):** Die drei Magiestufen der Spieler starten bei 0 (`prep` 1). Eine Karte wirkt höchstens mit der Magiestufe ihrer Farbe (`min(Kartenstufe, Magie)`); bei Magie 0 ist eine Farbe wirkungslos, bleibt aber im Deck und kann getauscht oder aufgewertet werden. Monster behalten ihre Magiewerte.
+- **Vorbereitung vor dem ersten Zug:** Die Monster sind aufgedeckt und gewürfelt, die Spielerdecks (je 12 Stufe-1-Karten) erzeugt, aber noch keine Hand gezogen. Beide Spieler wählen **gleichzeitig und verdeckt** eine Karte aus ihrem ganzen Deck (`prepPick`). Die Karte kommt auf den Ablagestapel, ihre Farbe beginnt kostenlos auf Stufe 1. Erst wenn beide gewählt haben, wird aufgedeckt; danach werden die Starthände gezogen und das Spiel beginnt (Startspieler wie bisher). Das Startgold (3, Abschnittsbonus) gehört zur Vorbereitung und bleibt unverändert; HP, Mana, Limit und Handplätze gehören nicht dazu.
+- **Magie kaufen bleibt offen** (in den eigenen Zügen der Weltphase): Der Gratispunkt zählt nicht in den Preiszähler, die Käufe kosten also 1, 2, 3 … Gold (Preise 0, 1, 2, 3 …). Gold-Quellen (Abschnittsbonus 3/6/9, Ausgleich, Zermürbung) bleiben unverändert. Vollausbau (alle drei Farben auf 3) braucht 8 Käufe (1 bis 8 Gold, zusammen 36 Gold).
+- **Kein Zugang über die Magie:** Die Bibliothek bleibt ohne Freischaltung (seit 0.7); Karten jeder Stufe sind unabhängig von der Magie tauschbar. Magie bestimmt nur die Wirkung (Schaden, Block, Kombostufe). Hinweis: Die Aussagen im Abschnitt „Startwerte“ zum Monster-Nebenelement sind veraltet (der Code nimmt das überlegene Element).
+- **Siegpunkt-Reihenfolge im Showdown:** `magicProgress` ist jetzt die Summe der Magiestufen (vorher Summe minus 3); die Rangfolge ändert sich nicht.
+- **KI:** Wählt in der Vorbereitung die Farbe mit den meisten Karten im eigenen Deck, ohne die Wahl des Gegners zu kennen. Kauft Magie vor den Verbesserungen, bis die Summe der Magiestufen 7 erreicht (`sacGP` 1, `mgGoalP` 7; im Selbstspiel 73 % Siegquote gegen die Reihenfolge „erst Verbesserungen“).
+- **Oberfläche und Mehrspieler:** Auswahlfenster mit dem ganzen Deck; im Intro werden nur die Monster aufgedeckt, Mischen und Austeilen entfallen. Im Mehrspieler wählen beide Geräte gleichzeitig; die Aktionen laufen durch das übliche Protokoll (Reihenfolge der beiden Wahlen ist für das Ergebnis egal). URL-Schalter `?prep=0` startet ohne Vorbereitung (für Tests).
+- Tests: `tests/vorbereitung.test.js` neu; die übrigen Tests laufen mit `prep: 0` (Helfer in `tests/helpers.js`, `?prep=0` in den Browser-Tests), `tests/golden.json` bleibt unverändert.
+- **Offen (Position 2):** Monster neu skalieren (Spezialisten schärfen, Magieprofil, Magie 0 bei Monstern), Auswertung der Monsterschwere durch die Spieler; Respec zurückgestellt.
 
 ## Änderung 0.14.8 (21.11.)
 
