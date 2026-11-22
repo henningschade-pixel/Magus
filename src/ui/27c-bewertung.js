@@ -1,5 +1,5 @@
 /* ---------- Monsterbewertung (temporär, seit 0.15) ---------- */
-// Zum Abstimmen der Monsterstärke: Nach einem Monsterkampf, den man als Angreifer geführt hat, fragt der Ergebnis-Bildschirm „zu leicht / genau richtig / zu schwer“. Die Antwort wird mit der Monsterkonfiguration
+// Zum Abstimmen der Monsterstärke: Nach einem Monsterkampf, den man als Angreifer geführt hat, fragt der Ergebnis-Bildschirm „zu schwer / etwas schwer / etwas leicht / zu leicht“. Die Antwort wird mit der Monsterkonfiguration
 // (Form, Würfel, Werte, Deck), dem Kampfausgang und dem Stand der Spieler im Browser gespeichert (localStorage 'magus_monsterbewertung') und lässt sich als JSON exportieren. Im Menü unter Einstellungen ein- und ausschaltbar.
 const RATE_KEY = 'magus_monsterbewertung', RATE_ON_KEY = 'magus_bewertung_an', RATE_MAX = 400;
 let ratingCtx = null;   // Zustand beim Kampfbeginn (Monster und Spieler)
@@ -29,12 +29,12 @@ function ratingPrepare(res, sn) {
 }
 function ratingHTML() {
   const r = endView && endView.rate; if (!r) return '';
-  if (r.value) return '<div class="ratebox"><div class="rateq">Bewertung gespeichert: ' + ({ easy: 'zu leicht', ok: 'genau richtig', hard: 'zu schwer' })[r.value] + '</div></div>';
+  if (r.value) return '<div class="ratebox"><div class="rateq">Bewertung gespeichert: ' + ({ hard: 'zu schwer', abitHard: 'etwas schwer', abitEasy: 'etwas leicht', easy: 'zu leicht' })[r.value] + '</div></div>';
   return '<div class="ratebox"><div class="rateq">Wie schwer war dieses Monster?</div><div class="rateb">' +
-    [['easy', 'Zu leicht'], ['ok', 'Genau richtig'], ['hard', 'Zu schwer']].map(([v, t]) => '<button class="btn" data-act="rate" data-v="' + v + '">' + t + '</button>').join('') + '</div></div>';
+    [['hard', 'Zu schwer'], ['abitHard', 'Etwas schwer'], ['abitEasy', 'Etwas leicht'], ['easy', 'Zu leicht']].map(([v, t]) => '<button class="btn" data-act="rate" data-v="' + v + '">' + t + '</button>').join('') + '</div></div>';
 }
 function ratingSave(v) {
-  const r = endView && endView.rate; if (!r || r.value || !['easy', 'ok', 'hard'].includes(v)) return;
+  const r = endView && endView.rate; if (!r || r.value || !['hard', 'abitHard', 'abitEasy', 'easy'].includes(v)) return;
   r.rec.rating = v; r.value = v;
   const l = ratingList(); l.push(r.rec);
   if (!ratingStore(l)) toast('Bewertung konnte nicht gespeichert werden.');
@@ -44,7 +44,7 @@ function ratingSettingsHTML() {
   const n = ratingList().length;
   return '<section class="setgrp"><div class="sethead"><h3>Monsterbewertung (Test)</h3>' + menuBtn('ratetoggle', ratingOn() ? 'an' : 'aus', ' title="Nach einem Monsterkampf fragen, ob das Monster zu leicht oder zu schwer war"', 'small') + '</div>' +
     '<div class="setbox"><div class="rulerow"><span>Gespeicherte Bewertungen: ' + n + '</span><span>' + menuBtn('rateexport', 'Exportieren', n ? '' : ' disabled', 'small') + ' ' + menuBtn('rateclear', 'Löschen', n ? '' : ' disabled', 'small') + '</span></div></div>' +
-    '<p class="sethint">Nach einem Monsterkampf als Angreifer fragt der Ergebnis-Bildschirm, ob das Monster zu leicht, genau richtig oder zu schwer war. Die Antwort wird zusammen mit der Monsterkonfiguration im Browser gespeichert.</p></section>';
+    '<p class="sethint">Nach einem Monsterkampf als Angreifer fragt der Ergebnis-Bildschirm, ob das Monster zu schwer, etwas schwer, etwas leicht oder zu leicht war. Die Antwort wird zusammen mit der Monsterkonfiguration im Browser gespeichert.</p></section>';
 }
 async function ratingExport() {
   const l = ratingList(); if (!l.length) { toast('Noch keine Bewertungen.'); return; }

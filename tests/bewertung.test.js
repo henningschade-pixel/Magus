@@ -24,7 +24,7 @@ test('Monsterbewertung: Frage nach dem Kampf, Speicherung mit Monsterkonfigurati
     await p.goto(url); await p.waitForTimeout(500);
     await p.click('text=Einzelspieler'); await p.click('text=Gegen den Computer spielen'); await p.waitForTimeout(800);
     await winFight(p);
-    assert.equal(await p.locator('#endov [data-act="rate"]').count(), 3, 'drei Antworten');
+    assert.equal(await p.locator('#endov [data-act="rate"]').count(), 4, 'vier Antworten');
     await p.click('#endov [data-act="rate"][data-v="hard"]');
     assert.match(await p.textContent('#endov .rateq'), /zu schwer/);
     const l = await p.evaluate(() => JSON.parse(localStorage.getItem('magus_monsterbewertung')));
